@@ -4,7 +4,8 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import type { WsStatus, WsServerMessage } from '@/lib/websocket'
 
 const RECONNECT_DELAY_MS = 2000
-const MAX_RECONNECT_ATTEMPTS = 5
+const MAX_RECONNECT_ATTEMPTS = 50
+const PONG_TIMEOUT_MS = 60000
 
 interface UseWebSocketOptions {
   meetingId?: string
@@ -18,6 +19,7 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
   const reconnectCountRef = useRef(0)
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const keepaliveRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pongTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const onMessageRef = useRef(onMessage)
   const meetingIdRef = useRef(meetingId)
   // Track whether the current session should reconnect on unexpected close
@@ -49,10 +51,6 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
       (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING) &&
       connectedMeetingIdRef.current === targetMeetingId
     ) {
-      console.log(
-        '[WS] connect() skipped — already open/connecting for meetingId=%s',
-        targetMeetingId
-      )
       return
     }
 
@@ -64,7 +62,6 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
 
     // Clean up any existing connection
     if (wsRef.current) {
-      console.log('[WS] Closing existing connection (readyState=%d)', wsRef.current.readyState)
       wsRef.current.onclose = null
       wsRef.current.close(1000)
       wsRef.current = null
@@ -77,7 +74,6 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
       ? `${endpoint}?meetingId=${encodeURIComponent(targetMeetingId)}`
       : endpoint
 
-    console.log('[WS] Connecting to meetingId=%s', targetMeetingId)
     setStatus('connecting')
     const ws = new WebSocket(url)
     wsRef.current = ws
@@ -85,12 +81,16 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     ws.onopen = () => {
       // Reset counter only on successful connection (preserves backoff on reconnect)
       reconnectCountRef.current = 0
-      console.log('[WS] Connected')
       setStatus('connected')
       // Keepalive: send ping every 30s to prevent API Gateway idle timeout
       keepaliveRef.current = setInterval(() => {
         if (wsRef.current?.readyState === WebSocket.OPEN) {
           wsRef.current.send(JSON.stringify({ action: 'ping' }))
+          // If no pong within 60s, connection is dead — force reconnect
+          pongTimeoutRef.current = setTimeout(() => {
+            console.warn('[WS] Pong timeout — forcing reconnect')
+            wsRef.current?.close()
+          }, PONG_TIMEOUT_MS)
         }
       }, 30000)
     }
@@ -98,6 +98,13 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data as string) as WsServerMessage
+        if (msg.type === 'pong') {
+          if (pongTimeoutRef.current) {
+            clearTimeout(pongTimeoutRef.current)
+            pongTimeoutRef.current = null
+          }
+          return
+        }
         onMessageRef.current(msg)
       } catch (err) {
         console.error('[WS] Failed to parse message:', err)
@@ -108,6 +115,10 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
       if (keepaliveRef.current) {
         clearInterval(keepaliveRef.current)
         keepaliveRef.current = null
+      }
+      if (pongTimeoutRef.current) {
+        clearTimeout(pongTimeoutRef.current)
+        pongTimeoutRef.current = null
       }
       wsRef.current = null
       connectedMeetingIdRef.current = undefined
@@ -186,11 +197,37 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
           ...(modelId && { modelId }),
         })
       )
-      console.log('[WS] sendAudio sent: b64_len=%d', audioBase64.length)
       return true
     },
     [] // stable — all deps via refs
   )
+
+  const startRecording = useCallback(
+    (opts: {
+      sttProvider: string
+      sourceLang?: string
+      targetLang?: string
+      modelId?: string
+      speaker?: string
+    }): void => {
+      const ws = wsRef.current
+      if (!ws || ws.readyState !== WebSocket.OPEN) return
+      ws.send(
+        JSON.stringify({
+          action: 'startRecording',
+          meetingId: meetingIdRef.current,
+          ...opts,
+        })
+      )
+    },
+    [] // stable — all deps via refs
+  )
+
+  const stopRecording = useCallback((): void => {
+    const ws = wsRef.current
+    if (!ws || ws.readyState !== WebSocket.OPEN) return
+    ws.send(JSON.stringify({ action: 'stopRecording', meetingId: meetingIdRef.current }))
+  }, [])
 
   // Cleanup on unmount
   useEffect(() => {
@@ -198,9 +235,10 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
       shouldReconnectRef.current = false
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current)
       if (keepaliveRef.current) clearInterval(keepaliveRef.current)
+      if (pongTimeoutRef.current) clearTimeout(pongTimeoutRef.current)
       wsRef.current?.close(1000)
     }
   }, [])
 
-  return { status, connect, disconnect, sendAudio }
+  return { status, connect, disconnect, sendAudio, startRecording, stopRecording }
 }

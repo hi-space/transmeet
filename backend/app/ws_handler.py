@@ -199,7 +199,7 @@ async def _process_audio_bytes(
     else:
         # SageMaker Whisper (default)
         payload: dict = {
-            "audio_input": base64.b64encode(audio_bytes).decode(),
+            "audio_input": audio_bytes.hex(),
             "task": "transcribe",
             "language": "english",
             "max_new_tokens": 448,
@@ -209,8 +209,6 @@ async def _process_audio_bytes(
             "early_stopping": False,
             "no_repeat_ngram_size": 3,
             "num_return_sequences": 1,
-            "min_length": 100,
-            "min_new_tokens": 0,
             "top_p": 1,
             "top_k": 50,
             "length_penalty": 1,

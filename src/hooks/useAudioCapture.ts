@@ -2,8 +2,9 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 
-// 2000ms chunks — reduce Whisper hallucination on short/silent audio
-const CHUNK_DURATION_MS = 2000
+// Default: 700ms for Transcribe streaming (feed continuously); 2000ms for Whisper (better context)
+// CloudFront→ALB→Fargate supports large frames, so 2000ms chunks are safe for Whisper
+const CHUNK_DURATION_MS = 700
 const SCRIPT_PROCESSOR_BUFFER_SIZE = 4096
 
 // Downsample to 16kHz (Whisper's native rate) using linear interpolation
@@ -107,13 +108,6 @@ export function useAudioCapture({
     const resampled = downsampleTo16k(combined, inputRate)
     const wavBuffer = encodeWav(resampled, 16000)
     const b64 = arrayBufferToBase64(wavBuffer)
-    console.log(
-      '[Audio] chunk ready: %dHz→16kHz samples=%d→%d b64_len=%d',
-      inputRate,
-      totalLength,
-      resampled.length,
-      b64.length
-    )
     onChunkRef.current(b64)
   }, [])
 
