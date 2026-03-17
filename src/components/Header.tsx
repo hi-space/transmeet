@@ -93,13 +93,17 @@ export default function Header({
           {!isRecording && wsStatus === 'connecting' && (
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-500/20 mr-1">
               <span className="blink-dot w-1.5 h-1.5 rounded-full bg-amber-500" />
-              <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 tracking-wide">연결 중</span>
+              <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 tracking-wide">
+                연결 중
+              </span>
             </div>
           )}
           {wsStatus === 'error' && (
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-red-50 dark:bg-red-900/20 border border-red-200/60 dark:border-red-500/20 mr-1">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-              <span className="text-[10px] font-semibold text-red-500 tracking-wide">연결 오류</span>
+              <span className="text-[10px] font-semibold text-red-500 tracking-wide">
+                연결 오류
+              </span>
             </div>
           )}
 

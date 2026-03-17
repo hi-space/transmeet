@@ -33,7 +33,6 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
   const connect = useCallback(() => {
     const endpoint = process.env.NEXT_PUBLIC_WS_ENDPOINT
     if (!endpoint) {
-      console.warn('[WS] NEXT_PUBLIC_WS_ENDPOINT is not set')
       setStatus('error')
       return
     }
@@ -83,9 +82,6 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
       if (reconnectCountRef.current < MAX_RECONNECT_ATTEMPTS) {
         reconnectCountRef.current++
         const delay = RECONNECT_DELAY_MS * reconnectCountRef.current
-        console.log(
-          `[WS] Reconnecting (attempt ${reconnectCountRef.current}/${MAX_RECONNECT_ATTEMPTS}) in ${delay}ms`
-        )
         setStatus('connecting')
         reconnectTimerRef.current = setTimeout(connect, delay)
       } else {
@@ -95,8 +91,7 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     }
 
     ws.onerror = () => {
-      // onerror always precedes onclose, so let onclose handle state
-      console.error('[WS] Connection error')
+      // onerror always precedes onclose; let onclose handle state transition
     }
   }, []) // stable — all deps via refs
 
@@ -117,22 +112,19 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     setStatus('disconnected')
   }, [])
 
-  const sendAudio = useCallback(
-    (audioBase64: string, speaker: string = 'speaker1'): boolean => {
-      if (wsRef.current?.readyState !== WebSocket.OPEN) return false
+  const sendAudio = useCallback((audioBase64: string, speaker: string = 'speaker1'): boolean => {
+    if (wsRef.current?.readyState !== WebSocket.OPEN) return false
 
-      wsRef.current.send(
-        JSON.stringify({
-          action: 'sendAudio',
-          audioData: audioBase64,
-          meetingId: meetingIdRef.current,
-          speaker,
-        })
-      )
-      return true
-    },
-    []
-  )
+    wsRef.current.send(
+      JSON.stringify({
+        action: 'sendAudio',
+        audioData: audioBase64,
+        meetingId: meetingIdRef.current,
+        speaker,
+      })
+    )
+    return true
+  }, [])
 
   // Cleanup on unmount
   useEffect(() => {

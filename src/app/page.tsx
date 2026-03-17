@@ -1,12 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import Header from '@/components/Header'
 import MeetingSidebar from '@/components/MeetingSidebar'
 import ChatArea from '@/components/ChatArea'
 import SummaryPanel from '@/components/SummaryPanel'
 import ControlPanel from '@/components/ControlPanel'
-import { Meeting } from '@/types/meeting'
+import { Meeting, Message } from '@/types/meeting'
+import { useAudioCapture } from '@/hooks/useAudioCapture'
+import { useWebSocket } from '@/hooks/useWebSocket'
+import type { WsServerMessage } from '@/lib/websocket'
 
 const MOCK_MEETINGS: Meeting[] = [
   {
@@ -35,20 +38,6 @@ const MOCK_MEETINGS: Meeting[] = [
         translation: '1분기 대시보드를 준비했습니다. 화면을 공유할게요.',
         timestamp: '2026-03-17T09:02:00',
       },
-      {
-        id: '4',
-        speaker: 'speaker1',
-        original: 'Perfect. We should focus on the conversion rate improvements this quarter.',
-        translation: '좋아요. 이번 분기 전환율 개선에 집중해야 합니다.',
-        timestamp: '2026-03-17T09:03:10',
-      },
-      {
-        id: '5',
-        speaker: 'me',
-        original: 'We achieved a 12% increase in conversions. Mostly from the onboarding redesign.',
-        translation: '전환율이 12% 증가했습니다. 주로 온보딩 재설계 덕분입니다.',
-        timestamp: '2026-03-17T09:03:45',
-      },
     ],
     summary: [
       'Q1 전환율 12% 증가 달성',
@@ -69,13 +58,6 @@ const MOCK_MEETINGS: Meeting[] = [
         translation: '새 디자인 시스템이 정말 훌륭합니다! 컴포넌트 작업 정말 잘했네요.',
         timestamp: '2026-03-16T14:01:00',
       },
-      {
-        id: '7',
-        speaker: 'me',
-        original: 'Thanks! We spent two weeks on the component library. It should speed things up.',
-        translation: '감사합니다! 컴포넌트 라이브러리에 2주를 투자했어요. 작업이 빨라질 거예요.',
-        timestamp: '2026-03-16T14:01:30',
-      },
     ],
   },
   {
@@ -87,25 +69,102 @@ const MOCK_MEETINGS: Meeting[] = [
 ]
 
 export default function Home() {
-  const [meetings] = useState<Meeting[]>(MOCK_MEETINGS)
+  const [meetings, setMeetings] = useState<Meeting[]>(MOCK_MEETINGS)
   const [activeMeetingId, setActiveMeetingId] = useState('m1')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
-  const [isRecording, setIsRecording] = useState(false)
   const [ttsInput, setTtsInput] = useState('')
 
   const activeMeeting = meetings.find((m) => m.id === activeMeetingId) ?? meetings[0]
+
+  // ─── WebSocket ─────────────────────────────────────────────────────────────
+
+  const handleWsMessage = useCallback(
+    (msg: WsServerMessage) => {
+      if (msg.type !== 'subtitle') return
+
+      const newMsg: Message = {
+        id: `ws-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        // Server echoes back the speaker value we sent
+        speaker: (msg.speaker as Message['speaker']) ?? 'speaker1',
+        original: msg.originalText,
+        translation: msg.translatedText,
+        timestamp: msg.timestamp,
+      }
+
+      setMeetings((prev) =>
+        prev.map((m) =>
+          m.id === activeMeetingId ? { ...m, messages: [...m.messages, newMsg] } : m
+        )
+      )
+    },
+    [activeMeetingId]
+  )
+
+  const {
+    status: wsStatus,
+    connect,
+    disconnect,
+    sendAudio,
+  } = useWebSocket({
+    meetingId: activeMeetingId,
+    onMessage: handleWsMessage,
+  })
+
+  // ─── Audio Capture ─────────────────────────────────────────────────────────
+
+  const handleChunk = useCallback(
+    (wavBase64: string) => {
+      sendAudio(wavBase64, 'speaker1')
+    },
+    [sendAudio]
+  )
+
+  const {
+    isRecording,
+    audioLevel,
+    error: audioError,
+    start: startAudio,
+    stop: stopAudio,
+  } = useAudioCapture({ onChunk: handleChunk })
+
+  // Show microphone error as a transient notification
+  useEffect(() => {
+    if (audioError) {
+      console.error('[Audio]', audioError)
+      // TODO: replace with toast notification in a future task
+      alert(audioError)
+    }
+  }, [audioError])
+
+  // ─── Recording toggle ──────────────────────────────────────────────────────
+
+  const handleToggleRecording = useCallback(async () => {
+    if (isRecording) {
+      stopAudio()
+      disconnect()
+    } else {
+      connect()
+      await startAudio()
+    }
+  }, [isRecording, startAudio, stopAudio, connect, disconnect])
+
+  // ─── Meeting management ────────────────────────────────────────────────────
 
   const handleSelectMeeting = (id: string) => {
     setActiveMeetingId(id)
     setSidebarOpen(false)
   }
 
+  // ─── TTS send (KO → EN, placeholder until Task #9) ────────────────────────
+
   const handleSend = () => {
     if (!ttsInput.trim()) return
-    // TODO: KO -> EN translation + TTS via Amazon Polly
+    // TODO: KO → EN translation + Polly TTS (Task #9)
     setTtsInput('')
   }
+
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <main className="relative flex flex-col h-screen overflow-hidden font-sans">
@@ -117,6 +176,7 @@ export default function Home() {
       {/* Header */}
       <Header
         isRecording={isRecording}
+        wsStatus={wsStatus}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
         onToggleSummary={() => setSummaryOpen((v) => !v)}
         summaryOpen={summaryOpen}
@@ -124,7 +184,6 @@ export default function Home() {
 
       {/* Body */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Mobile sidebar overlay backdrop */}
         {sidebarOpen && (
           <div
             className="fixed inset-0 z-30 bg-black/40 backdrop-blur-[2px] lg:hidden"
@@ -132,7 +191,6 @@ export default function Home() {
           />
         )}
 
-        {/* Sidebar: fixed overlay on mobile, flex item on desktop */}
         <aside
           className={`
             fixed lg:relative top-12 lg:top-auto bottom-0 left-0
@@ -149,12 +207,10 @@ export default function Home() {
           />
         </aside>
 
-        {/* Chat area */}
         <div className="flex-1 overflow-hidden min-w-0 flex flex-col">
           <ChatArea messages={activeMeeting.messages} isRecording={isRecording} />
         </div>
 
-        {/* Summary panel — desktop side panel */}
         {summaryOpen && (
           <div className="hidden sm:flex w-64 flex-shrink-0">
             <SummaryPanel
@@ -165,7 +221,6 @@ export default function Home() {
         )}
       </div>
 
-      {/* Summary panel — mobile inline panel (between chat and controls) */}
       {summaryOpen && (
         <div
           className="sm:hidden flex-shrink-0 border-t border-slate-200/60 dark:border-indigo-500/10"
@@ -181,10 +236,11 @@ export default function Home() {
       {/* Control panel */}
       <ControlPanel
         isRecording={isRecording}
-        onToggleRecording={() => setIsRecording((v) => !v)}
+        onToggleRecording={handleToggleRecording}
         ttsInput={ttsInput}
         onTtsInputChange={setTtsInput}
         onSend={handleSend}
+        audioLevel={audioLevel}
       />
     </main>
   )
