@@ -127,7 +127,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
           </div>
           {settings.sttProvider === 'transcribe' && (
             <p className="text-[10px] text-slate-400 dark:text-slate-500">
-              발화 단위 인식 • en/ko 자동 감지 지원
+              발화 단위 인식 • 화자 분리 지원 (영어) • en/ko 자동 감지
             </p>
           )}
         </div>

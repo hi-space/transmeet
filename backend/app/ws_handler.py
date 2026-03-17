@@ -1,15 +1,24 @@
 """
 WebSocket audio pipeline handler.
 
-Both STT providers (Whisper / Transcribe) use the same buffer/flush mechanism:
-  - Audio chunks are buffered per connection
-  - After 600ms of silence (or when buffer is full), the complete utterance is flushed
-  - Flushed audio is sent to SageMaker Whisper OR AWS Transcribe (one-shot streaming)
+Transcribe mode uses a **persistent streaming session** for the entire recording:
+  - On startRecording: open one Transcribe stream that stays open
+  - On sendAudio: PCM chunks are fed directly into the stream (no buffering)
+  - Partial results → frontend immediately as { phase: "stt_partial" }
+  - Final results   → Bedrock translation → { phase: "stt" / "translating" / "done" }
+  - On stopRecording: send end-of-stream, wait for remaining results
 
-Message sequence per flushed utterance:
+Whisper mode keeps the original buffer/flush pipeline:
+  - Audio chunks are buffered per connection
+  - After 600ms of silence (or buffer full), the utterance is flushed to SageMaker
+
+Message sequence per final utterance (both modes):
   1. { type: "subtitle_stream", phase: "stt",         originalText }
   2. { type: "subtitle_stream", phase: "translating", partialTranslation } × N tokens
   3. { type: "subtitle_stream", phase: "done",        originalText, translatedText, detectedLanguage }
+
+Transcribe-only partial:
+  0. { type: "subtitle_stream", phase: "stt_partial", originalText }  (live, not committed)
 
 Inbound message format:
 {
@@ -33,7 +42,8 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional
 from uuid import uuid4
 
-import boto3
+from amazon_transcribe.client import TranscribeStreamingClient
+from amazon_transcribe.model import TranscriptEvent as TranscribeEvent
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from .aws_clients import (
@@ -52,13 +62,24 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 MAX_BUFFER_BYTES = 512_000   # ~8 seconds at 16 kHz 16-bit mono
-FLUSH_DELAY_SECS = 0.6       # 600 ms silence → flush buffer
+FLUSH_DELAY_SECS = 0.6       # 600 ms silence → flush (Whisper mode only)
 
 # Transcribe language code mapping
 LANG_CODE_MAP: dict = {
     "en": "en-US",
     "ko": "ko-KR",
 }
+
+# Language codes that support ShowSpeakerLabel in Transcribe Streaming
+# (ko-KR does NOT support streaming speaker diarization)
+DIARIZATION_SUPPORTED_LANGS = {"en-US", "de-DE", "es-US", "fr-FR", "it-IT", "pt-BR"}
+
+# Map Transcribe speaker labels (spk_0, spk_1, …) to app speaker keys
+SPEAKER_LABEL_MAP = {"spk_0": "speaker1", "spk_1": "speaker2"}
+
+
+def _speaker_key(label: str) -> str:
+    return SPEAKER_LABEL_MAP.get(label, "speaker2")
 
 
 @dataclass
@@ -70,8 +91,12 @@ class ConnectionState:
     source_lang: str = "auto"
     model_id: str = field(default_factory=lambda: config.BEDROCK_MODEL_ID)
     speaker: str = "speaker1"
+    # Whisper mode: buffer/flush
     audio_buffer: List[bytes] = field(default_factory=list)
     flush_task: Optional[asyncio.Task] = None
+    # Transcribe mode: persistent streaming session
+    audio_queue: asyncio.Queue = field(default_factory=asyncio.Queue)
+    transcribe_task: Optional[asyncio.Task] = None
 
 
 # In-memory connection registry (single-process; scales with one Fargate task)
@@ -110,145 +135,86 @@ def combine_wav_chunks(chunks: List[bytes]) -> bytes:
     return header + pcm
 
 
-async def _transcribe_once(audio_bytes: bytes, language_code: str) -> tuple[str, str]:
+def _extract_segments(
+    alt, use_speaker_labels: bool, default_speaker: str
+) -> list[tuple[str, str]]:
     """
-    One-shot Transcribe Streaming for a complete buffered utterance.
+    Parse a Transcribe alternative into (text, speaker_key) segments.
 
-    Uses sync boto3 in a thread (aiobotocore does not support transcribestreaming).
-    Feeds all PCM audio into a single streaming session and collects only
-    the final (IsPartial=False) transcript segments.
-
-    Returns (transcript, detected_language: 'en'|'ko').
+    When speaker labels are available, groups consecutive word-level items
+    by speaker. Otherwise returns a single segment with default_speaker.
     """
-    pcm = audio_bytes[44:]  # Strip 44-byte WAV header
-    if len(pcm) < 3200:     # < ~100ms @ 16kHz 16-bit — too short for Transcribe
-        logger.debug("[Transcribe] Audio too short (%d bytes PCM), skipping", len(pcm))
-        return "", "en"
+    items = alt.items or []
+    transcript_text = (alt.transcript or "").strip()
 
-    CHUNK_SIZE = 16000 * 2  # 500 ms @ 16kHz 16-bit mono
-    region = config.REGION
-    lang_code = language_code
+    if not use_speaker_labels or not items:
+        return [(transcript_text, default_speaker)] if transcript_text else []
 
-    def _run_sync() -> tuple[str, str]:
-        tc = boto3.client("transcribestreaming", region_name=region)
+    segments: list[tuple[str, str]] = []
+    current_label: Optional[str] = None
+    current_words: list[str] = []
+    for item in items:
+        itype = getattr(item, "item_type", "") or ""
+        content = getattr(item, "content", "") or ""
+        label = getattr(item, "speaker", None) or "spk_0"
+        if itype == "punctuation":
+            if current_words:
+                current_words[-1] += content
+        elif itype == "pronunciation":
+            if current_label is None:
+                current_label = label
+            if label != current_label:
+                text = " ".join(current_words).strip()
+                if text:
+                    segments.append((text, _speaker_key(current_label)))
+                current_label = label
+                current_words = []
+            current_words.append(content)
+    if current_words and current_label is not None:
+        text = " ".join(current_words).strip()
+        if text:
+            segments.append((text, _speaker_key(current_label)))
+    return segments
 
-        def audio_gen():
-            offset = 0
-            while offset < len(pcm):
-                yield {"AudioEvent": {"Payload": pcm[offset : offset + CHUNK_SIZE]}}
-                offset += CHUNK_SIZE
 
-        kwargs: dict = {
-            "MediaSampleRateHertz": 16000,
-            "MediaEncoding": "pcm",
-            "AudioStream": audio_gen(),
-        }
-        if lang_code in ("auto", "", None):
-            kwargs["IdentifyLanguage"] = True
-            kwargs["LanguageOptions"] = "en-US,ko-KR"
+def _merge_consecutive_same_speaker(
+    segments: list[tuple[str, str]]
+) -> list[tuple[str, str]]:
+    """Merge adjacent segments from the same speaker into one."""
+    merged: list[tuple[str, str]] = []
+    for text, speaker in segments:
+        if merged and merged[-1][1] == speaker:
+            merged[-1] = (merged[-1][0] + " " + text, speaker)
         else:
-            kwargs["LanguageCode"] = LANG_CODE_MAP.get(lang_code, "en-US")
-
-        resp = tc.start_stream_transcription(**kwargs)
-        transcript_parts: list[str] = []
-        detected_lang = lang_code if lang_code not in ("auto", "", None) else "en"
-
-        for event in resp["TranscriptResultStream"]:
-            results = (
-                event.get("TranscriptEvent", {})
-                .get("Transcript", {})
-                .get("Results", [])
-            )
-            for r in results:
-                if r.get("IsPartial", True):
-                    continue
-                alts = r.get("Alternatives", [])
-                if alts:
-                    t = alts[0].get("Transcript", "").strip()
-                    if t:
-                        transcript_parts.append(t)
-                lc = r.get("LanguageCode", "")
-                if lc:
-                    detected_lang = lc[:2].lower()
-
-        result = " ".join(transcript_parts).strip()
-        logger.info("[Transcribe] result: %r (lang=%s)", result, detected_lang)
-        return result, detected_lang
-
-    try:
-        return await asyncio.to_thread(_run_sync)
-    except Exception:
-        logger.exception("[Transcribe] _transcribe_once failed")
-        return "", "en"
+            merged.append((text, speaker))
+    return merged
 
 
-async def _process_audio_bytes(
-    ws: WebSocket, audio_bytes: bytes, state: ConnectionState, connection_id: str
+async def _process_segment(
+    ws: WebSocket,
+    original_text: str,
+    speaker: str,
+    detected_language: str,
+    state: ConnectionState,
+    timestamp: str,
 ) -> None:
-    timestamp = _iso_now()
+    """
+    Run the translation pipeline for one speech segment and emit WS events.
+
+    Steps: push STT result → stream Bedrock translation → push final subtitle
+           → persist to DynamoDB.
+    """
     message_id = generate_message_id()
-
     meeting_id = state.meeting_id
-    speaker = state.speaker
-    req_source_lang: Optional[str] = None if state.source_lang == "auto" else state.source_lang
     bedrock_model_id = state.model_id
-
-    # ── Step 1: STT ──────────────────────────────────────────────────────────────
-    if state.stt_provider == "transcribe":
-        # One-shot Transcribe Streaming: send the complete buffered utterance at once
-        logger.info("[ws-audio] Calling Transcribe, audio_len=%d", len(audio_bytes))
-        original_text, detected_lang_raw = await _transcribe_once(
-            audio_bytes, state.source_lang
-        )
-    else:
-        # SageMaker Whisper (default) — send raw WAV binary
-        async with sagemaker_client() as sm:
-            whisper_resp = await sm.invoke_endpoint(
-                EndpointName=config.WHISPER_ENDPOINT,
-                ContentType="audio/wav",
-                Body=audio_bytes,
-            )
-            whisper_body = await whisper_resp["Body"].read()
-
-        whisper_result = json.loads(whisper_body.decode("utf-8"))
-        raw_text = whisper_result.get("text", "")
-        original_text = (" ".join(raw_text) if isinstance(raw_text, list) else raw_text).strip()
-        detected_lang_raw = whisper_result.get("language", "")
-        logger.info("[ws-audio] Whisper result: text=%r language=%r", original_text, detected_lang_raw)
-
-    if not original_text:
-        return
-
-    # ── Hallucination filter ──────────────────────────────────────────────────
-    if is_hallucination(original_text):
-        logger.info("[ws-audio] Hallucination filtered: %r", original_text)
-        return
-
-    # ── Language detection ────────────────────────────────────────────────────
-    if req_source_lang:
-        detected_language = normalize_language(req_source_lang)
-    else:
-        detected_language = normalize_language(detected_lang_raw)
-
-    # ── Mis-detection filter: if forced English but >30% non-ASCII chars ──────
-    if req_source_lang == "en":
-        non_ascii = sum(1 for c in original_text if ord(c) > 127)
-        if non_ascii / max(len(original_text), 1) > 0.3:
-            logger.info(
-                "[ws-audio] Mis-detection filtered (forced en but %.0f%% non-ASCII): %r",
-                100 * non_ascii / len(original_text),
-                original_text,
-            )
-            return
 
     translation_target = state.target_lang or (
         "en" if detected_language == "ko" else "ko"
     )
-
     source_lang_label = "Korean" if detected_language == "ko" else "English"
     target_lang_label = "Korean" if translation_target == "ko" else "English"
 
-    # ── Step 2: Push STT result immediately ────────────────────────────────────
+    # ── 1: Push STT result immediately ─────────────────────────────────────────
     await ws.send_json({
         "type": "subtitle_stream",
         "messageId": message_id,
@@ -258,7 +224,7 @@ async def _process_audio_bytes(
         "timestamp": timestamp,
     })
 
-    # ── Step 3: Stream translation via Bedrock ─────────────────────────────────
+    # ── 2: Stream translation via Bedrock ──────────────────────────────────────
     prompt = (
         f"Translate the following {source_lang_label} text to {target_lang_label}. "
         f"Output only the translated text, no explanations, no quotes.\n\n"
@@ -269,7 +235,7 @@ async def _process_audio_bytes(
     async with bedrock_client() as br:
         stream_resp = await br.converse_stream(
             modelId=bedrock_model_id,
-            messages=[{"role": "user", "content": [{"type": "text", "text": prompt}]}],
+            messages=[{"role": "user", "content": [{"text": prompt}]}],
             inferenceConfig={"maxTokens": 1024},
         )
         async for event in stream_resp["stream"]:
@@ -287,7 +253,7 @@ async def _process_audio_bytes(
                 "timestamp": timestamp,
             })
 
-    # ── Step 4: Push final subtitle ────────────────────────────────────────────
+    # ── 3: Push final subtitle ─────────────────────────────────────────────────
     await ws.send_json({
         "type": "subtitle_stream",
         "messageId": message_id,
@@ -299,7 +265,7 @@ async def _process_audio_bytes(
         "timestamp": timestamp,
     })
 
-    # ── Step 5: Persist to DynamoDB ────────────────────────────────────────────
+    # ── 4: Persist to DynamoDB ─────────────────────────────────────────────────
     if meeting_id:
         async with dynamodb_client() as ddb:
             await ddb.update_item(
@@ -325,24 +291,210 @@ async def _process_audio_bytes(
             )
 
 
+def _apply_segment_filters(
+    text: str, source_lang: Optional[str]
+) -> bool:
+    """Return True if segment should be processed (not filtered)."""
+    if is_hallucination(text):
+        logger.info("[ws-audio] Hallucination filtered: %r", text)
+        return False
+    if source_lang == "en":
+        non_ascii = sum(1 for c in text if ord(c) > 127)
+        if non_ascii / max(len(text), 1) > 0.3:
+            logger.info(
+                "[ws-audio] Mis-detection filtered (%.0f%% non-ASCII): %r",
+                100 * non_ascii / len(text),
+                text,
+            )
+            return False
+    return True
+
+
+# ─── Transcribe: persistent streaming session ────────────────────────────────
+
+async def _run_transcribe_streaming(
+    state: ConnectionState,
+    ws: WebSocket,
+    connection_id: str,
+) -> None:
+    """
+    Persistent AWS Transcribe Streaming session for one recording.
+
+    Lifecycle:
+      startRecording → this task is created
+      sendAudio      → PCM chunks are put into state.audio_queue
+      stopRecording  → None sentinel is put into state.audio_queue
+
+    Partial results are sent to the frontend immediately (live pending bubble).
+    Final results are routed through the translation pipeline.
+    """
+    lang_code = state.source_lang
+    mapped_lang = (
+        LANG_CODE_MAP.get(lang_code)
+        if lang_code not in ("auto", "", None)
+        else None
+    )
+    use_speaker_labels = mapped_lang in DIARIZATION_SUPPORTED_LANGS if mapped_lang else False
+
+    kwargs: dict = {"media_sample_rate_hz": 16000, "media_encoding": "pcm"}
+    if lang_code in ("auto", "", None):
+        kwargs["identify_language"] = True
+        kwargs["language_options"] = "en-US,ko-KR"
+    else:
+        kwargs["language_code"] = mapped_lang
+        if use_speaker_labels:
+            kwargs["show_speaker_label"] = True
+
+    try:
+        client = TranscribeStreamingClient(region=config.REGION)
+        stream = await client.start_stream_transcription(**kwargs)
+        logger.info(
+            "[Transcribe] Session started: connection_id=%s lang=%s diarized=%s",
+            connection_id, mapped_lang or "auto", use_speaker_labels,
+        )
+    except Exception:
+        logger.exception("[Transcribe] Failed to start session for connection_id=%s", connection_id)
+        return
+
+    detected_lang: str = mapped_lang[:2].lower() if mapped_lang else "en"
+
+    async def _send_audio() -> None:
+        try:
+            while True:
+                chunk = await state.audio_queue.get()
+                if chunk is None:           # sentinel → end of recording
+                    await stream.input_stream.end_stream()
+                    break
+                await stream.input_stream.send_audio_event(audio_chunk=chunk)
+        except asyncio.CancelledError:
+            await stream.input_stream.end_stream()
+            raise
+        except Exception:
+            logger.exception("[Transcribe] _send_audio error for connection_id=%s", connection_id)
+            await stream.input_stream.end_stream()
+
+    async def _collect_results() -> None:
+        nonlocal detected_lang
+        try:
+            async for event in stream.output_stream:
+                if not isinstance(event, TranscribeEvent):
+                    continue
+                for result in event.transcript.results:
+                    lc = getattr(result, "language_code", None) or ""
+                    if lc:
+                        detected_lang = lc[:2].lower()
+
+                    alts = result.alternatives or []
+                    if not alts:
+                        continue
+                    alt = alts[0]
+                    transcript_text = (alt.transcript or "").strip()
+                    if not transcript_text:
+                        continue
+
+                    if result.is_partial:
+                        # Live partial → pending bubble on frontend (not committed)
+                        try:
+                            await ws.send_json({
+                                "type": "subtitle_stream",
+                                "phase": "stt_partial",
+                                "messageId": "partial",
+                                "speaker": state.speaker,
+                                "originalText": transcript_text,
+                                "timestamp": _iso_now(),
+                            })
+                        except Exception:
+                            pass  # WS may be closing
+                    else:
+                        # Final sentence → translate
+                        segments = _extract_segments(alt, use_speaker_labels, state.speaker)
+                        segments = _merge_consecutive_same_speaker(segments)
+
+                        # Language for translation
+                        if state.source_lang not in ("auto", "", None):
+                            language = normalize_language(state.source_lang)
+                        else:
+                            language = normalize_language(detected_lang)
+
+                        timestamp = _iso_now()
+                        for text, speaker in segments:
+                            if not _apply_segment_filters(text, state.source_lang):
+                                continue
+                            asyncio.create_task(
+                                _process_segment(ws, text, speaker, language, state, timestamp)
+                            )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("[Transcribe] _collect_results error for connection_id=%s", connection_id)
+
+    try:
+        await asyncio.gather(_send_audio(), _collect_results())
+        logger.info("[Transcribe] Session ended: connection_id=%s", connection_id)
+    except asyncio.CancelledError:
+        logger.info("[Transcribe] Session cancelled: connection_id=%s", connection_id)
+    except Exception:
+        logger.exception("[Transcribe] Session failed for connection_id=%s", connection_id)
+
+
+# ─── Whisper: buffer/flush pipeline ─────────────────────────────────────────
+
+async def _process_whisper_audio(
+    ws: WebSocket, audio_bytes: bytes, state: ConnectionState, connection_id: str
+) -> None:
+    """Send one buffered utterance to SageMaker Whisper and run translation."""
+    timestamp = _iso_now()
+    req_source_lang: Optional[str] = None if state.source_lang == "auto" else state.source_lang
+
+    async with sagemaker_client() as sm:
+        whisper_resp = await sm.invoke_endpoint(
+            EndpointName=config.WHISPER_ENDPOINT,
+            ContentType="audio/wav",
+            Body=audio_bytes,
+        )
+        whisper_body = await whisper_resp["Body"].read()
+
+    whisper_result = json.loads(whisper_body.decode("utf-8"))
+    raw_text = whisper_result.get("text", "")
+    original_text = (" ".join(raw_text) if isinstance(raw_text, list) else raw_text).strip()
+    detected_lang_raw = whisper_result.get("language", "")
+    logger.info("[ws-audio] Whisper result: text=%r language=%r", original_text, detected_lang_raw)
+
+    if not original_text:
+        return
+
+    if req_source_lang:
+        detected_language = normalize_language(req_source_lang)
+    else:
+        detected_language = normalize_language(detected_lang_raw)
+
+    if not _apply_segment_filters(original_text, req_source_lang):
+        return
+
+    await _process_segment(ws, original_text, state.speaker, detected_language, state, timestamp)
+
+
 async def _flush_audio_buffer(
     state: ConnectionState, ws: WebSocket, connection_id: str
 ) -> None:
-    """Flush accumulated audio buffer to STT as a single utterance."""
+    """Flush accumulated audio buffer to SageMaker Whisper as a single utterance."""
     if not state.audio_buffer:
         return
     chunks = state.audio_buffer[:]
     state.audio_buffer.clear()
     combined_wav = combine_wav_chunks(chunks)
     try:
-        await _process_audio_bytes(ws, combined_wav, state, connection_id)
+        await _process_whisper_audio(ws, combined_wav, state, connection_id)
     except Exception:
         logger.exception("[ws] Audio buffer flush failed for connection_id=%s", connection_id)
-        await ws.send_json({
-            "type": "error",
-            "message": "Processing failed. Please try again.",
-            "timestamp": _iso_now(),
-        })
+        try:
+            await ws.send_json({
+                "type": "error",
+                "message": "Processing failed. Please try again.",
+                "timestamp": _iso_now(),
+            })
+        except Exception:
+            pass
 
 
 async def _schedule_flush(
@@ -361,6 +513,8 @@ async def _schedule_flush(
 
     state.flush_task = asyncio.create_task(_do_flush())
 
+
+# ─── Summary streaming ───────────────────────────────────────────────────────
 
 async def _stream_summary(ws: WebSocket, meeting_id: str, model_id: str) -> None:
     """Fetch meeting messages and stream a summary via converse_stream."""
@@ -401,7 +555,7 @@ async def _stream_summary(ws: WebSocket, meeting_id: str, model_id: str) -> None
             stream_resp = await br.converse_stream(
                 modelId=model_id,
                 system=[{"text": system_prompt}],
-                messages=[{"role": "user", "content": [{"type": "text", "text": user_prompt}]}],
+                messages=[{"role": "user", "content": [{"text": user_prompt}]}],
                 inferenceConfig={"maxTokens": 4096},
             )
             async for event in stream_resp["stream"]:
@@ -432,6 +586,8 @@ async def _stream_summary(ws: WebSocket, meeting_id: str, model_id: str) -> None
             pass
 
 
+# ─── WebSocket endpoint ──────────────────────────────────────────────────────
+
 @router.websocket("/ws")
 async def ws_endpoint(
     ws: WebSocket,
@@ -452,11 +608,16 @@ async def ws_endpoint(
                 await ws.send_json({"type": "pong", "timestamp": _iso_now()})
 
             elif action == "startRecording":
-                # Cancel any pending flush and reset buffer for fresh session
+                # ── Cancel / reset any previous session ──────────────────────
+                if state.transcribe_task and not state.transcribe_task.done():
+                    state.transcribe_task.cancel()
+                    state.transcribe_task = None
                 if state.flush_task and not state.flush_task.done():
                     state.flush_task.cancel()
-                state.flush_task = None
+                    state.flush_task = None
                 state.audio_buffer.clear()
+                # Fresh queue for this session
+                state.audio_queue = asyncio.Queue()
 
                 state.stt_provider = data.get("sttProvider", "whisper")
                 state.target_lang = data.get("targetLang", "ko") or "ko"
@@ -469,12 +630,28 @@ async def ws_endpoint(
                     state.stt_provider, state.source_lang, state.target_lang,
                 )
 
+                if state.stt_provider == "transcribe":
+                    # Open persistent streaming session for entire recording
+                    state.transcribe_task = asyncio.create_task(
+                        _run_transcribe_streaming(state, ws, connection_id)
+                    )
+
             elif action == "stopRecording":
-                # Flush remaining buffered audio before stopping
-                if state.flush_task and not state.flush_task.done():
-                    state.flush_task.cancel()
-                state.flush_task = None
-                await _flush_audio_buffer(state, ws, connection_id)
+                if state.stt_provider == "transcribe":
+                    if state.transcribe_task and not state.transcribe_task.done():
+                        # Signal end-of-stream; wait up to 8 s for final results
+                        await state.audio_queue.put(None)
+                        try:
+                            await asyncio.wait_for(state.transcribe_task, timeout=8.0)
+                        except (asyncio.TimeoutError, asyncio.CancelledError):
+                            state.transcribe_task.cancel()
+                        state.transcribe_task = None
+                else:
+                    # Whisper: flush remaining buffered audio
+                    if state.flush_task and not state.flush_task.done():
+                        state.flush_task.cancel()
+                    state.flush_task = None
+                    await _flush_audio_buffer(state, ws, connection_id)
 
             elif action == "summarize":
                 mid = data.get("meetingId") or state.meeting_id
@@ -485,24 +662,32 @@ async def ws_endpoint(
                 audio_data: Optional[str] = data.get("audioData")
                 if audio_data:
                     audio_bytes = base64.b64decode(audio_data)
-                    energy = compute_rms(audio_bytes)
-                    if energy >= SILENCE_RMS_THRESHOLD:
-                        # Voiced chunk: buffer and reschedule flush timer
-                        state.audio_buffer.append(audio_bytes)
-                        total_size = sum(len(c) for c in state.audio_buffer)
-                        if total_size > MAX_BUFFER_BYTES:
-                            # Buffer full: flush immediately
-                            await _flush_audio_buffer(state, ws, connection_id)
-                        else:
+
+                    if state.stt_provider == "transcribe":
+                        # Streaming: feed PCM directly into Transcribe session
+                        pcm = audio_bytes[44:]          # strip 44-byte WAV header
+                        if len(pcm) >= 3200:            # skip chunks < ~100ms
+                            await state.audio_queue.put(pcm)
+                    else:
+                        # Whisper: silence-gated buffer/flush
+                        energy = compute_rms(audio_bytes)
+                        if energy >= SILENCE_RMS_THRESHOLD:
+                            state.audio_buffer.append(audio_bytes)
+                            total_size = sum(len(c) for c in state.audio_buffer)
+                            if total_size > MAX_BUFFER_BYTES:
+                                await _flush_audio_buffer(state, ws, connection_id)
+                            else:
+                                await _schedule_flush(state, ws, connection_id)
+                        elif state.audio_buffer:
                             await _schedule_flush(state, ws, connection_id)
-                    elif state.audio_buffer:
-                        # Silent chunk but buffer has content: keep flush timer going
-                        await _schedule_flush(state, ws, connection_id)
-                    # else: silent + empty buffer → ignore
+                        # else: silent + empty buffer → ignore
 
     except WebSocketDisconnect:
         logger.info("[ws] Disconnected: connection_id=%s", connection_id)
     finally:
+        # Clean up both modes
+        if state.transcribe_task and not state.transcribe_task.done():
+            state.transcribe_task.cancel()
         if state.flush_task and not state.flush_task.done():
             state.flush_task.cancel()
         active_connections.pop(connection_id, None)
