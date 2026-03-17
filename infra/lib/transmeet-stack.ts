@@ -13,7 +13,7 @@ import { Construct } from 'constructs';
 import * as path from 'path';
 
 const WHISPER_ENDPOINT = 'whisper-large-v3-turbo-004709';
-const BEDROCK_MODEL_ID = 'anthropic.claude-3-haiku-20240307-v1:0';
+const BEDROCK_MODEL_ID = 'global.anthropic.claude-haiku-4-5-20251001-v1:0';
 const REGION = 'us-east-1';
 
 export class TransmeetStack extends cdk.Stack {
@@ -67,14 +67,17 @@ export class TransmeetStack extends cdk.Stack {
       })
     );
 
-    // Bedrock
+    // Bedrock — allow both foundation models and cross-region inference profiles (global.*)
     lambdaRole.addToPolicy(
       new iam.PolicyStatement({
         actions: [
           'bedrock:InvokeModel',
           'bedrock:InvokeModelWithResponseStream',
         ],
-        resources: [`arn:aws:bedrock:${REGION}::foundation-model/*`],
+        resources: [
+          `arn:aws:bedrock:*::foundation-model/*`,
+          `arn:aws:bedrock:*:${this.account}:inference-profile/*`,
+        ],
       })
     );
 
