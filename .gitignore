@@ -38,7 +38,7 @@ next-env.d.ts
 
 # CDK
 infra/cdk.out/
-infra/*.json
+infra/dist/
 infra/node_modules/
 
 # PWA
