@@ -1,0 +1,2295 @@
+{
+ "Description": "TransMeet - Real-time meeting translation infrastructure",
+ "Resources": {
+  "MeetingsTable00BD45B4": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "meetingId",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "status",
+      "AttributeType": "S"
+     },
+     {
+      "AttributeName": "createdAt",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "GlobalSecondaryIndexes": [
+     {
+      "IndexName": "createdAt-index",
+      "KeySchema": [
+       {
+        "AttributeName": "status",
+        "KeyType": "HASH"
+       },
+       {
+        "AttributeName": "createdAt",
+        "KeyType": "RANGE"
+       }
+      ],
+      "Projection": {
+       "ProjectionType": "ALL"
+      }
+     }
+    ],
+    "KeySchema": [
+     {
+      "AttributeName": "meetingId",
+      "KeyType": "HASH"
+     }
+    ],
+    "PointInTimeRecoverySpecification": {
+     "PointInTimeRecoveryEnabled": true
+    },
+    "TableName": "transmeet-meetings"
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/MeetingsTable/Resource"
+   }
+  },
+  "ConnectionsTable8000B8A1": {
+   "Type": "AWS::DynamoDB::Table",
+   "Properties": {
+    "AttributeDefinitions": [
+     {
+      "AttributeName": "connectionId",
+      "AttributeType": "S"
+     }
+    ],
+    "BillingMode": "PAY_PER_REQUEST",
+    "KeySchema": [
+     {
+      "AttributeName": "connectionId",
+      "KeyType": "HASH"
+     }
+    ],
+    "TableName": "transmeet-connections",
+    "TimeToLiveSpecification": {
+     "AttributeName": "ttl",
+     "Enabled": true
+    }
+   },
+   "UpdateReplacePolicy": "Delete",
+   "DeletionPolicy": "Delete",
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/ConnectionsTable/Resource"
+   }
+  },
+  "LambdaRole3A44B857": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "lambda.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+       ]
+      ]
+     }
+    ],
+    "RoleName": "transmeet-lambda-role"
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/LambdaRole/Resource"
+   }
+  },
+  "LambdaRoleDefaultPolicy75625A82": {
+   "Type": "AWS::IAM::Policy",
+   "Properties": {
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sagemaker:InvokeEndpoint",
+       "Effect": "Allow",
+       "Resource": "arn:aws:sagemaker:us-east-1:*:endpoint/whisper-large-v3-turbo-004709"
+      },
+      {
+       "Action": [
+        "bedrock:InvokeModel",
+        "bedrock:InvokeModelWithResponseStream"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        "arn:aws:bedrock:*::foundation-model/*",
+        "arn:aws:bedrock:*:913524902871:inference-profile/*"
+       ]
+      },
+      {
+       "Action": "polly:SynthesizeSpeech",
+       "Effect": "Allow",
+       "Resource": "*"
+      },
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "MeetingsTable00BD45B4",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "MeetingsTable00BD45B4",
+             "Arn"
+            ]
+           },
+           "/index/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "MeetingsTable00BD45B4",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "MeetingsTable00BD45B4",
+             "Arn"
+            ]
+           },
+           "/index/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "dynamodb:BatchGetItem",
+        "dynamodb:Query",
+        "dynamodb:GetItem",
+        "dynamodb:Scan",
+        "dynamodb:ConditionCheckItem",
+        "dynamodb:BatchWriteItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:DescribeTable"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "ConnectionsTable8000B8A1",
+          "Arn"
+         ]
+        }
+       ]
+      },
+      {
+       "Action": [
+        "dynamodb:GetRecords",
+        "dynamodb:GetShardIterator"
+       ],
+       "Effect": "Allow",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "ConnectionsTable8000B8A1",
+          "Arn"
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "execute-api:ManageConnections",
+       "Effect": "Allow",
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          "arn:aws:execute-api:us-east-1:*:",
+          {
+           "Ref": "WsApi88D84716"
+          },
+          "/prod/POST/@connections/*"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "PolicyName": "LambdaRoleDefaultPolicy75625A82",
+    "Roles": [
+     {
+      "Ref": "LambdaRole3A44B857"
+     }
+    ]
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/LambdaRole/DefaultPolicy/Resource"
+   }
+  },
+  "WsConnectFnB17D99F3": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-913524902871-us-east-1",
+     "S3Key": "eefe5931439688cb2740033c583e8c03255032dc9c81c6ce457a579813724320.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "MEETINGS_TABLE": {
+       "Ref": "MeetingsTable00BD45B4"
+      },
+      "CONNECTIONS_TABLE": {
+       "Ref": "ConnectionsTable8000B8A1"
+      },
+      "WHISPER_ENDPOINT": "whisper-large-v3-turbo-004709",
+      "BEDROCK_MODEL_ID": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "REGION": "us-east-1"
+     }
+    },
+    "FunctionName": "transmeet-ws-connect",
+    "Handler": "index.handler",
+    "Role": {
+     "Fn::GetAtt": [
+      "LambdaRole3A44B857",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Timeout": 10
+   },
+   "DependsOn": [
+    "LambdaRoleDefaultPolicy75625A82",
+    "LambdaRole3A44B857"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/WsConnectFn/Resource",
+    "aws:asset:path": "asset.eefe5931439688cb2740033c583e8c03255032dc9c81c6ce457a579813724320",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "WsDisconnectFn9523C1B1": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-913524902871-us-east-1",
+     "S3Key": "798982030161323f4c8e2695e173fa72b7a757605c9f697ada4b21a2ad8fe89a.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "MEETINGS_TABLE": {
+       "Ref": "MeetingsTable00BD45B4"
+      },
+      "CONNECTIONS_TABLE": {
+       "Ref": "ConnectionsTable8000B8A1"
+      },
+      "WHISPER_ENDPOINT": "whisper-large-v3-turbo-004709",
+      "BEDROCK_MODEL_ID": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "REGION": "us-east-1"
+     }
+    },
+    "FunctionName": "transmeet-ws-disconnect",
+    "Handler": "index.handler",
+    "Role": {
+     "Fn::GetAtt": [
+      "LambdaRole3A44B857",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Timeout": 10
+   },
+   "DependsOn": [
+    "LambdaRoleDefaultPolicy75625A82",
+    "LambdaRole3A44B857"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/WsDisconnectFn/Resource",
+    "aws:asset:path": "asset.798982030161323f4c8e2695e173fa72b7a757605c9f697ada4b21a2ad8fe89a",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "WsAudioFn9C7D7AF9": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-913524902871-us-east-1",
+     "S3Key": "dcf7099c00ad2503fb7a7f2c8675e3c410af10e08de7de761b7cef94c9919d2a.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "MEETINGS_TABLE": {
+       "Ref": "MeetingsTable00BD45B4"
+      },
+      "CONNECTIONS_TABLE": {
+       "Ref": "ConnectionsTable8000B8A1"
+      },
+      "WHISPER_ENDPOINT": "whisper-large-v3-turbo-004709",
+      "BEDROCK_MODEL_ID": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "REGION": "us-east-1",
+      "WS_ENDPOINT": {
+       "Fn::Join": [
+        "",
+        [
+         "https://",
+         {
+          "Ref": "WsApi88D84716"
+         },
+         ".execute-api.us-east-1.",
+         {
+          "Ref": "AWS::URLSuffix"
+         },
+         "/prod"
+        ]
+       ]
+      }
+     }
+    },
+    "FunctionName": "transmeet-ws-audio",
+    "Handler": "index.handler",
+    "MemorySize": 512,
+    "Role": {
+     "Fn::GetAtt": [
+      "LambdaRole3A44B857",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Timeout": 30
+   },
+   "DependsOn": [
+    "LambdaRoleDefaultPolicy75625A82",
+    "LambdaRole3A44B857"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/WsAudioFn/Resource",
+    "aws:asset:path": "asset.dcf7099c00ad2503fb7a7f2c8675e3c410af10e08de7de761b7cef94c9919d2a",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "MeetingsFn1685BBC1": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-913524902871-us-east-1",
+     "S3Key": "2083db5329791e4f5ad1c0752b1d52754f5e73109fc57541527ac367a940336b.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "MEETINGS_TABLE": {
+       "Ref": "MeetingsTable00BD45B4"
+      },
+      "CONNECTIONS_TABLE": {
+       "Ref": "ConnectionsTable8000B8A1"
+      },
+      "WHISPER_ENDPOINT": "whisper-large-v3-turbo-004709",
+      "BEDROCK_MODEL_ID": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "REGION": "us-east-1"
+     }
+    },
+    "FunctionName": "transmeet-meetings",
+    "Handler": "index.handler",
+    "Role": {
+     "Fn::GetAtt": [
+      "LambdaRole3A44B857",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Timeout": 15
+   },
+   "DependsOn": [
+    "LambdaRoleDefaultPolicy75625A82",
+    "LambdaRole3A44B857"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/MeetingsFn/Resource",
+    "aws:asset:path": "asset.2083db5329791e4f5ad1c0752b1d52754f5e73109fc57541527ac367a940336b",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "SummarizeFn8B7F3FA4": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-913524902871-us-east-1",
+     "S3Key": "97a2d58da69c4722c162c1d155ad53baca8647d753bf4e9ff3c7754acb3bdf43.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "MEETINGS_TABLE": {
+       "Ref": "MeetingsTable00BD45B4"
+      },
+      "CONNECTIONS_TABLE": {
+       "Ref": "ConnectionsTable8000B8A1"
+      },
+      "WHISPER_ENDPOINT": "whisper-large-v3-turbo-004709",
+      "BEDROCK_MODEL_ID": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "REGION": "us-east-1"
+     }
+    },
+    "FunctionName": "transmeet-summarize",
+    "Handler": "index.handler",
+    "Role": {
+     "Fn::GetAtt": [
+      "LambdaRole3A44B857",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Timeout": 60
+   },
+   "DependsOn": [
+    "LambdaRoleDefaultPolicy75625A82",
+    "LambdaRole3A44B857"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/SummarizeFn/Resource",
+    "aws:asset:path": "asset.97a2d58da69c4722c162c1d155ad53baca8647d753bf4e9ff3c7754acb3bdf43",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "TtsFn3E0F963B": {
+   "Type": "AWS::Lambda::Function",
+   "Properties": {
+    "Code": {
+     "S3Bucket": "cdk-hnb659fds-assets-913524902871-us-east-1",
+     "S3Key": "e726d3f82297ee2e2a60051181f16df17d8801e045fd55fb0ede7cd1005a6d0c.zip"
+    },
+    "Environment": {
+     "Variables": {
+      "MEETINGS_TABLE": {
+       "Ref": "MeetingsTable00BD45B4"
+      },
+      "CONNECTIONS_TABLE": {
+       "Ref": "ConnectionsTable8000B8A1"
+      },
+      "WHISPER_ENDPOINT": "whisper-large-v3-turbo-004709",
+      "BEDROCK_MODEL_ID": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+      "REGION": "us-east-1"
+     }
+    },
+    "FunctionName": "transmeet-tts",
+    "Handler": "index.handler",
+    "Role": {
+     "Fn::GetAtt": [
+      "LambdaRole3A44B857",
+      "Arn"
+     ]
+    },
+    "Runtime": "nodejs22.x",
+    "Timeout": 30
+   },
+   "DependsOn": [
+    "LambdaRoleDefaultPolicy75625A82",
+    "LambdaRole3A44B857"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/TtsFn/Resource",
+    "aws:asset:path": "asset.e726d3f82297ee2e2a60051181f16df17d8801e045fd55fb0ede7cd1005a6d0c",
+    "aws:asset:is-bundled": true,
+    "aws:asset:property": "Code"
+   }
+  },
+  "WsApi88D84716": {
+   "Type": "AWS::ApiGatewayV2::Api",
+   "Properties": {
+    "Name": "transmeet-websocket",
+    "ProtocolType": "WEBSOCKET",
+    "RouteSelectionExpression": "$request.body.action"
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/WsApi/Resource"
+   }
+  },
+  "WsApiconnectRouteWsConnectIntegrationPermissionADC57492": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "WsConnectFnB17D99F3",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:913524902871:",
+       {
+        "Ref": "WsApi88D84716"
+       },
+       "/*$connect"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/WsApi/$connect-Route/WsConnectIntegration-Permission"
+   }
+  },
+  "WsApiconnectRouteWsConnectIntegration467D17BF": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WsApi88D84716"
+    },
+    "IntegrationType": "AWS_PROXY",
+    "IntegrationUri": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+       {
+        "Fn::GetAtt": [
+         "WsConnectFnB17D99F3",
+         "Arn"
+        ]
+       },
+       "/invocations"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/WsApi/$connect-Route/WsConnectIntegration/Resource"
+   }
+  },
+  "WsApiconnectRoute3B404673": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WsApi88D84716"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "$connect",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "WsApiconnectRouteWsConnectIntegration467D17BF"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/WsApi/$connect-Route/Resource"
+   }
+  },
+  "WsApidisconnectRouteWsDisconnectIntegrationPermission39495327": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "WsDisconnectFn9523C1B1",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:913524902871:",
+       {
+        "Ref": "WsApi88D84716"
+       },
+       "/*$disconnect"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/WsApi/$disconnect-Route/WsDisconnectIntegration-Permission"
+   }
+  },
+  "WsApidisconnectRouteWsDisconnectIntegration9D9EBAE9": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WsApi88D84716"
+    },
+    "IntegrationType": "AWS_PROXY",
+    "IntegrationUri": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+       {
+        "Fn::GetAtt": [
+         "WsDisconnectFn9523C1B1",
+         "Arn"
+        ]
+       },
+       "/invocations"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/WsApi/$disconnect-Route/WsDisconnectIntegration/Resource"
+   }
+  },
+  "WsApidisconnectRoute52949C4E": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WsApi88D84716"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "$disconnect",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "WsApidisconnectRouteWsDisconnectIntegration9D9EBAE9"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/WsApi/$disconnect-Route/Resource"
+   }
+  },
+  "WsApidefaultRouteWsDefaultIntegrationPermission7591F047": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "WsAudioFn9C7D7AF9",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:913524902871:",
+       {
+        "Ref": "WsApi88D84716"
+       },
+       "/*$default"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/WsApi/$default-Route/WsDefaultIntegration-Permission"
+   }
+  },
+  "WsApidefaultRouteWsDefaultIntegration463C229B": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WsApi88D84716"
+    },
+    "IntegrationType": "AWS_PROXY",
+    "IntegrationUri": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+       {
+        "Fn::GetAtt": [
+         "WsAudioFn9C7D7AF9",
+         "Arn"
+        ]
+       },
+       "/invocations"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/WsApi/$default-Route/WsDefaultIntegration/Resource"
+   }
+  },
+  "WsApidefaultRoute688BE5A5": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WsApi88D84716"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "$default",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "WsApidefaultRouteWsDefaultIntegration463C229B"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/WsApi/$default-Route/Resource"
+   }
+  },
+  "WsApisendAudioRouteWsSendAudioIntegrationPermission3E32F1E7": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "WsAudioFn9C7D7AF9",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:913524902871:",
+       {
+        "Ref": "WsApi88D84716"
+       },
+       "/*sendAudio"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/WsApi/sendAudio-Route/WsSendAudioIntegration-Permission"
+   }
+  },
+  "WsApisendAudioRouteWsSendAudioIntegrationEE183A34": {
+   "Type": "AWS::ApiGatewayV2::Integration",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WsApi88D84716"
+    },
+    "IntegrationType": "AWS_PROXY",
+    "IntegrationUri": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+       {
+        "Fn::GetAtt": [
+         "WsAudioFn9C7D7AF9",
+         "Arn"
+        ]
+       },
+       "/invocations"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/WsApi/sendAudio-Route/WsSendAudioIntegration/Resource"
+   }
+  },
+  "WsApisendAudioRoute3F2306C3": {
+   "Type": "AWS::ApiGatewayV2::Route",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WsApi88D84716"
+    },
+    "AuthorizationType": "NONE",
+    "RouteKey": "sendAudio",
+    "Target": {
+     "Fn::Join": [
+      "",
+      [
+       "integrations/",
+       {
+        "Ref": "WsApisendAudioRouteWsSendAudioIntegrationEE183A34"
+       }
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/WsApi/sendAudio-Route/Resource"
+   }
+  },
+  "WsStage9AD02499": {
+   "Type": "AWS::ApiGatewayV2::Stage",
+   "Properties": {
+    "ApiId": {
+     "Ref": "WsApi88D84716"
+    },
+    "AutoDeploy": true,
+    "StageName": "prod"
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/WsStage/Resource"
+   }
+  },
+  "RestApi0C43BF4B": {
+   "Type": "AWS::ApiGateway::RestApi",
+   "Properties": {
+    "Name": "transmeet-api"
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Resource"
+   }
+  },
+  "RestApiCloudWatchRoleE3ED6605": {
+   "Type": "AWS::IAM::Role",
+   "Properties": {
+    "AssumeRolePolicyDocument": {
+     "Statement": [
+      {
+       "Action": "sts:AssumeRole",
+       "Effect": "Allow",
+       "Principal": {
+        "Service": "apigateway.amazonaws.com"
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    },
+    "ManagedPolicyArns": [
+     {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+       ]
+      ]
+     }
+    ]
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/CloudWatchRole/Resource"
+   }
+  },
+  "RestApiAccount7C83CF5A": {
+   "Type": "AWS::ApiGateway::Account",
+   "Properties": {
+    "CloudWatchRoleArn": {
+     "Fn::GetAtt": [
+      "RestApiCloudWatchRoleE3ED6605",
+      "Arn"
+     ]
+    }
+   },
+   "DependsOn": [
+    "RestApi0C43BF4B"
+   ],
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Account"
+   }
+  },
+  "RestApiDeployment180EC503650a890cdaa63771412508866dabe45d": {
+   "Type": "AWS::ApiGateway::Deployment",
+   "Properties": {
+    "Description": "Automatically created by the RestApi construct",
+    "RestApiId": {
+     "Ref": "RestApi0C43BF4B"
+    }
+   },
+   "DependsOn": [
+    "RestApimeetingsidDELETEC4B3AE19",
+    "RestApimeetingsidGET65BE8434",
+    "RestApimeetingsidOPTIONSCE613004",
+    "RestApimeetingsid024F38C7",
+    "RestApimeetingsidsummarizeOPTIONS0F2D4E4F",
+    "RestApimeetingsidsummarizePOSTF8CE4E69",
+    "RestApimeetingsidsummarize5A34868F",
+    "RestApimeetingsGET24ABDED4",
+    "RestApimeetingsOPTIONSC2486FCB",
+    "RestApimeetingsPOSTBF83FEC6",
+    "RestApimeetingsDE777F85",
+    "RestApiOPTIONS6AA64D2D",
+    "RestApittsOPTIONS9FB5FD3F",
+    "RestApittsPOST4D9F086A",
+    "RestApittsCCEAC48A"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Deployment/Resource",
+    "aws:cdk:do-not-refactor": true
+   }
+  },
+  "RestApiDeploymentStageprod3855DE66": {
+   "Type": "AWS::ApiGateway::Stage",
+   "Properties": {
+    "DeploymentId": {
+     "Ref": "RestApiDeployment180EC503650a890cdaa63771412508866dabe45d"
+    },
+    "MethodSettings": [
+     {
+      "DataTraceEnabled": false,
+      "HttpMethod": "*",
+      "LoggingLevel": "ERROR",
+      "ResourcePath": "/*"
+     }
+    ],
+    "RestApiId": {
+     "Ref": "RestApi0C43BF4B"
+    },
+    "StageName": "prod"
+   },
+   "DependsOn": [
+    "RestApiAccount7C83CF5A"
+   ],
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/DeploymentStage.prod/Resource"
+   }
+  },
+  "RestApiOPTIONS6AA64D2D": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Fn::GetAtt": [
+      "RestApi0C43BF4B",
+      "RootResourceId"
+     ]
+    },
+    "RestApiId": {
+     "Ref": "RestApi0C43BF4B"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/OPTIONS/Resource"
+   }
+  },
+  "RestApimeetingsDE777F85": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "RestApi0C43BF4B",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "meetings",
+    "RestApiId": {
+     "Ref": "RestApi0C43BF4B"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/Resource"
+   }
+  },
+  "RestApimeetingsOPTIONSC2486FCB": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "RestApimeetingsDE777F85"
+    },
+    "RestApiId": {
+     "Ref": "RestApi0C43BF4B"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/OPTIONS/Resource"
+   }
+  },
+  "RestApimeetingsGETApiPermissionTransmeetStackRestApi1A49C69CGETmeetingsC7E2D522": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "MeetingsFn1685BBC1",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:913524902871:",
+       {
+        "Ref": "RestApi0C43BF4B"
+       },
+       "/",
+       {
+        "Ref": "RestApiDeploymentStageprod3855DE66"
+       },
+       "/GET/meetings"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/GET/ApiPermission.TransmeetStackRestApi1A49C69C.GET..meetings"
+   }
+  },
+  "RestApimeetingsGETApiPermissionTestTransmeetStackRestApi1A49C69CGETmeetings4BB7FD57": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "MeetingsFn1685BBC1",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:913524902871:",
+       {
+        "Ref": "RestApi0C43BF4B"
+       },
+       "/test-invoke-stage/GET/meetings"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/GET/ApiPermission.Test.TransmeetStackRestApi1A49C69C.GET..meetings"
+   }
+  },
+  "RestApimeetingsGET24ABDED4": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "GET",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "MeetingsFn1685BBC1",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "RestApimeetingsDE777F85"
+    },
+    "RestApiId": {
+     "Ref": "RestApi0C43BF4B"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/GET/Resource"
+   }
+  },
+  "RestApimeetingsPOSTApiPermissionTransmeetStackRestApi1A49C69CPOSTmeetingsBA072D72": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "MeetingsFn1685BBC1",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:913524902871:",
+       {
+        "Ref": "RestApi0C43BF4B"
+       },
+       "/",
+       {
+        "Ref": "RestApiDeploymentStageprod3855DE66"
+       },
+       "/POST/meetings"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/POST/ApiPermission.TransmeetStackRestApi1A49C69C.POST..meetings"
+   }
+  },
+  "RestApimeetingsPOSTApiPermissionTestTransmeetStackRestApi1A49C69CPOSTmeetings350339BB": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "MeetingsFn1685BBC1",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:913524902871:",
+       {
+        "Ref": "RestApi0C43BF4B"
+       },
+       "/test-invoke-stage/POST/meetings"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/POST/ApiPermission.Test.TransmeetStackRestApi1A49C69C.POST..meetings"
+   }
+  },
+  "RestApimeetingsPOSTBF83FEC6": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "MeetingsFn1685BBC1",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "RestApimeetingsDE777F85"
+    },
+    "RestApiId": {
+     "Ref": "RestApi0C43BF4B"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/POST/Resource"
+   }
+  },
+  "RestApimeetingsid024F38C7": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Ref": "RestApimeetingsDE777F85"
+    },
+    "PathPart": "{id}",
+    "RestApiId": {
+     "Ref": "RestApi0C43BF4B"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/{id}/Resource"
+   }
+  },
+  "RestApimeetingsidOPTIONSCE613004": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "RestApimeetingsid024F38C7"
+    },
+    "RestApiId": {
+     "Ref": "RestApi0C43BF4B"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/{id}/OPTIONS/Resource"
+   }
+  },
+  "RestApimeetingsidGETApiPermissionTransmeetStackRestApi1A49C69CGETmeetingsid67E8611C": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "MeetingsFn1685BBC1",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:913524902871:",
+       {
+        "Ref": "RestApi0C43BF4B"
+       },
+       "/",
+       {
+        "Ref": "RestApiDeploymentStageprod3855DE66"
+       },
+       "/GET/meetings/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/{id}/GET/ApiPermission.TransmeetStackRestApi1A49C69C.GET..meetings.{id}"
+   }
+  },
+  "RestApimeetingsidGETApiPermissionTestTransmeetStackRestApi1A49C69CGETmeetingsid1125436C": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "MeetingsFn1685BBC1",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:913524902871:",
+       {
+        "Ref": "RestApi0C43BF4B"
+       },
+       "/test-invoke-stage/GET/meetings/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/{id}/GET/ApiPermission.Test.TransmeetStackRestApi1A49C69C.GET..meetings.{id}"
+   }
+  },
+  "RestApimeetingsidGET65BE8434": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "GET",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "MeetingsFn1685BBC1",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "RestApimeetingsid024F38C7"
+    },
+    "RestApiId": {
+     "Ref": "RestApi0C43BF4B"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/{id}/GET/Resource"
+   }
+  },
+  "RestApimeetingsidDELETEApiPermissionTransmeetStackRestApi1A49C69CDELETEmeetingsid62EC6B7E": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "MeetingsFn1685BBC1",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:913524902871:",
+       {
+        "Ref": "RestApi0C43BF4B"
+       },
+       "/",
+       {
+        "Ref": "RestApiDeploymentStageprod3855DE66"
+       },
+       "/DELETE/meetings/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/{id}/DELETE/ApiPermission.TransmeetStackRestApi1A49C69C.DELETE..meetings.{id}"
+   }
+  },
+  "RestApimeetingsidDELETEApiPermissionTestTransmeetStackRestApi1A49C69CDELETEmeetingsid85E9BF32": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "MeetingsFn1685BBC1",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:913524902871:",
+       {
+        "Ref": "RestApi0C43BF4B"
+       },
+       "/test-invoke-stage/DELETE/meetings/*"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/{id}/DELETE/ApiPermission.Test.TransmeetStackRestApi1A49C69C.DELETE..meetings.{id}"
+   }
+  },
+  "RestApimeetingsidDELETEC4B3AE19": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "DELETE",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "MeetingsFn1685BBC1",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "RestApimeetingsid024F38C7"
+    },
+    "RestApiId": {
+     "Ref": "RestApi0C43BF4B"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/{id}/DELETE/Resource"
+   }
+  },
+  "RestApimeetingsidsummarize5A34868F": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Ref": "RestApimeetingsid024F38C7"
+    },
+    "PathPart": "summarize",
+    "RestApiId": {
+     "Ref": "RestApi0C43BF4B"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/{id}/summarize/Resource"
+   }
+  },
+  "RestApimeetingsidsummarizeOPTIONS0F2D4E4F": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "RestApimeetingsidsummarize5A34868F"
+    },
+    "RestApiId": {
+     "Ref": "RestApi0C43BF4B"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/{id}/summarize/OPTIONS/Resource"
+   }
+  },
+  "RestApimeetingsidsummarizePOSTApiPermissionTransmeetStackRestApi1A49C69CPOSTmeetingsidsummarize6A8D5F5A": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "SummarizeFn8B7F3FA4",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:913524902871:",
+       {
+        "Ref": "RestApi0C43BF4B"
+       },
+       "/",
+       {
+        "Ref": "RestApiDeploymentStageprod3855DE66"
+       },
+       "/POST/meetings/*/summarize"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/{id}/summarize/POST/ApiPermission.TransmeetStackRestApi1A49C69C.POST..meetings.{id}.summarize"
+   }
+  },
+  "RestApimeetingsidsummarizePOSTApiPermissionTestTransmeetStackRestApi1A49C69CPOSTmeetingsidsummarizeA95F835B": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "SummarizeFn8B7F3FA4",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:913524902871:",
+       {
+        "Ref": "RestApi0C43BF4B"
+       },
+       "/test-invoke-stage/POST/meetings/*/summarize"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/{id}/summarize/POST/ApiPermission.Test.TransmeetStackRestApi1A49C69C.POST..meetings.{id}.summarize"
+   }
+  },
+  "RestApimeetingsidsummarizePOSTF8CE4E69": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "SummarizeFn8B7F3FA4",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "RestApimeetingsidsummarize5A34868F"
+    },
+    "RestApiId": {
+     "Ref": "RestApi0C43BF4B"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/meetings/{id}/summarize/POST/Resource"
+   }
+  },
+  "RestApittsCCEAC48A": {
+   "Type": "AWS::ApiGateway::Resource",
+   "Properties": {
+    "ParentId": {
+     "Fn::GetAtt": [
+      "RestApi0C43BF4B",
+      "RootResourceId"
+     ]
+    },
+    "PathPart": "tts",
+    "RestApiId": {
+     "Ref": "RestApi0C43BF4B"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/tts/Resource"
+   }
+  },
+  "RestApittsOPTIONS9FB5FD3F": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "ApiKeyRequired": false,
+    "AuthorizationType": "NONE",
+    "HttpMethod": "OPTIONS",
+    "Integration": {
+     "IntegrationResponses": [
+      {
+       "ResponseParameters": {
+        "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization'",
+        "method.response.header.Access-Control-Allow-Origin": "'*'",
+        "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,GET,PUT,POST,DELETE,PATCH,HEAD'"
+       },
+       "StatusCode": "204"
+      }
+     ],
+     "RequestTemplates": {
+      "application/json": "{ statusCode: 200 }"
+     },
+     "Type": "MOCK"
+    },
+    "MethodResponses": [
+     {
+      "ResponseParameters": {
+       "method.response.header.Access-Control-Allow-Headers": true,
+       "method.response.header.Access-Control-Allow-Origin": true,
+       "method.response.header.Access-Control-Allow-Methods": true
+      },
+      "StatusCode": "204"
+     }
+    ],
+    "ResourceId": {
+     "Ref": "RestApittsCCEAC48A"
+    },
+    "RestApiId": {
+     "Ref": "RestApi0C43BF4B"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/tts/OPTIONS/Resource"
+   }
+  },
+  "RestApittsPOSTApiPermissionTransmeetStackRestApi1A49C69CPOSTtts9654E8C8": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TtsFn3E0F963B",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:913524902871:",
+       {
+        "Ref": "RestApi0C43BF4B"
+       },
+       "/",
+       {
+        "Ref": "RestApiDeploymentStageprod3855DE66"
+       },
+       "/POST/tts"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/tts/POST/ApiPermission.TransmeetStackRestApi1A49C69C.POST..tts"
+   }
+  },
+  "RestApittsPOSTApiPermissionTestTransmeetStackRestApi1A49C69CPOSTtts402982D6": {
+   "Type": "AWS::Lambda::Permission",
+   "Properties": {
+    "Action": "lambda:InvokeFunction",
+    "FunctionName": {
+     "Fn::GetAtt": [
+      "TtsFn3E0F963B",
+      "Arn"
+     ]
+    },
+    "Principal": "apigateway.amazonaws.com",
+    "SourceArn": {
+     "Fn::Join": [
+      "",
+      [
+       "arn:",
+       {
+        "Ref": "AWS::Partition"
+       },
+       ":execute-api:us-east-1:913524902871:",
+       {
+        "Ref": "RestApi0C43BF4B"
+       },
+       "/test-invoke-stage/POST/tts"
+      ]
+     ]
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/tts/POST/ApiPermission.Test.TransmeetStackRestApi1A49C69C.POST..tts"
+   }
+  },
+  "RestApittsPOST4D9F086A": {
+   "Type": "AWS::ApiGateway::Method",
+   "Properties": {
+    "AuthorizationType": "NONE",
+    "HttpMethod": "POST",
+    "Integration": {
+     "IntegrationHttpMethod": "POST",
+     "Type": "AWS_PROXY",
+     "Uri": {
+      "Fn::Join": [
+       "",
+       [
+        "arn:",
+        {
+         "Ref": "AWS::Partition"
+        },
+        ":apigateway:us-east-1:lambda:path/2015-03-31/functions/",
+        {
+         "Fn::GetAtt": [
+          "TtsFn3E0F963B",
+          "Arn"
+         ]
+        },
+        "/invocations"
+       ]
+      ]
+     }
+    },
+    "ResourceId": {
+     "Ref": "RestApittsCCEAC48A"
+    },
+    "RestApiId": {
+     "Ref": "RestApi0C43BF4B"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/RestApi/Default/tts/POST/Resource"
+   }
+  },
+  "FrontendBucketEFE2E19C": {
+   "Type": "AWS::S3::Bucket",
+   "Properties": {
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "AES256"
+       }
+      }
+     ]
+    },
+    "BucketName": "transmeet-frontend-913524902871",
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    }
+   },
+   "UpdateReplacePolicy": "Retain",
+   "DeletionPolicy": "Retain",
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/FrontendBucket/Resource"
+   }
+  },
+  "FrontendBucketPolicy1DFF75D9": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Properties": {
+    "Bucket": {
+     "Ref": "FrontendBucketEFE2E19C"
+    },
+    "PolicyDocument": {
+     "Statement": [
+      {
+       "Action": [
+        "s3:GetObject*",
+        "s3:GetBucket*",
+        "s3:List*"
+       ],
+       "Effect": "Allow",
+       "Principal": {
+        "CanonicalUser": {
+         "Fn::GetAtt": [
+          "OAIE1EFC67F",
+          "S3CanonicalUserId"
+         ]
+        }
+       },
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "FrontendBucketEFE2E19C",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Join": [
+          "",
+          [
+           {
+            "Fn::GetAtt": [
+             "FrontendBucketEFE2E19C",
+             "Arn"
+            ]
+           },
+           "/*"
+          ]
+         ]
+        }
+       ]
+      },
+      {
+       "Action": "s3:GetObject",
+       "Effect": "Allow",
+       "Principal": {
+        "CanonicalUser": {
+         "Fn::GetAtt": [
+          "OAIE1EFC67F",
+          "S3CanonicalUserId"
+         ]
+        }
+       },
+       "Resource": {
+        "Fn::Join": [
+         "",
+         [
+          {
+           "Fn::GetAtt": [
+            "FrontendBucketEFE2E19C",
+            "Arn"
+           ]
+          },
+          "/*"
+         ]
+        ]
+       }
+      }
+     ],
+     "Version": "2012-10-17"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/FrontendBucket/Policy/Resource"
+   }
+  },
+  "OAIE1EFC67F": {
+   "Type": "AWS::CloudFront::CloudFrontOriginAccessIdentity",
+   "Properties": {
+    "CloudFrontOriginAccessIdentityConfig": {
+     "Comment": "TransMeet frontend OAI"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/OAI/Resource"
+   }
+  },
+  "FrontendDistributionE6EAF405": {
+   "Type": "AWS::CloudFront::Distribution",
+   "Properties": {
+    "DistributionConfig": {
+     "Comment": "TransMeet frontend",
+     "CustomErrorResponses": [
+      {
+       "ErrorCode": 404,
+       "ResponseCode": 200,
+       "ResponsePagePath": "/index.html"
+      }
+     ],
+     "DefaultCacheBehavior": {
+      "AllowedMethods": [
+       "GET",
+       "HEAD"
+      ],
+      "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+      "Compress": true,
+      "TargetOriginId": "TransmeetStackFrontendDistributionOrigin14F0C806E",
+      "ViewerProtocolPolicy": "redirect-to-https"
+     },
+     "DefaultRootObject": "index.html",
+     "Enabled": true,
+     "HttpVersion": "http2",
+     "IPV6Enabled": true,
+     "Origins": [
+      {
+       "DomainName": {
+        "Fn::GetAtt": [
+         "FrontendBucketEFE2E19C",
+         "RegionalDomainName"
+        ]
+       },
+       "Id": "TransmeetStackFrontendDistributionOrigin14F0C806E",
+       "S3OriginConfig": {
+        "OriginAccessIdentity": {
+         "Fn::Join": [
+          "",
+          [
+           "origin-access-identity/cloudfront/",
+           {
+            "Ref": "OAIE1EFC67F"
+           }
+          ]
+         ]
+        }
+       }
+      }
+     ],
+     "PriceClass": "PriceClass_100"
+    }
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/FrontendDistribution/Resource"
+   }
+  },
+  "CDKMetadata": {
+   "Type": "AWS::CDK::Metadata",
+   "Properties": {
+    "Analytics": "v2:deflate64:H4sIAAAAAAAA/21Sy27CMBD8lt6NWxJ+gIeQOLRUoVKPyHGWdCGxo+wahKz8e2WHQIp6mhnvaMe7diKTWSrfXtSFJro4TSrMpd+x0iehLrT3xdWo2ha59F8qr0AsDyaSTqCqpc9sfxbx01aor0H2rBOVqvNC7Y0t4EjyI8LaGc1ojaB0r4iASc4DCEqlXzh9Al4oAtHT0O3GeniEjPUQJf3yYO4J4SbQ1kiE1nRCNVgqhou6nhPpvyHf2dBh3mBwBrifZdYxPOTGMJStGpo+ySfzjlUZlxLJOFb6DGjIG9G51tYZFitoKnutwcSxR+pvS5EBWddqiHt6B/6xRSje2FC9hUTeCV1ZVxxaa1j6bYslhlQg2hRgGDludBk86+D517FC4hZzN8w91l33yI3PGW6Kpgy+rePGcSfCN5BHej0nMzlN5fTlSIiT1hnGGmTW4y9t3S7ckQIAAA=="
+   },
+   "Metadata": {
+    "aws:cdk:path": "TransmeetStack/CDKMetadata/Default"
+   }
+  }
+ },
+ "Outputs": {
+  "RestApiEndpoint0551178A": {
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "RestApi0C43BF4B"
+      },
+      ".execute-api.us-east-1.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "RestApiDeploymentStageprod3855DE66"
+      },
+      "/"
+     ]
+    ]
+   }
+  },
+  "WsEndpoint": {
+   "Description": "WebSocket API endpoint (wss://)",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "wss://",
+      {
+       "Ref": "WsApi88D84716"
+      },
+      ".execute-api.us-east-1.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/prod"
+     ]
+    ]
+   },
+   "Export": {
+    "Name": "TransmeetWsEndpoint"
+   }
+  },
+  "RestEndpoint": {
+   "Description": "REST API endpoint (https://)",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Ref": "RestApi0C43BF4B"
+      },
+      ".execute-api.us-east-1.",
+      {
+       "Ref": "AWS::URLSuffix"
+      },
+      "/",
+      {
+       "Ref": "RestApiDeploymentStageprod3855DE66"
+      },
+      "/"
+     ]
+    ]
+   },
+   "Export": {
+    "Name": "TransmeetRestEndpoint"
+   }
+  },
+  "FrontendBucketName": {
+   "Description": "S3 bucket for frontend deployment",
+   "Value": {
+    "Ref": "FrontendBucketEFE2E19C"
+   },
+   "Export": {
+    "Name": "TransmeetFrontendBucket"
+   }
+  },
+  "CloudFrontUrl": {
+   "Description": "CloudFront distribution URL",
+   "Value": {
+    "Fn::Join": [
+     "",
+     [
+      "https://",
+      {
+       "Fn::GetAtt": [
+        "FrontendDistributionE6EAF405",
+        "DomainName"
+       ]
+      }
+     ]
+    ]
+   },
+   "Export": {
+    "Name": "TransmeetCloudFrontUrl"
+   }
+  },
+  "MeetingsTableName": {
+   "Description": "DynamoDB meetings table name",
+   "Value": {
+    "Ref": "MeetingsTable00BD45B4"
+   },
+   "Export": {
+    "Name": "TransmeetMeetingsTable"
+   }
+  }
+ },
+ "Parameters": {
+  "BootstrapVersion": {
+   "Type": "AWS::SSM::Parameter::Value<String>",
+   "Default": "/cdk-bootstrap/hnb659fds/version",
+   "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]"
+  }
+ },
+ "Rules": {
+  "CheckBootstrapVersion": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Contains": [
+         [
+          "1",
+          "2",
+          "3",
+          "4",
+          "5"
+         ],
+         {
+          "Ref": "BootstrapVersion"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI."
+    }
+   ]
+  }
+ }
+}

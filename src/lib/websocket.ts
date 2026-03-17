@@ -4,6 +4,7 @@ export interface SubtitleServerMessage {
   type: 'subtitle'
   originalText: string
   translatedText: string
+  detectedLanguage?: 'ko' | 'en'
   speaker: string
   timestamp: string
 }

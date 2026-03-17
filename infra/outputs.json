@@ -1,0 +1,10 @@
+{
+  "TransmeetStack": {
+    "MeetingsTableName": "transmeet-meetings",
+    "CloudFrontUrl": "https://d2vih1xpifxmiz.cloudfront.net",
+    "WsEndpoint": "wss://tn8ktxuolg.execute-api.us-east-1.amazonaws.com/prod",
+    "FrontendBucketName": "transmeet-frontend-913524902871",
+    "RestApiEndpoint0551178A": "https://mk099wz1bd.execute-api.us-east-1.amazonaws.com/prod/",
+    "RestEndpoint": "https://mk099wz1bd.execute-api.us-east-1.amazonaws.com/prod/"
+  }
+}

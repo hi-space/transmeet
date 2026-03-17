@@ -37,6 +37,7 @@ interface SubtitleMessage {
   type: 'subtitle' | 'error';
   originalText?: string;
   translatedText?: string;
+  detectedLanguage?: 'ko' | 'en';
   speaker?: string;
   timestamp: string;
   message?: string;
@@ -104,14 +105,21 @@ export const handler = async (
 
     const whisperResult = JSON.parse(
       Buffer.from(whisperRes.Body as Uint8Array).toString('utf-8')
-    ) as { text?: string };
+    ) as { text?: string; language?: string };
 
     const originalText = (whisperResult.text ?? '').trim();
     if (!originalText) {
       return { statusCode: 200, body: 'Empty transcription' };
     }
 
-    // Step 2: Translate EN -> KO via Bedrock Claude
+    // Whisper language hint (e.g. "ko", "en") — used as context for Bedrock
+    const whisperLang = whisperResult.language ?? '';
+
+    // Step 2: Detect language + bidirectional translation via Bedrock Claude
+    const langHint = whisperLang
+      ? `Whisper detected the language as "${whisperLang}". Use this as a hint but verify with the text itself.\n`
+      : '';
+
     const bedrockRes = await bedrock.send(
       new InvokeModelCommand({
         modelId: process.env.BEDROCK_MODEL_ID,
@@ -123,7 +131,12 @@ export const handler = async (
           messages: [
             {
               role: 'user',
-              content: `Translate the following English text to Korean. Return only the translated text, no explanation.\n\n${originalText}`,
+              content:
+                `${langHint}Detect the language of the following text and translate it:\n` +
+                `- If Korean, translate to English\n` +
+                `- If English, translate to Korean\n` +
+                `- Return ONLY valid JSON with no markdown fences: {"detected": "ko" or "en", "translation": "..."}\n\n` +
+                `Text: ${originalText}`,
             },
           ],
         }),
@@ -134,7 +147,21 @@ export const handler = async (
       Buffer.from(bedrockRes.body as Uint8Array).toString('utf-8')
     ) as { content?: Array<{ text: string }> };
 
-    const translatedText = bedrockResult.content?.[0]?.text ?? '';
+    const rawContent = (bedrockResult.content?.[0]?.text ?? '').trim();
+
+    let detectedLanguage: 'ko' | 'en' = 'en';
+    let translatedText = '';
+    try {
+      const parsed = JSON.parse(rawContent) as {
+        detected?: string;
+        translation?: string;
+      };
+      detectedLanguage = parsed.detected === 'ko' ? 'ko' : 'en';
+      translatedText = parsed.translation ?? '';
+    } catch {
+      // Bedrock returned plain text instead of JSON — use as-is
+      translatedText = rawContent;
+    }
 
     // Step 3: Persist message to DynamoDB
     if (meetingId) {
@@ -143,6 +170,7 @@ export const handler = async (
         speaker,
         originalText,
         translatedText,
+        detectedLanguage,
         timestamp: new Date().toISOString(),
       };
 
@@ -167,6 +195,7 @@ export const handler = async (
       type: 'subtitle',
       originalText,
       translatedText,
+      detectedLanguage,
       speaker,
       timestamp: new Date().toISOString(),
     });

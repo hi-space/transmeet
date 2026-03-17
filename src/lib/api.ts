@@ -7,6 +7,7 @@ interface ApiMessage {
   speaker: string
   originalText: string
   translatedText: string
+  detectedLanguage?: 'ko' | 'en'
   timestamp: string
 }
 
@@ -60,6 +61,7 @@ export function toMeeting(m: ApiMeeting): Meeting {
         speaker: VALID_SPEAKERS[msg.speaker] ?? 'speaker1',
         original: msg.originalText,
         translation: msg.translatedText,
+        detectedLanguage: msg.detectedLanguage,
         timestamp: msg.timestamp,
       })
     ),

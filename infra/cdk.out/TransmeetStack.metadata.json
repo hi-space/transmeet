@@ -1,0 +1,432 @@
+{
+  "/TransmeetStack/MeetingsTable": [
+    {
+      "type": "aws:cdk:hasPhysicalName",
+      "data": {
+        "Ref": "MeetingsTable00BD45B4"
+      }
+    }
+  ],
+  "/TransmeetStack/ConnectionsTable": [
+    {
+      "type": "aws:cdk:hasPhysicalName",
+      "data": {
+        "Ref": "ConnectionsTable8000B8A1"
+      }
+    }
+  ],
+  "/TransmeetStack/WsEndpoint": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsEndpoint"
+    }
+  ],
+  "/TransmeetStack/RestEndpoint": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestEndpoint"
+    }
+  ],
+  "/TransmeetStack/FrontendBucketName": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "FrontendBucketName"
+    }
+  ],
+  "/TransmeetStack/CloudFrontUrl": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CloudFrontUrl"
+    }
+  ],
+  "/TransmeetStack/MeetingsTableName": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "MeetingsTableName"
+    }
+  ],
+  "/TransmeetStack/BootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "BootstrapVersion"
+    }
+  ],
+  "/TransmeetStack/CheckBootstrapVersion": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CheckBootstrapVersion"
+    }
+  ],
+  "/TransmeetStack/MeetingsTable/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "MeetingsTable00BD45B4"
+    }
+  ],
+  "/TransmeetStack/ConnectionsTable/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "ConnectionsTable8000B8A1"
+    }
+  ],
+  "/TransmeetStack/LambdaRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "LambdaRole3A44B857"
+    }
+  ],
+  "/TransmeetStack/WsConnectFn/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsConnectFnB17D99F3"
+    }
+  ],
+  "/TransmeetStack/WsDisconnectFn/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsDisconnectFn9523C1B1"
+    }
+  ],
+  "/TransmeetStack/WsAudioFn/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsAudioFn9C7D7AF9"
+    }
+  ],
+  "/TransmeetStack/MeetingsFn/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "MeetingsFn1685BBC1"
+    }
+  ],
+  "/TransmeetStack/SummarizeFn/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "SummarizeFn8B7F3FA4"
+    }
+  ],
+  "/TransmeetStack/TtsFn/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "TtsFn3E0F963B"
+    }
+  ],
+  "/TransmeetStack/WsApi/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsApi88D84716"
+    }
+  ],
+  "/TransmeetStack/WsStage/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsStage9AD02499"
+    }
+  ],
+  "/TransmeetStack/RestApi/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApi0C43BF4B"
+    }
+  ],
+  "/TransmeetStack/RestApi/Account": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApiAccount7C83CF5A"
+    }
+  ],
+  "/TransmeetStack/RestApi/Endpoint": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApiEndpoint0551178A"
+    }
+  ],
+  "/TransmeetStack/FrontendBucket/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "FrontendBucketEFE2E19C"
+    }
+  ],
+  "/TransmeetStack/OAI/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "OAIE1EFC67F"
+    }
+  ],
+  "/TransmeetStack/FrontendDistribution/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "FrontendDistributionE6EAF405"
+    }
+  ],
+  "/TransmeetStack/CDKMetadata/Default": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "CDKMetadata"
+    }
+  ],
+  "/TransmeetStack/LambdaRole/DefaultPolicy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "LambdaRoleDefaultPolicy75625A82"
+    }
+  ],
+  "/TransmeetStack/WsApi/$connect-Route/WsConnectIntegration-Permission": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsApiconnectRouteWsConnectIntegrationPermissionADC57492"
+    }
+  ],
+  "/TransmeetStack/WsApi/$connect-Route/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsApiconnectRoute3B404673"
+    }
+  ],
+  "/TransmeetStack/WsApi/$disconnect-Route/WsDisconnectIntegration-Permission": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsApidisconnectRouteWsDisconnectIntegrationPermission39495327"
+    }
+  ],
+  "/TransmeetStack/WsApi/$disconnect-Route/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsApidisconnectRoute52949C4E"
+    }
+  ],
+  "/TransmeetStack/WsApi/$default-Route/WsDefaultIntegration-Permission": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsApidefaultRouteWsDefaultIntegrationPermission7591F047"
+    }
+  ],
+  "/TransmeetStack/WsApi/$default-Route/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsApidefaultRoute688BE5A5"
+    }
+  ],
+  "/TransmeetStack/WsApi/sendAudio-Route/WsSendAudioIntegration-Permission": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsApisendAudioRouteWsSendAudioIntegrationPermission3E32F1E7"
+    }
+  ],
+  "/TransmeetStack/WsApi/sendAudio-Route/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsApisendAudioRoute3F2306C3"
+    }
+  ],
+  "/TransmeetStack/RestApi/CloudWatchRole/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApiCloudWatchRoleE3ED6605"
+    }
+  ],
+  "/TransmeetStack/RestApi/Deployment/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApiDeployment180EC503650a890cdaa63771412508866dabe45d"
+    }
+  ],
+  "/TransmeetStack/RestApi/DeploymentStage.prod/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApiDeploymentStageprod3855DE66"
+    }
+  ],
+  "/TransmeetStack/FrontendBucket/Policy/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "FrontendBucketPolicy1DFF75D9"
+    }
+  ],
+  "/TransmeetStack/WsApi/$connect-Route/WsConnectIntegration/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsApiconnectRouteWsConnectIntegration467D17BF"
+    }
+  ],
+  "/TransmeetStack/WsApi/$disconnect-Route/WsDisconnectIntegration/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsApidisconnectRouteWsDisconnectIntegration9D9EBAE9"
+    }
+  ],
+  "/TransmeetStack/WsApi/$default-Route/WsDefaultIntegration/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsApidefaultRouteWsDefaultIntegration463C229B"
+    }
+  ],
+  "/TransmeetStack/WsApi/sendAudio-Route/WsSendAudioIntegration/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "WsApisendAudioRouteWsSendAudioIntegrationEE183A34"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/OPTIONS/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApiOPTIONS6AA64D2D"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsDE777F85"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/tts/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApittsCCEAC48A"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/OPTIONS/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsOPTIONSC2486FCB"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/GET/ApiPermission.TransmeetStackRestApi1A49C69C.GET..meetings": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsGETApiPermissionTransmeetStackRestApi1A49C69CGETmeetingsC7E2D522"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/GET/ApiPermission.Test.TransmeetStackRestApi1A49C69C.GET..meetings": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsGETApiPermissionTestTransmeetStackRestApi1A49C69CGETmeetings4BB7FD57"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/GET/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsGET24ABDED4"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/POST/ApiPermission.TransmeetStackRestApi1A49C69C.POST..meetings": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsPOSTApiPermissionTransmeetStackRestApi1A49C69CPOSTmeetingsBA072D72"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/POST/ApiPermission.Test.TransmeetStackRestApi1A49C69C.POST..meetings": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsPOSTApiPermissionTestTransmeetStackRestApi1A49C69CPOSTmeetings350339BB"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/POST/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsPOSTBF83FEC6"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/{id}/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsid024F38C7"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/tts/OPTIONS/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApittsOPTIONS9FB5FD3F"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/tts/POST/ApiPermission.TransmeetStackRestApi1A49C69C.POST..tts": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApittsPOSTApiPermissionTransmeetStackRestApi1A49C69CPOSTtts9654E8C8"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/tts/POST/ApiPermission.Test.TransmeetStackRestApi1A49C69C.POST..tts": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApittsPOSTApiPermissionTestTransmeetStackRestApi1A49C69CPOSTtts402982D6"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/tts/POST/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApittsPOST4D9F086A"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/{id}/OPTIONS/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsidOPTIONSCE613004"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/{id}/GET/ApiPermission.TransmeetStackRestApi1A49C69C.GET..meetings.{id}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsidGETApiPermissionTransmeetStackRestApi1A49C69CGETmeetingsid67E8611C"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/{id}/GET/ApiPermission.Test.TransmeetStackRestApi1A49C69C.GET..meetings.{id}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsidGETApiPermissionTestTransmeetStackRestApi1A49C69CGETmeetingsid1125436C"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/{id}/GET/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsidGET65BE8434"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/{id}/DELETE/ApiPermission.TransmeetStackRestApi1A49C69C.DELETE..meetings.{id}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsidDELETEApiPermissionTransmeetStackRestApi1A49C69CDELETEmeetingsid62EC6B7E"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/{id}/DELETE/ApiPermission.Test.TransmeetStackRestApi1A49C69C.DELETE..meetings.{id}": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsidDELETEApiPermissionTestTransmeetStackRestApi1A49C69CDELETEmeetingsid85E9BF32"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/{id}/DELETE/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsidDELETEC4B3AE19"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/{id}/summarize/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsidsummarize5A34868F"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/{id}/summarize/OPTIONS/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsidsummarizeOPTIONS0F2D4E4F"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/{id}/summarize/POST/ApiPermission.TransmeetStackRestApi1A49C69C.POST..meetings.{id}.summarize": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsidsummarizePOSTApiPermissionTransmeetStackRestApi1A49C69CPOSTmeetingsidsummarize6A8D5F5A"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/{id}/summarize/POST/ApiPermission.Test.TransmeetStackRestApi1A49C69C.POST..meetings.{id}.summarize": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsidsummarizePOSTApiPermissionTestTransmeetStackRestApi1A49C69CPOSTmeetingsidsummarizeA95F835B"
+    }
+  ],
+  "/TransmeetStack/RestApi/Default/meetings/{id}/summarize/POST/Resource": [
+    {
+      "type": "aws:cdk:logicalId",
+      "data": "RestApimeetingsidsummarizePOSTF8CE4E69"
+    }
+  ]
+}

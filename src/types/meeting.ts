@@ -5,6 +5,7 @@ export interface Message {
   speaker: SpeakerRole
   original: string
   translation: string
+  detectedLanguage?: 'ko' | 'en'
   timestamp: string
 }
 
