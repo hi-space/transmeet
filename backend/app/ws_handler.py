@@ -63,6 +63,7 @@ router = APIRouter()
 
 MAX_BUFFER_BYTES = 512_000   # ~8 seconds at 16 kHz 16-bit mono
 FLUSH_DELAY_SECS = 0.6       # 600 ms silence → flush (Whisper mode only)
+SEGMENT_MERGE_DELAY_SECS = 1.5  # Transcribe: wait this long before translating (accumulates consecutive finals)
 
 # Transcribe language code mapping
 LANG_CODE_MAP: dict = {
@@ -97,6 +98,9 @@ class ConnectionState:
     # Transcribe mode: persistent streaming session
     audio_queue: asyncio.Queue = field(default_factory=asyncio.Queue)
     transcribe_task: Optional[asyncio.Task] = None
+    # Transcribe mode: deferred segment accumulation (merges consecutive finals before translating)
+    seg_buffer: List[tuple] = field(default_factory=list)  # [(text, speaker, detected_lang)]
+    seg_flush_task: Optional[asyncio.Task] = None
 
 
 # In-memory connection registry (single-process; scales with one Fargate task)
@@ -310,6 +314,32 @@ def _apply_segment_filters(
     return True
 
 
+async def _flush_seg_buffer(state: "ConnectionState", ws: WebSocket) -> None:
+    """
+    Translate all accumulated Transcribe final segments at once.
+
+    Consecutive segments from the same speaker (and same detected language) are
+    merged into a single text before being sent to Bedrock, reducing API calls
+    and producing more natural translations.
+    """
+    if not state.seg_buffer:
+        return
+    buf = state.seg_buffer[:]
+    state.seg_buffer.clear()
+
+    # Merge consecutive same-speaker, same-lang entries
+    merged: List[tuple] = []
+    for text, speaker, lang in buf:
+        if merged and merged[-1][1] == speaker and merged[-1][2] == lang:
+            merged[-1] = (merged[-1][0] + " " + text, speaker, lang)
+        else:
+            merged.append((text, speaker, lang))
+
+    timestamp = _iso_now()
+    for text, speaker, lang in merged:
+        asyncio.create_task(_process_segment(ws, text, speaker, lang, state, timestamp))
+
+
 # ─── Transcribe: persistent streaming session ────────────────────────────────
 
 async def _run_transcribe_streaming(
@@ -406,7 +436,7 @@ async def _run_transcribe_streaming(
                         except Exception:
                             pass  # WS may be closing
                     else:
-                        # Final sentence → translate
+                        # Final sentence → accumulate for deferred translation
                         segments = _extract_segments(alt, use_speaker_labels, state.speaker)
                         segments = _merge_consecutive_same_speaker(segments)
 
@@ -416,13 +446,23 @@ async def _run_transcribe_streaming(
                         else:
                             language = normalize_language(detected_lang)
 
-                        timestamp = _iso_now()
                         for text, speaker in segments:
                             if not _apply_segment_filters(text, state.source_lang):
                                 continue
-                            asyncio.create_task(
-                                _process_segment(ws, text, speaker, language, state, timestamp)
-                            )
+                            state.seg_buffer.append((text, speaker, language))
+
+                        # Cancel previous flush timer and reschedule
+                        if state.seg_flush_task and not state.seg_flush_task.done():
+                            state.seg_flush_task.cancel()
+
+                        async def _deferred_flush(s=state, w=ws) -> None:
+                            try:
+                                await asyncio.sleep(SEGMENT_MERGE_DELAY_SECS)
+                                await _flush_seg_buffer(s, w)
+                            except asyncio.CancelledError:
+                                pass
+
+                        state.seg_flush_task = asyncio.create_task(_deferred_flush())
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -625,6 +665,10 @@ async def ws_endpoint(
                 state.model_id = data.get("modelId") or config.BEDROCK_MODEL_ID
                 state.meeting_id = data.get("meetingId") or state.meeting_id
                 state.speaker = data.get("speaker", "speaker1")
+                state.seg_buffer.clear()
+                if state.seg_flush_task and not state.seg_flush_task.done():
+                    state.seg_flush_task.cancel()
+                    state.seg_flush_task = None
                 logger.info(
                     "[ws] startRecording: provider=%s sourceLang=%s targetLang=%s",
                     state.stt_provider, state.source_lang, state.target_lang,
@@ -646,6 +690,11 @@ async def ws_endpoint(
                         except (asyncio.TimeoutError, asyncio.CancelledError):
                             state.transcribe_task.cancel()
                         state.transcribe_task = None
+                    # Flush any segments still pending in the buffer (bypass 1.5s delay)
+                    if state.seg_flush_task and not state.seg_flush_task.done():
+                        state.seg_flush_task.cancel()
+                        state.seg_flush_task = None
+                    await _flush_seg_buffer(state, ws)
                 else:
                     # Whisper: flush remaining buffered audio
                     if state.flush_task and not state.flush_task.done():
@@ -690,4 +739,6 @@ async def ws_endpoint(
             state.transcribe_task.cancel()
         if state.flush_task and not state.flush_task.done():
             state.flush_task.cancel()
+        if state.seg_flush_task and not state.seg_flush_task.done():
+            state.seg_flush_task.cancel()
         active_connections.pop(connection_id, None)

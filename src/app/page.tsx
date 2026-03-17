@@ -275,7 +275,7 @@ export default function Home() {
           )
         )
       } else if (msg.type === 'subtitle_stream') {
-        const MERGE_WINDOW_MS = 3000
+        const MERGE_WINDOW_MS = 8000
         if (msg.phase === 'stt_partial') {
           // Word-by-word Transcribe partial — show in pending bubble, not committed messages
           setPendingTranscript({

@@ -15,7 +15,7 @@ export interface Settings {
 
 const DEFAULT: Settings = {
   sourceLang: 'en',
-  targetLang: 'en',
+  targetLang: 'ko',
   sttProvider: 'whisper',
   ttsAutoPlay: true,
   pollyEngine: 'generative',
