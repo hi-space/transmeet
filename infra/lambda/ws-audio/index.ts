@@ -116,6 +116,16 @@ export const handler = async (
     return { statusCode: 400, body: 'Invalid JSON' };
   }
 
+  if ((body as { action?: string }).action === 'ping') {
+    try {
+      await apigw.send(new PostToConnectionCommand({
+        ConnectionId: connectionId,
+        Data: Buffer.from(JSON.stringify({ type: 'pong', timestamp })),
+      }));
+    } catch { /* connection gone — ignore */ }
+    return { statusCode: 200, body: 'pong' };
+  }
+
   const {
     audioData,
     meetingId,

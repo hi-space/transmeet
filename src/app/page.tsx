@@ -380,6 +380,25 @@ export default function Home() {
                 : m
             )
           )
+        } else if (msg.type === 'summary_stream') {
+          if (msg.phase === 'delta') {
+            setMeetings((prev) =>
+              prev.map((m) =>
+                m.id === activeMeetingId
+                  ? { ...m, summary: (m.summary ?? '') + (msg.text ?? '') }
+                  : m
+              )
+            )
+          } else if (msg.phase === 'done') {
+            setMeetings((prev) =>
+              prev.map((m) =>
+                m.id === activeMeetingId ? { ...m, summary: msg.summary ?? m.summary } : m
+              )
+            )
+            setIsSummarizing(false)
+          } else if (msg.phase === 'error') {
+            setIsSummarizing(false)
+          }
         }
       }
     },
@@ -393,6 +412,7 @@ export default function Home() {
     sendAudio,
     startRecording,
     stopRecording,
+    sendSummarize,
   } = useWebSocket({
     meetingId: activeMeetingId,
     onMessage: handleWsMessage,
@@ -482,10 +502,7 @@ export default function Home() {
       setMeetings((prev) =>
         prev.map((m) =>
           m.id === activeMeetingId
-            ? {
-                ...m,
-                summary: 'API 엔드포인트를 설정하면 Bedrock Claude로 요약이 생성됩니다.',
-              }
+            ? { ...m, summary: 'API 엔드포인트를 설정하면 Bedrock Claude로 요약이 생성됩니다.' }
             : m
         )
       )
@@ -494,19 +511,28 @@ export default function Home() {
       return
     }
 
+    if (wsStatus === 'connected') {
+      // Stream summary via WebSocket — isSummarizing cleared on 'done'/'error'
+      setMeetings((prev) => prev.map((m) => (m.id === activeMeetingId ? { ...m, summary: '' } : m)))
+      setSummaryOpen(true)
+      sendSummarize(activeMeetingId)
+      return
+    }
+
+    // Fallback: REST API (WebSocket not connected)
     try {
       const { summary } = await api.meetings.summarize(activeMeetingId)
       lastSummarizedCountRef.current[activeMeetingId] = msgCount
       setMeetings((prev) =>
         prev.map((m) => (m.id === activeMeetingId ? { ...m, summary: parseSummary(summary) } : m))
-      ) // parseSummary now returns trimmed string
+      )
       setSummaryOpen(true)
     } catch {
       // Silent — user can retry via button
     } finally {
       setIsSummarizing(false)
     }
-  }, [isSummarizing, activeMeetingId])
+  }, [isSummarizing, activeMeetingId, wsStatus, sendSummarize])
 
   // Keep ref in sync for use inside timers
   useEffect(() => {

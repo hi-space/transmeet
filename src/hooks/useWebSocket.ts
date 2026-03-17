@@ -229,6 +229,12 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     ws.send(JSON.stringify({ action: 'stopRecording', meetingId: meetingIdRef.current }))
   }, [])
 
+  const sendSummarize = useCallback((meetingId: string): void => {
+    const ws = wsRef.current
+    if (!ws || ws.readyState !== WebSocket.OPEN) return
+    ws.send(JSON.stringify({ action: 'summarize', meetingId }))
+  }, [])
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -240,5 +246,5 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     }
   }, [])
 
-  return { status, connect, disconnect, sendAudio, startRecording, stopRecording }
+  return { status, connect, disconnect, sendAudio, startRecording, stopRecording, sendSummarize }
 }

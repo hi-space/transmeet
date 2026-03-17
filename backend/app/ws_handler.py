@@ -33,6 +33,7 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional
 from uuid import uuid4
 
+import boto3
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from .aws_clients import (
@@ -44,7 +45,6 @@ from .aws_clients import (
     is_hallucination,
     normalize_language,
     sagemaker_client,
-    transcribe_streaming_client,
 )
 from .config import config
 
@@ -114,8 +114,9 @@ async def _transcribe_once(audio_bytes: bytes, language_code: str) -> tuple[str,
     """
     One-shot Transcribe Streaming for a complete buffered utterance.
 
-    Strips the WAV header, feeds all PCM audio into a single streaming session,
-    and collects only the final (IsPartial=False) transcript segments.
+    Uses sync boto3 in a thread (aiobotocore does not support transcribestreaming).
+    Feeds all PCM audio into a single streaming session and collects only
+    the final (IsPartial=False) transcript segments.
 
     Returns (transcript, detected_language: 'en'|'ko').
     """
@@ -124,58 +125,61 @@ async def _transcribe_once(audio_bytes: bytes, language_code: str) -> tuple[str,
         logger.debug("[Transcribe] Audio too short (%d bytes PCM), skipping", len(pcm))
         return "", "en"
 
-    # Feed PCM in ~500ms chunks so Transcribe starts processing quickly
     CHUNK_SIZE = 16000 * 2  # 500 ms @ 16kHz 16-bit mono
+    region = config.REGION
+    lang_code = language_code
 
-    async def audio_gen():
-        offset = 0
-        while offset < len(pcm):
-            yield {"AudioEvent": {"Payload": pcm[offset : offset + CHUNK_SIZE]}}
-            offset += CHUNK_SIZE
+    def _run_sync() -> tuple[str, str]:
+        tc = boto3.client("transcribestreaming", region_name=region)
 
-    kwargs: dict = {
-        "MediaSampleRateHertz": 16000,
-        "MediaEncoding": "pcm",
-        "AudioStream": audio_gen(),
-    }
-    if language_code in ("auto", "", None):
-        # Limit to the two languages the app handles to speed up detection
-        kwargs["IdentifyLanguage"] = True
-        kwargs["LanguageOptions"] = "en-US,ko-KR"
-    else:
-        kwargs["LanguageCode"] = LANG_CODE_MAP.get(language_code, "en-US")
+        def audio_gen():
+            offset = 0
+            while offset < len(pcm):
+                yield {"AudioEvent": {"Payload": pcm[offset : offset + CHUNK_SIZE]}}
+                offset += CHUNK_SIZE
 
-    transcript_parts: list[str] = []
-    detected_lang = language_code if language_code not in ("auto", "", None) else "en"
+        kwargs: dict = {
+            "MediaSampleRateHertz": 16000,
+            "MediaEncoding": "pcm",
+            "AudioStream": audio_gen(),
+        }
+        if lang_code in ("auto", "", None):
+            kwargs["IdentifyLanguage"] = True
+            kwargs["LanguageOptions"] = "en-US,ko-KR"
+        else:
+            kwargs["LanguageCode"] = LANG_CODE_MAP.get(lang_code, "en-US")
+
+        resp = tc.start_stream_transcription(**kwargs)
+        transcript_parts: list[str] = []
+        detected_lang = lang_code if lang_code not in ("auto", "", None) else "en"
+
+        for event in resp["TranscriptResultStream"]:
+            results = (
+                event.get("TranscriptEvent", {})
+                .get("Transcript", {})
+                .get("Results", [])
+            )
+            for r in results:
+                if r.get("IsPartial", True):
+                    continue
+                alts = r.get("Alternatives", [])
+                if alts:
+                    t = alts[0].get("Transcript", "").strip()
+                    if t:
+                        transcript_parts.append(t)
+                lc = r.get("LanguageCode", "")
+                if lc:
+                    detected_lang = lc[:2].lower()
+
+        result = " ".join(transcript_parts).strip()
+        logger.info("[Transcribe] result: %r (lang=%s)", result, detected_lang)
+        return result, detected_lang
 
     try:
-        async with transcribe_streaming_client() as tc:
-            resp = await tc.start_stream_transcription(**kwargs)
-            async for event in resp["TranscriptResultStream"]:
-                results = (
-                    event.get("TranscriptEvent", {})
-                    .get("Transcript", {})
-                    .get("Results", [])
-                )
-                for r in results:
-                    # Only collect finalised (non-partial) segments
-                    if r.get("IsPartial", True):
-                        continue
-                    alts = r.get("Alternatives", [])
-                    if alts:
-                        t = alts[0].get("Transcript", "").strip()
-                        if t:
-                            transcript_parts.append(t)
-                    lang_id = r.get("LanguageCode", "")
-                    if lang_id:
-                        detected_lang = lang_id[:2].lower()
+        return await asyncio.to_thread(_run_sync)
     except Exception:
         logger.exception("[Transcribe] _transcribe_once failed")
         return "", "en"
-
-    result = " ".join(transcript_parts).strip()
-    logger.info("[Transcribe] result: %r (lang=%s)", result, detected_lang)
-    return result, detected_lang
 
 
 async def _process_audio_bytes(
@@ -197,28 +201,12 @@ async def _process_audio_bytes(
             audio_bytes, state.source_lang
         )
     else:
-        # SageMaker Whisper (default)
-        payload: dict = {
-            "audio_input": audio_bytes.hex(),
-            "task": "transcribe",
-            "language": "english",
-            "max_new_tokens": 448,
-            "num_beams": 1,
-            "temperature": 0,
-            "do_sample": False,
-            "early_stopping": False,
-            "no_repeat_ngram_size": 3,
-            "num_return_sequences": 1,
-            "top_p": 1,
-            "top_k": 50,
-            "length_penalty": 1,
-        }
-
+        # SageMaker Whisper (default) — send raw WAV binary
         async with sagemaker_client() as sm:
             whisper_resp = await sm.invoke_endpoint(
                 EndpointName=config.WHISPER_ENDPOINT,
-                ContentType="application/json",
-                Body=json.dumps(payload),
+                ContentType="audio/wav",
+                Body=audio_bytes,
             )
             whisper_body = await whisper_resp["Body"].read()
 
@@ -279,36 +267,25 @@ async def _process_audio_bytes(
 
     translated_text = ""
     async with bedrock_client() as br:
-        stream_resp = await br.invoke_model_with_response_stream(
+        stream_resp = await br.converse_stream(
             modelId=bedrock_model_id,
-            contentType="application/json",
-            accept="application/json",
-            body=json.dumps({
-                "anthropic_version": "bedrock-2023-05-31",
-                "max_tokens": 1024,
-                "messages": [{"role": "user", "content": prompt}],
-            }),
+            messages=[{"role": "user", "content": [{"type": "text", "text": prompt}]}],
+            inferenceConfig={"maxTokens": 1024},
         )
-        async for event in stream_resp["body"]:
-            chunk = event.get("chunk")
-            if not chunk:
+        async for event in stream_resp["stream"]:
+            delta = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
+            if not delta:
                 continue
-            parsed = json.loads(chunk["bytes"].decode("utf-8"))
-            if (
-                parsed.get("type") == "content_block_delta"
-                and parsed.get("delta", {}).get("type") == "text_delta"
-                and parsed["delta"].get("text")
-            ):
-                translated_text += parsed["delta"]["text"]
-                await ws.send_json({
-                    "type": "subtitle_stream",
-                    "messageId": message_id,
-                    "phase": "translating",
-                    "speaker": speaker,
-                    "originalText": original_text,
-                    "partialTranslation": translated_text,
-                    "timestamp": timestamp,
-                })
+            translated_text += delta
+            await ws.send_json({
+                "type": "subtitle_stream",
+                "messageId": message_id,
+                "phase": "translating",
+                "speaker": speaker,
+                "originalText": original_text,
+                "partialTranslation": translated_text,
+                "timestamp": timestamp,
+            })
 
     # ── Step 4: Push final subtitle ────────────────────────────────────────────
     await ws.send_json({
@@ -385,6 +362,76 @@ async def _schedule_flush(
     state.flush_task = asyncio.create_task(_do_flush())
 
 
+async def _stream_summary(ws: WebSocket, meeting_id: str, model_id: str) -> None:
+    """Fetch meeting messages and stream a summary via converse_stream."""
+    try:
+        async with dynamodb_client() as ddb:
+            result = await ddb.get_item(
+                TableName=config.MEETINGS_TABLE,
+                Key={"meetingId": {"S": meeting_id}},
+            )
+        raw_messages = result.get("Item", {}).get("messages", {}).get("L", [])
+
+        if not raw_messages:
+            await ws.send_json({"type": "summary_stream", "phase": "error", "error": "No messages to summarize"})
+            return
+
+        lines: List[str] = []
+        for m in raw_messages:
+            mv = m.get("M", {})
+            speaker = mv.get("speaker", {}).get("S", "")
+            orig = mv.get("originalText", {}).get("S", "")
+            trans = mv.get("translatedText", {}).get("S", "")
+            lines.append(f"[{speaker}]\nOriginal: {orig}\nTranslation: {trans}")
+        transcript = "\n\n".join(lines)
+
+        system_prompt = "당신은 전문 회의록 작성자입니다. 회의 대화록을 분석하여 명확하고 구조화된 한국어 요약을 마크다운 형식으로 작성합니다."
+        user_prompt = (
+            "다음 회의 대화록을 분석하여 아래 형식에 맞게 한국어로 요약해 주세요.\n\n"
+            "## 개요\n(미팅 전체를 한 문장으로 요약)\n\n"
+            "## 핵심 메시지\n- (가장 중요한 내용 1-2개)\n\n"
+            "## 주요 포인트\n- (주요 논의 사항 나열)\n\n"
+            "## 상세 노트\n(세부 내용)\n\n"
+            "각 섹션을 ## 헤더와 - 불릿으로 작성하세요. 간결하되 핵심 내용을 빠짐없이 포함하세요.\n\n"
+            f"---\n{transcript}"
+        )
+
+        summary = ""
+        async with bedrock_client() as br:
+            stream_resp = await br.converse_stream(
+                modelId=model_id,
+                system=[{"text": system_prompt}],
+                messages=[{"role": "user", "content": [{"type": "text", "text": user_prompt}]}],
+                inferenceConfig={"maxTokens": 4096},
+            )
+            async for event in stream_resp["stream"]:
+                delta = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
+                if not delta:
+                    continue
+                summary += delta
+                await ws.send_json({"type": "summary_stream", "phase": "delta", "text": delta})
+
+        async with dynamodb_client() as ddb:
+            await ddb.update_item(
+                TableName=config.MEETINGS_TABLE,
+                Key={"meetingId": {"S": meeting_id}},
+                UpdateExpression="SET summary = :s, summarizedAt = :t",
+                ExpressionAttributeValues={
+                    ":s": {"S": summary},
+                    ":t": {"S": _iso_now()},
+                },
+            )
+
+        await ws.send_json({"type": "summary_stream", "phase": "done", "summary": summary})
+
+    except Exception:
+        logger.exception("[ws] _stream_summary failed for meeting_id=%s", meeting_id)
+        try:
+            await ws.send_json({"type": "summary_stream", "phase": "error", "error": "Summary generation failed"})
+        except Exception:
+            pass
+
+
 @router.websocket("/ws")
 async def ws_endpoint(
     ws: WebSocket,
@@ -428,6 +475,11 @@ async def ws_endpoint(
                     state.flush_task.cancel()
                 state.flush_task = None
                 await _flush_audio_buffer(state, ws, connection_id)
+
+            elif action == "summarize":
+                mid = data.get("meetingId") or state.meeting_id
+                if mid:
+                    asyncio.create_task(_stream_summary(ws, mid, state.model_id))
 
             elif action == "sendAudio":
                 audio_data: Optional[str] = data.get("audioData")

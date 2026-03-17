@@ -7,7 +7,7 @@ import {
 } from '@aws-sdk/lib-dynamodb';
 import {
   BedrockRuntimeClient,
-  InvokeModelCommand,
+  ConverseCommand,
 } from '@aws-sdk/client-bedrock-runtime';
 
 const ddb = DynamoDBDocumentClient.from(
@@ -97,24 +97,15 @@ ${transcript}`;
       process.env.SUMMARIZE_MODEL_ID ?? process.env.BEDROCK_MODEL_ID ?? '';
 
     const bedrockRes = await bedrock.send(
-      new InvokeModelCommand({
+      new ConverseCommand({
         modelId,
-        contentType: 'application/json',
-        accept: 'application/json',
-        body: JSON.stringify({
-          anthropic_version: 'bedrock-2023-05-31',
-          max_tokens: 4096,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: userPrompt }],
-        }),
+        system: [{ text: systemPrompt }],
+        messages: [{ role: 'user', content: [{ text: userPrompt }] }],
+        inferenceConfig: { maxTokens: 4096 },
       })
     );
 
-    const bedrockResult = JSON.parse(
-      Buffer.from(bedrockRes.body as Uint8Array).toString('utf-8')
-    ) as { content?: Array<{ text: string }> };
-
-    const summary = bedrockResult.content?.[0]?.text ?? '';
+    const summary = bedrockRes.output?.message?.content?.[0]?.text ?? '';
 
     // Persist summary
     await ddb.send(

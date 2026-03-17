@@ -251,6 +251,13 @@ export class TransmeetStack extends cdk.Stack {
       })
     );
 
+    wsTaskRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['transcribe:StartStreamTranscription'],
+        resources: ['*'],
+      })
+    );
+
     meetingsTable.grantReadWriteData(wsTaskRole);
 
     // ─── ECS Task Definition ────────────────────────────────────────────────────

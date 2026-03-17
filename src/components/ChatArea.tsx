@@ -80,6 +80,33 @@ const SPEAKER_CONFIG: Record<
   },
 }
 
+function PendingBubble({ speaker, text }: { speaker: string; text: string }) {
+  const speakerKey: SpeakerRole = speaker in SPEAKER_CONFIG ? (speaker as SpeakerRole) : 'speaker1'
+  const cfg = SPEAKER_CONFIG[speakerKey]
+  const isRight = cfg.side === 'right'
+  return (
+    <div
+      className={`flex items-start gap-2.5 ${isRight ? 'flex-row-reverse ml-10 sm:ml-16' : 'mr-10 sm:mr-16'}`}
+    >
+      <div
+        className={`flex-shrink-0 w-8 h-8 rounded-full ${cfg.avatarBg} ${cfg.avatarText} flex items-center justify-center text-[10px] font-bold opacity-60`}
+      >
+        {cfg.abbr}
+      </div>
+      <div className={`flex flex-col min-w-0 ${isRight ? 'items-end' : 'items-start'}`}>
+        <div
+          className={`rounded-2xl px-3.5 py-2.5 max-w-xs sm:max-w-sm border border-dashed border-slate-300/60 dark:border-slate-600/40 bg-white/40 dark:bg-slate-800/30 ${isRight ? 'rounded-tr-sm' : 'rounded-tl-sm'}`}
+        >
+          <p className="text-sm text-slate-500 dark:text-slate-400 italic leading-relaxed">
+            {text}
+            <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('ko-KR', {
     hour: '2-digit',
@@ -96,6 +123,7 @@ interface Props {
   isMessageLoading?: boolean
   onPlayMessage?: (id: string, text: string) => void
   onStopMessage?: () => void
+  pendingTranscript?: { messageId: string; text: string; speaker: string } | null
 }
 
 export default function ChatArea({
@@ -106,6 +134,7 @@ export default function ChatArea({
   isMessageLoading,
   onPlayMessage,
   onStopMessage,
+  pendingTranscript,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -258,6 +287,11 @@ export default function ChatArea({
           </div>
         )
       })}
+      {/* Pending Transcribe bubble: word-by-word partial transcript */}
+      {isRecording && pendingTranscript && pendingTranscript.text && (
+        <PendingBubble speaker={pendingTranscript.speaker} text={pendingTranscript.text} />
+      )}
+
       {/* Recording indicator: shows while waiting for next subtitle */}
       {isRecording && (
         <div className="flex items-center gap-2 px-3 py-2 mx-2 mb-1 rounded-xl bg-rose-50/60 dark:bg-rose-900/15 border border-rose-100/60 dark:border-rose-500/10 w-fit">

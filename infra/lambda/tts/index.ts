@@ -1,7 +1,7 @@
 import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import {
   BedrockRuntimeClient,
-  InvokeModelCommand,
+  ConverseCommand,
 } from '@aws-sdk/client-bedrock-runtime';
 import {
   PollyClient,
@@ -64,28 +64,19 @@ export const handler = async (
     // Step 1: Translate KO -> EN via Bedrock (if requested)
     if (translateFirst) {
       const bedrockRes = await bedrock.send(
-        new InvokeModelCommand({
-          modelId: process.env.BEDROCK_MODEL_ID,
-          contentType: 'application/json',
-          accept: 'application/json',
-          body: JSON.stringify({
-            anthropic_version: 'bedrock-2023-05-31',
-            max_tokens: 1024,
-            messages: [
-              {
-                role: 'user',
-                content: `Translate the following Korean text to natural, fluent English. Return only the translated text.\n\n${text}`,
-              },
-            ],
-          }),
+        new ConverseCommand({
+          modelId: process.env.BEDROCK_MODEL_ID!,
+          messages: [
+            {
+              role: 'user',
+              content: [{ text: `Translate the following Korean text to natural, fluent English. Return only the translated text.\n\n${text}` }],
+            },
+          ],
+          inferenceConfig: { maxTokens: 1024 },
         })
       );
 
-      const bedrockResult = JSON.parse(
-        Buffer.from(bedrockRes.body as Uint8Array).toString('utf-8')
-      ) as { content?: Array<{ text: string }> };
-
-      englishText = bedrockResult.content?.[0]?.text ?? text;
+      englishText = bedrockRes.output?.message?.content?.[0]?.text ?? text;
     }
 
     // Korean voice (Seoyeon) only supports neural — override generative/standard

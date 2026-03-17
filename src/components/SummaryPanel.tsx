@@ -196,7 +196,12 @@ export default function SummaryPanel({ summary, onClose, onSummarize, isSummariz
             </p>
           </div>
         ) : summary ? (
-          <MarkdownSummary text={summary} />
+          <div>
+            <MarkdownSummary text={summary} />
+            {isSummarizing && (
+              <span className="inline-block w-[2px] h-3 bg-indigo-400 dark:bg-indigo-500 rounded-sm animate-pulse ml-0.5 mt-1" />
+            )}
+          </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center select-none">
             <div className="w-10 h-10 rounded-xl bg-slate-100/80 dark:bg-slate-800/60 text-slate-400 flex items-center justify-center mb-3">

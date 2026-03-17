@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 export interface Settings {
   sourceLang: 'ko' | 'en' | 'auto'
   targetLang: 'ko' | 'en'
+  sttProvider: 'whisper' | 'transcribe'
   ttsAutoPlay: boolean
   pollyEngine: 'generative' | 'neural' | 'standard'
   pollyVoiceId: string
@@ -15,6 +16,7 @@ export interface Settings {
 const DEFAULT: Settings = {
   sourceLang: 'en',
   targetLang: 'en',
+  sttProvider: 'whisper',
   ttsAutoPlay: true,
   pollyEngine: 'generative',
   pollyVoiceId: 'Ruth',
