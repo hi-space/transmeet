@@ -220,7 +220,7 @@ export default function ChatArea({
                     onClick={() =>
                       playingMessageId === msg.id
                         ? onStopMessage?.()
-                        : onPlayMessage?.(msg.id, msg.translation)
+                        : onPlayMessage?.(msg.id, msg.original)
                     }
                     title={
                       playingMessageId === msg.id
