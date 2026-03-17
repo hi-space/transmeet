@@ -6,6 +6,10 @@ import {
   type ISignUpResult,
 } from 'amazon-cognito-identity-js'
 
+export type SignInResult =
+  | { type: 'success'; user: CognitoUser }
+  | { type: 'newPasswordRequired'; user: CognitoUser }
+
 let _pool: CognitoUserPool | null = null
 
 function getPool(): CognitoUserPool {
@@ -17,15 +21,28 @@ function getPool(): CognitoUserPool {
   return _pool
 }
 
-export function signIn(email: string, password: string): Promise<CognitoUser> {
+export function signIn(email: string, password: string): Promise<SignInResult> {
   return new Promise((resolve, reject) => {
     const user = new CognitoUser({ Username: email, Pool: getPool() })
     const authDetails = new AuthenticationDetails({ Username: email, Password: password })
     user.authenticateUser(authDetails, {
-      onSuccess: () => resolve(user),
+      onSuccess: () => resolve({ type: 'success', user }),
       onFailure: reject,
-      newPasswordRequired: () => reject(new Error('새 비밀번호 설정이 필요합니다.')),
+      newPasswordRequired: () => resolve({ type: 'newPasswordRequired', user }),
     })
+  })
+}
+
+export function completeNewPassword(user: CognitoUser, newPassword: string): Promise<CognitoUser> {
+  return new Promise((resolve, reject) => {
+    user.completeNewPasswordChallenge(
+      newPassword,
+      {},
+      {
+        onSuccess: () => resolve(user),
+        onFailure: reject,
+      }
+    )
   })
 }
 

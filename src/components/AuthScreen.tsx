@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import type { CognitoUser } from 'amazon-cognito-identity-js'
-import { signIn } from '@/lib/cognito'
+import { signIn, completeNewPassword } from '@/lib/cognito'
 
 interface Props {
   onAuth: (user: CognitoUser) => void
@@ -14,14 +14,41 @@ export default function AuthScreen({ onAuth }: Props) {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // new password challenge state
+  const [pendingUser, setPendingUser] = useState<CognitoUser | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+
   async function handleLogin() {
     setError('')
     setLoading(true)
     try {
-      const user = await signIn(email, password)
-      onAuth(user)
+      const result = await signIn(email, password)
+      if (result.type === 'newPasswordRequired') {
+        setPendingUser(result.user)
+      } else {
+        onAuth(result.user)
+      }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : '로그인에 실패했습니다.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleNewPassword() {
+    if (!pendingUser) return
+    if (newPassword !== confirmPassword) {
+      setError('비밀번호가 일치하지 않습니다.')
+      return
+    }
+    setError('')
+    setLoading(true)
+    try {
+      const user = await completeNewPassword(pendingUser, newPassword)
+      onAuth(user)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : '비밀번호 설정에 실패했습니다.')
     } finally {
       setLoading(false)
     }
@@ -64,32 +91,68 @@ export default function AuthScreen({ onAuth }: Props) {
 
         {/* Card */}
         <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-white/60 dark:border-indigo-500/15 rounded-2xl p-6 shadow-xl shadow-indigo-500/5">
-          <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-5 text-center">
-            로그인
-          </h2>
-          <div className="space-y-3">
-            <input
-              type="email"
-              placeholder="이메일"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={inputClass}
-              autoComplete="email"
-            />
-            <input
-              type="password"
-              placeholder="비밀번호"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-              className={inputClass}
-              autoComplete="current-password"
-            />
-            {error && <p className="text-xs text-red-500">{error}</p>}
-            <button onClick={handleLogin} disabled={loading} className={btnPrimary}>
-              {loading ? '로그인 중...' : '로그인'}
-            </button>
-          </div>
+          {pendingUser ? (
+            <>
+              <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-1 text-center">
+                새 비밀번호 설정
+              </h2>
+              <p className="text-xs text-slate-400 dark:text-slate-500 text-center mb-5">
+                보안을 위해 새 비밀번호를 설정해 주세요.
+              </p>
+              <div className="space-y-3">
+                <input
+                  type="password"
+                  placeholder="새 비밀번호"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className={inputClass}
+                  autoComplete="new-password"
+                />
+                <input
+                  type="password"
+                  placeholder="새 비밀번호 확인"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleNewPassword()}
+                  className={inputClass}
+                  autoComplete="new-password"
+                />
+                {error && <p className="text-xs text-red-500">{error}</p>}
+                <button onClick={handleNewPassword} disabled={loading} className={btnPrimary}>
+                  {loading ? '설정 중...' : '비밀번호 설정'}
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-5 text-center">
+                로그인
+              </h2>
+              <div className="space-y-3">
+                <input
+                  type="email"
+                  placeholder="이메일"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={inputClass}
+                  autoComplete="email"
+                />
+                <input
+                  type="password"
+                  placeholder="비밀번호"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                  className={inputClass}
+                  autoComplete="current-password"
+                />
+                {error && <p className="text-xs text-red-500">{error}</p>}
+                <button onClick={handleLogin} disabled={loading} className={btnPrimary}>
+                  {loading ? '로그인 중...' : '로그인'}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
