@@ -198,6 +198,29 @@ export default function Home() {
     }
   }, [isCreatingMeeting])
 
+  // ─── Issue #30: Delete meeting ─────────────────────────────────────────────
+
+  const handleDeleteMeeting = useCallback(
+    async (id: string) => {
+      if (HAS_API) {
+        try {
+          await api.meetings.delete(id)
+        } catch {
+          return
+        }
+      }
+      setMeetings((prev) => prev.filter((m) => m.id !== id))
+      if (activeMeetingId === id) {
+        const next = meetings.find((m) => m.id !== id)
+        if (next) {
+          setActiveMeetingId(next.id)
+          if (HAS_API) loadMeetingMessages(next.id)
+        }
+      }
+    },
+    [activeMeetingId, meetings, loadMeetingMessages]
+  )
+
   // ─── Task #5: WebSocket subtitle handler ───────────────────────────────────
 
   const handleWsMessage = useCallback(
@@ -646,6 +669,7 @@ export default function Home() {
             onSelect={handleSelectMeeting}
             onClose={() => setSidebarOpen(false)}
             onNewMeeting={handleNewMeeting}
+            onDelete={handleDeleteMeeting}
             isCreating={isCreatingMeeting}
           />
         </aside>

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Meeting } from '@/types/meeting'
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
   onSelect: (id: string) => void
   onClose: () => void
   onNewMeeting: () => void
+  onDelete: (id: string) => void
   isCreating?: boolean
 }
 
@@ -21,8 +23,11 @@ export default function MeetingSidebar({
   onSelect,
   onClose,
   onNewMeeting,
+  onDelete,
   isCreating,
 }: Props) {
+  const [confirmId, setConfirmId] = useState<string | null>(null)
+
   return (
     <div className="flex flex-col h-full w-56 glass-sidebar border-r border-slate-200/60 dark:border-indigo-500/10">
       {/* Header */}
@@ -57,16 +62,12 @@ export default function MeetingSidebar({
         ) : (
           meetings.map((meeting) => {
             const isActive = meeting.id === activeMeetingId
+            const isConfirming = confirmId === meeting.id
             return (
-              <button
+              <div
                 key={meeting.id}
-                onClick={() => {
-                  onSelect(meeting.id)
-                  onClose()
-                }}
                 className={`
-                  w-full text-left px-4 py-3 border-b border-slate-100/50 dark:border-white/4
-                  transition-colors
+                  group relative border-b border-slate-100/50 dark:border-white/4
                   ${
                     isActive
                       ? 'bg-indigo-50/90 dark:bg-indigo-500/12 border-l-2 border-l-indigo-500'
@@ -74,19 +75,85 @@ export default function MeetingSidebar({
                   }
                 `}
               >
-                <div
-                  className={`text-sm font-medium truncate ${
-                    isActive
-                      ? 'text-indigo-600 dark:text-indigo-400'
-                      : 'text-slate-700 dark:text-slate-200'
-                  }`}
+                <button
+                  onClick={() => {
+                    if (isConfirming) return
+                    onSelect(meeting.id)
+                    onClose()
+                  }}
+                  className="w-full text-left px-4 py-3 pr-8 transition-colors"
                 >
-                  {meeting.title}
-                </div>
-                <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-                  {formatDate(meeting.startedAt)} · {meeting.messages.length}개
-                </div>
-              </button>
+                  <div
+                    className={`text-sm font-medium truncate ${
+                      isActive
+                        ? 'text-indigo-600 dark:text-indigo-400'
+                        : 'text-slate-700 dark:text-slate-200'
+                    }`}
+                  >
+                    {meeting.title}
+                  </div>
+                  <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                    {formatDate(meeting.startedAt)} · {meeting.messages.length}개
+                  </div>
+                </button>
+
+                {/* Delete button (hover) */}
+                {!isConfirming && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setConfirmId(meeting.id)
+                    }}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                    aria-label="삭제"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-3.5 h-3.5"
+                    >
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                      <path d="M10 11v6M14 11v6" />
+                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                    </svg>
+                  </button>
+                )}
+
+                {/* Inline confirm */}
+                {isConfirming && (
+                  <div className="absolute inset-0 flex items-center justify-between px-3 bg-red-50/95 dark:bg-red-950/80 backdrop-blur-sm">
+                    <span className="text-xs text-red-600 dark:text-red-400 font-medium">
+                      삭제하시겠습니까?
+                    </span>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setConfirmId(null)
+                          onDelete(meeting.id)
+                        }}
+                        className="px-2 py-1 rounded text-xs font-semibold bg-red-500 text-white hover:bg-red-600 transition-colors"
+                      >
+                        삭제
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setConfirmId(null)
+                        }}
+                        className="px-2 py-1 rounded text-xs font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
+                      >
+                        취소
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             )
           })
         )}
