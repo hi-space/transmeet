@@ -4,6 +4,7 @@
 
 - **Spec:** [spec.md](./spec.md)
 - **Repository:** https://github.com/hi-space/transmeet
+- **Issues:** https://github.com/hi-space/transmeet/issues
 - **Started:** 2025-01-20
 
 ## Progress
