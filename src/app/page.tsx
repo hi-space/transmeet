@@ -127,12 +127,22 @@ export default function Home() {
 
   // ─── Task #10: Load meetings on mount ──────────────────────────────────────
 
+  const loadMeetingMessages = useCallback(async (id: string) => {
+    try {
+      const full = await api.meetings.get(id)
+      const meeting = toMeeting(full)
+      setMeetings((prev) => prev.map((m) => (m.id === id ? meeting : m)))
+    } catch {
+      // silent — sidebar still shows the meeting
+    }
+  }, [])
+
   useEffect(() => {
     if (!HAS_API) return
 
     api.meetings
       .list()
-      .then((list) => {
+      .then(async (list) => {
         if (list.length === 0) {
           return api.meetings.create('새 회의').then((m) => {
             const meeting = toMeeting(m)
@@ -143,6 +153,8 @@ export default function Home() {
         const mapped = list.map(toMeeting)
         setMeetings(mapped)
         setActiveMeetingId(mapped[0].id)
+        // list API omits messages — fetch full data for the first (active) meeting
+        await loadMeetingMessages(mapped[0].id)
       })
       .catch(() => {
         // API unavailable — fall back to mock data
@@ -522,10 +534,14 @@ export default function Home() {
 
   // ─── Meeting selection ────────────────────────────────────────────────────────
 
-  const handleSelectMeeting = (id: string) => {
-    setActiveMeetingId(id)
-    setSidebarOpen(false)
-  }
+  const handleSelectMeeting = useCallback(
+    (id: string) => {
+      setActiveMeetingId(id)
+      setSidebarOpen(false)
+      if (HAS_API) loadMeetingMessages(id)
+    },
+    [loadMeetingMessages]
+  )
 
   // ─── Render ──────────────────────────────────────────────────────────────────
 
