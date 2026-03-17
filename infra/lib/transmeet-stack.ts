@@ -12,6 +12,7 @@ import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
+const WHISPER_ENDPOINT = 'whisper-large';
 const BEDROCK_MODEL_ID = 'global.anthropic.claude-haiku-4-5-20251001-v1:0';
 const REGION = 'us-east-1';
 
@@ -56,11 +57,13 @@ export class TransmeetStack extends cdk.Stack {
       ],
     });
 
-    // Transcribe Streaming
+    // SageMaker Whisper endpoint
     lambdaRole.addToPolicy(
       new iam.PolicyStatement({
-        actions: ['transcribe:StartStreamTranscription'],
-        resources: ['*'],
+        actions: ['sagemaker:InvokeEndpoint'],
+        resources: [
+          `arn:aws:sagemaker:${REGION}:*:endpoint/${WHISPER_ENDPOINT}`,
+        ],
       })
     );
 
@@ -95,6 +98,7 @@ export class TransmeetStack extends cdk.Stack {
     const commonEnv: Record<string, string> = {
       MEETINGS_TABLE: meetingsTable.tableName,
       CONNECTIONS_TABLE: connectionsTable.tableName,
+      WHISPER_ENDPOINT,
       BEDROCK_MODEL_ID,
       REGION,
     };
