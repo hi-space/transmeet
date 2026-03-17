@@ -41,6 +41,12 @@ infra/cdk.out/
 infra/dist/
 infra/node_modules/
 
+# Sample
+sample/**/.venv/
+sample/**/cdk.out/
+sample/**/__pycache__/
+sample/**/.git/
+
 # PWA
 /public/sw.js
 /public/workbox-*.js
