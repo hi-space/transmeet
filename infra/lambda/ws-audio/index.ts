@@ -93,8 +93,12 @@ async function transcribeAudio(
   // Strip 44-byte WAV header to send raw PCM to Transcribe
   const pcmData = wavBuffer.subarray(44);
 
+  // Split PCM into 100ms chunks: 16kHz * 2 bytes/sample * 0.1s = 3200 bytes
   async function* audioStream() {
-    yield { AudioEvent: { AudioChunk: pcmData } };
+    const chunkSize = 3200;
+    for (let i = 0; i < pcmData.length; i += chunkSize) {
+      yield { AudioEvent: { AudioChunk: pcmData.subarray(i, i + chunkSize) } };
+    }
   }
 
   const response = await transcribeClient.send(
