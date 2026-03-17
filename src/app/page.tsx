@@ -380,25 +380,23 @@ export default function Home() {
                 : m
             )
           )
-        } else if (msg.type === 'summary_stream') {
-          if (msg.phase === 'delta') {
-            setMeetings((prev) =>
-              prev.map((m) =>
-                m.id === activeMeetingId
-                  ? { ...m, summary: (m.summary ?? '') + (msg.text ?? '') }
-                  : m
-              )
+        }
+      } else if (msg.type === 'summary_stream') {
+        if (msg.phase === 'delta') {
+          setMeetings((prev) =>
+            prev.map((m) =>
+              m.id === activeMeetingId ? { ...m, summary: (m.summary ?? '') + (msg.text ?? '') } : m
             )
-          } else if (msg.phase === 'done') {
-            setMeetings((prev) =>
-              prev.map((m) =>
-                m.id === activeMeetingId ? { ...m, summary: msg.summary ?? m.summary } : m
-              )
+          )
+        } else if (msg.phase === 'done') {
+          setMeetings((prev) =>
+            prev.map((m) =>
+              m.id === activeMeetingId ? { ...m, summary: msg.summary ?? m.summary } : m
             )
-            setIsSummarizing(false)
-          } else if (msg.phase === 'error') {
-            setIsSummarizing(false)
-          }
+          )
+          setIsSummarizing(false)
+        } else if (msg.phase === 'error') {
+          setIsSummarizing(false)
         }
       }
     },

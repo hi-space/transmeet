@@ -135,57 +135,6 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
         {/* Divider */}
         <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
 
-        {/* ── Language settings ─────────────────────────────────────────────── */}
-        <div className="space-y-4">
-          <div>
-            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-              소스 언어
-            </p>
-            <div className="flex gap-1.5">
-              {(
-                [
-                  ['auto', '자동감지'],
-                  ['ko', '한국어'],
-                  ['en', 'English'],
-                ] as const
-              ).map(([val, label]) => (
-                <button
-                  key={val}
-                  onClick={() => handleUpdate({ sourceLang: val })}
-                  className={pill(settings.sourceLang === val)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-              번역 대상 언어
-            </p>
-            <div className="flex gap-1.5">
-              {(
-                [
-                  ['ko', '한국어'],
-                  ['en', 'English'],
-                ] as const
-              ).map(([val, label]) => (
-                <button
-                  key={val}
-                  onClick={() => handleUpdate({ targetLang: val })}
-                  className={pill(settings.targetLang === val)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Divider */}
-        <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
-
         {/* ── Translation model ─────────────────────────────────────────────── */}
         <div className="space-y-2">
           <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
