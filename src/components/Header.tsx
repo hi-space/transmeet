@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import type { WsStatus } from '@/lib/websocket'
 
 interface Props {
   isRecording: boolean
+  wsStatus?: WsStatus
   onToggleSidebar: () => void
   onToggleSummary: () => void
   summaryOpen: boolean
@@ -11,6 +13,7 @@ interface Props {
 
 export default function Header({
   isRecording,
+  wsStatus,
   onToggleSidebar,
   onToggleSummary,
   summaryOpen,
@@ -83,6 +86,20 @@ export default function Header({
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-rose-50 dark:bg-rose-900/20 border border-rose-200/60 dark:border-rose-500/20 mr-1">
               <span className="blink-dot w-1.5 h-1.5 rounded-full bg-rose-500" />
               <span className="text-[10px] font-semibold text-rose-500 tracking-wide">녹음 중</span>
+            </div>
+          )}
+
+          {/* WebSocket status — shown when connecting or errored */}
+          {!isRecording && wsStatus === 'connecting' && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-500/20 mr-1">
+              <span className="blink-dot w-1.5 h-1.5 rounded-full bg-amber-500" />
+              <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 tracking-wide">연결 중</span>
+            </div>
+          )}
+          {wsStatus === 'error' && (
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-red-50 dark:bg-red-900/20 border border-red-200/60 dark:border-red-500/20 mr-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+              <span className="text-[10px] font-semibold text-red-500 tracking-wide">연결 오류</span>
             </div>
           )}
 
