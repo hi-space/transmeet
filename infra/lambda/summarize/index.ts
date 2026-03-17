@@ -72,18 +72,23 @@ export const handler = async (
       .map((m) => `[${m.speaker}]\nOriginal: ${m.originalText}\nTranslation: ${m.translatedText}`)
       .join('\n\n');
 
-    const systemPrompt = `You are a professional meeting minutes writer. Analyze meeting transcripts and produce clear, structured Korean summaries in markdown format.`;
+    const systemPrompt = `당신은 전문 회의록 작성자입니다. 회의 대화록을 분석하여 명확하고 구조화된 한국어 요약을 마크다운 형식으로 작성합니다.`;
 
-    const userPrompt = `Analyze the following meeting transcript and create a comprehensive meeting summary in Korean.
+    const userPrompt = `다음 회의 대화록을 분석하여 아래 형식에 맞게 한국어로 요약해 주세요.
 
-Include ALL of these sections:
-1. **회의 개요**: 주요 주제, 참석자 역할 추정
-2. **주요 논의 사항**: 각 토픽별로 논의된 내용 정리
-3. **결정 사항**: 합의된 내용, 결론
-4. **Action Items**: 후속 조치가 필요한 사항
-5. **기타 메모**: 중요한 언급사항
+## 개요
+(미팅 전체를 한 문장으로 요약)
 
-Format as clean markdown using ## for sections and - for bullets. Be thorough but concise.
+## 핵심 메시지
+- (가장 중요한 내용 1-2개)
+
+## 주요 포인트
+- (주요 논의 사항 나열)
+
+## 상세 노트
+(세부 내용)
+
+각 섹션을 ## 헤더와 - 불릿으로 작성하세요. 간결하되 핵심 내용을 빠짐없이 포함하세요.
 
 ---
 ${transcript}`;
