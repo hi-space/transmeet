@@ -199,7 +199,7 @@ async def _process_audio_bytes(
     else:
         # SageMaker Whisper (default)
         payload: dict = {
-            "audio_input": base64.b64encode(audio_bytes).decode("utf-8"),
+            "audio_input": base64.b64encode(audio_bytes).decode(),
             "task": "transcribe",
             "language": "english",
             "max_new_tokens": 448,
