@@ -2,19 +2,15 @@
 
 import { useState } from 'react'
 import type { CognitoUser } from 'amazon-cognito-identity-js'
-import { signIn, signUp, confirmSignUp } from '@/lib/cognito'
-
-type View = 'login' | 'signup' | 'verify'
+import { signIn } from '@/lib/cognito'
 
 interface Props {
   onAuth: (user: CognitoUser) => void
 }
 
 export default function AuthScreen({ onAuth }: Props) {
-  const [view, setView] = useState<View>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -26,33 +22,6 @@ export default function AuthScreen({ onAuth }: Props) {
       onAuth(user)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : '로그인에 실패했습니다.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleSignUp() {
-    setError('')
-    setLoading(true)
-    try {
-      await signUp(email, password)
-      setView('verify')
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '회원가입에 실패했습니다.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  async function handleVerify() {
-    setError('')
-    setLoading(true)
-    try {
-      await confirmSignUp(email, code)
-      const user = await signIn(email, password)
-      onAuth(user)
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : '인증에 실패했습니다.')
     } finally {
       setLoading(false)
     }
@@ -96,86 +65,31 @@ export default function AuthScreen({ onAuth }: Props) {
         {/* Card */}
         <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-white/60 dark:border-indigo-500/15 rounded-2xl p-6 shadow-xl shadow-indigo-500/5">
           <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-5 text-center">
-            {view === 'login' ? '로그인' : view === 'signup' ? '회원가입' : '이메일 인증'}
+            로그인
           </h2>
-
-          {view === 'verify' ? (
-            <div className="space-y-4">
-              <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
-                <span className="font-medium text-indigo-600 dark:text-indigo-400">{email}</span>{' '}
-                으로 발송된 인증 코드를 입력하세요.
-              </p>
-              <input
-                type="text"
-                placeholder="인증 코드"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
-                className={inputClass}
-                autoComplete="one-time-code"
-              />
-              {error && <p className="text-xs text-red-500">{error}</p>}
-              <button onClick={handleVerify} disabled={loading} className={btnPrimary}>
-                {loading ? '인증 중...' : '인증 완료'}
-              </button>
-              <button
-                onClick={() => {
-                  setView('login')
-                  setError('')
-                }}
-                className="w-full py-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-              >
-                로그인 화면으로 돌아가기
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <input
-                type="email"
-                placeholder="이메일"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={inputClass}
-                autoComplete="email"
-              />
-              <input
-                type="password"
-                placeholder="비밀번호 (8자 이상)"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) =>
-                  e.key === 'Enter' && (view === 'login' ? handleLogin() : handleSignUp())
-                }
-                className={inputClass}
-                autoComplete={view === 'login' ? 'current-password' : 'new-password'}
-              />
-              {error && <p className="text-xs text-red-500">{error}</p>}
-              <button
-                onClick={view === 'login' ? handleLogin : handleSignUp}
-                disabled={loading}
-                className={btnPrimary}
-              >
-                {loading
-                  ? view === 'login'
-                    ? '로그인 중...'
-                    : '가입 중...'
-                  : view === 'login'
-                    ? '로그인'
-                    : '회원가입'}
-              </button>
-              <button
-                onClick={() => {
-                  setView(view === 'login' ? 'signup' : 'login')
-                  setError('')
-                }}
-                className="w-full py-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-              >
-                {view === 'login'
-                  ? '계정이 없으신가요? 회원가입'
-                  : '이미 계정이 있으신가요? 로그인'}
-              </button>
-            </div>
-          )}
+          <div className="space-y-3">
+            <input
+              type="email"
+              placeholder="이메일"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputClass}
+              autoComplete="email"
+            />
+            <input
+              type="password"
+              placeholder="비밀번호"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+              className={inputClass}
+              autoComplete="current-password"
+            />
+            {error && <p className="text-xs text-red-500">{error}</p>}
+            <button onClick={handleLogin} disabled={loading} className={btnPrimary}>
+              {loading ? '로그인 중...' : '로그인'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
