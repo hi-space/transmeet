@@ -10,6 +10,7 @@ interface Props {
   onTtsInputChange: (val: string) => void
   onSend: () => void
   audioLevel?: number // 0–1, real-time mic amplitude
+  isTtsPending?: boolean
 }
 
 export default function ControlPanel({
@@ -19,6 +20,7 @@ export default function ControlPanel({
   onTtsInputChange,
   onSend,
   audioLevel = 0,
+  isTtsPending = false,
 }: Props) {
   return (
     <div className="glass-footer relative z-20 px-4 pt-2 pb-4 flex-shrink-0">
@@ -100,29 +102,42 @@ export default function ControlPanel({
               onSend()
             }
           }}
+          disabled={isTtsPending}
           placeholder="한글로 입력하면 영어로 번역됩니다..."
-          className="flex-1 min-w-0 px-3.5 py-2.5 rounded-2xl bg-white/70 dark:bg-white/5 border border-slate-200/70 dark:border-white/10 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-400/50 focus:border-indigo-300/70 dark:focus:border-indigo-500/40 backdrop-blur-sm transition-colors"
+          className="flex-1 min-w-0 px-3.5 py-2.5 rounded-2xl bg-white/70 dark:bg-white/5 border border-slate-200/70 dark:border-white/10 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-400/50 focus:border-indigo-300/70 dark:focus:border-indigo-500/40 backdrop-blur-sm transition-colors disabled:opacity-60"
         />
 
         {/* Send button */}
         <button
           onClick={onSend}
-          disabled={!ttsInput.trim()}
+          disabled={!ttsInput.trim() || isTtsPending}
           aria-label="전송"
           className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none hover:opacity-90 active:scale-95 transition-all"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-4 h-4"
-          >
-            <path d="m22 2-7 20-4-9-9-4 20-7Z" />
-            <path d="M22 2 11 13" />
-          </svg>
+          {isTtsPending ? (
+            <svg
+              className="w-4 h-4 animate-spin"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            </svg>
+          ) : (
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-4 h-4"
+            >
+              <path d="m22 2-7 20-4-9-9-4 20-7Z" />
+              <path d="M22 2 11 13" />
+            </svg>
+          )}
         </button>
       </div>
     </div>
