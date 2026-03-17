@@ -22,6 +22,8 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
   const meetingIdRef = useRef(meetingId)
   // Track whether the current session should reconnect on unexpected close
   const shouldReconnectRef = useRef(false)
+  // Track the meetingId of the active connection to avoid redundant reconnects
+  const connectedMeetingIdRef = useRef<string | undefined>(undefined)
 
   useEffect(() => {
     onMessageRef.current = onMessage
@@ -38,6 +40,22 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
       return
     }
 
+    const targetMeetingId = meetingIdRef.current
+
+    // Skip if already open or connecting to the same meeting
+    const existing = wsRef.current
+    if (
+      existing &&
+      (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING) &&
+      connectedMeetingIdRef.current === targetMeetingId
+    ) {
+      console.log(
+        '[WS] connect() skipped — already open/connecting for meetingId=%s',
+        targetMeetingId
+      )
+      return
+    }
+
     // Clear any pending reconnect timer to avoid duplicate connections
     if (reconnectTimerRef.current) {
       clearTimeout(reconnectTimerRef.current)
@@ -46,18 +64,20 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
 
     // Clean up any existing connection
     if (wsRef.current) {
+      console.log('[WS] Closing existing connection (readyState=%d)', wsRef.current.readyState)
       wsRef.current.onclose = null
       wsRef.current.close(1000)
       wsRef.current = null
     }
 
     shouldReconnectRef.current = true
+    connectedMeetingIdRef.current = targetMeetingId
 
-    const url = meetingIdRef.current
-      ? `${endpoint}?meetingId=${encodeURIComponent(meetingIdRef.current)}`
+    const url = targetMeetingId
+      ? `${endpoint}?meetingId=${encodeURIComponent(targetMeetingId)}`
       : endpoint
 
-    console.log('[WS] Connecting to', url)
+    console.log('[WS] Connecting to meetingId=%s', targetMeetingId)
     setStatus('connecting')
     const ws = new WebSocket(url)
     wsRef.current = ws
@@ -90,6 +110,7 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
         keepaliveRef.current = null
       }
       wsRef.current = null
+      connectedMeetingIdRef.current = undefined
 
       // Normal close (code 1000) or explicitly disconnected
       if (!shouldReconnectRef.current || event.code === 1000) {
@@ -150,13 +171,7 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
       const ws = wsRef.current
       const readyState = ws?.readyState
       if (!ws || readyState !== WebSocket.OPEN) {
-        // Reconnect if not already connecting
-        if (readyState !== WebSocket.CONNECTING) {
-          console.warn('[WS] sendAudio: not connected, attempting reconnect...')
-          connect()
-        } else {
-          console.warn('[WS] sendAudio blocked: still connecting')
-        }
+        console.warn('[WS] sendAudio skipped — ws not open (readyState=%s)', readyState ?? 'null')
         return false
       }
 
@@ -174,7 +189,7 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
       console.log('[WS] sendAudio sent: b64_len=%d', audioBase64.length)
       return true
     },
-    [connect]
+    [] // stable — all deps via refs
   )
 
   // Cleanup on unmount
