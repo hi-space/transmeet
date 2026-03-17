@@ -66,9 +66,10 @@ function formatTime(iso: string) {
 interface Props {
   messages: Message[]
   isRecording: boolean
+  isProcessing?: boolean // true while a TTS message is being translated
 }
 
-export default function ChatArea({ messages, isRecording }: Props) {
+export default function ChatArea({ messages, isRecording, isProcessing }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -161,6 +162,24 @@ export default function ChatArea({ messages, isRecording }: Props) {
           </div>
         )
       })}
+      {/* Recording indicator: shows while waiting for next subtitle */}
+      {isRecording && (
+        <div className="flex items-center gap-2 px-3 py-2 mx-2 mb-1 rounded-xl bg-rose-50/60 dark:bg-rose-900/15 border border-rose-100/60 dark:border-rose-500/10 w-fit">
+          <span className="flex gap-[3px] items-end h-3">
+            {[0, 0.15, 0.3].map((d, i) => (
+              <span
+                key={i}
+                className="w-[3px] rounded-full bg-rose-400 dark:bg-rose-500 animate-bounce"
+                style={{ animationDelay: `${d}s`, height: i === 1 ? '12px' : '8px' }}
+              />
+            ))}
+          </span>
+          <span className="text-[11px] text-rose-500 dark:text-rose-400 font-medium">
+            {isProcessing ? '번역 중...' : '음성 인식 중...'}
+          </span>
+        </div>
+      )}
+
       <div ref={bottomRef} />
     </div>
   )
