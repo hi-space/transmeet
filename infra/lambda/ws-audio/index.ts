@@ -56,11 +56,16 @@ interface ErrorMessage {
   timestamp: string;
 }
 
+/**
+ * Send a message to the WebSocket client.
+ * Returns true if the connection is gone (client disconnected) so callers
+ * can abort further processing early.
+ */
 async function sendToClient(
   apigw: ApiGatewayManagementApiClient,
   connectionId: string,
   data: StreamMessage | ErrorMessage
-): Promise<void> {
+): Promise<boolean> {
   try {
     await apigw.send(
       new PostToConnectionCommand({
@@ -68,12 +73,13 @@ async function sendToClient(
         Data: Buffer.from(JSON.stringify(data)),
       })
     );
+    return false;
   } catch (err) {
     if (err instanceof GoneException) {
       console.warn(`Connection ${connectionId} is gone`);
-    } else {
-      throw err;
+      return true;
     }
+    throw err;
   }
 }
 
@@ -148,12 +154,10 @@ export const handler = async (
     }
 
     // ── Hallucination filter ───────────────────────────────────────────────
-    // Whisper commonly produces these artifacts on silence or short audio
+    // Only filter unambiguous Whisper artifacts (not real speech fragments)
     const HALLUCINATION_PATTERNS = [
-      /^(you\.?)$/i,
       /^(uh\.?|um\.?|hmm+\.?)$/i,
-      /^thank\s*(you)?\.?$/i,
-      /^thanks(\s+for\s+watching)?\.?$/i,
+      /^thanks\s+for\s+watching\.?$/i,
       /^(please\s+)?subscribe\.?$/i,
       /^(like\s+and\s+subscribe\.?)$/i,
       /^\[.*\]$/, // [Music], [Silence], [Applause], etc.
@@ -183,7 +187,7 @@ export const handler = async (
     const targetLang = translationTarget === 'ko' ? 'Korean' : 'English';
 
     // ── Step 2: Push STT result immediately ───────────────────────────────────
-    await sendToClient(apigw, connectionId, {
+    const goneAfterStt = await sendToClient(apigw, connectionId, {
       type: 'subtitle_stream',
       messageId,
       phase: 'stt',
@@ -191,6 +195,7 @@ export const handler = async (
       originalText,
       timestamp,
     });
+    if (goneAfterStt) return { statusCode: 200, body: 'Connection gone' };
 
     // ── Step 3: Stream translation via Bedrock ────────────────────────────────
     const streamRes = await bedrock.send(
@@ -228,7 +233,7 @@ export const handler = async (
           parsed.delta.text
         ) {
           translatedText += parsed.delta.text;
-          await sendToClient(apigw, connectionId, {
+          const gone = await sendToClient(apigw, connectionId, {
             type: 'subtitle_stream',
             messageId,
             phase: 'translating',
@@ -237,6 +242,7 @@ export const handler = async (
             partialTranslation: translatedText,
             timestamp,
           });
+          if (gone) return { statusCode: 200, body: 'Connection gone' };
         }
       }
     }
