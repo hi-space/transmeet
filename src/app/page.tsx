@@ -136,6 +136,8 @@ export default function Home() {
   const lastSummarizedCountRef = useRef<Record<string, number>>({})
   // Stable ref for handleSummarize to avoid stale closure in timers
   const handleSummarizeRef = useRef<() => Promise<void>>(() => Promise.resolve())
+  // Safety: reset isSummarizing if WS done/error event is never received
+  const isSummarizingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const activeMeeting = meetings.find((m) => m.id === activeMeetingId) ?? meetings[0]
 
@@ -389,6 +391,10 @@ export default function Home() {
             )
           )
         } else if (msg.phase === 'done') {
+          if (isSummarizingTimeoutRef.current) {
+            clearTimeout(isSummarizingTimeoutRef.current)
+            isSummarizingTimeoutRef.current = null
+          }
           setMeetings((prev) =>
             prev.map((m) =>
               m.id === activeMeetingId ? { ...m, summary: msg.summary ?? m.summary } : m
@@ -396,6 +402,10 @@ export default function Home() {
           )
           setIsSummarizing(false)
         } else if (msg.phase === 'error') {
+          if (isSummarizingTimeoutRef.current) {
+            clearTimeout(isSummarizingTimeoutRef.current)
+            isSummarizingTimeoutRef.current = null
+          }
           setIsSummarizing(false)
         }
       }
@@ -484,7 +494,21 @@ export default function Home() {
   // ─── Task #8: Summarize ─────────────────────────────────────────────────────
 
   const handleSummarize = useCallback(async () => {
-    if (isSummarizing || !activeMeetingId) return
+    console.log('[auto-summary] handleSummarize called', {
+      isSummarizing,
+      activeMeetingId,
+      wsStatus,
+    })
+
+    if (isSummarizing || !activeMeetingId) {
+      console.log(
+        '[auto-summary] skipped: isSummarizing=',
+        isSummarizing,
+        '/ activeMeetingId=',
+        activeMeetingId
+      )
+      return
+    }
 
     // Read current messages count from state via functional setter trick
     let msgCount = 0
@@ -493,7 +517,11 @@ export default function Home() {
       return prev // no-op — just reading
     })
 
-    if (msgCount === 0) return
+    console.log('[auto-summary] msgCount=', msgCount)
+    if (msgCount === 0) {
+      console.log('[auto-summary] skipped: no messages')
+      return
+    }
     setIsSummarizing(true)
 
     if (!HAS_API) {
@@ -511,13 +539,23 @@ export default function Home() {
 
     if (wsStatus === 'connected') {
       // Stream summary via WebSocket — isSummarizing cleared on 'done'/'error'
+      console.log('[auto-summary] sending via WebSocket')
       setMeetings((prev) => prev.map((m) => (m.id === activeMeetingId ? { ...m, summary: '' } : m)))
       setSummaryOpen(true)
       sendSummarize(activeMeetingId)
+      // Update ref so "every 10 messages" trigger doesn't re-fire immediately
+      lastSummarizedCountRef.current[activeMeetingId] = msgCount
+      // Safety: reset isSummarizing after 90s in case WS done/error event is lost
+      if (isSummarizingTimeoutRef.current) clearTimeout(isSummarizingTimeoutRef.current)
+      isSummarizingTimeoutRef.current = setTimeout(() => {
+        console.warn('[auto-summary] isSummarizing safety reset after 90s timeout')
+        setIsSummarizing(false)
+      }, 90_000)
       return
     }
 
     // Fallback: REST API (WebSocket not connected)
+    console.log('[auto-summary] sending via REST API')
     try {
       const { summary } = await api.meetings.summarize(activeMeetingId)
       lastSummarizedCountRef.current[activeMeetingId] = msgCount
@@ -551,7 +589,16 @@ export default function Home() {
     isRecording && settings.autoSummarizeInterval > 0
       ? settings.autoSummarizeInterval * 60 * 1000
       : null
-  useInterval(() => handleSummarizeRef.current(), autoSummarizeMs)
+  useInterval(() => {
+    console.log('[auto-summary] interval tick', {
+      isRecording,
+      autoSummarizeInterval: settings.autoSummarizeInterval,
+      autoSummarizeMs,
+      isSummarizing,
+      msgCount: activeMeeting?.messages.length,
+    })
+    handleSummarizeRef.current()
+  }, autoSummarizeMs)
 
   // ─── Task #9: TTS ────────────────────────────────────────────────────────────
 
