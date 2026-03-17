@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="80" fill="#2563EB"/>
+  <!-- Microphone body -->
+  <rect x="208" y="100" width="96" height="160" rx="48" fill="white"/>
+  <!-- Microphone stand arc -->
+  <path d="M160 260 Q160 340 256 340 Q352 340 352 260" stroke="white" stroke-width="20" fill="none" stroke-linecap="round"/>
+  <!-- Stand -->
+  <line x1="256" y1="340" x2="256" y2="390" stroke="white" stroke-width="20" stroke-linecap="round"/>
+  <line x1="210" y1="390" x2="302" y2="390" stroke="white" stroke-width="20" stroke-linecap="round"/>
+  <!-- Translation waves -->
+  <path d="M370 180 Q390 200 370 220" stroke="white" stroke-width="12" fill="none" stroke-linecap="round" opacity="0.8"/>
+  <path d="M390 160 Q420 200 390 240" stroke="white" stroke-width="12" fill="none" stroke-linecap="round" opacity="0.6"/>
+  <!-- Korean character hint -->
+  <text x="130" y="430" font-size="48" font-family="Arial" fill="white" opacity="0.4" font-weight="bold">한</text>
+  <text x="340" y="430" font-size="48" font-family="Arial" fill="white" opacity="0.4" font-weight="bold">EN</text>
+</svg>
