@@ -6,12 +6,18 @@ import {
   PutCommand,
   DeleteCommand,
   ScanCommand,
+  UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
+import {
+  BedrockRuntimeClient,
+  InvokeModelCommand,
+} from '@aws-sdk/client-bedrock-runtime';
 import { randomUUID } from 'crypto';
 
 const ddb = DynamoDBDocumentClient.from(
   new DynamoDBClient({ region: process.env.REGION })
 );
+const bedrock = new BedrockRuntimeClient({ region: process.env.REGION });
 
 const headers = {
   'Content-Type': 'application/json',
@@ -22,11 +28,18 @@ function respond(statusCode: number, body: unknown): APIGatewayProxyResult {
   return { statusCode, headers, body: JSON.stringify(body) };
 }
 
+interface MeetingMessage {
+  speaker: string;
+  originalText: string;
+  translatedText: string;
+}
+
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
   const method = event.httpMethod;
   const meetingId = event.pathParameters?.id;
+  const resource = event.resource ?? '';
 
   try {
     switch (method) {
@@ -62,6 +75,72 @@ export const handler = async (
       }
 
       case 'POST': {
+        if (resource.endsWith('/title')) {
+          // POST /meetings/{id}/title — generate title with Bedrock
+          if (!meetingId) {
+            return respond(400, { error: 'Missing meeting id' });
+          }
+
+          const result = await ddb.send(
+            new GetCommand({
+              TableName: process.env.MEETINGS_TABLE,
+              Key: { meetingId },
+            })
+          );
+
+          if (!result.Item) {
+            return respond(404, { error: 'Meeting not found' });
+          }
+
+          const messages = (result.Item.messages ?? []) as MeetingMessage[];
+          if (messages.length === 0) {
+            return respond(400, { error: 'No messages to generate title from' });
+          }
+
+          const transcript = messages
+            .slice(0, 20)
+            .map((m) => `[${m.speaker}] ${m.originalText}`)
+            .join('\n');
+
+          const bedrockRes = await bedrock.send(
+            new InvokeModelCommand({
+              modelId: process.env.BEDROCK_MODEL_ID ?? '',
+              contentType: 'application/json',
+              accept: 'application/json',
+              body: JSON.stringify({
+                anthropic_version: 'bedrock-2023-05-31',
+                max_tokens: 64,
+                messages: [
+                  {
+                    role: 'user',
+                    content: `다음 회의 내용을 보고 짧은 제목을 생성하세요 (10-20자, 한국어). 제목만 출력하세요.\n\n${transcript}`,
+                  },
+                ],
+              }),
+            })
+          );
+
+          const bedrockResult = JSON.parse(
+            Buffer.from(bedrockRes.body as Uint8Array).toString('utf-8')
+          ) as { content?: Array<{ text: string }> };
+
+          const title = (bedrockResult.content?.[0]?.text ?? '').trim();
+
+          await ddb.send(
+            new UpdateCommand({
+              TableName: process.env.MEETINGS_TABLE,
+              Key: { meetingId },
+              UpdateExpression: 'SET title = :t, updatedAt = :u',
+              ExpressionAttributeValues: {
+                ':t': title,
+                ':u': new Date().toISOString(),
+              },
+            })
+          );
+
+          return respond(200, { title, meetingId });
+        }
+
         // POST /meetings - create new meeting
         const body = JSON.parse(event.body ?? '{}') as { title?: string };
         const now = new Date().toISOString();

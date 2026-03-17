@@ -10,6 +10,8 @@ interface Props {
   onClose: () => void
   onNewMeeting: () => void
   onDelete: (id: string) => void
+  onGenerateTitle: (id: string) => void
+  generatingTitleId: string | null
   isCreating?: boolean
 }
 
@@ -24,6 +26,8 @@ export default function MeetingSidebar({
   onClose,
   onNewMeeting,
   onDelete,
+  onGenerateTitle,
+  generatingTitleId,
   isCreating,
 }: Props) {
   const [confirmId, setConfirmId] = useState<string | null>(null)
@@ -81,7 +85,7 @@ export default function MeetingSidebar({
                     onSelect(meeting.id)
                     onClose()
                   }}
-                  className="w-full text-left px-4 py-3 pr-8 transition-colors"
+                  className="w-full text-left px-4 py-3 pr-16 transition-colors"
                 >
                   <div
                     className={`text-sm font-medium truncate ${
@@ -97,31 +101,70 @@ export default function MeetingSidebar({
                   </div>
                 </button>
 
-                {/* Delete button (hover) */}
+                {/* Action buttons (hover) */}
                 {!isConfirming && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setConfirmId(meeting.id)
-                    }}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
-                    aria-label="삭제"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="w-3.5 h-3.5"
+                  <div className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-all">
+                    {/* Generate title button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onGenerateTitle(meeting.id)
+                      }}
+                      disabled={generatingTitleId === meeting.id}
+                      className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      aria-label="제목 생성"
+                      title="AI로 제목 생성"
                     >
-                      <polyline points="3 6 5 6 21 6" />
-                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                      <path d="M10 11v6M14 11v6" />
-                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                    </svg>
-                  </button>
+                      {generatingTitleId === meeting.id ? (
+                        <svg
+                          className="w-3 h-3 animate-spin"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                        </svg>
+                      ) : (
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="w-3 h-3"
+                        >
+                          <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 1 7.92 12.446A5 5 0 1 1 10 19H5a4 4 0 0 1-.608-7.95A6 6 0 0 1 12 3z" />
+                          <path d="m10 13 2 2 4-4" />
+                        </svg>
+                      )}
+                    </button>
+                    {/* Delete button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setConfirmId(meeting.id)
+                      }}
+                      className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                      aria-label="삭제"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="w-3.5 h-3.5"
+                      >
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                        <path d="M10 11v6M14 11v6" />
+                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                      </svg>
+                    </button>
+                  </div>
                 )}
 
                 {/* Inline confirm */}

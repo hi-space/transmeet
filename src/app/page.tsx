@@ -198,6 +198,26 @@ export default function Home() {
     }
   }, [isCreatingMeeting])
 
+  // ─── Issue #33: Generate meeting title ────────────────────────────────────
+
+  const [generatingTitleId, setGeneratingTitleId] = useState<string | null>(null)
+
+  const handleGenerateTitle = useCallback(
+    async (id: string) => {
+      if (!HAS_API || generatingTitleId) return
+      setGeneratingTitleId(id)
+      try {
+        const { title } = await api.meetings.generateTitle(id)
+        setMeetings((prev) => prev.map((m) => (m.id === id ? { ...m, title } : m)))
+      } catch {
+        // Silent — user can retry
+      } finally {
+        setGeneratingTitleId(null)
+      }
+    },
+    [generatingTitleId]
+  )
+
   // ─── Issue #30: Delete meeting ─────────────────────────────────────────────
 
   const handleDeleteMeeting = useCallback(
@@ -670,6 +690,8 @@ export default function Home() {
             onClose={() => setSidebarOpen(false)}
             onNewMeeting={handleNewMeeting}
             onDelete={handleDeleteMeeting}
+            onGenerateTitle={handleGenerateTitle}
+            generatingTitleId={generatingTitleId}
             isCreating={isCreatingMeeting}
           />
         </aside>

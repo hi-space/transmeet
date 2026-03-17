@@ -95,6 +95,10 @@ export const api = {
       apiFetch<{ summary: string; meetingId: string }>(`/meetings/${id}/summarize`, {
         method: 'POST',
       }),
+    generateTitle: (id: string) =>
+      apiFetch<{ title: string; meetingId: string }>(`/meetings/${id}/title`, {
+        method: 'POST',
+      }),
   },
   tts: {
     synthesize: (text: string, engine?: string, voiceId?: string, translateFirst = true) =>

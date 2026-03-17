@@ -28,23 +28,26 @@ const cdk = __importStar(require("aws-cdk-lib"));
 const dynamodb = __importStar(require("aws-cdk-lib/aws-dynamodb"));
 const lambda = __importStar(require("aws-cdk-lib/aws-lambda"));
 const aws_lambda_nodejs_1 = require("aws-cdk-lib/aws-lambda-nodejs");
-const apigwv2 = __importStar(require("aws-cdk-lib/aws-apigatewayv2"));
-const apigwv2_integrations = __importStar(require("aws-cdk-lib/aws-apigatewayv2-integrations"));
 const apigateway = __importStar(require("aws-cdk-lib/aws-apigateway"));
 const iam = __importStar(require("aws-cdk-lib/aws-iam"));
 const s3 = __importStar(require("aws-cdk-lib/aws-s3"));
 const cloudfront = __importStar(require("aws-cdk-lib/aws-cloudfront"));
 const origins = __importStar(require("aws-cdk-lib/aws-cloudfront-origins"));
+const ecr = __importStar(require("aws-cdk-lib/aws-ecr"));
+const ecs = __importStar(require("aws-cdk-lib/aws-ecs"));
+const ec2 = __importStar(require("aws-cdk-lib/aws-ec2"));
+const elbv2 = __importStar(require("aws-cdk-lib/aws-elasticloadbalancingv2"));
 const path = __importStar(require("path"));
 const WHISPER_ENDPOINT = 'whisper-large';
 const BEDROCK_MODEL_ID = 'global.anthropic.claude-haiku-4-5-20251001-v1:0';
 const REGION = 'us-east-1';
+const MEETINGS_TABLE = 'transmeet-meetings';
 class TransmeetStack extends cdk.Stack {
     constructor(scope, id, props) {
         super(scope, id, props);
         // ─── DynamoDB Tables ───────────────────────────────────────────────────────
         const meetingsTable = new dynamodb.Table(this, 'MeetingsTable', {
-            tableName: 'transmeet-meetings',
+            tableName: MEETINGS_TABLE,
             partitionKey: { name: 'meetingId', type: dynamodb.AttributeType.STRING },
             billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
             pointInTimeRecovery: true,
@@ -56,14 +59,7 @@ class TransmeetStack extends cdk.Stack {
             partitionKey: { name: 'status', type: dynamodb.AttributeType.STRING },
             sortKey: { name: 'createdAt', type: dynamodb.AttributeType.STRING },
         });
-        const connectionsTable = new dynamodb.Table(this, 'ConnectionsTable', {
-            tableName: 'transmeet-connections',
-            partitionKey: { name: 'connectionId', type: dynamodb.AttributeType.STRING },
-            billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
-            timeToLiveAttribute: 'ttl',
-            removalPolicy: cdk.RemovalPolicy.DESTROY,
-        });
-        // ─── IAM Role ───────────────────────────────────────────────────────────────
+        // ─── IAM Role (REST Lambda functions only) ──────────────────────────────────
         const lambdaRole = new iam.Role(this, 'LambdaRole', {
             roleName: 'transmeet-lambda-role',
             assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
@@ -71,13 +67,6 @@ class TransmeetStack extends cdk.Stack {
                 iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
             ],
         });
-        // SageMaker Whisper endpoint
-        lambdaRole.addToPolicy(new iam.PolicyStatement({
-            actions: ['sagemaker:InvokeEndpoint'],
-            resources: [
-                `arn:aws:sagemaker:${REGION}:*:endpoint/${WHISPER_ENDPOINT}`,
-            ],
-        }));
         // Bedrock — allow both foundation models and cross-region inference profiles (global.*)
         lambdaRole.addToPolicy(new iam.PolicyStatement({
             actions: [
@@ -96,11 +85,9 @@ class TransmeetStack extends cdk.Stack {
         }));
         // DynamoDB
         meetingsTable.grantReadWriteData(lambdaRole);
-        connectionsTable.grantReadWriteData(lambdaRole);
         // ─── Shared Lambda Config ───────────────────────────────────────────────────
         const commonEnv = {
             MEETINGS_TABLE: meetingsTable.tableName,
-            CONNECTIONS_TABLE: connectionsTable.tableName,
             WHISPER_ENDPOINT,
             BEDROCK_MODEL_ID,
             REGION,
@@ -115,26 +102,7 @@ class TransmeetStack extends cdk.Stack {
                 externalModules: [],
             },
         };
-        // ─── Lambda Functions ───────────────────────────────────────────────────────
-        const wsConnectFn = new aws_lambda_nodejs_1.NodejsFunction(this, 'WsConnectFn', {
-            functionName: 'transmeet-ws-connect',
-            entry: path.join(__dirname, '../lambda/ws-connect/index.ts'),
-            timeout: cdk.Duration.seconds(10),
-            ...commonNodejsFunctionProps,
-        });
-        const wsDisconnectFn = new aws_lambda_nodejs_1.NodejsFunction(this, 'WsDisconnectFn', {
-            functionName: 'transmeet-ws-disconnect',
-            entry: path.join(__dirname, '../lambda/ws-disconnect/index.ts'),
-            timeout: cdk.Duration.seconds(10),
-            ...commonNodejsFunctionProps,
-        });
-        const wsAudioFn = new aws_lambda_nodejs_1.NodejsFunction(this, 'WsAudioFn', {
-            functionName: 'transmeet-ws-audio',
-            entry: path.join(__dirname, '../lambda/ws-audio/index.ts'),
-            timeout: cdk.Duration.seconds(30),
-            memorySize: 512,
-            ...commonNodejsFunctionProps,
-        });
+        // ─── Lambda Functions (REST only) ───────────────────────────────────────────
         const meetingsFn = new aws_lambda_nodejs_1.NodejsFunction(this, 'MeetingsFn', {
             functionName: 'transmeet-meetings',
             entry: path.join(__dirname, '../lambda/meetings/index.ts'),
@@ -158,35 +126,6 @@ class TransmeetStack extends cdk.Stack {
             timeout: cdk.Duration.seconds(30),
             ...commonNodejsFunctionProps,
         });
-        // ─── WebSocket API ──────────────────────────────────────────────────────────
-        const wsApi = new apigwv2.WebSocketApi(this, 'WsApi', {
-            apiName: 'transmeet-websocket',
-            connectRouteOptions: {
-                integration: new apigwv2_integrations.WebSocketLambdaIntegration('WsConnectIntegration', wsConnectFn),
-            },
-            disconnectRouteOptions: {
-                integration: new apigwv2_integrations.WebSocketLambdaIntegration('WsDisconnectIntegration', wsDisconnectFn),
-            },
-            defaultRouteOptions: {
-                integration: new apigwv2_integrations.WebSocketLambdaIntegration('WsDefaultIntegration', wsAudioFn),
-            },
-        });
-        wsApi.addRoute('sendAudio', {
-            integration: new apigwv2_integrations.WebSocketLambdaIntegration('WsSendAudioIntegration', wsAudioFn),
-        });
-        const wsStage = new apigwv2.WebSocketStage(this, 'WsStage', {
-            webSocketApi: wsApi,
-            stageName: 'prod',
-            autoDeploy: true,
-        });
-        // Allow wsAudioFn to push messages back to connected clients
-        wsAudioFn.addToRolePolicy(new iam.PolicyStatement({
-            actions: ['execute-api:ManageConnections'],
-            resources: [
-                `arn:aws:execute-api:${REGION}:*:${wsApi.apiId}/${wsStage.stageName}/POST/@connections/*`,
-            ],
-        }));
-        wsAudioFn.addEnvironment('WS_ENDPOINT', wsStage.callbackUrl);
         // ─── REST API ───────────────────────────────────────────────────────────────
         const restApi = new apigateway.RestApi(this, 'RestApi', {
             restApiName: 'transmeet-api',
@@ -213,6 +152,8 @@ class TransmeetStack extends cdk.Stack {
         meetingResource.addMethod('DELETE', meetingsIntegration);
         // /meetings/{id}/summarize
         meetingResource.addResource('summarize').addMethod('POST', summarizeIntegration);
+        // /meetings/{id}/title
+        meetingResource.addResource('title').addMethod('POST', meetingsIntegration);
         // /tts
         restApi.root.addResource('tts').addMethod('POST', ttsIntegration);
         // ─── S3 + CloudFront (Frontend Hosting) ────────────────────────────────────
@@ -246,11 +187,108 @@ class TransmeetStack extends cdk.Stack {
             ],
             priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
         });
+        // ─── ECR ────────────────────────────────────────────────────────────────────
+        const ecrRepo = new ecr.Repository(this, 'WsBackendRepo', {
+            repositoryName: 'transmeet-ws-backend',
+            lifecycleRules: [{ maxImageCount: 5 }],
+        });
+        // ─── VPC + ECS Cluster ──────────────────────────────────────────────────────
+        const vpc = ec2.Vpc.fromLookup(this, 'DefaultVpc', { isDefault: true });
+        const cluster = new ecs.Cluster(this, 'WsCluster', {
+            clusterName: 'transmeet-ws-cluster',
+            vpc,
+        });
+        // ─── ECS Task Role ──────────────────────────────────────────────────────────
+        const wsTaskRole = new iam.Role(this, 'WsTaskRole', {
+            assumedBy: new iam.ServicePrincipal('ecs-tasks.amazonaws.com'),
+        });
+        wsTaskRole.addToPolicy(new iam.PolicyStatement({
+            actions: ['sagemaker:InvokeEndpoint'],
+            resources: [
+                `arn:aws:sagemaker:${REGION}:*:endpoint/${WHISPER_ENDPOINT}`,
+            ],
+        }));
+        wsTaskRole.addToPolicy(new iam.PolicyStatement({
+            actions: [
+                'bedrock:InvokeModel',
+                'bedrock:InvokeModelWithResponseStream',
+            ],
+            resources: [
+                `arn:aws:bedrock:*::foundation-model/*`,
+                `arn:aws:bedrock:*:${this.account}:inference-profile/*`,
+            ],
+        }));
+        meetingsTable.grantReadWriteData(wsTaskRole);
+        // ─── ECS Task Definition ────────────────────────────────────────────────────
+        const taskDef = new ecs.FargateTaskDefinition(this, 'WsTaskDef', {
+            cpu: 512,
+            memoryLimitMiB: 1024,
+            taskRole: wsTaskRole,
+        });
+        taskDef.addContainer('ws-backend', {
+            image: ecs.ContainerImage.fromEcrRepository(ecrRepo, 'latest'),
+            portMappings: [{ containerPort: 8000 }],
+            environment: {
+                REGION,
+                MEETINGS_TABLE,
+                WHISPER_ENDPOINT,
+                BEDROCK_MODEL_ID,
+            },
+            logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'transmeet-ws' }),
+        });
+        // ─── Security Groups ────────────────────────────────────────────────────────
+        const albSg = new ec2.SecurityGroup(this, 'AlbSg', { vpc });
+        albSg.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80));
+        const taskSg = new ec2.SecurityGroup(this, 'WsTaskSg', { vpc });
+        taskSg.addIngressRule(albSg, ec2.Port.tcp(8000));
+        // ─── ALB + Target Group + Listener ─────────────────────────────────────────
+        const alb = new elbv2.ApplicationLoadBalancer(this, 'WsAlb', {
+            vpc,
+            internetFacing: true,
+            securityGroup: albSg,
+        });
+        const targetGroup = new elbv2.ApplicationTargetGroup(this, 'WsTg', {
+            vpc,
+            port: 8000,
+            protocol: elbv2.ApplicationProtocol.HTTP,
+            targetType: elbv2.TargetType.IP,
+            healthCheck: {
+                path: '/health',
+                interval: cdk.Duration.seconds(30),
+            },
+        });
+        alb.addListener('WsListener', { port: 80 }).addTargetGroups('WsTgAttach', { targetGroups: [targetGroup] });
+        // ─── Fargate Service ────────────────────────────────────────────────────────
+        const service = new ecs.FargateService(this, 'WsService', {
+            cluster,
+            taskDefinition: taskDef,
+            desiredCount: 1,
+            securityGroups: [taskSg],
+            assignPublicIp: true,
+        });
+        service.attachToApplicationTargetGroup(targetGroup);
+        // ─── CloudFront /ws behavior → ALB ─────────────────────────────────────────
+        const albOrigin = new origins.HttpOrigin(alb.loadBalancerDnsName, {
+            protocolPolicy: cloudfront.OriginProtocolPolicy.HTTP_ONLY,
+        });
+        distribution.addBehavior('/ws', albOrigin, {
+            allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+            cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+            originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+            viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
+        });
         // ─── Outputs ────────────────────────────────────────────────────────────────
+        new cdk.CfnOutput(this, 'WsBackendEcrUri', {
+            value: ecrRepo.repositoryUri,
+            description: 'ECR repository URI for the WebSocket backend image',
+        });
+        new cdk.CfnOutput(this, 'WsAlbDns', {
+            value: alb.loadBalancerDnsName,
+            description: 'ALB DNS name (CloudFront /ws origin)',
+        });
         new cdk.CfnOutput(this, 'WsEndpoint', {
-            value: wsStage.url,
-            exportName: 'TransmeetWsEndpoint',
-            description: 'WebSocket API endpoint (wss://)',
+            value: `wss://${distribution.distributionDomainName}/ws`,
+            description: 'WebSocket endpoint via CloudFront',
         });
         new cdk.CfnOutput(this, 'RestEndpoint', {
             value: restApi.url,
