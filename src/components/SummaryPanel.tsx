@@ -1,11 +1,96 @@
 'use client'
 
+import type { ReactNode } from 'react'
+
 interface Props {
-  summary: string[]
+  summary?: string // raw markdown
   onClose?: () => void
   onSummarize?: () => void
   isSummarizing?: boolean
 }
+
+// ─── Inline bold renderer ────────────────────────────────────────────────────
+
+function renderInline(text: string): ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/)
+  if (parts.length === 1) return text
+  return parts.map((part, i) =>
+    part.startsWith('**') && part.endsWith('**') ? (
+      <strong key={i} className="font-semibold text-slate-700 dark:text-slate-200">
+        {part.slice(2, -2)}
+      </strong>
+    ) : (
+      part
+    )
+  )
+}
+
+// ─── Markdown renderer ───────────────────────────────────────────────────────
+
+function MarkdownSummary({ text }: { text: string }) {
+  const lines = text.split('\n')
+
+  return (
+    <div className="space-y-0.5">
+      {lines.map((line, i) => {
+        const t = line.trim()
+
+        if (!t) return <div key={i} className="h-2" />
+
+        if (t === '---')
+          return <hr key={i} className="my-3 border-slate-200/60 dark:border-white/8" />
+
+        if (t.startsWith('## '))
+          return (
+            <h3
+              key={i}
+              className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider pt-4 pb-1 first:pt-0"
+            >
+              {t.slice(3)}
+            </h3>
+          )
+
+        if (t.startsWith('### '))
+          return (
+            <h4 key={i} className="text-xs font-semibold text-slate-600 dark:text-slate-300 pt-2">
+              {renderInline(t.slice(4))}
+            </h4>
+          )
+
+        if (t.startsWith('- ') || t.startsWith('* '))
+          return (
+            <div key={i} className="flex items-start gap-2 py-0.5">
+              <span className="flex-shrink-0 w-1 h-1 rounded-full bg-indigo-400 dark:bg-indigo-500 mt-[6px]" />
+              <span className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                {renderInline(t.slice(2))}
+              </span>
+            </div>
+          )
+
+        const numMatch = t.match(/^(\d+)\.\s+(.+)/)
+        if (numMatch)
+          return (
+            <div key={i} className="flex items-start gap-2 py-0.5">
+              <span className="flex-shrink-0 text-[10px] font-bold text-indigo-500 w-4 text-right mt-0.5">
+                {numMatch[1]}.
+              </span>
+              <span className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                {renderInline(numMatch[2])}
+              </span>
+            </div>
+          )
+
+        return (
+          <p key={i} className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+            {renderInline(t)}
+          </p>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─── Panel ───────────────────────────────────────────────────────────────────
 
 export default function SummaryPanel({ summary, onClose, onSummarize, isSummarizing }: Props) {
   return (
@@ -32,7 +117,6 @@ export default function SummaryPanel({ summary, onClose, onSummarize, isSummariz
         </div>
 
         <div className="flex items-center gap-1">
-          {/* Summarize button */}
           {onSummarize && (
             <button
               onClick={onSummarize}
@@ -94,7 +178,7 @@ export default function SummaryPanel({ summary, onClose, onSummarize, isSummariz
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto scrollbar-thin p-4">
-        {isSummarizing && summary.length === 0 ? (
+        {isSummarizing && !summary ? (
           <div className="flex flex-col items-center justify-center h-full text-center select-none">
             <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500 flex items-center justify-center mb-3">
               <svg
@@ -111,7 +195,9 @@ export default function SummaryPanel({ summary, onClose, onSummarize, isSummariz
               요약을 생성하고 있습니다...
             </p>
           </div>
-        ) : summary.length === 0 ? (
+        ) : summary ? (
+          <MarkdownSummary text={summary} />
+        ) : (
           <div className="flex flex-col items-center justify-center h-full text-center select-none">
             <div className="w-10 h-10 rounded-xl bg-slate-100/80 dark:bg-slate-800/60 text-slate-400 flex items-center justify-center mb-3">
               <svg
@@ -132,19 +218,6 @@ export default function SummaryPanel({ summary, onClose, onSummarize, isSummariz
               위의 요약 버튼을 눌러주세요.
             </p>
           </div>
-        ) : (
-          <ul className="space-y-3">
-            {summary.map((point, i) => (
-              <li key={i} className="flex items-start gap-2.5">
-                <span className="flex-shrink-0 w-5 h-5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-[10px] font-bold mt-0.5">
-                  {i + 1}
-                </span>
-                <span className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                  {point}
-                </span>
-              </li>
-            ))}
-          </ul>
         )}
       </div>
     </div>

@@ -1,8 +1,13 @@
 /**
  * WebSocket audio handler
- * Flow: audio chunk -> Whisper STT -> Bedrock translation -> WS response
+ * Flow: audio chunk -> Whisper STT -> Bedrock streaming translation -> WS response
  *
- * Expected message format:
+ * Message sequence per audio chunk:
+ *   1. { type: "subtitle_stream", phase: "stt",         originalText }
+ *   2. { type: "subtitle_stream", phase: "translating", partialTranslation } × N tokens
+ *   3. { type: "subtitle_stream", phase: "done",        originalText, translatedText, detectedLanguage }
+ *
+ * Expected inbound message format:
  * {
  *   action: "sendAudio",
  *   audioData: "<base64 WAV>",
@@ -19,7 +24,7 @@ import {
 } from '@aws-sdk/client-sagemaker-runtime';
 import {
   BedrockRuntimeClient,
-  InvokeModelCommand,
+  InvokeModelWithResponseStreamCommand,
 } from '@aws-sdk/client-bedrock-runtime';
 import {
   ApiGatewayManagementApiClient,
@@ -33,20 +38,28 @@ const ddb = DynamoDBDocumentClient.from(
 const sagemaker = new SageMakerRuntimeClient({ region: process.env.REGION });
 const bedrock = new BedrockRuntimeClient({ region: process.env.REGION });
 
-interface SubtitleMessage {
-  type: 'subtitle' | 'error';
-  originalText?: string;
-  translatedText?: string;
-  detectedLanguage?: 'ko' | 'en';
+interface StreamMessage {
+  type: 'subtitle_stream';
+  messageId: string;
+  phase: 'stt' | 'translating' | 'done';
   speaker?: string;
   timestamp: string;
-  message?: string;
+  originalText?: string;
+  partialTranslation?: string;
+  translatedText?: string;
+  detectedLanguage?: 'ko' | 'en';
+}
+
+interface ErrorMessage {
+  type: 'error';
+  message: string;
+  timestamp: string;
 }
 
 async function sendToClient(
   apigw: ApiGatewayManagementApiClient,
   connectionId: string,
-  data: SubtitleMessage
+  data: StreamMessage | ErrorMessage
 ): Promise<void> {
   try {
     await apigw.send(
@@ -64,10 +77,19 @@ async function sendToClient(
   }
 }
 
+/** Normalize Whisper language codes to 'ko' | 'en' */
+function normalizeLanguage(lang: string): 'ko' | 'en' {
+  const l = lang.toLowerCase();
+  if (l === 'ko' || l === 'korean' || l === 'kor') return 'ko';
+  return 'en';
+}
+
 export const handler = async (
-  event: APIGatewayProxyWebsocketEventV2
+  wsEvent: APIGatewayProxyWebsocketEventV2
 ): Promise<{ statusCode: number; body: string }> => {
-  const { connectionId } = event.requestContext;
+  const { connectionId } = wsEvent.requestContext;
+  const timestamp = new Date().toISOString();
+  const messageId = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
   const apigw = new ApiGatewayManagementApiClient({
     endpoint: process.env.WS_ENDPOINT,
@@ -78,22 +100,32 @@ export const handler = async (
     audioData?: string;
     meetingId?: string;
     speaker?: string;
+    sourceLang?: string; // 'ko' | 'en' | 'auto' — from client settings
+    targetLang?: string; // 'ko' | 'en' — from client settings
+    modelId?: string; // Bedrock model override from client settings
   };
-
   try {
-    body = JSON.parse(event.body ?? '{}');
+    body = JSON.parse(wsEvent.body ?? '{}');
   } catch {
     return { statusCode: 400, body: 'Invalid JSON' };
   }
 
-  const { audioData, meetingId, speaker = 'remote' } = body;
+  const {
+    audioData,
+    meetingId,
+    speaker = 'remote',
+    sourceLang: reqSourceLang,
+    targetLang: reqTargetLang,
+    modelId: reqModelId,
+  } = body;
 
+  const bedrockModelId = reqModelId || process.env.BEDROCK_MODEL_ID;
   if (!audioData) {
     return { statusCode: 400, body: 'Missing audioData' };
   }
 
   try {
-    // Step 1: STT via SageMaker Whisper
+    // ── Step 1: STT via SageMaker Whisper ─────────────────────────────────────
     const audioBuffer = Buffer.from(audioData, 'base64');
     const whisperRes = await sagemaker.send(
       new InvokeEndpointCommand({
@@ -105,24 +137,45 @@ export const handler = async (
 
     const whisperResult = JSON.parse(
       Buffer.from(whisperRes.Body as Uint8Array).toString('utf-8')
-    ) as { text?: string; language?: string };
+    ) as { text?: string | string[]; language?: string };
 
-    const originalText = (whisperResult.text ?? '').trim();
+    const rawText = whisperResult.text;
+    const originalText = (
+      Array.isArray(rawText) ? rawText.join(' ') : rawText ?? ''
+    ).trim();
     if (!originalText) {
       return { statusCode: 200, body: 'Empty transcription' };
     }
 
-    // Whisper language hint (e.g. "ko", "en") — used as context for Bedrock
-    const whisperLang = whisperResult.language ?? '';
+    // Client override > Whisper detection > default 'en'
+    const detectedLanguage: 'ko' | 'en' =
+      reqSourceLang && reqSourceLang !== 'auto'
+        ? normalizeLanguage(reqSourceLang)
+        : normalizeLanguage(whisperResult.language ?? '');
 
-    // Step 2: Detect language + bidirectional translation via Bedrock Claude
-    const langHint = whisperLang
-      ? `Whisper detected the language as "${whisperLang}". Use this as a hint but verify with the text itself.\n`
-      : '';
+    const translationTarget: 'ko' | 'en' = reqTargetLang
+      ? normalizeLanguage(reqTargetLang)
+      : detectedLanguage === 'ko'
+        ? 'en'
+        : 'ko';
 
-    const bedrockRes = await bedrock.send(
-      new InvokeModelCommand({
-        modelId: process.env.BEDROCK_MODEL_ID,
+    const sourceLang = detectedLanguage === 'ko' ? 'Korean' : 'English';
+    const targetLang = translationTarget === 'ko' ? 'Korean' : 'English';
+
+    // ── Step 2: Push STT result immediately ───────────────────────────────────
+    await sendToClient(apigw, connectionId, {
+      type: 'subtitle_stream',
+      messageId,
+      phase: 'stt',
+      speaker,
+      originalText,
+      timestamp,
+    });
+
+    // ── Step 3: Stream translation via Bedrock ────────────────────────────────
+    const streamRes = await bedrock.send(
+      new InvokeModelWithResponseStreamCommand({
+        modelId: bedrockModelId,
         contentType: 'application/json',
         accept: 'application/json',
         body: JSON.stringify({
@@ -132,10 +185,8 @@ export const handler = async (
             {
               role: 'user',
               content:
-                `${langHint}Detect the language of the following text and translate it:\n` +
-                `- If Korean, translate to English\n` +
-                `- If English, translate to Korean\n` +
-                `- Return ONLY valid JSON with no markdown fences: {"detected": "ko" or "en", "translation": "..."}\n\n` +
+                `Translate the following ${sourceLang} text to ${targetLang}. ` +
+                `Output only the translated text, no explanations, no quotes.\n\n` +
                 `Text: ${originalText}`,
             },
           ],
@@ -143,37 +194,47 @@ export const handler = async (
       })
     );
 
-    const bedrockResult = JSON.parse(
-      Buffer.from(bedrockRes.body as Uint8Array).toString('utf-8')
-    ) as { content?: Array<{ text: string }> };
-
-    const rawContent = (bedrockResult.content?.[0]?.text ?? '').trim();
-
-    let detectedLanguage: 'ko' | 'en' = 'en';
     let translatedText = '';
-    try {
-      const parsed = JSON.parse(rawContent) as {
-        detected?: string;
-        translation?: string;
-      };
-      detectedLanguage = parsed.detected === 'ko' ? 'ko' : 'en';
-      translatedText = parsed.translation ?? '';
-    } catch {
-      // Bedrock returned plain text instead of JSON — use as-is
-      translatedText = rawContent;
+    if (streamRes.body) {
+      for await (const streamChunk of streamRes.body) {
+        if (!streamChunk.chunk?.bytes) continue;
+        const parsed = JSON.parse(
+          Buffer.from(streamChunk.chunk.bytes).toString('utf-8')
+        ) as { type?: string; delta?: { type?: string; text?: string } };
+
+        if (
+          parsed.type === 'content_block_delta' &&
+          parsed.delta?.type === 'text_delta' &&
+          parsed.delta.text
+        ) {
+          translatedText += parsed.delta.text;
+          await sendToClient(apigw, connectionId, {
+            type: 'subtitle_stream',
+            messageId,
+            phase: 'translating',
+            speaker,
+            originalText,
+            partialTranslation: translatedText,
+            timestamp,
+          });
+        }
+      }
     }
 
-    // Step 3: Persist message to DynamoDB
-    if (meetingId) {
-      const message = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        speaker,
-        originalText,
-        translatedText,
-        detectedLanguage,
-        timestamp: new Date().toISOString(),
-      };
+    // ── Step 4: Push final completed subtitle ─────────────────────────────────
+    await sendToClient(apigw, connectionId, {
+      type: 'subtitle_stream',
+      messageId,
+      phase: 'done',
+      speaker,
+      originalText,
+      translatedText,
+      detectedLanguage,
+      timestamp,
+    });
 
+    // ── Step 5: Persist to DynamoDB ───────────────────────────────────────────
+    if (meetingId) {
       await ddb.send(
         new UpdateCommand({
           TableName: process.env.MEETINGS_TABLE,
@@ -182,34 +243,31 @@ export const handler = async (
             'SET messages = list_append(if_not_exists(messages, :empty), :msg), #updatedAt = :ts',
           ExpressionAttributeNames: { '#updatedAt': 'updatedAt' },
           ExpressionAttributeValues: {
-            ':msg': [message],
+            ':msg': [
+              {
+                id: messageId,
+                speaker,
+                originalText,
+                translatedText,
+                detectedLanguage,
+                timestamp,
+              },
+            ],
             ':empty': [],
-            ':ts': new Date().toISOString(),
+            ':ts': timestamp,
           },
         })
       );
     }
 
-    // Step 4: Push subtitle back to client
-    await sendToClient(apigw, connectionId, {
-      type: 'subtitle',
-      originalText,
-      translatedText,
-      detectedLanguage,
-      speaker,
-      timestamp: new Date().toISOString(),
-    });
-
     return { statusCode: 200, body: 'OK' };
   } catch (err) {
     console.error('Error processing audio:', err);
-
     await sendToClient(apigw, connectionId, {
       type: 'error',
       message: 'Processing failed. Please try again.',
-      timestamp: new Date().toISOString(),
+      timestamp,
     });
-
     return { statusCode: 500, body: 'Internal error' };
   }
 };

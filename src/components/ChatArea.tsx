@@ -3,6 +3,31 @@
 import { useEffect, useRef } from 'react'
 import { Message, SpeakerRole } from '@/types/meeting'
 
+function SpeakerIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
+    </svg>
+  )
+}
+
+function StopIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <rect x="6" y="6" width="12" height="12" rx="1" />
+    </svg>
+  )
+}
+
 const SPEAKER_CONFIG: Record<
   SpeakerRole,
   {
@@ -67,9 +92,21 @@ interface Props {
   messages: Message[]
   isRecording: boolean
   isProcessing?: boolean // true while a TTS message is being translated
+  playingMessageId?: string | null
+  isMessageLoading?: boolean
+  onPlayMessage?: (id: string, text: string) => void
+  onStopMessage?: () => void
 }
 
-export default function ChatArea({ messages, isRecording, isProcessing }: Props) {
+export default function ChatArea({
+  messages,
+  isRecording,
+  isProcessing,
+  playingMessageId,
+  isMessageLoading,
+  onPlayMessage,
+  onStopMessage,
+}: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -147,17 +184,76 @@ export default function ChatArea({ messages, isRecording, isProcessing }: Props)
                   isRight ? 'rounded-tr-sm' : 'rounded-tl-sm'
                 }`}
               >
-                {/* EN original */}
+                {/* Original text */}
                 <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
                   {msg.original}
                 </p>
-                {/* KO translation */}
+                {/* Translation — three states */}
                 <div className={`border-t ${cfg.dividerColor} mt-1.5 pt-1.5`}>
-                  <p className={`text-xs leading-relaxed ${cfg.translationColor}`}>
-                    {msg.translation}
-                  </p>
+                  {msg.streamPhase === 'stt' ? (
+                    <span className="flex items-center gap-1">
+                      <span className={`text-xs ${cfg.translationColor}`}>번역 중</span>
+                      {[0, 0.1, 0.2].map((d, i) => (
+                        <span
+                          key={i}
+                          className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 animate-bounce"
+                          style={{ animationDelay: `${d}s` }}
+                        />
+                      ))}
+                    </span>
+                  ) : (
+                    <p className={`text-xs leading-relaxed ${cfg.translationColor}`}>
+                      {msg.translation}
+                      {msg.streamPhase === 'translating' && (
+                        <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
+                      )}
+                    </p>
+                  )}
                 </div>
               </div>
+
+              {/* Per-message TTS play/stop button */}
+              {msg.translation &&
+                msg.streamPhase !== 'stt' &&
+                msg.streamPhase !== 'translating' && (
+                  <button
+                    onClick={() =>
+                      playingMessageId === msg.id
+                        ? onStopMessage?.()
+                        : onPlayMessage?.(msg.id, msg.translation)
+                    }
+                    title={
+                      playingMessageId === msg.id
+                        ? isMessageLoading
+                          ? '로딩 중...'
+                          : '재생 중지'
+                        : '번역 음성 재생'
+                    }
+                    className={`mt-1 flex items-center justify-center w-6 h-6 rounded-full transition-colors ${
+                      playingMessageId === msg.id
+                        ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/50'
+                        : 'bg-slate-100/80 dark:bg-white/6 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-600 dark:hover:text-slate-300'
+                    }`}
+                  >
+                    {playingMessageId === msg.id ? (
+                      isMessageLoading ? (
+                        <svg
+                          className="w-3 h-3 animate-spin"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                        </svg>
+                      ) : (
+                        <StopIcon className="w-2.5 h-2.5" />
+                      )
+                    ) : (
+                      <SpeakerIcon className="w-3 h-3" />
+                    )}
+                  </button>
+                )}
             </div>
           </div>
         )

@@ -9,6 +9,7 @@ interface Props {
   onToggleSidebar: () => void
   onToggleSummary: () => void
   summaryOpen: boolean
+  onToggleSettings: () => void
 }
 
 export default function Header({
@@ -17,6 +18,7 @@ export default function Header({
   onToggleSidebar,
   onToggleSummary,
   summaryOpen,
+  onToggleSettings,
 }: Props) {
   const [isDark, setIsDark] = useState(false)
 
@@ -129,6 +131,25 @@ export default function Header({
               <polyline points="14 2 14 8 20 8" />
               <line x1="16" x2="8" y1="13" y2="13" />
               <line x1="16" x2="8" y1="17" y2="17" />
+            </svg>
+          </button>
+
+          {/* Settings */}
+          <button
+            onClick={onToggleSettings}
+            aria-label="설정"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all duration-200"
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              className="w-[18px] h-[18px]"
+            >
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+              <circle cx="12" cy="12" r="3" />
             </svg>
           </button>
 

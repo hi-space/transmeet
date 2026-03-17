@@ -19,9 +19,15 @@
     margin: 0;
   }
 
-  html,
+  html {
+    height: 100%;
+    /* iOS Safari: match visual viewport */
+    height: -webkit-fill-available;
+  }
+
   body {
     height: 100%;
+    min-height: -webkit-fill-available;
     overflow: hidden;
   }
 

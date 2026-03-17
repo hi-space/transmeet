@@ -69,31 +69,38 @@ export const handler = async (
 
     // Build transcript for Claude
     const transcript = messages
-      .map(
-        (m) =>
-          `[${m.speaker}]\nEN: ${m.originalText}\nKO: ${m.translatedText}`
-      )
+      .map((m) => `[${m.speaker}]\nOriginal: ${m.originalText}\nTranslation: ${m.translatedText}`)
       .join('\n\n');
 
-    const prompt = `다음은 글로벌 회의의 대화 내용입니다. 아래 형식으로 한국어 요약을 작성해주세요.
+    const systemPrompt = `You are a professional meeting minutes writer. Analyze meeting transcripts and produce clear, structured Korean summaries in markdown format.`;
 
-## 회의 요약
-- 주요 논의 사항 (bullet points)
-- 결정 사항
-- 후속 조치 (Action Items)
+    const userPrompt = `Analyze the following meeting transcript and create a comprehensive meeting summary in Korean.
+
+Include ALL of these sections:
+1. **회의 개요**: 주요 주제, 참석자 역할 추정
+2. **주요 논의 사항**: 각 토픽별로 논의된 내용 정리
+3. **결정 사항**: 합의된 내용, 결론
+4. **Action Items**: 후속 조치가 필요한 사항
+5. **기타 메모**: 중요한 언급사항
+
+Format as clean markdown using ## for sections and - for bullets. Be thorough but concise.
 
 ---
 ${transcript}`;
 
+    const modelId =
+      process.env.SUMMARIZE_MODEL_ID ?? process.env.BEDROCK_MODEL_ID ?? '';
+
     const bedrockRes = await bedrock.send(
       new InvokeModelCommand({
-        modelId: process.env.BEDROCK_MODEL_ID,
+        modelId,
         contentType: 'application/json',
         accept: 'application/json',
         body: JSON.stringify({
           anthropic_version: 'bedrock-2023-05-31',
-          max_tokens: 2048,
-          messages: [{ role: 'user', content: prompt }],
+          max_tokens: 4096,
+          system: systemPrompt,
+          messages: [{ role: 'user', content: userPrompt }],
         }),
       })
     );

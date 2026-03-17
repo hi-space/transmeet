@@ -12,7 +12,7 @@ import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
-const WHISPER_ENDPOINT = 'whisper-large-v3-turbo-004709';
+const WHISPER_ENDPOINT = 'whisper-large';
 const BEDROCK_MODEL_ID = 'global.anthropic.claude-haiku-4-5-20251001-v1:0';
 const REGION = 'us-east-1';
 
@@ -148,8 +148,13 @@ export class TransmeetStack extends cdk.Stack {
     const summarizeFn = new NodejsFunction(this, 'SummarizeFn', {
       functionName: 'transmeet-summarize',
       entry: path.join(__dirname, '../lambda/summarize/index.ts'),
-      timeout: cdk.Duration.seconds(60),
+      timeout: cdk.Duration.seconds(120),
       ...commonNodejsFunctionProps,
+      environment: {
+        ...commonEnv,
+        // Sonnet for higher-quality meeting summaries
+        SUMMARIZE_MODEL_ID: 'global.anthropic.claude-sonnet-4-6',
+      },
     });
 
     const ttsFn = new NodejsFunction(this, 'TtsFn', {

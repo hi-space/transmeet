@@ -2,9 +2,24 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 
-// 500ms chunks — short enough for low latency, long enough for Whisper accuracy
-const CHUNK_DURATION_MS = 500
+// 2000ms chunks — reduce Whisper hallucination on short/silent audio
+const CHUNK_DURATION_MS = 2000
 const SCRIPT_PROCESSOR_BUFFER_SIZE = 4096
+
+// Downsample to 16kHz (Whisper's native rate) using linear interpolation
+function downsampleTo16k(samples: Float32Array, inputRate: number): Float32Array {
+  if (inputRate === 16000) return samples
+  const ratio = inputRate / 16000
+  const length = Math.floor(samples.length / ratio)
+  const result = new Float32Array(length)
+  for (let i = 0; i < length; i++) {
+    const src = i * ratio
+    const lo = Math.floor(src)
+    const hi = Math.min(lo + 1, samples.length - 1)
+    result[i] = samples[lo] + (src - lo) * (samples[hi] - samples[lo])
+  }
+  return result
+}
 
 function encodeWav(samples: Float32Array, sampleRate: number): ArrayBuffer {
   const dataLen = samples.length * 2 // 16-bit = 2 bytes per sample
@@ -88,9 +103,18 @@ export function useAudioCapture({
     }
     samplesRef.current = []
 
-    const sampleRate = audioContextRef.current?.sampleRate ?? 44100
-    const wavBuffer = encodeWav(combined, sampleRate)
-    onChunkRef.current(arrayBufferToBase64(wavBuffer))
+    const inputRate = audioContextRef.current?.sampleRate ?? 48000
+    const resampled = downsampleTo16k(combined, inputRate)
+    const wavBuffer = encodeWav(resampled, 16000)
+    const b64 = arrayBufferToBase64(wavBuffer)
+    console.log(
+      '[Audio] chunk ready: %dHz→16kHz samples=%d→%d b64_len=%d',
+      inputRate,
+      totalLength,
+      resampled.length,
+      b64.length
+    )
+    onChunkRef.current(b64)
   }, [])
 
   const updateLevel = useCallback(() => {

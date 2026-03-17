@@ -37,6 +37,12 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
       return
     }
 
+    // Clear any pending reconnect timer to avoid duplicate connections
+    if (reconnectTimerRef.current) {
+      clearTimeout(reconnectTimerRef.current)
+      reconnectTimerRef.current = null
+    }
+
     // Clean up any existing connection
     if (wsRef.current) {
       wsRef.current.onclose = null
@@ -44,19 +50,21 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
       wsRef.current = null
     }
 
-    reconnectCountRef.current = 0
     shouldReconnectRef.current = true
 
     const url = meetingIdRef.current
       ? `${endpoint}?meetingId=${encodeURIComponent(meetingIdRef.current)}`
       : endpoint
 
+    console.log('[WS] Connecting to', url)
     setStatus('connecting')
     const ws = new WebSocket(url)
     wsRef.current = ws
 
     ws.onopen = () => {
+      // Reset counter only on successful connection (preserves backoff on reconnect)
       reconnectCountRef.current = 0
+      console.log('[WS] Connected')
       setStatus('connected')
     }
 
@@ -78,13 +86,21 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
         return
       }
 
-      // Unexpected close — attempt reconnect with backoff
+      // Unexpected close — attempt reconnect with exponential backoff
       if (reconnectCountRef.current < MAX_RECONNECT_ATTEMPTS) {
         reconnectCountRef.current++
         const delay = RECONNECT_DELAY_MS * reconnectCountRef.current
+        console.warn(
+          '[WS] Unexpected close (code=%d), reconnecting in %dms (attempt %d/%d)',
+          event.code,
+          delay,
+          reconnectCountRef.current,
+          MAX_RECONNECT_ATTEMPTS
+        )
         setStatus('connecting')
         reconnectTimerRef.current = setTimeout(connect, delay)
       } else {
+        console.error('[WS] Max reconnect attempts reached, giving up')
         setStatus('error')
         shouldReconnectRef.current = false
       }
@@ -112,19 +128,41 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     setStatus('disconnected')
   }, [])
 
-  const sendAudio = useCallback((audioBase64: string, speaker: string = 'speaker1'): boolean => {
-    if (wsRef.current?.readyState !== WebSocket.OPEN) return false
+  const sendAudio = useCallback(
+    (
+      audioBase64: string,
+      speaker: string = 'speaker1',
+      sourceLang?: string,
+      targetLang?: string,
+      modelId?: string
+    ): boolean => {
+      const ws = wsRef.current
+      const readyState = ws?.readyState
+      if (!ws || readyState !== WebSocket.OPEN) {
+        console.warn(
+          '[WS] sendAudio blocked: readyState=%s (need %s=OPEN)',
+          readyState ?? 'null',
+          WebSocket.OPEN
+        )
+        return false
+      }
 
-    wsRef.current.send(
-      JSON.stringify({
-        action: 'sendAudio',
-        audioData: audioBase64,
-        meetingId: meetingIdRef.current,
-        speaker,
-      })
-    )
-    return true
-  }, [])
+      ws.send(
+        JSON.stringify({
+          action: 'sendAudio',
+          audioData: audioBase64,
+          meetingId: meetingIdRef.current,
+          speaker,
+          ...(sourceLang && sourceLang !== 'auto' && { sourceLang }),
+          ...(targetLang && { targetLang }),
+          ...(modelId && { modelId }),
+        })
+      )
+      console.log('[WS] sendAudio sent: b64_len=%d', audioBase64.length)
+      return true
+    },
+    []
+  )
 
   // Cleanup on unmount
   useEffect(() => {

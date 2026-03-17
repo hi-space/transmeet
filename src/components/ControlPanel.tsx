@@ -9,6 +9,7 @@ interface Props {
   ttsInput: string
   onTtsInputChange: (val: string) => void
   onSend: () => void
+  onStopTts: () => void
   audioLevel?: number // 0–1, real-time mic amplitude
   isTtsPending?: boolean
 }
@@ -19,6 +20,7 @@ export default function ControlPanel({
   ttsInput,
   onTtsInputChange,
   onSend,
+  onStopTts,
   audioLevel = 0,
   isTtsPending = false,
 }: Props) {
@@ -90,6 +92,19 @@ export default function ControlPanel({
             )}
           </button>
         </div>
+
+        {/* TTS stop button — visible only while TTS is playing */}
+        {isTtsPending && (
+          <button
+            onClick={onStopTts}
+            aria-label="TTS 중지"
+            className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-rose-50 dark:bg-rose-900/20 border border-rose-200/60 dark:border-rose-500/20 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-900/30 active:scale-95 transition-all"
+          >
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
+              <rect x="5" y="5" width="14" height="14" rx="2" />
+            </svg>
+          </button>
+        )}
 
         {/* KO → EN text input */}
         <input

@@ -31,7 +31,12 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
 export const handler = async (
   event: APIGatewayProxyEvent
 ): Promise<APIGatewayProxyResult> => {
-  let body: { text?: string; translateFirst?: boolean; voiceId?: string };
+  let body: {
+    text?: string;
+    translateFirst?: boolean;
+    voiceId?: string;
+    engine?: string;
+  };
 
   try {
     body = JSON.parse(event.body ?? '{}');
@@ -43,7 +48,7 @@ export const handler = async (
     };
   }
 
-  const { text, translateFirst = true, voiceId = 'Joanna' } = body;
+  const { text, translateFirst = true, voiceId = 'Ruth', engine = 'generative' } = body;
 
   if (!text?.trim()) {
     return {
@@ -83,13 +88,17 @@ export const handler = async (
       englishText = bedrockResult.content?.[0]?.text ?? text;
     }
 
-    // Step 2: Synthesize speech with Polly Neural TTS
+    // Korean voice (Seoyeon) only supports neural — override generative/standard
+    const pollyEngine: Engine =
+      voiceId === 'Seoyeon' && engine !== 'neural' ? Engine.NEURAL : (engine as Engine);
+
+    // Step 2: Synthesize speech with Polly TTS
     const pollyRes = await polly.send(
       new SynthesizeSpeechCommand({
         Text: englishText,
         OutputFormat: OutputFormat.MP3,
-        VoiceId: (voiceId as VoiceId) ?? VoiceId.Joanna,
-        Engine: Engine.NEURAL,
+        VoiceId: (voiceId as VoiceId) ?? VoiceId.Ruth,
+        Engine: pollyEngine,
       })
     );
 

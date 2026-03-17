@@ -6,6 +6,7 @@ export interface Message {
   original: string
   translation: string
   detectedLanguage?: 'ko' | 'en'
+  streamPhase?: 'stt' | 'translating' | 'done'
   timestamp: string
 }
 
@@ -14,5 +15,5 @@ export interface Meeting {
   title: string
   startedAt: string
   messages: Message[]
-  summary?: string[]
+  summary?: string // raw markdown
 }
