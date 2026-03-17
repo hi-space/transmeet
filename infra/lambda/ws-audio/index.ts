@@ -147,6 +147,26 @@ export const handler = async (
       return { statusCode: 200, body: 'Empty transcription' };
     }
 
+    // ── Hallucination filter ───────────────────────────────────────────────
+    // Whisper commonly produces these artifacts on silence or short audio
+    const HALLUCINATION_PATTERNS = [
+      /^(you\.?)$/i,
+      /^(uh\.?|um\.?|hmm+\.?)$/i,
+      /^thank\s*(you)?\.?$/i,
+      /^thanks(\s+for\s+watching)?\.?$/i,
+      /^(please\s+)?subscribe\.?$/i,
+      /^(like\s+and\s+subscribe\.?)$/i,
+      /^\[.*\]$/, // [Music], [Silence], [Applause], etc.
+      /^\(.*\)$/, // (Music), (silence), etc.
+    ];
+    const isHallucination = HALLUCINATION_PATTERNS.some((p) =>
+      p.test(originalText)
+    );
+    if (isHallucination) {
+      console.log('[ws-audio] Hallucination filtered:', JSON.stringify(originalText));
+      return { statusCode: 200, body: 'Hallucination filtered' };
+    }
+
     // Client override > Whisper detection > default 'en'
     const detectedLanguage: 'ko' | 'en' =
       reqSourceLang && reqSourceLang !== 'auto'

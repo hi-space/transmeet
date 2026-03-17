@@ -117,6 +117,8 @@ export default function Home() {
 
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null)
   const msgAudioRef = useRef<HTMLAudioElement | null>(null)
+  // Maps stream messageId -> displayed message id (for consecutive-message merging)
+  const mergeMapRef = useRef<Map<string, string>>(new Map())
 
   // Track last auto-summarized message count per meeting
   const lastSummarizedCountRef = useRef<Record<string, number>>({})
@@ -216,29 +218,61 @@ export default function Home() {
           )
         )
       } else if (msg.type === 'subtitle_stream') {
+        const MERGE_WINDOW_MS = 3000
         if (msg.phase === 'stt') {
-          // New message appears immediately with original text
-          const newMsg: Message = {
-            id: msg.messageId,
-            speaker: (msg.speaker as Message['speaker']) ?? 'speaker1',
-            original: msg.originalText ?? '',
-            translation: '',
-            streamPhase: 'stt',
-            timestamp: msg.timestamp,
-          }
-          setMeetings((prev) =>
-            prev.map((m) =>
+          const streamSpeaker = (msg.speaker as Message['speaker']) ?? 'speaker1'
+          setMeetings((prev) => {
+            const meeting = prev.find((m) => m.id === activeMeetingId)
+            const messages = meeting?.messages ?? []
+            const lastMsg = messages[messages.length - 1]
+            const shouldMerge =
+              lastMsg &&
+              lastMsg.speaker === streamSpeaker &&
+              Date.now() - new Date(lastMsg.timestamp).getTime() < MERGE_WINDOW_MS &&
+              (lastMsg.streamPhase === 'done' || lastMsg.streamPhase === undefined)
+            if (shouldMerge) {
+              // Reuse existing bubble; track messageId -> displayed id
+              mergeMapRef.current.set(msg.messageId, lastMsg.id)
+              return prev.map((m) =>
+                m.id === activeMeetingId
+                  ? {
+                      ...m,
+                      messages: m.messages.map((existing) =>
+                        existing.id === lastMsg.id
+                          ? {
+                              ...existing,
+                              original: existing.original + ' ' + (msg.originalText ?? ''),
+                              translation: '',
+                              streamPhase: 'stt' as const,
+                            }
+                          : existing
+                      ),
+                    }
+                  : m
+              )
+            }
+            // New bubble
+            const newMsg: Message = {
+              id: msg.messageId,
+              speaker: streamSpeaker,
+              original: msg.originalText ?? '',
+              translation: '',
+              streamPhase: 'stt',
+              timestamp: msg.timestamp,
+            }
+            return prev.map((m) =>
               m.id === activeMeetingId ? { ...m, messages: [...m.messages, newMsg] } : m
             )
-          )
+          })
         } else if (msg.phase === 'translating') {
+          const resolvedId = mergeMapRef.current.get(msg.messageId) ?? msg.messageId
           setMeetings((prev) =>
             prev.map((m) =>
               m.id === activeMeetingId
                 ? {
                     ...m,
                     messages: m.messages.map((existing) =>
-                      existing.id === msg.messageId
+                      existing.id === resolvedId
                         ? {
                             ...existing,
                             translation: msg.partialTranslation ?? '',
@@ -251,16 +285,22 @@ export default function Home() {
             )
           )
         } else if (msg.phase === 'done') {
+          const resolvedId = mergeMapRef.current.get(msg.messageId) ?? msg.messageId
+          const isMerged = mergeMapRef.current.has(msg.messageId)
+          mergeMapRef.current.delete(msg.messageId)
           setMeetings((prev) =>
             prev.map((m) =>
               m.id === activeMeetingId
                 ? {
                     ...m,
                     messages: m.messages.map((existing) =>
-                      existing.id === msg.messageId
+                      existing.id === resolvedId
                         ? {
                             ...existing,
-                            original: msg.originalText ?? existing.original,
+                            // If merged, original was already appended at stt phase
+                            original: isMerged
+                              ? existing.original
+                              : (msg.originalText ?? existing.original),
                             translation: msg.translatedText ?? '',
                             detectedLanguage: msg.detectedLanguage,
                             streamPhase: 'done' as const,
