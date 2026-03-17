@@ -36,6 +36,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# CDK
+infra/cdk.out/
+infra/*.json
+infra/node_modules/
+
 # PWA
 /public/sw.js
 /public/workbox-*.js
