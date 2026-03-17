@@ -17,6 +17,7 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
   const wsRef = useRef<WebSocket | null>(null)
   const reconnectCountRef = useRef(0)
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const keepaliveRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const onMessageRef = useRef(onMessage)
   const meetingIdRef = useRef(meetingId)
   // Track whether the current session should reconnect on unexpected close
@@ -66,6 +67,12 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
       reconnectCountRef.current = 0
       console.log('[WS] Connected')
       setStatus('connected')
+      // Keepalive: send ping every 30s to prevent API Gateway idle timeout
+      keepaliveRef.current = setInterval(() => {
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ action: 'ping' }))
+        }
+      }, 30000)
     }
 
     ws.onmessage = (event) => {
@@ -78,6 +85,10 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     }
 
     ws.onclose = (event) => {
+      if (keepaliveRef.current) {
+        clearInterval(keepaliveRef.current)
+        keepaliveRef.current = null
+      }
       wsRef.current = null
 
       // Normal close (code 1000) or explicitly disconnected
@@ -139,11 +150,13 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
       const ws = wsRef.current
       const readyState = ws?.readyState
       if (!ws || readyState !== WebSocket.OPEN) {
-        console.warn(
-          '[WS] sendAudio blocked: readyState=%s (need %s=OPEN)',
-          readyState ?? 'null',
-          WebSocket.OPEN
-        )
+        // Reconnect if not already connecting
+        if (readyState !== WebSocket.CONNECTING) {
+          console.warn('[WS] sendAudio: not connected, attempting reconnect...')
+          connect()
+        } else {
+          console.warn('[WS] sendAudio blocked: still connecting')
+        }
         return false
       }
 
@@ -161,7 +174,7 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
       console.log('[WS] sendAudio sent: b64_len=%d', audioBase64.length)
       return true
     },
-    []
+    [connect]
   )
 
   // Cleanup on unmount
@@ -169,6 +182,7 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     return () => {
       shouldReconnectRef.current = false
       if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current)
+      if (keepaliveRef.current) clearInterval(keepaliveRef.current)
       wsRef.current?.close(1000)
     }
   }, [])

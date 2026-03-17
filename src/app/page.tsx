@@ -356,15 +356,19 @@ export default function Home() {
     if (audioError) alert(audioError)
   }, [audioError])
 
+  // Connect on page load (and reconnect when active meeting changes); cleanup on unmount
+  useEffect(() => {
+    if (!HAS_API || !activeMeetingId) return
+    connect()
+  }, [activeMeetingId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleToggleRecording = useCallback(async () => {
     if (isRecording) {
       stopAudio()
-      disconnect()
     } else {
-      connect()
       await startAudio()
     }
-  }, [isRecording, startAudio, stopAudio, connect, disconnect])
+  }, [isRecording, startAudio, stopAudio])
 
   // ─── Task #8: Summarize ─────────────────────────────────────────────────────
 
