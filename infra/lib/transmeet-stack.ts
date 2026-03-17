@@ -11,6 +11,7 @@ import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
+import * as cognito from 'aws-cdk-lib/aws-cognito';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -330,6 +331,28 @@ export class TransmeetStack extends cdk.Stack {
       viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
     });
 
+    // ─── Cognito ────────────────────────────────────────────────────────────────
+
+    const userPool = new cognito.UserPool(this, 'UserPool', {
+      userPoolName: 'transmeet-users',
+      selfSignUpEnabled: true,
+      signInAliases: { email: true },
+      autoVerify: { email: true },
+      passwordPolicy: {
+        minLength: 8,
+        requireLowercase: false,
+        requireUppercase: false,
+        requireDigits: false,
+        requireSymbols: false,
+      },
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    const userPoolClient = userPool.addClient('WebClient', {
+      authFlows: { userSrp: true },
+      preventUserExistenceErrors: true,
+    });
+
     // ─── Outputs ────────────────────────────────────────────────────────────────
 
     new cdk.CfnOutput(this, 'WsBackendEcrUri', {
@@ -369,6 +392,18 @@ export class TransmeetStack extends cdk.Stack {
       value: meetingsTable.tableName,
       exportName: 'TransmeetMeetingsTable',
       description: 'DynamoDB meetings table name',
+    });
+
+    new cdk.CfnOutput(this, 'UserPoolId', {
+      value: userPool.userPoolId,
+      exportName: 'TransmeetUserPoolId',
+      description: 'Cognito User Pool ID',
+    });
+
+    new cdk.CfnOutput(this, 'UserPoolClientId', {
+      value: userPoolClient.userPoolClientId,
+      exportName: 'TransmeetUserPoolClientId',
+      description: 'Cognito User Pool Client ID',
     });
   }
 }

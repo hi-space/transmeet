@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Inter, JetBrains_Mono } from 'next/font/google'
 import './globals.css'
 import ThemeProvider from '@/components/ThemeProvider'
+import { AuthProvider } from '@/context/AuthContext'
 
 const inter = Inter({
   variable: '--font-geist-sans',
@@ -48,7 +49,9 @@ export default function RootLayout({
     <html lang="ko" suppressHydrationWarning>
       <body>
         <ThemeProvider>
-          <div className={`${inter.variable} ${jetbrainsMono.variable}`}>{children}</div>
+          <AuthProvider>
+            <div className={`${inter.variable} ${jetbrainsMono.variable}`}>{children}</div>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

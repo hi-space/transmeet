@@ -1,0 +1,183 @@
+'use client'
+
+import { useState } from 'react'
+import type { CognitoUser } from 'amazon-cognito-identity-js'
+import { signIn, signUp, confirmSignUp } from '@/lib/cognito'
+
+type View = 'login' | 'signup' | 'verify'
+
+interface Props {
+  onAuth: (user: CognitoUser) => void
+}
+
+export default function AuthScreen({ onAuth }: Props) {
+  const [view, setView] = useState<View>('login')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [code, setCode] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function handleLogin() {
+    setError('')
+    setLoading(true)
+    try {
+      const user = await signIn(email, password)
+      onAuth(user)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : '로그인에 실패했습니다.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleSignUp() {
+    setError('')
+    setLoading(true)
+    try {
+      await signUp(email, password)
+      setView('verify')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : '회원가입에 실패했습니다.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleVerify() {
+    setError('')
+    setLoading(true)
+    try {
+      await confirmSignUp(email, code)
+      const user = await signIn(email, password)
+      onAuth(user)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : '인증에 실패했습니다.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const inputClass =
+    'w-full px-3 py-2.5 text-sm rounded-lg bg-white/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 dark:focus:ring-indigo-500/40'
+
+  const btnPrimary =
+    'w-full py-2.5 rounded-lg text-sm font-semibold bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed'
+
+  return (
+    <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-50 via-indigo-50/60 to-violet-50/80 dark:from-[#070614] dark:via-[#0b0820] dark:to-[#0f0828]">
+      {/* Background orbs */}
+      <div className="absolute top-[8%] left-[3%] w-72 h-72 rounded-full bg-indigo-300/20 dark:bg-indigo-600/18 blur-3xl pointer-events-none" />
+      <div className="absolute top-[35%] right-[5%] w-96 h-96 rounded-full bg-violet-300/15 dark:bg-violet-700/14 blur-3xl pointer-events-none" />
+
+      <div className="relative w-full max-w-sm mx-4">
+        {/* Logo */}
+        <div className="flex items-center justify-center gap-2.5 mb-8">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-lg">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-5 h-5"
+            >
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+              <line x1="12" x2="12" y1="19" y2="22" />
+            </svg>
+          </div>
+          <span className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400 bg-clip-text text-transparent">
+            TransMeet
+          </span>
+        </div>
+
+        {/* Card */}
+        <div className="bg-white/70 dark:bg-slate-900/60 backdrop-blur-xl border border-white/60 dark:border-indigo-500/15 rounded-2xl p-6 shadow-xl shadow-indigo-500/5">
+          <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-5 text-center">
+            {view === 'login' ? '로그인' : view === 'signup' ? '회원가입' : '이메일 인증'}
+          </h2>
+
+          {view === 'verify' ? (
+            <div className="space-y-4">
+              <p className="text-xs text-slate-500 dark:text-slate-400 text-center">
+                <span className="font-medium text-indigo-600 dark:text-indigo-400">{email}</span>{' '}
+                으로 발송된 인증 코드를 입력하세요.
+              </p>
+              <input
+                type="text"
+                placeholder="인증 코드"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
+                className={inputClass}
+                autoComplete="one-time-code"
+              />
+              {error && <p className="text-xs text-red-500">{error}</p>}
+              <button onClick={handleVerify} disabled={loading} className={btnPrimary}>
+                {loading ? '인증 중...' : '인증 완료'}
+              </button>
+              <button
+                onClick={() => {
+                  setView('login')
+                  setError('')
+                }}
+                className="w-full py-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              >
+                로그인 화면으로 돌아가기
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <input
+                type="email"
+                placeholder="이메일"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={inputClass}
+                autoComplete="email"
+              />
+              <input
+                type="password"
+                placeholder="비밀번호 (8자 이상)"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) =>
+                  e.key === 'Enter' && (view === 'login' ? handleLogin() : handleSignUp())
+                }
+                className={inputClass}
+                autoComplete={view === 'login' ? 'current-password' : 'new-password'}
+              />
+              {error && <p className="text-xs text-red-500">{error}</p>}
+              <button
+                onClick={view === 'login' ? handleLogin : handleSignUp}
+                disabled={loading}
+                className={btnPrimary}
+              >
+                {loading
+                  ? view === 'login'
+                    ? '로그인 중...'
+                    : '가입 중...'
+                  : view === 'login'
+                    ? '로그인'
+                    : '회원가입'}
+              </button>
+              <button
+                onClick={() => {
+                  setView(view === 'login' ? 'signup' : 'login')
+                  setError('')
+                }}
+                className="w-full py-1.5 text-xs text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+              >
+                {view === 'login'
+                  ? '계정이 없으신가요? 회원가입'
+                  : '이미 계정이 있으신가요? 로그인'}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

@@ -7,13 +7,17 @@ import ChatArea from '@/components/ChatArea'
 import SummaryPanel from '@/components/SummaryPanel'
 import ControlPanel from '@/components/ControlPanel'
 import SettingsPanel from '@/components/SettingsPanel'
+import AuthScreen from '@/components/AuthScreen'
 import { Meeting, Message } from '@/types/meeting'
 import { useAudioCapture } from '@/hooks/useAudioCapture'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import { useSettings } from '@/hooks/useSettings'
 import { useInterval } from '@/hooks/useInterval'
+import { useAuth } from '@/context/AuthContext'
 import type { WsServerMessage } from '@/lib/websocket'
 import { api, toMeeting, parseSummary } from '@/lib/api'
+
+const HAS_COGNITO = !!process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID
 
 // ─── Dev fallback when API is not configured ────────────────────────────────
 
@@ -100,6 +104,7 @@ function playBase64Audio(
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function Home() {
+  const { user, isLoading: authLoading, setUser, logout } = useAuth()
   const { settings, updateSettings } = useSettings()
 
   const [meetings, setMeetings] = useState<Meeting[]>(HAS_API ? [] : MOCK_MEETINGS)
@@ -110,6 +115,11 @@ export default function Home() {
   const [ttsInput, setTtsInput] = useState('')
   const [isSummarizing, setIsSummarizing] = useState(false)
   const [isTtsPending, setIsTtsPending] = useState(false)
+  const [pendingTranscript, setPendingTranscript] = useState<{
+    messageId: string
+    text: string
+    speaker: string
+  } | null>(null)
   const [isLoadingMeetings, setIsLoadingMeetings] = useState(HAS_API)
   const [isCreatingMeeting, setIsCreatingMeeting] = useState(false)
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null)
@@ -262,7 +272,18 @@ export default function Home() {
         )
       } else if (msg.type === 'subtitle_stream') {
         const MERGE_WINDOW_MS = 3000
+        if (msg.phase === 'stt_partial') {
+          // Word-by-word Transcribe partial — show in pending bubble, not committed messages
+          setPendingTranscript({
+            messageId: msg.messageId,
+            text: msg.originalText ?? '',
+            speaker: msg.speaker ?? 'speaker1',
+          })
+          return
+        }
         if (msg.phase === 'stt') {
+          // Final sentence from Transcribe — clear pending bubble (partial ID differs from final ID)
+          setPendingTranscript(null)
           const streamSpeaker = (msg.speaker as Message['speaker']) ?? 'speaker1'
           setMeetings((prev) => {
             const meeting = prev.find((m) => m.id === activeMeetingId)
@@ -365,6 +386,8 @@ export default function Home() {
     connect,
     disconnect,
     sendAudio,
+    startRecording,
+    stopRecording,
   } = useWebSocket({
     meetingId: activeMeetingId,
     onMessage: handleWsMessage,
@@ -393,7 +416,10 @@ export default function Home() {
     error: audioError,
     start: startAudio,
     stop: stopAudio,
-  } = useAudioCapture({ onChunk: handleChunk })
+  } = useAudioCapture({
+    onChunk: handleChunk,
+    chunkDurationMs: settings.sttProvider === 'whisper' ? 2000 : 700,
+  })
 
   useEffect(() => {
     if (audioError) alert(audioError)
@@ -408,10 +434,29 @@ export default function Home() {
   const handleToggleRecording = useCallback(async () => {
     if (isRecording) {
       stopAudio()
+      stopRecording()
+      setPendingTranscript(null)
     } else {
       await startAudio()
+      startRecording({
+        sttProvider: settings.sttProvider,
+        sourceLang: settings.sourceLang,
+        targetLang: settings.targetLang,
+        modelId: settings.translationModel,
+        speaker: 'speaker1',
+      })
     }
-  }, [isRecording, startAudio, stopAudio])
+  }, [
+    isRecording,
+    startAudio,
+    stopAudio,
+    startRecording,
+    stopRecording,
+    settings.sttProvider,
+    settings.sourceLang,
+    settings.targetLang,
+    settings.translationModel,
+  ])
 
   // ─── Task #8: Summarize ─────────────────────────────────────────────────────
 
@@ -632,6 +677,30 @@ export default function Home() {
 
   // ─── Render ──────────────────────────────────────────────────────────────────
 
+  // Auth gate — show loading spinner while session is being restored
+  if (HAS_COGNITO && authLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-50 to-indigo-50 dark:from-[#070614] dark:to-[#0b0820]">
+        <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 text-sm">
+          <svg
+            className="w-4 h-4 animate-spin"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+          >
+            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+          </svg>
+        </div>
+      </div>
+    )
+  }
+
+  // Show login screen if Cognito is configured and user is not authenticated
+  if (HAS_COGNITO && !user) {
+    return <AuthScreen onAuth={setUser} />
+  }
+
   if (isLoadingMeetings) {
     return (
       <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-50 to-indigo-50 dark:from-[#070614] dark:to-[#0b0820]">
@@ -665,6 +734,7 @@ export default function Home() {
         onToggleSummary={() => setSummaryOpen((v) => !v)}
         summaryOpen={summaryOpen}
         onToggleSettings={() => setSettingsOpen((v) => !v)}
+        onLogout={HAS_COGNITO ? logout : undefined}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -705,6 +775,7 @@ export default function Home() {
             isMessageLoading={isMessageLoading}
             onPlayMessage={handlePlayMessage}
             onStopMessage={handleStopAllAudio}
+            pendingTranscript={pendingTranscript}
           />
         </div>
 

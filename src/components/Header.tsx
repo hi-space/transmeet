@@ -10,6 +10,7 @@ interface Props {
   onToggleSummary: () => void
   summaryOpen: boolean
   onToggleSettings: () => void
+  onLogout?: () => void
 }
 
 export default function Header({
@@ -19,6 +20,7 @@ export default function Header({
   onToggleSummary,
   summaryOpen,
   onToggleSettings,
+  onLogout,
 }: Props) {
   const [isDark, setIsDark] = useState(false)
 
@@ -152,6 +154,28 @@ export default function Header({
               <circle cx="12" cy="12" r="3" />
             </svg>
           </button>
+
+          {/* Logout */}
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              aria-label="로그아웃"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all duration-200"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                className="w-[18px] h-[18px]"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            </button>
+          )}
 
           {/* Theme toggle */}
           <button
