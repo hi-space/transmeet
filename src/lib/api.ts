@@ -101,10 +101,16 @@ export const api = {
       }),
   },
   tts: {
-    synthesize: (text: string, engine?: string, voiceId?: string, translateFirst = true) =>
+    synthesize: (
+      text: string,
+      engine?: string,
+      voiceId?: string,
+      translateFirst = true,
+      modelId?: string
+    ) =>
       apiFetch<TtsResponse>('/tts', {
         method: 'POST',
-        body: JSON.stringify({ text, translateFirst, engine, voiceId }),
+        body: JSON.stringify({ text, translateFirst, engine, voiceId, modelId }),
       }),
   },
 }

@@ -575,18 +575,17 @@ async def _stream_summary(ws: WebSocket, meeting_id: str, model_id: str) -> None
             mv = m.get("M", {})
             speaker = mv.get("speaker", {}).get("S", "")
             orig = mv.get("originalText", {}).get("S", "")
-            trans = mv.get("translatedText", {}).get("S", "")
-            lines.append(f"[{speaker}]\nOriginal: {orig}\nTranslation: {trans}")
-        transcript = "\n\n".join(lines)
+            lines.append(f"[{speaker}] {orig}")
+        transcript = "\n".join(lines)
 
-        system_prompt = "당신은 전문 회의록 작성자입니다. 회의 대화록을 분석하여 명확하고 구조화된 한국어 요약을 마크다운 형식으로 작성합니다."
+        system_prompt = "You are a professional meeting summarizer. Analyze meeting transcripts and produce clear, structured Korean summaries."
         user_prompt = (
-            "다음 회의 대화록을 분석하여 아래 형식에 맞게 한국어로 요약해 주세요.\n\n"
-            "## 개요\n(미팅 전체를 한 문장으로 요약)\n\n"
-            "## 핵심 메시지\n- (가장 중요한 내용 1-2개)\n\n"
-            "## 주요 포인트\n- (주요 논의 사항 나열)\n\n"
-            "## 상세 노트\n(세부 내용)\n\n"
-            "각 섹션을 ## 헤더와 - 불릿으로 작성하세요. 간결하되 핵심 내용을 빠짐없이 포함하세요.\n\n"
+            "Summarize the following meeting transcript in Korean. Include:\n"
+            "- 개요: one-sentence overview of the meeting\n"
+            "- 핵심 메시지: 1-2 most important takeaways\n"
+            "- 주요 포인트: key discussion items\n"
+            "- 상세 노트: any additional details worth noting\n\n"
+            "Be concise but comprehensive. Do not omit important information.\n\n"
             f"---\n{transcript}"
         )
 

@@ -67,28 +67,20 @@ export const handler = async (
       };
     }
 
-    // Build transcript for Claude
+    // Build transcript for Claude (original text only — translation is redundant)
     const transcript = messages
-      .map((m) => `[${m.speaker}]\nOriginal: ${m.originalText}\nTranslation: ${m.translatedText}`)
-      .join('\n\n');
+      .map((m) => `[${m.speaker}] ${m.originalText}`)
+      .join('\n');
 
-    const systemPrompt = `당신은 전문 회의록 작성자입니다. 회의 대화록을 분석하여 명확하고 구조화된 한국어 요약을 마크다운 형식으로 작성합니다.`;
+    const systemPrompt = `You are a professional meeting summarizer. Analyze meeting transcripts and produce clear, structured Korean summaries.`;
 
-    const userPrompt = `다음 회의 대화록을 분석하여 아래 형식에 맞게 한국어로 요약해 주세요.
+    const userPrompt = `Summarize the following meeting transcript in Korean. Include:
+- 개요: one-sentence overview of the meeting
+- 핵심 메시지: 1-2 most important takeaways
+- 주요 포인트: key discussion items
+- 상세 노트: any additional details worth noting
 
-## 개요
-(미팅 전체를 한 문장으로 요약)
-
-## 핵심 메시지
-- (가장 중요한 내용 1-2개)
-
-## 주요 포인트
-- (주요 논의 사항 나열)
-
-## 상세 노트
-(세부 내용)
-
-각 섹션을 ## 헤더와 - 불릿으로 작성하세요. 간결하되 핵심 내용을 빠짐없이 포함하세요.
+Be concise but comprehensive. Do not omit important information.
 
 ---
 ${transcript}`;

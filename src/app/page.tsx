@@ -643,7 +643,8 @@ export default function Home() {
           text,
           settings.pollyEngine,
           settings.pollyVoiceId,
-          false
+          false,
+          settings.translationModel
         )
         setIsMessageLoading(false)
         await playBase64Audio(audioData, (audio) => {
@@ -657,7 +658,7 @@ export default function Home() {
         setIsMessageLoading(false)
       }
     },
-    [settings.pollyEngine, settings.pollyVoiceId]
+    [settings.pollyEngine, settings.pollyVoiceId, settings.translationModel]
   )
 
   const handleSend = useCallback(async () => {
@@ -696,7 +697,9 @@ export default function Home() {
       const { audioData, translatedText } = await api.tts.synthesize(
         text,
         settings.pollyEngine,
-        settings.pollyVoiceId
+        settings.pollyVoiceId,
+        true,
+        settings.translationModel
       )
 
       // Replace placeholder with real translation
@@ -738,6 +741,7 @@ export default function Home() {
     settings.ttsAutoPlay,
     settings.pollyEngine,
     settings.pollyVoiceId,
+    settings.translationModel,
   ])
 
   // ─── Meeting selection ────────────────────────────────────────────────────────

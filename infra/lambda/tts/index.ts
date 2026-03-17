@@ -36,6 +36,7 @@ export const handler = async (
     translateFirst?: boolean;
     voiceId?: string;
     engine?: string;
+    modelId?: string;
   };
 
   try {
@@ -48,7 +49,7 @@ export const handler = async (
     };
   }
 
-  const { text, translateFirst = true, voiceId = 'Ruth', engine = 'generative' } = body;
+  const { text, translateFirst = true, voiceId = 'Ruth', engine = 'generative', modelId } = body;
 
   if (!text?.trim()) {
     return {
@@ -65,7 +66,7 @@ export const handler = async (
     if (translateFirst) {
       const bedrockRes = await bedrock.send(
         new ConverseCommand({
-          modelId: process.env.BEDROCK_MODEL_ID!,
+          modelId: modelId ?? process.env.BEDROCK_MODEL_ID!,
           messages: [
             {
               role: 'user',
