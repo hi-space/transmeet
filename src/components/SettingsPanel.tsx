@@ -104,6 +104,37 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
           </button>
         </div>
 
+        {/* ── STT engine ───────────────────────────────────────────────────── */}
+        <div className="space-y-2">
+          <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            STT 엔진
+          </p>
+          <div className="flex gap-1.5">
+            {(
+              [
+                ['whisper', 'SageMaker Whisper'],
+                ['transcribe', 'AWS Transcribe'],
+              ] as const
+            ).map(([val, label]) => (
+              <button
+                key={val}
+                onClick={() => handleUpdate({ sttProvider: val })}
+                className={pill(settings.sttProvider === val)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {settings.sttProvider === 'transcribe' && (
+            <p className="text-[10px] text-slate-400 dark:text-slate-500">
+              발화 단위 인식 • en/ko 자동 감지 지원
+            </p>
+          )}
+        </div>
+
+        {/* Divider */}
+        <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
+
         {/* ── Language settings ─────────────────────────────────────────────── */}
         <div className="space-y-4">
           <div>

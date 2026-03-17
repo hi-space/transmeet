@@ -129,6 +129,8 @@ export default function Home() {
   const msgAudioRef = useRef<HTMLAudioElement | null>(null)
   // Maps stream messageId -> displayed message id (for consecutive-message merging)
   const mergeMapRef = useRef<Map<string, string>>(new Map())
+  // Tracks displayed message IDs that have been merged into (protects their original text)
+  const mergedMsgIdsRef = useRef<Set<string>>(new Set())
 
   // Track last auto-summarized message count per meeting
   const lastSummarizedCountRef = useRef<Record<string, number>>({})
@@ -293,10 +295,11 @@ export default function Home() {
               lastMsg &&
               lastMsg.speaker === streamSpeaker &&
               Date.now() - new Date(lastMsg.timestamp).getTime() < MERGE_WINDOW_MS &&
-              (lastMsg.streamPhase === 'done' || lastMsg.streamPhase === undefined)
+              lastMsg.streamPhase !== undefined
             if (shouldMerge) {
               // Reuse existing bubble; track messageId -> displayed id
               mergeMapRef.current.set(msg.messageId, lastMsg.id)
+              mergedMsgIdsRef.current.add(lastMsg.id)
               return prev.map((m) =>
                 m.id === activeMeetingId
                   ? {
@@ -351,6 +354,7 @@ export default function Home() {
         } else if (msg.phase === 'done') {
           const resolvedId = mergeMapRef.current.get(msg.messageId) ?? msg.messageId
           const isMerged = mergeMapRef.current.has(msg.messageId)
+          const isProtected = mergedMsgIdsRef.current.has(resolvedId)
           mergeMapRef.current.delete(msg.messageId)
           setMeetings((prev) =>
             prev.map((m) =>
@@ -361,10 +365,11 @@ export default function Home() {
                       existing.id === resolvedId
                         ? {
                             ...existing,
-                            // If merged, original was already appended at stt phase
-                            original: isMerged
-                              ? existing.original
-                              : (msg.originalText ?? existing.original),
+                            // Preserve original if this bubble was merged into or is a merge target
+                            original:
+                              isMerged || isProtected
+                                ? existing.original
+                                : (msg.originalText ?? existing.original),
                             translation: msg.translatedText ?? '',
                             detectedLanguage: msg.detectedLanguage,
                             streamPhase: 'done' as const,
@@ -397,15 +402,13 @@ export default function Home() {
 
   const handleChunk = useCallback(
     (wav: string) => {
-      console.log('[DEBUG] handleChunk wav_len=%d', wav.length)
-      const sent = sendAudio(
+      sendAudio(
         wav,
         'speaker1',
         settings.sourceLang !== 'auto' ? settings.sourceLang : undefined,
         settings.targetLang,
         settings.translationModel
       )
-      console.log('[DEBUG] sendAudio sent=%s', sent)
     },
     [sendAudio, settings.sourceLang, settings.targetLang, settings.translationModel]
   )
@@ -436,6 +439,8 @@ export default function Home() {
       stopAudio()
       stopRecording()
       setPendingTranscript(null)
+      mergeMapRef.current.clear()
+      mergedMsgIdsRef.current.clear()
     } else {
       await startAudio()
       startRecording({
@@ -668,6 +673,8 @@ export default function Home() {
 
   const handleSelectMeeting = useCallback(
     (id: string) => {
+      mergeMapRef.current.clear()
+      mergedMsgIdsRef.current.clear()
       setActiveMeetingId(id)
       setSidebarOpen(false)
       if (HAS_API) loadMeetingMessages(id)
