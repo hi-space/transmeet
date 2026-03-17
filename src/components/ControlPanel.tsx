@@ -9,6 +9,7 @@ interface Props {
   ttsInput: string
   onTtsInputChange: (val: string) => void
   onSend: () => void
+  audioLevel?: number // 0–1, real-time mic amplitude
 }
 
 export default function ControlPanel({
@@ -17,14 +18,18 @@ export default function ControlPanel({
   ttsInput,
   onTtsInputChange,
   onSend,
+  audioLevel = 0,
 }: Props) {
   return (
     <div className="glass-footer relative z-20 px-4 pt-2 pb-4 flex-shrink-0">
       <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-400/40 dark:via-indigo-500/25 to-transparent" />
 
-      {/* Waveform — visible while recording */}
+      {/* Waveform — visible while recording, scales with real audio level */}
       {isRecording && (
-        <div className="flex items-center justify-center gap-[3px] h-5 mb-2">
+        <div
+          className="flex items-center justify-center gap-[3px] h-5 mb-2 transition-transform duration-75"
+          style={{ transform: `scaleY(${0.25 + audioLevel * 0.75})` }}
+        >
           {WAVE_DELAYS.map((delay, i) => (
             <div
               key={i}
