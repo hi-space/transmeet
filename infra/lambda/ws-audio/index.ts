@@ -1,9 +1,9 @@
 /**
  * WebSocket audio handler
- * Flow: audio chunk -> Whisper STT -> Bedrock streaming translation -> WS response
+ * Flow: audio chunk -> Transcribe Streaming STT -> Bedrock streaming translation -> WS response
  *
  * Message sequence per audio chunk:
- *   1. { type: "subtitle_stream", phase: "stt",         originalText }
+ *   1. { type: "subtitle_stream", phase: "stt",         originalText, speaker }
  *   2. { type: "subtitle_stream", phase: "translating", partialTranslation } × N tokens
  *   3. { type: "subtitle_stream", phase: "done",        originalText, translatedText, detectedLanguage }
  *
@@ -19,9 +19,9 @@ import type { APIGatewayProxyWebsocketEventV2 } from 'aws-lambda';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import {
-  SageMakerRuntimeClient,
-  InvokeEndpointCommand,
-} from '@aws-sdk/client-sagemaker-runtime';
+  TranscribeStreamingClient,
+  StartStreamTranscriptionCommand,
+} from '@aws-sdk/client-transcribe-streaming';
 import {
   BedrockRuntimeClient,
   InvokeModelWithResponseStreamCommand,
@@ -35,7 +35,7 @@ import {
 const ddb = DynamoDBDocumentClient.from(
   new DynamoDBClient({ region: process.env.REGION })
 );
-const sagemaker = new SageMakerRuntimeClient({ region: process.env.REGION });
+const transcribeClient = new TranscribeStreamingClient({ region: process.env.REGION });
 const bedrock = new BedrockRuntimeClient({ region: process.env.REGION });
 
 interface StreamMessage {
@@ -83,11 +83,55 @@ async function sendToClient(
   }
 }
 
-/** Normalize Whisper language codes to 'ko' | 'en' */
-function normalizeLanguage(lang: string): 'ko' | 'en' {
-  const l = lang.toLowerCase();
-  if (l === 'ko' || l === 'korean' || l === 'kor') return 'ko';
-  return 'en';
+/**
+ * Transcribe a single WAV buffer (16kHz, 16-bit PCM, mono) via Transcribe Streaming.
+ * Returns the final transcript text and the first detected speaker ID.
+ */
+async function transcribeAudio(
+  wavBuffer: Buffer
+): Promise<{ text: string; speakerId?: string }> {
+  // Strip 44-byte WAV header to send raw PCM to Transcribe
+  const pcmData = wavBuffer.subarray(44);
+
+  async function* audioStream() {
+    yield { AudioEvent: { AudioChunk: pcmData } };
+  }
+
+  const response = await transcribeClient.send(
+    new StartStreamTranscriptionCommand({
+      LanguageCode: 'en-US',
+      MediaEncoding: 'pcm',
+      MediaSampleRateHertz: 16000,
+      ShowSpeakerLabel: true,
+      AudioStream: audioStream(),
+    })
+  );
+
+  let finalText = '';
+  let speakerId: string | undefined;
+
+  if (response.TranscriptResultStream) {
+    for await (const event of response.TranscriptResultStream) {
+      const results = event.TranscriptEvent?.Transcript?.Results;
+      if (!results) continue;
+      for (const result of results) {
+        if (result.IsPartial) continue;
+        const alt = result.Alternatives?.[0];
+        if (!alt) continue;
+        if (alt.Transcript) finalText = alt.Transcript;
+        if (!speakerId) {
+          for (const item of alt.Items ?? []) {
+            if (item.Speaker) {
+              speakerId = item.Speaker;
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return { text: finalText.trim(), speakerId };
 }
 
 export const handler = async (
@@ -120,7 +164,6 @@ export const handler = async (
     audioData,
     meetingId,
     speaker = 'remote',
-    sourceLang: reqSourceLang,
     targetLang: reqTargetLang,
     modelId: reqModelId,
   } = body;
@@ -131,59 +174,21 @@ export const handler = async (
   }
 
   try {
-    // ── Step 1: STT via SageMaker Whisper ─────────────────────────────────────
+    // ── Step 1: STT via AWS Transcribe Streaming ───────────────────────────────
     const audioBuffer = Buffer.from(audioData, 'base64');
-    const whisperRes = await sagemaker.send(
-      new InvokeEndpointCommand({
-        EndpointName: process.env.WHISPER_ENDPOINT,
-        ContentType: 'audio/wav',
-        Body: audioBuffer,
-      })
-    );
+    const { text: originalText, speakerId } = await transcribeAudio(audioBuffer);
 
-    const whisperResult = JSON.parse(
-      Buffer.from(whisperRes.Body as Uint8Array).toString('utf-8')
-    ) as { text?: string | string[]; language?: string };
-
-    const rawText = whisperResult.text;
-    const originalText = (
-      Array.isArray(rawText) ? rawText.join(' ') : rawText ?? ''
-    ).trim();
     if (!originalText) {
       return { statusCode: 200, body: 'Empty transcription' };
     }
 
-    // ── Hallucination filter ───────────────────────────────────────────────
-    // Only filter unambiguous Whisper artifacts (not real speech fragments)
-    const HALLUCINATION_PATTERNS = [
-      /^(uh\.?|um\.?|hmm+\.?)$/i,
-      /^thanks\s+for\s+watching\.?$/i,
-      /^(please\s+)?subscribe\.?$/i,
-      /^(like\s+and\s+subscribe\.?)$/i,
-      /^\[.*\]$/, // [Music], [Silence], [Applause], etc.
-      /^\(.*\)$/, // (Music), (silence), etc.
-    ];
-    const isHallucination = HALLUCINATION_PATTERNS.some((p) =>
-      p.test(originalText)
-    );
-    if (isHallucination) {
-      console.log('[ws-audio] Hallucination filtered:', JSON.stringify(originalText));
-      return { statusCode: 200, body: 'Hallucination filtered' };
-    }
+    // Use Transcribe speaker ID when available, fall back to client-supplied speaker
+    const effectiveSpeaker = speakerId ?? speaker;
 
-    // Client override > Whisper detection > default 'en'
-    const detectedLanguage: 'ko' | 'en' =
-      reqSourceLang && reqSourceLang !== 'auto'
-        ? normalizeLanguage(reqSourceLang)
-        : normalizeLanguage(whisperResult.language ?? '');
-
-    const translationTarget: 'ko' | 'en' = reqTargetLang
-      ? normalizeLanguage(reqTargetLang)
-      : detectedLanguage === 'ko'
-        ? 'en'
-        : 'ko';
-
-    const sourceLang = detectedLanguage === 'ko' ? 'Korean' : 'English';
+    // Transcribe input is always English; target translation is Korean by default
+    const detectedLanguage: 'ko' | 'en' = 'en';
+    const translationTarget: 'ko' | 'en' = reqTargetLang === 'en' ? 'en' : 'ko';
+    const sourceLang = 'English';
     const targetLang = translationTarget === 'ko' ? 'Korean' : 'English';
 
     // ── Step 2: Push STT result immediately ───────────────────────────────────
@@ -191,7 +196,7 @@ export const handler = async (
       type: 'subtitle_stream',
       messageId,
       phase: 'stt',
-      speaker,
+      speaker: effectiveSpeaker,
       originalText,
       timestamp,
     });
@@ -237,7 +242,7 @@ export const handler = async (
             type: 'subtitle_stream',
             messageId,
             phase: 'translating',
-            speaker,
+            speaker: effectiveSpeaker,
             originalText,
             partialTranslation: translatedText,
             timestamp,
@@ -252,7 +257,7 @@ export const handler = async (
       type: 'subtitle_stream',
       messageId,
       phase: 'done',
-      speaker,
+      speaker: effectiveSpeaker,
       originalText,
       translatedText,
       detectedLanguage,
@@ -272,7 +277,7 @@ export const handler = async (
             ':msg': [
               {
                 id: messageId,
-                speaker,
+                speaker: effectiveSpeaker,
                 originalText,
                 translatedText,
                 detectedLanguage,
