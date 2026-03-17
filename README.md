@@ -61,6 +61,92 @@ public/
 [한글 Input] -> Bedrock Claude -> Polly TTS -> [영어 Audio]
 ```
 
+## Infrastructure (AWS CDK)
+
+인프라는 `infra/` 폴더에 AWS CDK (TypeScript)로 구성되어 있습니다.
+
+### AWS Resources
+
+| 리소스 | 이름 | 용도 |
+|--------|------|------|
+| API Gateway WebSocket | `transmeet-websocket` | 실시간 오디오 스트리밍 |
+| API Gateway REST | `transmeet-api` | 회의 CRUD, 요약, TTS |
+| Lambda | `transmeet-ws-connect` | WebSocket 연결 처리 |
+| Lambda | `transmeet-ws-disconnect` | WebSocket 연결 해제 |
+| Lambda | `transmeet-ws-audio` | 오디오 → Whisper STT → Bedrock 번역 |
+| Lambda | `transmeet-meetings` | 회의 생성/조회/삭제 |
+| Lambda | `transmeet-summarize` | Bedrock Claude 요약 생성 |
+| Lambda | `transmeet-tts` | Bedrock 번역 + Polly TTS |
+| DynamoDB | `transmeet-meetings` | 회의 기록 저장 |
+| DynamoDB | `transmeet-connections` | WebSocket 연결 관리 (TTL 24h) |
+| S3 | `transmeet-frontend-{account}` | 프론트엔드 정적 호스팅 |
+| CloudFront | - | CDN 배포 |
+
+### REST API Endpoints
+
+```
+POST   /meetings              # 회의 생성
+GET    /meetings              # 회의 목록
+GET    /meetings/{id}         # 회의 상세
+DELETE /meetings/{id}         # 회의 삭제
+POST   /meetings/{id}/summarize  # 요약 생성
+POST   /tts                   # 한→영 번역 + TTS
+```
+
+### WebSocket Routes
+
+```
+$connect    # 연결 (queryParam: meetingId)
+$disconnect # 연결 해제
+sendAudio   # 오디오 청크 전송
+```
+
+### Deploying Infrastructure
+
+```bash
+# Prerequisites
+npm install -g aws-cdk
+aws configure  # AWS credentials 설정
+
+# CDK bootstrap (최초 1회)
+cd infra && npx cdk bootstrap
+
+# 인프라만 배포
+./deploy.sh infra
+
+# 프론트엔드만 배포
+./deploy.sh frontend
+
+# 전체 배포
+./deploy.sh all
+
+# 변경사항 미리 보기
+./deploy.sh diff
+
+# 인프라 삭제
+./deploy.sh destroy
+```
+
+### Infrastructure Directory
+
+```
+infra/
+  bin/
+    transmeet.ts        # CDK app entry point
+  lib/
+    transmeet-stack.ts  # Main CDK stack
+  lambda/
+    ws-connect/         # WebSocket $connect
+    ws-disconnect/      # WebSocket $disconnect
+    ws-audio/           # Audio -> STT -> Translation
+    meetings/           # CRUD handler
+    summarize/          # Summary generation
+    tts/                # Korean -> English TTS
+  package.json
+  tsconfig.json
+  cdk.json
+```
+
 ## Environment Variables
 
 ```bash
