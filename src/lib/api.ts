@@ -36,18 +36,8 @@ const VALID_SPEAKERS: Record<string, SpeakerRole> = {
   me: 'me',
 }
 
-export function parseSummary(raw: string): string[] {
-  return raw
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l && !l.startsWith('#') && !l.startsWith('---'))
-    .map((l) =>
-      l
-        .replace(/^[-*•]\s+/, '')
-        .replace(/^\d+\.\s+/, '')
-        .trim()
-    )
-    .filter(Boolean)
+export function parseSummary(raw: string): string {
+  return raw.trim()
 }
 
 export function toMeeting(m: ApiMeeting): Meeting {
@@ -65,7 +55,7 @@ export function toMeeting(m: ApiMeeting): Meeting {
         timestamp: msg.timestamp,
       })
     ),
-    summary: m.summary ? parseSummary(m.summary) : undefined,
+    summary: m.summary ? parseSummary(m.summary) : undefined, // returns trimmed string
   }
 }
 
@@ -107,10 +97,10 @@ export const api = {
       }),
   },
   tts: {
-    synthesize: (text: string) =>
+    synthesize: (text: string, engine?: string, voiceId?: string, translateFirst = true) =>
       apiFetch<TtsResponse>('/tts', {
         method: 'POST',
-        body: JSON.stringify({ text, translateFirst: true }),
+        body: JSON.stringify({ text, translateFirst, engine, voiceId }),
       }),
   },
 }

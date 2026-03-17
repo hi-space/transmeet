@@ -6,9 +6,12 @@ import MeetingSidebar from '@/components/MeetingSidebar'
 import ChatArea from '@/components/ChatArea'
 import SummaryPanel from '@/components/SummaryPanel'
 import ControlPanel from '@/components/ControlPanel'
+import SettingsPanel from '@/components/SettingsPanel'
 import { Meeting, Message } from '@/types/meeting'
 import { useAudioCapture } from '@/hooks/useAudioCapture'
 import { useWebSocket } from '@/hooks/useWebSocket'
+import { useSettings } from '@/hooks/useSettings'
+import { useInterval } from '@/hooks/useInterval'
 import type { WsServerMessage } from '@/lib/websocket'
 import { api, toMeeting, parseSummary } from '@/lib/api'
 
@@ -44,7 +47,7 @@ const MOCK_MEETINGS: Meeting[] = [
         timestamp: '2026-03-17T09:02:00',
       },
     ],
-    summary: ['Q1 전환율 12% 증가', '온보딩 재설계가 주요 성과 요인', 'Q2 목표: 전환율 최적화'],
+    summary: `## 회의 개요\n- 주제: Q1 제품 리뷰\n- 참석자: Speaker 1 (발표자), Me (참석자), Speaker 2\n\n## 주요 논의 사항\n- Q1 대시보드 공유 및 전환율 검토\n\n## 결정 사항\n- Q1 전환율 12% 증가 확인\n- 온보딩 재설계가 주요 성과 요인으로 인정\n\n## Action Items\n- Q2 목표: 전환율 최적화 진행`,
   },
   {
     id: 'm2',
@@ -70,7 +73,10 @@ const MOCK_MEETINGS: Meeting[] = [
 
 // ─── Audio helpers ──────────────────────────────────────────────────────────
 
-function playBase64Audio(base64: string): Promise<void> {
+function playBase64Audio(
+  base64: string,
+  onAudio?: (audio: HTMLAudioElement) => void
+): Promise<void> {
   return new Promise((resolve, reject) => {
     const binary = atob(base64)
     const bytes = new Uint8Array(binary.length)
@@ -78,6 +84,7 @@ function playBase64Audio(base64: string): Promise<void> {
     const blob = new Blob([bytes], { type: 'audio/mp3' })
     const url = URL.createObjectURL(blob)
     const audio = new Audio(url)
+    onAudio?.(audio)
     audio.onended = () => {
       URL.revokeObjectURL(url)
       resolve()
@@ -93,15 +100,23 @@ function playBase64Audio(base64: string): Promise<void> {
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function Home() {
+  const { settings, updateSettings } = useSettings()
+
   const [meetings, setMeetings] = useState<Meeting[]>(HAS_API ? [] : MOCK_MEETINGS)
   const [activeMeetingId, setActiveMeetingId] = useState(HAS_API ? '' : MOCK_MEETINGS[0].id)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [ttsInput, setTtsInput] = useState('')
   const [isSummarizing, setIsSummarizing] = useState(false)
   const [isTtsPending, setIsTtsPending] = useState(false)
   const [isLoadingMeetings, setIsLoadingMeetings] = useState(HAS_API)
   const [isCreatingMeeting, setIsCreatingMeeting] = useState(false)
+  const [playingMessageId, setPlayingMessageId] = useState<string | null>(null)
+  const [isMessageLoading, setIsMessageLoading] = useState(false)
+
+  const ttsAudioRef = useRef<HTMLAudioElement | null>(null)
+  const msgAudioRef = useRef<HTMLAudioElement | null>(null)
 
   // Track last auto-summarized message count per meeting
   const lastSummarizedCountRef = useRef<Record<string, number>>({})
@@ -173,21 +188,79 @@ export default function Home() {
 
   const handleWsMessage = useCallback(
     (msg: WsServerMessage) => {
-      if (msg.type !== 'subtitle') return
-
-      const newMsg: Message = {
-        id: `ws-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        speaker: (msg.speaker as Message['speaker']) ?? 'speaker1',
-        original: msg.originalText,
-        translation: msg.translatedText,
-        timestamp: msg.timestamp,
-      }
-
-      setMeetings((prev) =>
-        prev.map((m) =>
-          m.id === activeMeetingId ? { ...m, messages: [...m.messages, newMsg] } : m
+      if (msg.type === 'subtitle') {
+        // Legacy non-streaming path
+        const newMsg: Message = {
+          id: `ws-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+          speaker: (msg.speaker as Message['speaker']) ?? 'speaker1',
+          original: msg.originalText,
+          translation: msg.translatedText,
+          detectedLanguage: msg.detectedLanguage,
+          timestamp: msg.timestamp,
+        }
+        setMeetings((prev) =>
+          prev.map((m) =>
+            m.id === activeMeetingId ? { ...m, messages: [...m.messages, newMsg] } : m
+          )
         )
-      )
+      } else if (msg.type === 'subtitle_stream') {
+        if (msg.phase === 'stt') {
+          // New message appears immediately with original text
+          const newMsg: Message = {
+            id: msg.messageId,
+            speaker: (msg.speaker as Message['speaker']) ?? 'speaker1',
+            original: msg.originalText ?? '',
+            translation: '',
+            streamPhase: 'stt',
+            timestamp: msg.timestamp,
+          }
+          setMeetings((prev) =>
+            prev.map((m) =>
+              m.id === activeMeetingId ? { ...m, messages: [...m.messages, newMsg] } : m
+            )
+          )
+        } else if (msg.phase === 'translating') {
+          setMeetings((prev) =>
+            prev.map((m) =>
+              m.id === activeMeetingId
+                ? {
+                    ...m,
+                    messages: m.messages.map((existing) =>
+                      existing.id === msg.messageId
+                        ? {
+                            ...existing,
+                            translation: msg.partialTranslation ?? '',
+                            streamPhase: 'translating' as const,
+                          }
+                        : existing
+                    ),
+                  }
+                : m
+            )
+          )
+        } else if (msg.phase === 'done') {
+          setMeetings((prev) =>
+            prev.map((m) =>
+              m.id === activeMeetingId
+                ? {
+                    ...m,
+                    messages: m.messages.map((existing) =>
+                      existing.id === msg.messageId
+                        ? {
+                            ...existing,
+                            original: msg.originalText ?? existing.original,
+                            translation: msg.translatedText ?? '',
+                            detectedLanguage: msg.detectedLanguage,
+                            streamPhase: 'done' as const,
+                          }
+                        : existing
+                    ),
+                  }
+                : m
+            )
+          )
+        }
+      }
     },
     [activeMeetingId]
   )
@@ -206,9 +279,17 @@ export default function Home() {
 
   const handleChunk = useCallback(
     (wav: string) => {
-      sendAudio(wav, 'speaker1')
+      console.log('[DEBUG] handleChunk wav_len=%d', wav.length)
+      const sent = sendAudio(
+        wav,
+        'speaker1',
+        settings.sourceLang !== 'auto' ? settings.sourceLang : undefined,
+        settings.targetLang,
+        settings.translationModel
+      )
+      console.log('[DEBUG] sendAudio sent=%s', sent)
     },
-    [sendAudio]
+    [sendAudio, settings.sourceLang, settings.targetLang, settings.translationModel]
   )
 
   const {
@@ -254,7 +335,7 @@ export default function Home() {
           m.id === activeMeetingId
             ? {
                 ...m,
-                summary: ['API 엔드포인트를 설정하면 Bedrock Claude로 요약이 생성됩니다.'],
+                summary: 'API 엔드포인트를 설정하면 Bedrock Claude로 요약이 생성됩니다.',
               }
             : m
         )
@@ -269,7 +350,7 @@ export default function Home() {
       lastSummarizedCountRef.current[activeMeetingId] = msgCount
       setMeetings((prev) =>
         prev.map((m) => (m.id === activeMeetingId ? { ...m, summary: parseSummary(summary) } : m))
-      )
+      ) // parseSummary now returns trimmed string
       setSummaryOpen(true)
     } catch {
       // Silent — user can retry via button
@@ -292,19 +373,72 @@ export default function Home() {
     }
   }, [activeMeeting?.messages.length, activeMeetingId])
 
-  // Auto-summary: every 5 minutes while recording
-  useEffect(() => {
-    if (!isRecording) return
-    const timer = setInterval(
-      () => {
-        handleSummarizeRef.current()
-      },
-      5 * 60 * 1000
-    )
-    return () => clearInterval(timer)
-  }, [isRecording])
+  // Auto-summary: configurable interval while recording (0 = disabled)
+  const autoSummarizeMs =
+    isRecording && settings.autoSummarizeInterval > 0
+      ? settings.autoSummarizeInterval * 60 * 1000
+      : null
+  useInterval(() => handleSummarizeRef.current(), autoSummarizeMs)
 
   // ─── Task #9: TTS ────────────────────────────────────────────────────────────
+
+  // ─── Unified audio stop ──────────────────────────────────────────────────────
+
+  const handleStopAllAudio = useCallback(() => {
+    if (ttsAudioRef.current) {
+      ttsAudioRef.current.pause()
+      ttsAudioRef.current = null
+    }
+    if (msgAudioRef.current) {
+      msgAudioRef.current.pause()
+      msgAudioRef.current = null
+    }
+    setIsTtsPending(false)
+    setPlayingMessageId(null)
+    setIsMessageLoading(false)
+  }, [])
+
+  // ─── Per-message TTS ─────────────────────────────────────────────────────────
+
+  const handlePlayMessage = useCallback(
+    async (id: string, text: string) => {
+      if (!HAS_API || !text) return
+
+      // Stop everything before starting new playback
+      if (ttsAudioRef.current) {
+        ttsAudioRef.current.pause()
+        ttsAudioRef.current = null
+        setIsTtsPending(false)
+      }
+      if (msgAudioRef.current) {
+        msgAudioRef.current.pause()
+        msgAudioRef.current = null
+      }
+
+      setPlayingMessageId(id)
+      setIsMessageLoading(true)
+
+      try {
+        const { audioData } = await api.tts.synthesize(
+          text,
+          settings.pollyEngine,
+          settings.pollyVoiceId,
+          false
+        )
+        setIsMessageLoading(false)
+        await playBase64Audio(audioData, (audio) => {
+          msgAudioRef.current = audio
+        })
+      } catch {
+        // Silent on failure
+      } finally {
+        msgAudioRef.current = null
+        setPlayingMessageId(null)
+        setIsMessageLoading(false)
+      }
+    },
+    [settings.pollyEngine, settings.pollyVoiceId]
+  )
 
   const handleSend = useCallback(async () => {
     if (!ttsInput.trim() || isTtsPending) return
@@ -313,9 +447,17 @@ export default function Home() {
 
     if (!HAS_API) return
 
+    // Stop any per-message playback before sending
+    if (msgAudioRef.current) {
+      msgAudioRef.current.pause()
+      msgAudioRef.current = null
+    }
+    setPlayingMessageId(null)
+    setIsMessageLoading(false)
+
     setIsTtsPending(true)
 
-    // Optimistic: add message with placeholder English text
+    // Optimistic: add message with placeholder translation
     const tempId = `tts-${Date.now()}`
     const optimistic: Message = {
       id: tempId,
@@ -331,7 +473,11 @@ export default function Home() {
     )
 
     try {
-      const { audioData, translatedText } = await api.tts.synthesize(text)
+      const { audioData, translatedText } = await api.tts.synthesize(
+        text,
+        settings.pollyEngine,
+        settings.pollyVoiceId
+      )
 
       // Replace placeholder with real translation
       setMeetings((prev) =>
@@ -347,7 +493,12 @@ export default function Home() {
         )
       )
 
-      await playBase64Audio(audioData)
+      if (settings.ttsAutoPlay) {
+        await playBase64Audio(audioData, (audio) => {
+          ttsAudioRef.current = audio
+        })
+        ttsAudioRef.current = null
+      }
     } catch {
       // Remove optimistic on failure
       setMeetings((prev) =>
@@ -360,7 +511,14 @@ export default function Home() {
     } finally {
       setIsTtsPending(false)
     }
-  }, [ttsInput, isTtsPending, activeMeetingId])
+  }, [
+    ttsInput,
+    isTtsPending,
+    activeMeetingId,
+    settings.ttsAutoPlay,
+    settings.pollyEngine,
+    settings.pollyVoiceId,
+  ])
 
   // ─── Meeting selection ────────────────────────────────────────────────────────
 
@@ -391,7 +549,7 @@ export default function Home() {
   }
 
   return (
-    <main className="relative flex flex-col h-screen overflow-hidden font-sans">
+    <main className="relative flex flex-col overflow-hidden font-sans" style={{ height: '100dvh' }}>
       {/* Background */}
       <div className="absolute inset-0 -z-10 bg-gradient-to-br from-slate-50 via-indigo-50/60 to-violet-50/80 dark:from-[#070614] dark:via-[#0b0820] dark:to-[#0f0828]" />
       <div className="orb-a absolute top-[8%] left-[3%] w-72 h-72 rounded-full bg-indigo-300/20 dark:bg-indigo-600/18 blur-3xl pointer-events-none -z-10" />
@@ -403,6 +561,7 @@ export default function Home() {
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
         onToggleSummary={() => setSummaryOpen((v) => !v)}
         summaryOpen={summaryOpen}
+        onToggleSettings={() => setSettingsOpen((v) => !v)}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -436,13 +595,17 @@ export default function Home() {
             messages={activeMeeting?.messages ?? []}
             isRecording={isRecording}
             isProcessing={isTtsPending}
+            playingMessageId={playingMessageId}
+            isMessageLoading={isMessageLoading}
+            onPlayMessage={handlePlayMessage}
+            onStopMessage={handleStopAllAudio}
           />
         </div>
 
         {summaryOpen && (
           <div className="hidden sm:flex w-64 flex-shrink-0">
             <SummaryPanel
-              summary={activeMeeting?.summary ?? []}
+              summary={activeMeeting?.summary}
               onClose={() => setSummaryOpen(false)}
               onSummarize={handleSummarize}
               isSummarizing={isSummarizing}
@@ -457,7 +620,7 @@ export default function Home() {
           style={{ maxHeight: '45vh' }}
         >
           <SummaryPanel
-            summary={activeMeeting?.summary ?? []}
+            summary={activeMeeting?.summary}
             onClose={() => setSummaryOpen(false)}
             onSummarize={handleSummarize}
             isSummarizing={isSummarizing}
@@ -471,9 +634,18 @@ export default function Home() {
         ttsInput={ttsInput}
         onTtsInputChange={setTtsInput}
         onSend={handleSend}
+        onStopTts={handleStopAllAudio}
         audioLevel={audioLevel}
         isTtsPending={isTtsPending}
       />
+
+      {settingsOpen && (
+        <SettingsPanel
+          settings={settings}
+          onUpdate={updateSettings}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
     </main>
   )
 }
