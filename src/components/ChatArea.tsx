@@ -270,16 +270,15 @@ export default function ChatArea({
               </div>
 
               {/* Action buttons row (translate + TTS) */}
-              {msg.streamPhase !== 'stt' && (
+              {(msg.streamPhase !== 'stt' || msg.original) && (
                 <div
                   className={`flex items-center gap-1 mt-1 ${isRight ? 'flex-row-reverse' : ''}`}
                 >
-                  {/* Translate button — hover-revealed, spinner while translating */}
+                  {/* Translate button — hover-revealed, spinner while translating; always shown when stuck */}
                   <button
                     onClick={() =>
                       onTranslateMessage?.(msg.id, msg.original, msg.speaker, msg.detectedLanguage)
                     }
-                    disabled={msg.streamPhase === 'translating'}
                     title="번역"
                     className={`flex items-center justify-center w-6 h-6 rounded-full transition-all ${
                       msg.streamPhase === 'translating'

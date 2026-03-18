@@ -63,7 +63,7 @@ router = APIRouter()
 
 MAX_BUFFER_BYTES = 512_000   # ~8 seconds at 16 kHz 16-bit mono
 FLUSH_DELAY_SECS = 0.6       # 600 ms silence → flush (Whisper mode only)
-SEGMENT_MERGE_DELAY_SECS = 1.5  # Transcribe: wait this long before translating (accumulates consecutive finals)
+SEGMENT_MERGE_DELAY_SECS = 2.0  # Transcribe: wait this long before translating (accumulates consecutive finals)
 
 # Transcribe language code mapping
 LANG_CODE_MAP: dict = {

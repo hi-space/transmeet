@@ -138,6 +138,8 @@ export default function Home() {
   const handleSummarizeRef = useRef<() => Promise<void>>(() => Promise.resolve())
   // Safety: reset isSummarizing if WS done/error event is never received
   const isSummarizingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Per-message translation timeouts: auto-unblock messages stuck in stt/translating
+  const translationTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
   const activeMeeting = meetings.find((m) => m.id === activeMeetingId) ?? meetings[0]
 
@@ -275,7 +277,7 @@ export default function Home() {
           )
         )
       } else if (msg.type === 'subtitle_stream') {
-        const MERGE_WINDOW_MS = 8000
+        const MERGE_WINDOW_MS = 5000
         if (msg.phase === 'stt_partial') {
           // Word-by-word Transcribe partial — show in pending bubble, not committed messages
           setPendingTranscript({
@@ -285,10 +287,36 @@ export default function Home() {
           })
           return
         }
+        // 번역 고착 방지: displayId에 대해 15초 타임아웃 설정
+        const scheduleTranslationTimeout = (displayId: string) => {
+          const existing = translationTimeoutsRef.current.get(displayId)
+          if (existing) clearTimeout(existing)
+          const t = setTimeout(() => {
+            translationTimeoutsRef.current.delete(displayId)
+            setMeetings((prev) =>
+              prev.map((m) =>
+                m.id === activeMeetingId
+                  ? {
+                      ...m,
+                      messages: m.messages.map((existing) =>
+                        existing.id === displayId &&
+                        (existing.streamPhase === 'stt' || existing.streamPhase === 'translating')
+                          ? { ...existing, streamPhase: 'done' as const }
+                          : existing
+                      ),
+                    }
+                  : m
+              )
+            )
+          }, 15000)
+          translationTimeoutsRef.current.set(displayId, t)
+        }
+
         if (msg.phase === 'stt') {
           // Final sentence from Transcribe — clear pending bubble (partial ID differs from final ID)
           setPendingTranscript(null)
           const streamSpeaker = (msg.speaker as Message['speaker']) ?? 'speaker1'
+          let displayId = msg.messageId
           setMeetings((prev) => {
             const meeting = prev.find((m) => m.id === activeMeetingId)
             const messages = meeting?.messages ?? []
@@ -300,6 +328,7 @@ export default function Home() {
               lastMsg.streamPhase !== undefined
             if (shouldMerge) {
               // Reuse existing bubble; track messageId -> displayed id
+              displayId = lastMsg.id
               mergeMapRef.current.set(msg.messageId, lastMsg.id)
               mergedMsgIdsRef.current.add(lastMsg.id)
               return prev.map((m) =>
@@ -333,8 +362,10 @@ export default function Home() {
               m.id === activeMeetingId ? { ...m, messages: [...m.messages, newMsg] } : m
             )
           })
+          scheduleTranslationTimeout(displayId)
         } else if (msg.phase === 'translating') {
           const resolvedId = mergeMapRef.current.get(msg.messageId) ?? msg.messageId
+          scheduleTranslationTimeout(resolvedId)
           setMeetings((prev) =>
             prev.map((m) =>
               m.id === activeMeetingId
@@ -358,6 +389,12 @@ export default function Home() {
           const isMerged = mergeMapRef.current.has(msg.messageId)
           const isProtected = mergedMsgIdsRef.current.has(resolvedId)
           mergeMapRef.current.delete(msg.messageId)
+          // 타임아웃 해제
+          const t = translationTimeoutsRef.current.get(resolvedId)
+          if (t) {
+            clearTimeout(t)
+            translationTimeoutsRef.current.delete(resolvedId)
+          }
           setMeetings((prev) =>
             prev.map((m) =>
               m.id === activeMeetingId
@@ -470,6 +507,8 @@ export default function Home() {
       setPendingTranscript(null)
       mergeMapRef.current.clear()
       mergedMsgIdsRef.current.clear()
+      translationTimeoutsRef.current.forEach((t) => clearTimeout(t))
+      translationTimeoutsRef.current.clear()
     } else {
       await startAudio()
       startRecording({
