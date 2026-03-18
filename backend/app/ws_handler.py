@@ -212,17 +212,9 @@ async def _process_segment(
     meeting_id = state.meeting_id
     bedrock_model_id = state.model_id
 
-    # 화자 기반 번역 방향 결정: me(나) → 영어, them(상대방) → 한국어
-    if speaker == "me":
-        translation_target = "en"
-    elif speaker == "them":
-        translation_target = "ko"
-    else:
-        translation_target = state.target_lang or (
-            "en" if detected_language == "ko" else "ko"
-        )
+    translation_target = "ko"
     source_lang_label = "Korean" if detected_language == "ko" else "English"
-    target_lang_label = "Korean" if translation_target == "ko" else "English"
+    target_lang_label = "Korean"
 
     # ── 1: Push STT result immediately ─────────────────────────────────────────
     await ws.send_json({
