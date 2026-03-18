@@ -28,6 +28,27 @@ function StopIcon({ className }: { className?: string }) {
   )
 }
 
+function LanguagesIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+    >
+      <path d="m5 8 6 6" />
+      <path d="m4 14 6-6 2-3" />
+      <path d="M2 5h12" />
+      <path d="M7 2h1" />
+      <path d="m22 22-5-10-5 10" />
+      <path d="M14 18h6" />
+    </svg>
+  )
+}
+
 const SPEAKER_CONFIG: Record<
   SpeakerRole,
   {
@@ -123,6 +144,12 @@ interface Props {
   isMessageLoading?: boolean
   onPlayMessage?: (id: string, text: string) => void
   onStopMessage?: () => void
+  onTranslateMessage?: (
+    id: string,
+    text: string,
+    speaker: string,
+    detectedLanguage?: 'ko' | 'en'
+  ) => void
   pendingTranscript?: { messageId: string; text: string; speaker: string } | null
 }
 
@@ -134,6 +161,7 @@ export default function ChatArea({
   isMessageLoading,
   onPlayMessage,
   onStopMessage,
+  onTranslateMessage,
   pendingTranscript,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -184,7 +212,7 @@ export default function ChatArea({
         return (
           <div
             key={msg.id}
-            className={`flex items-start gap-2.5 ${
+            className={`group flex items-start gap-2.5 ${
               isRight ? 'flex-row-reverse ml-10 sm:ml-16' : 'mr-10 sm:mr-16'
             }`}
           >
@@ -241,48 +269,81 @@ export default function ChatArea({
                 </div>
               </div>
 
-              {/* Per-message TTS play/stop button */}
-              {msg.translation &&
-                msg.streamPhase !== 'stt' &&
-                msg.streamPhase !== 'translating' && (
+              {/* Action buttons row (translate + TTS) */}
+              {msg.streamPhase !== 'stt' && (
+                <div
+                  className={`flex items-center gap-1 mt-1 ${isRight ? 'flex-row-reverse' : ''}`}
+                >
+                  {/* Translate button — hover-revealed, spinner while translating */}
                   <button
                     onClick={() =>
-                      playingMessageId === msg.id
-                        ? onStopMessage?.()
-                        : onPlayMessage?.(msg.id, msg.original)
+                      onTranslateMessage?.(msg.id, msg.original, msg.speaker, msg.detectedLanguage)
                     }
-                    title={
-                      playingMessageId === msg.id
-                        ? isMessageLoading
-                          ? '로딩 중...'
-                          : '재생 중지'
-                        : '번역 음성 재생'
-                    }
-                    className={`mt-1 flex items-center justify-center w-6 h-6 rounded-full transition-colors ${
-                      playingMessageId === msg.id
-                        ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/50'
-                        : 'bg-slate-100/80 dark:bg-white/6 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-600 dark:hover:text-slate-300'
+                    disabled={msg.streamPhase === 'translating'}
+                    title="번역"
+                    className={`flex items-center justify-center w-6 h-6 rounded-full transition-all ${
+                      msg.streamPhase === 'translating'
+                        ? 'bg-indigo-100/80 dark:bg-indigo-900/30 text-indigo-400 dark:text-indigo-500'
+                        : 'opacity-0 group-hover:opacity-100 bg-slate-100/80 dark:bg-white/6 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-600 dark:hover:text-slate-300'
                     }`}
                   >
-                    {playingMessageId === msg.id ? (
-                      isMessageLoading ? (
-                        <svg
-                          className="w-3 h-3 animate-spin"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                        </svg>
-                      ) : (
-                        <StopIcon className="w-2.5 h-2.5" />
-                      )
+                    {msg.streamPhase === 'translating' ? (
+                      <svg
+                        className="w-3 h-3 animate-spin"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                      >
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                      </svg>
                     ) : (
-                      <SpeakerIcon className="w-3 h-3" />
+                      <LanguagesIcon className="w-3 h-3" />
                     )}
                   </button>
-                )}
+
+                  {/* TTS play/stop button */}
+                  {msg.translation && msg.streamPhase !== 'translating' && (
+                    <button
+                      onClick={() =>
+                        playingMessageId === msg.id
+                          ? onStopMessage?.()
+                          : onPlayMessage?.(msg.id, msg.original)
+                      }
+                      title={
+                        playingMessageId === msg.id
+                          ? isMessageLoading
+                            ? '로딩 중...'
+                            : '재생 중지'
+                          : '번역 음성 재생'
+                      }
+                      className={`flex items-center justify-center w-6 h-6 rounded-full transition-colors ${
+                        playingMessageId === msg.id
+                          ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/50'
+                          : 'opacity-0 group-hover:opacity-100 bg-slate-100/80 dark:bg-white/6 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-600 dark:hover:text-slate-300'
+                      }`}
+                    >
+                      {playingMessageId === msg.id ? (
+                        isMessageLoading ? (
+                          <svg
+                            className="w-3 h-3 animate-spin"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                          </svg>
+                        ) : (
+                          <StopIcon className="w-2.5 h-2.5" />
+                        )
+                      ) : (
+                        <SpeakerIcon className="w-3 h-3" />
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )

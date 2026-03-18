@@ -314,6 +314,64 @@ def _apply_segment_filters(
     return True
 
 
+async def _retranslate_segment(
+    ws: WebSocket,
+    message_id: str,
+    original_text: str,
+    speaker: str,
+    detected_language: str,
+    target_lang: str,
+    model_id: str,
+    timestamp: str,
+) -> None:
+    """
+    Re-translate a segment using an existing message_id.
+    Skips the STT phase (uses provided text directly) and DynamoDB write.
+    Streams translating + done phases back to the frontend.
+    """
+    source_lang_label = "Korean" if detected_language == "ko" else "English"
+    target_lang_label = "Korean" if target_lang == "ko" else "English"
+
+    prompt = (
+        f"Translate the following {source_lang_label} text to {target_lang_label}. "
+        f"Output only the translated text, no explanations, no quotes.\n\n"
+        f"Text: {original_text}"
+    )
+
+    translated_text = ""
+    async with bedrock_client() as br:
+        stream_resp = await br.converse_stream(
+            modelId=model_id,
+            messages=[{"role": "user", "content": [{"text": prompt}]}],
+            inferenceConfig={"maxTokens": 1024},
+        )
+        async for event in stream_resp["stream"]:
+            delta = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
+            if not delta:
+                continue
+            translated_text += delta
+            await ws.send_json({
+                "type": "subtitle_stream",
+                "messageId": message_id,
+                "phase": "translating",
+                "speaker": speaker,
+                "originalText": original_text,
+                "partialTranslation": translated_text,
+                "timestamp": timestamp,
+            })
+
+    await ws.send_json({
+        "type": "subtitle_stream",
+        "messageId": message_id,
+        "phase": "done",
+        "speaker": speaker,
+        "originalText": original_text,
+        "translatedText": translated_text,
+        "detectedLanguage": detected_language,
+        "timestamp": timestamp,
+    })
+
+
 async def _flush_seg_buffer(state: "ConnectionState", ws: WebSocket) -> None:
     """
     Translate all accumulated Transcribe final segments at once.
@@ -705,6 +763,23 @@ async def ws_endpoint(
                 mid = data.get("meetingId") or state.meeting_id
                 if mid:
                     asyncio.create_task(_stream_summary(ws, mid, state.model_id))
+
+            elif action == "translateMessage":
+                msg_id = data.get("messageId")
+                orig_text = (data.get("originalText") or "").strip()
+                speaker = data.get("speaker") or state.speaker
+                source_lang = normalize_language(
+                    data.get("sourceLang") or state.source_lang or "en"
+                )
+                target_lang = data.get("targetLang") or state.target_lang or "ko"
+                model_id = data.get("modelId") or state.model_id
+                if msg_id and orig_text:
+                    asyncio.create_task(
+                        _retranslate_segment(
+                            ws, msg_id, orig_text, speaker,
+                            source_lang, target_lang, model_id, _iso_now(),
+                        )
+                    )
 
             elif action == "sendAudio":
                 audio_data: Optional[str] = data.get("audioData")

@@ -235,6 +235,32 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     ws.send(JSON.stringify({ action: 'summarize', meetingId }))
   }, [])
 
+  const sendTranslate = useCallback(
+    (
+      messageId: string,
+      originalText: string,
+      speaker: string,
+      sourceLang?: string,
+      targetLang?: string,
+      modelId?: string
+    ): void => {
+      const ws = wsRef.current
+      if (!ws || ws.readyState !== WebSocket.OPEN) return
+      ws.send(
+        JSON.stringify({
+          action: 'translateMessage',
+          messageId,
+          originalText,
+          speaker,
+          ...(sourceLang && { sourceLang }),
+          ...(targetLang && { targetLang }),
+          ...(modelId && { modelId }),
+        })
+      )
+    },
+    [] // stable — all deps via refs
+  )
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -246,5 +272,14 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     }
   }, [])
 
-  return { status, connect, disconnect, sendAudio, startRecording, stopRecording, sendSummarize }
+  return {
+    status,
+    connect,
+    disconnect,
+    sendAudio,
+    startRecording,
+    stopRecording,
+    sendSummarize,
+    sendTranslate,
+  }
 }

@@ -421,6 +421,7 @@ export default function Home() {
     startRecording,
     stopRecording,
     sendSummarize,
+    sendTranslate,
   } = useWebSocket({
     meetingId: activeMeetingId,
     onMessage: handleWsMessage,
@@ -617,6 +618,38 @@ export default function Home() {
     setPlayingMessageId(null)
     setIsMessageLoading(false)
   }, [])
+
+  // ─── Issue #44: Per-message manual translation ───────────────────────────────
+
+  const handleTranslateMessage = useCallback(
+    (id: string, text: string, speaker: string, detectedLanguage?: 'ko' | 'en') => {
+      if (!text || wsStatus !== 'connected') return
+      const sourceLang =
+        detectedLanguage ?? (settings.sourceLang !== 'auto' ? settings.sourceLang : 'en')
+      sendTranslate(id, text, speaker, sourceLang, settings.targetLang, settings.translationModel)
+      // Optimistically mark the bubble as "waiting for translation"
+      setMeetings((prev) =>
+        prev.map((m) =>
+          m.id === activeMeetingId
+            ? {
+                ...m,
+                messages: m.messages.map((msg) =>
+                  msg.id === id ? { ...msg, translation: '', streamPhase: 'stt' as const } : msg
+                ),
+              }
+            : m
+        )
+      )
+    },
+    [
+      wsStatus,
+      sendTranslate,
+      activeMeetingId,
+      settings.sourceLang,
+      settings.targetLang,
+      settings.translationModel,
+    ]
+  )
 
   // ─── Per-message TTS ─────────────────────────────────────────────────────────
 
@@ -857,6 +890,7 @@ export default function Home() {
             isMessageLoading={isMessageLoading}
             onPlayMessage={handlePlayMessage}
             onStopMessage={handleStopAllAudio}
+            onTranslateMessage={handleTranslateMessage}
             pendingTranscript={pendingTranscript}
           />
         </div>
