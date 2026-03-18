@@ -212,9 +212,13 @@ async def _process_segment(
     meeting_id = state.meeting_id
     bedrock_model_id = state.model_id
 
-    translation_target = state.target_lang or (
-        "en" if detected_language == "ko" else "ko"
-    )
+    # auto 모드에서는 감지 언어 기반으로 번역 방향 결정 (한→영, 영→한)
+    if state.source_lang in ("auto", "", None):
+        translation_target = "en" if detected_language == "ko" else "ko"
+    else:
+        translation_target = state.target_lang or (
+            "en" if detected_language == "ko" else "ko"
+        )
     source_lang_label = "Korean" if detected_language == "ko" else "English"
     target_lang_label = "Korean" if translation_target == "ko" else "English"
 
