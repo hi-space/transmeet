@@ -512,23 +512,34 @@ async def _run_transcribe_streaming(
                         else:
                             language = normalize_language(detected_lang)
 
+                        sentence_ended = False
                         for text, speaker in segments:
                             if not _apply_segment_filters(text, state.source_lang):
                                 continue
                             state.seg_buffer.append((text, speaker, language))
+                            # 문장 종료 부호 감지
+                            stripped = text.rstrip()
+                            if stripped and stripped[-1] in ".?!。？！":
+                                sentence_ended = True
 
-                        # Cancel previous flush timer and reschedule
-                        if state.seg_flush_task and not state.seg_flush_task.done():
-                            state.seg_flush_task.cancel()
+                        if sentence_ended:
+                            # 문장이 완성됐으면 대기 없이 즉시 번역
+                            if state.seg_flush_task and not state.seg_flush_task.done():
+                                state.seg_flush_task.cancel()
+                            await _flush_seg_buffer(state, ws)
+                        else:
+                            # 문장 미완성 → 기존대로 타이머 재설정
+                            if state.seg_flush_task and not state.seg_flush_task.done():
+                                state.seg_flush_task.cancel()
 
-                        async def _deferred_flush(s=state, w=ws) -> None:
-                            try:
-                                await asyncio.sleep(SEGMENT_MERGE_DELAY_SECS)
-                                await _flush_seg_buffer(s, w)
-                            except asyncio.CancelledError:
-                                pass
+                            async def _deferred_flush(s=state, w=ws) -> None:
+                                try:
+                                    await asyncio.sleep(SEGMENT_MERGE_DELAY_SECS)
+                                    await _flush_seg_buffer(s, w)
+                                except asyncio.CancelledError:
+                                    pass
 
-                        state.seg_flush_task = asyncio.create_task(_deferred_flush())
+                            state.seg_flush_task = asyncio.create_task(_deferred_flush())
         except asyncio.CancelledError:
             raise
         except Exception:
