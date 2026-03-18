@@ -212,7 +212,11 @@ async def _process_segment(
     meeting_id = state.meeting_id
     bedrock_model_id = state.model_id
 
-    translation_target = "ko"
+    translation_target = "ko"  # 항상 한국어로 번역
+    logger.info(
+        "[process_segment] speaker=%s detectedLang=%s -> translation_target=%s text=%r",
+        speaker, detected_language, translation_target, original_text,
+    )
     source_lang_label = "Korean" if detected_language == "ko" else "English"
     target_lang_label = "Korean"
 
@@ -327,8 +331,13 @@ async def _retranslate_segment(
     Skips the STT phase (uses provided text directly) and DynamoDB write.
     Streams translating + done phases back to the frontend.
     """
+    translation_target = "ko"  # 항상 한국어로 번역
+    logger.info(
+        "[retranslate] messageId=%s speaker=%s detectedLang=%s targetLang_param=%r -> translation_target=%s text=%r",
+        message_id, speaker, detected_language, target_lang, translation_target, original_text,
+    )
     source_lang_label = "Korean" if detected_language == "ko" else "English"
-    target_lang_label = "Korean" if target_lang == "ko" else "English"
+    target_lang_label = "Korean"
 
     prompt = (
         f"Translate the following {source_lang_label} text to {target_lang_label}. "
@@ -358,6 +367,7 @@ async def _retranslate_segment(
                 "timestamp": timestamp,
             })
 
+    logger.info("[retranslate] done: translatedText=%r", translated_text)
     await ws.send_json({
         "type": "subtitle_stream",
         "messageId": message_id,
