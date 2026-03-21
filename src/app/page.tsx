@@ -382,7 +382,10 @@ export default function Home() {
                       existing.id === resolvedId
                         ? {
                             ...existing,
-                            translation: msg.partialTranslation ?? '',
+                            // 'me': EN 번역 결과 → original / others: KO 번역 결과 → translation
+                            ...(existing.speaker === 'me'
+                              ? { original: msg.partialTranslation ?? '' }
+                              : { translation: msg.partialTranslation ?? '' }),
                             streamPhase: 'translating' as const,
                           }
                         : existing
@@ -409,17 +412,24 @@ export default function Home() {
                     ...m,
                     messages: m.messages.map((existing) =>
                       existing.id === resolvedId
-                        ? {
-                            ...existing,
-                            // Preserve original if this bubble was merged into or is a merge target
-                            original:
-                              isMerged || isProtected
-                                ? existing.original
-                                : (msg.originalText ?? existing.original),
-                            translation: msg.translatedText ?? '',
-                            detectedLanguage: msg.detectedLanguage,
-                            streamPhase: 'done' as const,
-                          }
+                        ? existing.speaker === 'me'
+                          ? {
+                              // 'me': EN 번역 결과 → original, KO 원본(translation) 유지
+                              ...existing,
+                              original: msg.translatedText ?? '',
+                              streamPhase: 'done' as const,
+                            }
+                          : {
+                              // others: Preserve original if merged; KO 번역 → translation
+                              ...existing,
+                              original:
+                                isMerged || isProtected
+                                  ? existing.original
+                                  : (msg.originalText ?? existing.original),
+                              translation: msg.translatedText ?? '',
+                              detectedLanguage: msg.detectedLanguage,
+                              streamPhase: 'done' as const,
+                            }
                         : existing
                     ),
                   }
@@ -725,17 +735,25 @@ export default function Home() {
   const handleTranslateMessage = useCallback(
     (id: string, text: string, speaker: string, detectedLanguage?: 'ko' | 'en') => {
       if (!text || wsStatus !== 'connected') return
-      const sourceLang =
-        detectedLanguage ?? (settings.sourceLang !== 'auto' ? settings.sourceLang : 'en')
-      sendTranslate(id, text, speaker, sourceLang, settings.targetLang, settings.translationModel)
-      // Optimistically mark the bubble as "waiting for translation"
+      // 'me' speaker: KO → EN / others: detected/sourceLang → targetLang(KO)
+      const isMe = speaker === 'me'
+      const sourceLang = isMe
+        ? 'ko'
+        : (detectedLanguage ?? (settings.sourceLang !== 'auto' ? settings.sourceLang : 'en'))
+      const targetLang = isMe ? 'en' : settings.targetLang
+      sendTranslate(id, text, speaker, sourceLang, targetLang, settings.translationModel)
+      // Optimistically mark the result field as loading
       setMeetings((prev) =>
         prev.map((m) =>
           m.id === activeMeetingId
             ? {
                 ...m,
                 messages: m.messages.map((msg) =>
-                  msg.id === id ? { ...msg, translation: '', streamPhase: 'stt' as const } : msg
+                  msg.id === id
+                    ? isMe
+                      ? { ...msg, original: '', streamPhase: 'stt' as const }
+                      : { ...msg, translation: '', streamPhase: 'stt' as const }
+                    : msg
                 ),
               }
             : m

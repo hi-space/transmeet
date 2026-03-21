@@ -245,7 +245,9 @@ export default function ChatArea({
                 <div
                   onClick={() => {
                     if (msg.streamPhase === 'translating' || msg.streamPhase === 'stt') return
-                    onTranslateMessage?.(msg.id, msg.original, msg.speaker, msg.detectedLanguage)
+                    // 'me': KO(translation) → EN / others: EN(original) → KO
+                    const textToTranslate = msg.speaker === 'me' ? msg.translation : msg.original
+                    onTranslateMessage?.(msg.id, textToTranslate, msg.speaker, msg.detectedLanguage)
                   }}
                   className={`rounded-2xl px-3.5 py-2.5 max-w-xs sm:max-w-sm ${cfg.bubbleBg} ${
                     isRight ? 'rounded-tr-sm' : 'rounded-tl-sm'

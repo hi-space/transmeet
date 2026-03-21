@@ -335,13 +335,13 @@ async def _retranslate_segment(
     Skips the STT phase (uses provided text directly) and DynamoDB write.
     Streams translating + done phases back to the frontend.
     """
-    translation_target = "ko"  # 항상 한국어로 번역
+    translation_target = target_lang if target_lang else "ko"
     logger.info(
-        "[retranslate] messageId=%s speaker=%s detectedLang=%s targetLang_param=%r -> translation_target=%s text=%r",
-        message_id, speaker, detected_language, target_lang, translation_target, original_text,
+        "[retranslate] messageId=%s speaker=%s detectedLang=%s -> translation_target=%s text=%r",
+        message_id, speaker, detected_language, translation_target, original_text,
     )
     source_lang_label = "Korean" if detected_language == "ko" else "English"
-    target_lang_label = "Korean"
+    target_lang_label = "Korean" if translation_target == "ko" else "English"
 
     prompt = (
         f"Translate the following {source_lang_label} text to {target_lang_label}. "
