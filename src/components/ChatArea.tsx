@@ -239,49 +239,49 @@ export default function ChatArea({
                 </span>
               </div>
 
-              {/* Message bubble */}
-              <div
-                onClick={() => {
-                  if (msg.streamPhase === 'translating' || msg.streamPhase === 'stt') return
-                  onTranslateMessage?.(msg.id, msg.original, msg.speaker, msg.detectedLanguage)
-                }}
-                className={`relative rounded-2xl px-3.5 py-2.5 max-w-xs sm:max-w-sm ${cfg.bubbleBg} ${
-                  isRight ? 'rounded-tr-sm' : 'rounded-tl-sm'
-                } cursor-pointer active:opacity-70 transition-opacity`}
-              >
-                {/* Original text */}
-                <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
-                  {msg.original}
-                </p>
-                {/* Translation — three states */}
-                <div className={`border-t ${cfg.dividerColor} mt-1.5 pt-1.5`}>
-                  {msg.streamPhase === 'stt' ? (
-                    <span className="flex items-center gap-1">
-                      <span className={`text-xs ${cfg.translationColor}`}>번역 중</span>
-                      {[0, 0.1, 0.2].map((d, i) => (
-                        <span
-                          key={i}
-                          className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 animate-bounce"
-                          style={{ animationDelay: `${d}s` }}
-                        />
-                      ))}
-                    </span>
-                  ) : (
-                    <p className={`text-xs leading-relaxed ${cfg.translationColor}`}>
-                      {msg.translation}
-                      {msg.streamPhase === 'translating' && (
-                        <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
-                      )}
-                    </p>
-                  )}
+              {/* Bubble + side buttons row */}
+              <div className={`flex items-center gap-1 ${isRight ? 'flex-row-reverse' : ''}`}>
+                {/* Message bubble */}
+                <div
+                  onClick={() => {
+                    if (msg.streamPhase === 'translating' || msg.streamPhase === 'stt') return
+                    onTranslateMessage?.(msg.id, msg.original, msg.speaker, msg.detectedLanguage)
+                  }}
+                  className={`rounded-2xl px-3.5 py-2.5 max-w-xs sm:max-w-sm ${cfg.bubbleBg} ${
+                    isRight ? 'rounded-tr-sm' : 'rounded-tl-sm'
+                  } cursor-pointer active:opacity-70 transition-opacity`}
+                >
+                  {/* Original text */}
+                  <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+                    {msg.original}
+                  </p>
+                  {/* Translation — three states */}
+                  <div className={`border-t ${cfg.dividerColor} mt-1.5 pt-1.5`}>
+                    {msg.streamPhase === 'stt' ? (
+                      <span className="flex items-center gap-1">
+                        <span className={`text-xs ${cfg.translationColor}`}>번역 중</span>
+                        {[0, 0.1, 0.2].map((d, i) => (
+                          <span
+                            key={i}
+                            className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 animate-bounce"
+                            style={{ animationDelay: `${d}s` }}
+                          />
+                        ))}
+                      </span>
+                    ) : (
+                      <p className={`text-xs leading-relaxed ${cfg.translationColor}`}>
+                        {msg.translation}
+                        {msg.streamPhase === 'translating' && (
+                          <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
+                        )}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
-                {/* Action buttons — overlaid inside bubble, no layout impact */}
+                {/* Side action buttons */}
                 {(msg.streamPhase !== 'stt' || msg.original) && (
-                  <div
-                    className={`absolute top-1.5 flex items-center gap-0.5 ${isRight ? 'left-1.5' : 'right-1.5'}`}
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <div className="flex flex-col gap-0.5">
                     {/* Translate button */}
                     <button
                       onClick={() =>
@@ -296,7 +296,7 @@ export default function ChatArea({
                       className={`flex items-center justify-center w-5 h-5 rounded-full transition-all ${
                         msg.streamPhase === 'translating'
                           ? 'bg-indigo-100/80 dark:bg-indigo-900/30 text-indigo-400 dark:text-indigo-500'
-                          : 'opacity-0 group-hover:opacity-100 bg-white/70 dark:bg-slate-700/70 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+                          : 'opacity-0 group-hover:opacity-100 bg-slate-100/80 dark:bg-white/6 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-600 dark:hover:text-slate-300'
                       }`}
                     >
                       {msg.streamPhase === 'translating' ? (
@@ -332,7 +332,7 @@ export default function ChatArea({
                         className={`flex items-center justify-center w-5 h-5 rounded-full transition-colors ${
                           playingMessageId === msg.id
                             ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/50'
-                            : 'opacity-0 group-hover:opacity-100 bg-white/70 dark:bg-slate-700/70 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+                            : 'opacity-0 group-hover:opacity-100 bg-slate-100/80 dark:bg-white/6 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-600 dark:hover:text-slate-300'
                         }`}
                       >
                         {playingMessageId === msg.id ? (
