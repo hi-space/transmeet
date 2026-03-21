@@ -67,11 +67,13 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
 interface UseAudioCaptureOptions {
   onChunk: (wavBase64: string) => void
   chunkDurationMs?: number
+  audioSource?: 'mic' | 'system' | 'both'
 }
 
 export function useAudioCapture({
   onChunk,
   chunkDurationMs = CHUNK_DURATION_MS,
+  audioSource = 'mic',
 }: UseAudioCaptureOptions) {
   const [isRecording, setIsRecording] = useState(false)
   const [audioLevel, setAudioLevel] = useState(0)
@@ -80,7 +82,8 @@ export function useAudioCapture({
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const processorRef = useRef<ScriptProcessorNode | null>(null)
-  const streamRef = useRef<MediaStream | null>(null)
+  const streamRef = useRef<MediaStream | null>(null) // mic stream
+  const sysStreamRef = useRef<MediaStream | null>(null) // system audio stream
   const samplesRef = useRef<Float32Array[]>([])
   const chunkTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const levelAnimRef = useRef<number | null>(null)
@@ -123,49 +126,93 @@ export function useAudioCapture({
   const start = useCallback(async () => {
     setError(null)
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      })
-      streamRef.current = stream
+      let micStream: MediaStream | null = null
+      let sysStream: MediaStream | null = null
 
+      // ── 마이크 스트림 획득 ────────────────────────────────────────────────
+      if (audioSource === 'mic' || audioSource === 'both') {
+        micStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        })
+        streamRef.current = micStream
+      }
+
+      // ── 시스템 오디오 스트림 획득 ─────────────────────────────────────────
+      if (audioSource === 'system' || audioSource === 'both') {
+        // video:false는 일부 브라우저에서 미지원 → video:true 후 track 즉시 중단
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true,
+        })
+        displayStream.getVideoTracks().forEach((t) => t.stop())
+
+        const audioTracks = displayStream.getAudioTracks()
+        if (audioTracks.length === 0) {
+          displayStream.getTracks().forEach((t) => t.stop())
+          throw new Error(
+            '시스템 오디오를 가져올 수 없습니다. 화면 공유 시 "오디오 공유"를 체크해 주세요.'
+          )
+        }
+        sysStream = new MediaStream(audioTracks)
+        sysStreamRef.current = sysStream
+      }
+
+      // ── AudioContext + 노드 구성 ──────────────────────────────────────────
       const ctx = new AudioContext()
       audioContextRef.current = ctx
-      const source = ctx.createMediaStreamSource(stream)
 
-      // Analyser for level visualization
-      const analyser = ctx.createAnalyser()
-      analyser.fftSize = 256
-      analyserRef.current = analyser
-      source.connect(analyser)
-
-      // ScriptProcessorNode to collect PCM samples
       const processor = ctx.createScriptProcessor(SCRIPT_PROCESSOR_BUFFER_SIZE, 1, 1)
       processorRef.current = processor
       processor.onaudioprocess = (e) => {
-        const inputData = e.inputBuffer.getChannelData(0)
-        samplesRef.current.push(new Float32Array(inputData))
+        samplesRef.current.push(new Float32Array(e.inputBuffer.getChannelData(0)))
       }
-      source.connect(processor)
       processor.connect(ctx.destination)
+
+      // 레벨 시각화용 analyser (mic 우선, system-only면 system)
+      const analyser = ctx.createAnalyser()
+      analyser.fftSize = 256
+      analyserRef.current = analyser
+
+      if (micStream) {
+        const micSource = ctx.createMediaStreamSource(micStream)
+        micSource.connect(analyser) // 레벨 표시
+        micSource.connect(processor) // PCM 수집
+      }
+
+      if (sysStream) {
+        const sysSource = ctx.createMediaStreamSource(sysStream)
+        if (!micStream) sysSource.connect(analyser) // system-only: analyser에도 연결
+        sysSource.connect(processor) // PCM 수집 (AudioContext가 자동 믹싱)
+      }
 
       chunkTimerRef.current = setInterval(flushChunk, chunkDurationMs)
       levelAnimRef.current = requestAnimationFrame(updateLevel)
       setIsRecording(true)
     } catch (err) {
+      // getDisplayMedia 취소(NotAllowedError)와 명시적 에러 메시지 구분
       const msg =
-        err instanceof DOMException && err.name === 'NotAllowedError'
-          ? '마이크 접근이 거부되었습니다. 브라우저 설정에서 허용해 주세요.'
-          : err instanceof Error
-            ? err.message
-            : '마이크를 사용할 수 없습니다.'
+        err instanceof Error && err.message.includes('시스템 오디오')
+          ? err.message
+          : err instanceof DOMException && err.name === 'NotAllowedError'
+            ? audioSource === 'mic'
+              ? '마이크 접근이 거부되었습니다. 브라우저 설정에서 허용해 주세요.'
+              : '화면/오디오 공유가 거부되었습니다.'
+            : err instanceof Error
+              ? err.message
+              : '오디오를 시작할 수 없습니다.'
       setError(msg)
+      // 부분적으로 획득한 스트림 정리
+      streamRef.current?.getTracks().forEach((t) => t.stop())
+      streamRef.current = null
+      sysStreamRef.current?.getTracks().forEach((t) => t.stop())
+      sysStreamRef.current = null
     }
-  }, [chunkDurationMs, flushChunk, updateLevel])
+  }, [audioSource, chunkDurationMs, flushChunk, updateLevel])
 
   const stop = useCallback(() => {
     flushChunk()
@@ -189,6 +236,8 @@ export function useAudioCapture({
 
     streamRef.current?.getTracks().forEach((t) => t.stop())
     streamRef.current = null
+    sysStreamRef.current?.getTracks().forEach((t) => t.stop())
+    sysStreamRef.current = null
 
     samplesRef.current = []
     setAudioLevel(0)
@@ -204,6 +253,7 @@ export function useAudioCapture({
       analyserRef.current?.disconnect()
       audioContextRef.current?.close()
       streamRef.current?.getTracks().forEach((t) => t.stop())
+      sysStreamRef.current?.getTracks().forEach((t) => t.stop())
     }
   }, [])
 

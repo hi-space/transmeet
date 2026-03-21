@@ -738,6 +738,7 @@ export default function Home() {
   } = useAudioCapture({
     onChunk: handleChunk,
     chunkDurationMs: settings.sttProvider === 'whisper' ? 2000 : 700,
+    audioSource: settings.audioSource,
   })
 
   useEffect(() => {

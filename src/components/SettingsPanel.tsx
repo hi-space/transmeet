@@ -113,6 +113,39 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
             </button>
           </div>
 
+          {/* ── Audio source ────────────────────────────────────────────────── */}
+          <div className="space-y-2">
+            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              오디오 소스
+            </p>
+            <div className="flex gap-1.5">
+              {(
+                [
+                  ['mic', '마이크'],
+                  ['system', '시스템'],
+                  ['both', '믹스'],
+                ] as const
+              ).map(([val, label]) => (
+                <button
+                  key={val}
+                  onClick={() => handleUpdate({ audioSource: val })}
+                  className={pill(settings.audioSource === val)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500">
+              {settings.audioSource === 'mic' && '마이크 입력만 캡처'}
+              {settings.audioSource === 'system' &&
+                '시스템 오디오 캡처 · 화면 공유 시 "오디오 공유" 체크 필요'}
+              {settings.audioSource === 'both' && '마이크 + 시스템 오디오 믹싱'}
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
+
           {/* ── STT engine ─────────────────────────────────────────────────── */}
           <div className="space-y-2">
             <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">

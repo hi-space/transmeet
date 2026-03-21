@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react'
 export interface Settings {
   sourceLang: 'ko' | 'en' | 'auto'
   targetLang: 'ko' | 'en'
+  audioSource: 'mic' | 'system' | 'both'
   sttProvider: 'whisper' | 'transcribe'
   ttsAutoPlay: boolean
   pollyEngine: 'generative' | 'neural' | 'standard'
@@ -30,6 +31,7 @@ const LANG_DEFAULT_VOICE: Record<'en' | 'ko', { id: string; engine: Settings['po
 const DEFAULT: Settings = {
   sourceLang: 'en',
   targetLang: 'ko',
+  audioSource: 'mic',
   sttProvider: 'whisper',
   ttsAutoPlay: true,
   pollyEngine: 'generative',
