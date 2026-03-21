@@ -165,9 +165,13 @@ export default function ChatArea({
   pendingTranscript,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
+  const prevLengthRef = useRef(0)
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (messages.length > prevLengthRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+    prevLengthRef.current = messages.length
   }, [messages])
 
   if (messages.length === 0) {
