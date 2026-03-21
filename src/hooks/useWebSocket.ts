@@ -209,6 +209,7 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
       targetLang?: string
       modelId?: string
       speaker?: string
+      translationTiming?: string
     }): void => {
       const ws = wsRef.current
       if (!ws || ws.readyState !== WebSocket.OPEN) return

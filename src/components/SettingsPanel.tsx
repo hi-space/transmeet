@@ -135,6 +135,39 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
         {/* Divider */}
         <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
 
+        {/* ── Translation timing ────────────────────────────────────────────── */}
+        <div className="space-y-2">
+          <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            번역 타이밍
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              [
+                ['sentence', '문장 완료 시'],
+                ['realtime', '실시간'],
+                ['manual', '수동만'],
+              ] as const
+            ).map(([val, label]) => (
+              <button
+                key={val}
+                onClick={() => handleUpdate({ translationTiming: val })}
+                className={pill(settings.translationTiming === val)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-slate-400 dark:text-slate-500">
+            {settings.translationTiming === 'sentence' &&
+              '마침표/물음표 감지 또는 2초 무음 후 번역'}
+            {settings.translationTiming === 'realtime' && '모든 발화 세그먼트마다 즉시 번역'}
+            {settings.translationTiming === 'manual' && '자동 번역 없음 · 버튼 클릭 시에만 번역'}
+          </p>
+        </div>
+
+        {/* Divider */}
+        <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
+
         {/* ── Translation model ─────────────────────────────────────────────── */}
         <div className="space-y-2">
           <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">

@@ -101,6 +101,8 @@ class ConnectionState:
     # Transcribe mode: deferred segment accumulation (merges consecutive finals before translating)
     seg_buffer: List[tuple] = field(default_factory=list)  # [(text, speaker, detected_lang)]
     seg_flush_task: Optional[asyncio.Task] = None
+    # Translation timing: "sentence" | "realtime" | "manual"
+    translation_timing: str = "sentence"
 
 
 # In-memory connection registry (single-process; scales with one Fargate task)
@@ -512,34 +514,44 @@ async def _run_transcribe_streaming(
                         else:
                             language = normalize_language(detected_lang)
 
-                        sentence_ended = False
                         for text, speaker in segments:
                             if not _apply_segment_filters(text, state.source_lang):
                                 continue
                             state.seg_buffer.append((text, speaker, language))
-                            # 문장 종료 부호 감지
-                            stripped = text.rstrip()
-                            if stripped and stripped[-1] in ".?!。？！":
-                                sentence_ended = True
 
-                        if sentence_ended:
-                            # 문장이 완성됐으면 대기 없이 즉시 번역
+                        timing = state.translation_timing
+
+                        if timing == "manual":
+                            # 자동 번역 없음 — translateMessage action으로만 번역
+                            pass
+                        elif timing == "realtime":
+                            # 모든 세그먼트마다 즉시 번역
                             if state.seg_flush_task and not state.seg_flush_task.done():
                                 state.seg_flush_task.cancel()
                             await _flush_seg_buffer(state, ws)
                         else:
-                            # 문장 미완성 → 기존대로 타이머 재설정
-                            if state.seg_flush_task and not state.seg_flush_task.done():
-                                state.seg_flush_task.cancel()
+                            # sentence(기본): 문장 종료 부호 감지 or 2초 대기
+                            sentence_ended = any(
+                                (t.rstrip() or "")[-1:] in ".?!。？！"
+                                for t, _ in segments
+                                if _apply_segment_filters(t, state.source_lang)
+                            )
+                            if sentence_ended:
+                                if state.seg_flush_task and not state.seg_flush_task.done():
+                                    state.seg_flush_task.cancel()
+                                await _flush_seg_buffer(state, ws)
+                            else:
+                                if state.seg_flush_task and not state.seg_flush_task.done():
+                                    state.seg_flush_task.cancel()
 
-                            async def _deferred_flush(s=state, w=ws) -> None:
-                                try:
-                                    await asyncio.sleep(SEGMENT_MERGE_DELAY_SECS)
-                                    await _flush_seg_buffer(s, w)
-                                except asyncio.CancelledError:
-                                    pass
+                                async def _deferred_flush(s=state, w=ws) -> None:
+                                    try:
+                                        await asyncio.sleep(SEGMENT_MERGE_DELAY_SECS)
+                                        await _flush_seg_buffer(s, w)
+                                    except asyncio.CancelledError:
+                                        pass
 
-                            state.seg_flush_task = asyncio.create_task(_deferred_flush())
+                                state.seg_flush_task = asyncio.create_task(_deferred_flush())
         except asyncio.CancelledError:
             raise
         except Exception:
@@ -741,6 +753,7 @@ async def ws_endpoint(
                 state.model_id = data.get("modelId") or config.BEDROCK_MODEL_ID
                 state.meeting_id = data.get("meetingId") or state.meeting_id
                 state.speaker = data.get("speaker", "speaker1")
+                state.translation_timing = data.get("translationTiming", "sentence") or "sentence"
                 state.seg_buffer.clear()
                 if state.seg_flush_task and not state.seg_flush_task.done():
                     state.seg_flush_task.cancel()

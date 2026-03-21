@@ -11,6 +11,7 @@ export interface Settings {
   pollyVoiceId: string
   autoSummarizeInterval: 0 | 1 | 2 | 5 | 10 // minutes; 0 = off
   translationModel: string
+  translationTiming: 'sentence' | 'realtime' | 'manual'
 }
 
 const DEFAULT: Settings = {
@@ -22,6 +23,7 @@ const DEFAULT: Settings = {
   pollyVoiceId: 'Ruth',
   autoSummarizeInterval: 2,
   translationModel: 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
+  translationTiming: 'sentence',
 }
 
 const STORAGE_KEY = 'transmeet-settings'

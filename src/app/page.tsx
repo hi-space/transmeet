@@ -517,6 +517,7 @@ export default function Home() {
         targetLang: settings.targetLang,
         modelId: settings.translationModel,
         speaker: 'speaker1',
+        translationTiming: settings.translationTiming,
       })
     }
   }, [
@@ -529,6 +530,7 @@ export default function Home() {
     settings.sourceLang,
     settings.targetLang,
     settings.translationModel,
+    settings.translationTiming,
   ])
 
   // ─── Task #8: Summarize ─────────────────────────────────────────────────────
