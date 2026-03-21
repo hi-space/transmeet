@@ -119,6 +119,7 @@ export default function Home() {
     messageId: string
     text: string
     speaker: string
+    translation?: string
   } | null>(null)
   const [isLoadingMeetings, setIsLoadingMeetings] = useState(HAS_API)
   const [isCreatingMeeting, setIsCreatingMeeting] = useState(false)
@@ -136,6 +137,8 @@ export default function Home() {
   const lastSummarizedCountRef = useRef<Record<string, number>>({})
   // Stable ref for handleSummarize to avoid stale closure in timers
   const handleSummarizeRef = useRef<() => Promise<void>>(() => Promise.resolve())
+  // partial 번역 디바운스 (500ms)
+  const pendingTranslateDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // sendTranslate ref: handleWsMessage보다 먼저 선언되어야 하므로 ref 패턴 사용
   const sendTranslateRef = useRef<
     (
@@ -291,11 +294,28 @@ export default function Home() {
         const SILENCE_TIMEOUT_MS = settings.silenceTimeout
         if (msg.phase === 'stt_partial') {
           // Word-by-word Transcribe partial — show in pending bubble, not committed messages
-          setPendingTranscript({
+          const partialText = msg.originalText ?? ''
+          const partialSpeaker = msg.speaker ?? 'speaker1'
+          setPendingTranscript((prev) => ({
             messageId: msg.messageId,
-            text: msg.originalText ?? '',
-            speaker: msg.speaker ?? 'speaker1',
-          })
+            text: partialText,
+            speaker: partialSpeaker,
+            translation: prev?.translation, // 기존 번역 유지
+          }))
+          // 500ms 디바운스로 번역 요청 (잦은 partial 업데이트 방지)
+          if (pendingTranslateDebounceRef.current) clearTimeout(pendingTranslateDebounceRef.current)
+          pendingTranslateDebounceRef.current = setTimeout(() => {
+            pendingTranslateDebounceRef.current = null
+            const srcLang = settings.sourceLang !== 'auto' ? settings.sourceLang : 'en'
+            sendTranslateRef.current(
+              '__pending__',
+              partialText,
+              partialSpeaker,
+              srcLang,
+              settings.targetLang,
+              settings.translationModel
+            )
+          }, 500)
           return
         }
         // 번역 고착 방지: displayId에 대해 15초 타임아웃 설정
@@ -325,6 +345,11 @@ export default function Home() {
 
         if (msg.phase === 'stt') {
           // Final sentence from Transcribe — clear pending bubble (partial ID differs from final ID)
+          // partial 번역 디바운스 취소
+          if (pendingTranslateDebounceRef.current) {
+            clearTimeout(pendingTranslateDebounceRef.current)
+            pendingTranslateDebounceRef.current = null
+          }
           setPendingTranscript(null)
           const streamSpeaker = (msg.speaker as Message['speaker']) ?? 'speaker1'
           let displayId = msg.messageId
@@ -401,6 +426,13 @@ export default function Home() {
             )
           }
         } else if (msg.phase === 'translating') {
+          // pending 버블 번역 스트리밍
+          if (msg.messageId === '__pending__') {
+            setPendingTranscript((prev) =>
+              prev ? { ...prev, translation: msg.partialTranslation ?? '' } : prev
+            )
+            return
+          }
           const resolvedId = mergeMapRef.current.get(msg.messageId) ?? msg.messageId
           scheduleTranslationTimeout(resolvedId)
           setMeetings((prev) =>
@@ -425,6 +457,13 @@ export default function Home() {
             )
           )
         } else if (msg.phase === 'done') {
+          // pending 버블 번역 완료
+          if (msg.messageId === '__pending__') {
+            setPendingTranscript((prev) =>
+              prev ? { ...prev, translation: msg.translatedText ?? '' } : prev
+            )
+            return
+          }
           const resolvedId = mergeMapRef.current.get(msg.messageId) ?? msg.messageId
           const isMerged = mergeMapRef.current.has(msg.messageId)
           const isProtected = mergedMsgIdsRef.current.has(resolvedId)

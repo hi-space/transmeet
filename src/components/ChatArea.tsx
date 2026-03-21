@@ -101,7 +101,15 @@ const SPEAKER_CONFIG: Record<
   },
 }
 
-function PendingBubble({ speaker, text }: { speaker: string; text: string }) {
+function PendingBubble({
+  speaker,
+  text,
+  translation,
+}: {
+  speaker: string
+  text: string
+  translation?: string
+}) {
   const speakerKey: SpeakerRole = speaker in SPEAKER_CONFIG ? (speaker as SpeakerRole) : 'speaker1'
   const cfg = SPEAKER_CONFIG[speakerKey]
   const isRight = cfg.side === 'right'
@@ -122,6 +130,14 @@ function PendingBubble({ speaker, text }: { speaker: string; text: string }) {
             {text}
             <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
           </p>
+          {translation && (
+            <div className={`border-t ${cfg.dividerColor} mt-1.5 pt-1.5`}>
+              <p className={`text-xs leading-relaxed ${cfg.translationColor}`}>
+                {translation}
+                <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -150,7 +166,12 @@ interface Props {
     speaker: string,
     detectedLanguage?: 'ko' | 'en'
   ) => void
-  pendingTranscript?: { messageId: string; text: string; speaker: string } | null
+  pendingTranscript?: {
+    messageId: string
+    text: string
+    speaker: string
+    translation?: string
+  } | null
 }
 
 export default function ChatArea({
@@ -368,7 +389,11 @@ export default function ChatArea({
       })}
       {/* Pending Transcribe bubble: word-by-word partial transcript */}
       {isRecording && pendingTranscript && pendingTranscript.text && (
-        <PendingBubble speaker={pendingTranscript.speaker} text={pendingTranscript.text} />
+        <PendingBubble
+          speaker={pendingTranscript.speaker}
+          text={pendingTranscript.text}
+          translation={pendingTranscript.translation}
+        />
       )}
 
       {/* Recording indicator: shows while waiting for next subtitle */}
