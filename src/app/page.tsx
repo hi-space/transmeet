@@ -501,6 +501,8 @@ export default function Home() {
               )
             } else {
               // 기존 번역 없음 or 진행 중 → 전체 병합 텍스트 재번역
+              // 진행 중인 __append__ 무효화 (stale done이 나중에 덮어쓰는 것 방지)
+              appendBaseRef.current.delete(displayId)
               sendTranslateRef.current(
                 displayId,
                 mergedFullText,
@@ -524,6 +526,8 @@ export default function Home() {
           // final 말풍선 append 번역: base + partial 합산하여 실시간 스트리밍 표시
           if (msg.messageId.startsWith('__append__')) {
             const targetId = msg.messageId.slice('__append__'.length)
+            // appendBase가 없으면 전체 재번역으로 superseded — stale 결과 무시
+            if (!appendBaseRef.current.has(targetId)) return
             const base = appendBaseRef.current.get(targetId) ?? ''
             const partial = msg.partialTranslation ?? ''
             scheduleTranslationTimeout(targetId)
@@ -598,6 +602,8 @@ export default function Home() {
           // final 말풍선 append 번역: base + 완성 번역으로 교체 후 done으로 전환
           if (msg.messageId.startsWith('__append__')) {
             const targetId = msg.messageId.slice('__append__'.length)
+            // appendBase가 없으면 전체 재번역으로 superseded — stale 결과 무시
+            if (!appendBaseRef.current.has(targetId)) return
             const base = appendBaseRef.current.get(targetId) ?? ''
             appendBaseRef.current.delete(targetId)
             const appended = msg.translatedText ?? ''
@@ -660,23 +666,30 @@ export default function Home() {
                               original: msg.translatedText ?? '',
                               streamPhase: 'done' as const,
                             }
-                          : {
+                          : (() => {
                               // others: KO 번역 → translation
                               // isProtected: 병합된 버블은 original 보호 + 더 긴 번역 유지
                               // (_process_segment의 단일 세그먼트 번역이 병합 재번역을 덮어쓰지 못하게)
-                              ...existing,
-                              original: isProtected
-                                ? existing.original
-                                : (msg.originalText ?? existing.original),
-                              translation:
+                              const keepExisting =
                                 isProtected &&
                                 (existing.translation ?? '').length >
                                   (msg.translatedText ?? '').length
+                              return {
+                                ...existing,
+                                original: isProtected
+                                  ? existing.original
+                                  : (msg.originalText ?? existing.original),
+                                translation: keepExisting
                                   ? existing.translation
                                   : (msg.translatedText ?? ''),
-                              detectedLanguage: msg.detectedLanguage,
-                              streamPhase: 'done' as const,
-                            }
+                                detectedLanguage: msg.detectedLanguage,
+                                // 기존 번역 유지 시 streamPhase도 유지 — 재번역 스트리밍 중인데
+                                // 짧은 원본 done이 도착해서 done으로 잠기는 race condition 방지
+                                streamPhase: keepExisting
+                                  ? (existing.streamPhase ?? 'done')
+                                  : 'done',
+                              }
+                            })()
                         : existing
                     ),
                   }
