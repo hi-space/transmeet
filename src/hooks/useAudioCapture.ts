@@ -147,7 +147,7 @@ export function useAudioCapture({
         // video:false는 일부 브라우저 미지원 → video:true로 요청 후 나중에 중단
         // displayStream을 그대로 사용 (audio tracks만 추출하면 Chrome에서 stream이 비활성화됨)
         const displayStream = await navigator.mediaDevices.getDisplayMedia({
-          video: true,
+          video: { width: 1, height: 1, frameRate: 1 }, // 오디오만 필요하므로 최소 해상도
           audio: true,
         })
 
@@ -189,8 +189,8 @@ export function useAudioCapture({
         const sysSource = ctx.createMediaStreamSource(sysStream)
         if (!micStream) sysSource.connect(analyser) // system-only: analyser에도 연결
         sysSource.connect(processor) // PCM 수집 (AudioContext가 자동 믹싱)
-        // AudioContext 연결 후 video track 중단 (연결 전 중단 시 stream 비활성화 가능)
-        sysStream.getVideoTracks().forEach((t) => t.stop())
+        // video track은 stop() 시에 sysStreamRef.current?.getTracks()로 일괄 정리
+        // 녹화 중 video track 중단 시 Chrome에서 stream 전체가 비활성화되어 묵음이 됨
       }
 
       chunkTimerRef.current = setInterval(flushChunk, chunkDurationMs)
