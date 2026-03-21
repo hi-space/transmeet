@@ -236,6 +236,30 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     ws.send(JSON.stringify({ action: 'summarize', meetingId }))
   }, [])
 
+  const sendTtsRequest = useCallback(
+    (
+      messageId: string,
+      text: string,
+      modelId?: string,
+      pollyEngine?: string,
+      pollyVoiceId?: string
+    ): void => {
+      const ws = wsRef.current
+      if (!ws || ws.readyState !== WebSocket.OPEN) return
+      ws.send(
+        JSON.stringify({
+          action: 'ttsRequest',
+          messageId,
+          text,
+          ...(modelId && { modelId }),
+          ...(pollyEngine && { pollyEngine }),
+          ...(pollyVoiceId && { pollyVoiceId }),
+        })
+      )
+    },
+    [] // stable — all deps via refs
+  )
+
   const sendTranslate = useCallback(
     (
       messageId: string,
@@ -282,5 +306,6 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     stopRecording,
     sendSummarize,
     sendTranslate,
+    sendTtsRequest,
   }
 }

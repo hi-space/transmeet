@@ -54,6 +54,7 @@ from .aws_clients import (
     generate_message_id,
     is_hallucination,
     normalize_language,
+    polly_client,
     sagemaker_client,
 )
 from .config import config
@@ -656,6 +657,94 @@ async def _schedule_flush(
     state.flush_task = asyncio.create_task(_do_flush())
 
 
+# ─── TTS request streaming ───────────────────────────────────────────────────
+
+async def _handle_tts_request(
+    ws: WebSocket,
+    message_id: str,
+    text: str,
+    model_id: str,
+    polly_engine: str,
+    polly_voice_id: str,
+    timestamp: str,
+) -> None:
+    """KO→EN 번역 스트리밍 후 Polly TTS 합성."""
+    prompt = (
+        f"Translate the following Korean text to natural, fluent English. "
+        f"Return only the translated text.\n\n{text}"
+    )
+
+    # Step 1: Stream Bedrock translation
+    translated_text = ""
+    try:
+        async with bedrock_client() as br:
+            stream_resp = await br.converse_stream(
+                modelId=model_id,
+                messages=[{"role": "user", "content": [{"text": prompt}]}],
+                inferenceConfig={"maxTokens": 1024},
+            )
+            async for event in stream_resp["stream"]:
+                delta = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
+                if not delta:
+                    continue
+                translated_text += delta
+                await ws.send_json({
+                    "type": "tts_stream",
+                    "messageId": message_id,
+                    "phase": "translating",
+                    "partialText": translated_text,
+                    "timestamp": timestamp,
+                })
+    except Exception:
+        logger.exception("[tts_request] Bedrock streaming failed for messageId=%s", message_id)
+        try:
+            await ws.send_json({
+                "type": "tts_stream",
+                "messageId": message_id,
+                "phase": "error",
+                "timestamp": timestamp,
+            })
+        except Exception:
+            pass
+        return
+
+    if not translated_text:
+        return
+
+    # Step 2: Polly TTS synthesis
+    try:
+        # Seoyeon(Korean) only supports neural engine
+        actual_engine = "neural" if polly_voice_id == "Seoyeon" and polly_engine != "neural" else polly_engine
+        async with polly_client() as polly:
+            polly_resp = await polly.synthesize_speech(
+                Text=translated_text,
+                OutputFormat="mp3",
+                VoiceId=polly_voice_id,
+                Engine=actual_engine,
+            )
+            audio_bytes = await polly_resp["AudioStream"].read()
+        audio_data = base64.b64encode(audio_bytes).decode("utf-8")
+
+        await ws.send_json({
+            "type": "tts_stream",
+            "messageId": message_id,
+            "phase": "done",
+            "translatedText": translated_text,
+            "audioData": audio_data,
+            "timestamp": timestamp,
+        })
+    except Exception:
+        logger.exception("[tts_request] Polly synthesis failed for messageId=%s", message_id)
+        # Still send done without audio so frontend can show the translation
+        await ws.send_json({
+            "type": "tts_stream",
+            "messageId": message_id,
+            "phase": "done",
+            "translatedText": translated_text,
+            "timestamp": timestamp,
+        })
+
+
 # ─── Summary streaming ───────────────────────────────────────────────────────
 
 async def _stream_summary(ws: WebSocket, meeting_id: str, model_id: str) -> None:
@@ -809,6 +898,20 @@ async def ws_endpoint(
                 mid = data.get("meetingId") or state.meeting_id
                 if mid:
                     asyncio.create_task(_stream_summary(ws, mid, state.model_id))
+
+            elif action == "ttsRequest":
+                msg_id = data.get("messageId") or generate_message_id()
+                tts_text = (data.get("text") or "").strip()
+                model_id = data.get("modelId") or state.model_id
+                polly_engine = data.get("pollyEngine") or "generative"
+                polly_voice_id = data.get("pollyVoiceId") or "Ruth"
+                if tts_text:
+                    asyncio.create_task(
+                        _handle_tts_request(
+                            ws, msg_id, tts_text, model_id,
+                            polly_engine, polly_voice_id, _iso_now(),
+                        )
+                    )
 
             elif action == "translateMessage":
                 msg_id = data.get("messageId")

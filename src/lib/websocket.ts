@@ -21,6 +21,16 @@ export interface SubtitleStreamServerMessage {
   detectedLanguage?: 'ko' | 'en'
 }
 
+export interface TtsStreamServerMessage {
+  type: 'tts_stream'
+  messageId: string
+  phase: 'translating' | 'done' | 'error'
+  partialText?: string
+  translatedText?: string
+  audioData?: string
+  timestamp: string
+}
+
 export interface SummaryStreamServerMessage {
   type: 'summary_stream'
   phase: 'delta' | 'done' | 'error'
@@ -43,6 +53,7 @@ export interface PongServerMessage {
 export type WsServerMessage =
   | SubtitleServerMessage
   | SubtitleStreamServerMessage
+  | TtsStreamServerMessage
   | SummaryStreamServerMessage
   | ErrorServerMessage
   | PongServerMessage

@@ -26,6 +26,12 @@ async def bedrock_client():
 
 
 @asynccontextmanager
+async def polly_client():
+    async with _session.client("polly", region_name=config.REGION) as client:
+        yield client
+
+
+@asynccontextmanager
 async def dynamodb_client():
     async with _session.client("dynamodb", region_name=config.REGION) as client:
         yield client

@@ -427,6 +427,58 @@ export default function Home() {
             )
           )
         }
+      } else if (msg.type === 'tts_stream') {
+        if (msg.phase === 'translating') {
+          setMeetings((prev) =>
+            prev.map((m) =>
+              m.id === activeMeetingId
+                ? {
+                    ...m,
+                    messages: m.messages.map((existing) =>
+                      existing.id === msg.messageId
+                        ? {
+                            ...existing,
+                            translation: msg.partialText ?? '',
+                            streamPhase: 'translating' as const,
+                          }
+                        : existing
+                    ),
+                  }
+                : m
+            )
+          )
+        } else if (msg.phase === 'done') {
+          setMeetings((prev) =>
+            prev.map((m) =>
+              m.id === activeMeetingId
+                ? {
+                    ...m,
+                    messages: m.messages.map((existing) =>
+                      existing.id === msg.messageId
+                        ? {
+                            ...existing,
+                            translation: msg.translatedText ?? '',
+                            streamPhase: 'done' as const,
+                          }
+                        : existing
+                    ),
+                  }
+                : m
+            )
+          )
+          setIsTtsPending(false)
+          if (msg.audioData && settings.ttsAutoPlay) {
+            playBase64Audio(msg.audioData, (audio) => {
+              ttsAudioRef.current = audio
+            })
+              .then(() => {
+                ttsAudioRef.current = null
+              })
+              .catch(() => {})
+          }
+        } else if (msg.phase === 'error') {
+          setIsTtsPending(false)
+        }
       } else if (msg.type === 'summary_stream') {
         if (msg.phase === 'delta') {
           setMeetings((prev) =>
@@ -454,7 +506,7 @@ export default function Home() {
         }
       }
     },
-    [activeMeetingId, settings.silenceTimeout]
+    [activeMeetingId, settings.silenceTimeout, settings.ttsAutoPlay]
   )
 
   const {
@@ -466,6 +518,7 @@ export default function Home() {
     stopRecording,
     sendSummarize,
     sendTranslate,
+    sendTtsRequest,
   } = useWebSocket({
     meetingId: activeMeetingId,
     onMessage: handleWsMessage,
@@ -759,14 +812,15 @@ export default function Home() {
 
     setIsTtsPending(true)
 
-    // Optimistic: add message with placeholder translation
+    // Optimistic: add 'me' bubble — original = KO input, translation = EN (to be streamed)
     const tempId = `tts-${Date.now()}`
     const optimistic: Message = {
       id: tempId,
       speaker: 'me',
-      original: '번역 중...',
-      translation: text,
+      original: text,
+      translation: '',
       timestamp: new Date().toISOString(),
+      streamPhase: 'stt',
     }
     setMeetings((prev) =>
       prev.map((m) =>
@@ -774,6 +828,19 @@ export default function Home() {
       )
     )
 
+    // WebSocket streaming path (preferred)
+    if (wsStatus === 'connected') {
+      sendTtsRequest(
+        tempId,
+        text,
+        settings.translationModel,
+        settings.pollyEngine,
+        settings.pollyVoiceId
+      )
+      return
+    }
+
+    // Fallback: REST API when WebSocket is not connected
     try {
       const { audioData, translatedText } = await api.tts.synthesize(
         text,
@@ -782,21 +849,20 @@ export default function Home() {
         true,
         settings.translationModel
       )
-
-      // Replace placeholder with real translation
       setMeetings((prev) =>
         prev.map((m) =>
           m.id === activeMeetingId
             ? {
                 ...m,
                 messages: m.messages.map((msg) =>
-                  msg.id === tempId ? { ...msg, original: translatedText } : msg
+                  msg.id === tempId
+                    ? { ...msg, translation: translatedText, streamPhase: 'done' as const }
+                    : msg
                 ),
               }
             : m
         )
       )
-
       if (settings.ttsAutoPlay) {
         await playBase64Audio(audioData, (audio) => {
           ttsAudioRef.current = audio
@@ -804,7 +870,6 @@ export default function Home() {
         ttsAudioRef.current = null
       }
     } catch {
-      // Remove optimistic on failure
       setMeetings((prev) =>
         prev.map((m) =>
           m.id === activeMeetingId
@@ -819,6 +884,8 @@ export default function Home() {
     ttsInput,
     isTtsPending,
     activeMeetingId,
+    wsStatus,
+    sendTtsRequest,
     settings.ttsAutoPlay,
     settings.pollyEngine,
     settings.pollyVoiceId,
