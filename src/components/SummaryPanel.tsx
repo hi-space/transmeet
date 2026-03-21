@@ -120,9 +120,8 @@ export default function SummaryPanel({ summary, onClose, onSummarize, isSummariz
           {onSummarize && (
             <button
               onClick={onSummarize}
-              disabled={isSummarizing}
-              title="요약 생성"
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              title={isSummarizing ? '다시 시도 (강제 재시작)' : '요약 생성'}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/25 transition-colors"
             >
               {isSummarizing ? (
                 <>

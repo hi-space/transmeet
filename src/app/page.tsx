@@ -165,6 +165,8 @@ export default function Home() {
   >(() => {})
   // Safety: reset isSummarizing if WS done/error event is never received
   const isSummarizingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Ref-based isSummarizing: stuck 감지 및 force reset에 사용 (state와 동기화)
+  const isSummarizingRef = useRef(false)
   // Per-message translation timeouts: auto-unblock messages stuck in stt/translating
   const translationTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
 
@@ -174,6 +176,11 @@ export default function Home() {
   useEffect(() => {
     pendingTranscriptRef.current = pendingTranscript
   }, [pendingTranscript])
+
+  // isSummarizing ref 동기화
+  useEffect(() => {
+    isSummarizingRef.current = isSummarizing
+  }, [isSummarizing])
 
   // ─── Task #10: Load meetings on mount ──────────────────────────────────────
 
@@ -779,82 +786,86 @@ export default function Home() {
 
   // ─── Task #8: Summarize ─────────────────────────────────────────────────────
 
-  const handleSummarize = useCallback(async () => {
-    console.log('[auto-summary] handleSummarize called', {
-      isSummarizing,
-      activeMeetingId,
-      wsStatus,
-    })
-
-    if (isSummarizing || !activeMeetingId) {
-      console.log(
-        '[auto-summary] skipped: isSummarizing=',
-        isSummarizing,
-        '/ activeMeetingId=',
-        activeMeetingId
-      )
-      return
-    }
-
-    // Read current messages count from state via functional setter trick
-    let msgCount = 0
-    setMeetings((prev) => {
-      msgCount = prev.find((m) => m.id === activeMeetingId)?.messages.length ?? 0
-      return prev // no-op — just reading
-    })
-
-    console.log('[auto-summary] msgCount=', msgCount)
-    if (msgCount === 0) {
-      console.log('[auto-summary] skipped: no messages')
-      return
-    }
-    setIsSummarizing(true)
-
-    if (!HAS_API) {
-      setMeetings((prev) =>
-        prev.map((m) =>
-          m.id === activeMeetingId
-            ? { ...m, summary: 'API 엔드포인트를 설정하면 Bedrock Claude로 요약이 생성됩니다.' }
-            : m
-        )
-      )
-      setSummaryOpen(true)
-      setIsSummarizing(false)
-      return
-    }
-
-    if (wsStatus === 'connected') {
-      // Stream summary via WebSocket — isSummarizing cleared on 'done'/'error'
-      console.log('[auto-summary] sending via WebSocket')
-      setMeetings((prev) => prev.map((m) => (m.id === activeMeetingId ? { ...m, summary: '' } : m)))
-      setSummaryOpen(true)
-      sendSummarize(activeMeetingId)
-      // Update ref so "every 10 messages" trigger doesn't re-fire immediately
-      lastSummarizedCountRef.current[activeMeetingId] = msgCount
-      // Safety: reset isSummarizing after 90s in case WS done/error event is lost
-      if (isSummarizingTimeoutRef.current) clearTimeout(isSummarizingTimeoutRef.current)
-      isSummarizingTimeoutRef.current = setTimeout(() => {
-        console.warn('[auto-summary] isSummarizing safety reset after 90s timeout')
+  // force=true: 버튼 클릭 시 stuck 상태 강제 리셋 후 재시도
+  // force=false (기본): 자동 요약 트리거 — 이미 진행 중이면 skip
+  const handleSummarize = useCallback(
+    async (force = false) => {
+      if (isSummarizingRef.current) {
+        if (!force) return
+        // 강제 리셋: 기존 safety timeout 취소 후 즉시 재시도
+        if (isSummarizingTimeoutRef.current) {
+          clearTimeout(isSummarizingTimeoutRef.current)
+          isSummarizingTimeoutRef.current = null
+        }
+        isSummarizingRef.current = false
         setIsSummarizing(false)
-      }, 90_000)
-      return
-    }
+      }
 
-    // Fallback: REST API (WebSocket not connected)
-    console.log('[auto-summary] sending via REST API')
-    try {
-      const { summary } = await api.meetings.summarize(activeMeetingId)
-      lastSummarizedCountRef.current[activeMeetingId] = msgCount
-      setMeetings((prev) =>
-        prev.map((m) => (m.id === activeMeetingId ? { ...m, summary: parseSummary(summary) } : m))
-      )
-      setSummaryOpen(true)
-    } catch {
-      // Silent — user can retry via button
-    } finally {
-      setIsSummarizing(false)
-    }
-  }, [isSummarizing, activeMeetingId, wsStatus, sendSummarize])
+      if (!activeMeetingId) return
+
+      // Read current messages count
+      let msgCount = 0
+      setMeetings((prev) => {
+        msgCount = prev.find((m) => m.id === activeMeetingId)?.messages.length ?? 0
+        return prev // no-op — just reading
+      })
+
+      if (msgCount === 0) return
+
+      isSummarizingRef.current = true
+      setIsSummarizing(true)
+
+      if (!HAS_API) {
+        setMeetings((prev) =>
+          prev.map((m) =>
+            m.id === activeMeetingId
+              ? { ...m, summary: 'API 엔드포인트를 설정하면 Bedrock Claude로 요약이 생성됩니다.' }
+              : m
+          )
+        )
+        setSummaryOpen(true)
+        isSummarizingRef.current = false
+        setIsSummarizing(false)
+        return
+      }
+
+      // WS 경로: connected이고 실제로 send 성공한 경우에만
+      if (wsStatus === 'connected') {
+        const sent = sendSummarize(activeMeetingId)
+        if (sent) {
+          setMeetings((prev) =>
+            prev.map((m) => (m.id === activeMeetingId ? { ...m, summary: '' } : m))
+          )
+          setSummaryOpen(true)
+          lastSummarizedCountRef.current[activeMeetingId] = msgCount
+          // Safety: 60초 후 강제 리셋 (WS done/error 미수신 대비)
+          if (isSummarizingTimeoutRef.current) clearTimeout(isSummarizingTimeoutRef.current)
+          isSummarizingTimeoutRef.current = setTimeout(() => {
+            isSummarizingRef.current = false
+            setIsSummarizing(false)
+          }, 60_000)
+          return
+        }
+        // WS status는 connected이지만 실제 소켓 not OPEN → REST fallback
+      }
+
+      // REST API fallback
+      try {
+        const { summary } = await api.meetings.summarize(activeMeetingId)
+        lastSummarizedCountRef.current[activeMeetingId] = msgCount
+        setMeetings((prev) =>
+          prev.map((m) => (m.id === activeMeetingId ? { ...m, summary: parseSummary(summary) } : m))
+        )
+        setSummaryOpen(true)
+      } catch {
+        // Silent — user can retry via button
+      } finally {
+        isSummarizingRef.current = false
+        setIsSummarizing(false)
+      }
+    },
+    [activeMeetingId, wsStatus, sendSummarize]
+  )
 
   // Keep ref in sync for use inside timers
   useEffect(() => {
@@ -1199,7 +1210,7 @@ export default function Home() {
             <SummaryPanel
               summary={activeMeeting?.summary}
               onClose={() => setSummaryOpen(false)}
-              onSummarize={handleSummarize}
+              onSummarize={() => handleSummarize(true)}
               isSummarizing={isSummarizing}
             />
           </div>
@@ -1214,7 +1225,7 @@ export default function Home() {
           <SummaryPanel
             summary={activeMeeting?.summary}
             onClose={() => setSummaryOpen(false)}
-            onSummarize={handleSummarize}
+            onSummarize={() => handleSummarize(true)}
             isSummarizing={isSummarizing}
           />
         </div>
