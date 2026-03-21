@@ -129,6 +129,13 @@ export function useAudioCapture({
       let micStream: MediaStream | null = null
       let sysStream: MediaStream | null = null
 
+      // ── AudioContext를 user gesture 컨텍스트 내에서 즉시 생성 ─────────────
+      // getDisplayMedia/getUserMedia는 async라 이후엔 user gesture가 만료됨
+      // AudioContext는 user gesture 내에서 생성해야 running 상태로 시작됨
+      const ctx = new AudioContext()
+      await ctx.resume()
+      audioContextRef.current = ctx
+
       // ── 마이크 스트림 획득 ────────────────────────────────────────────────
       if (audioSource === 'mic' || audioSource === 'both') {
         micStream = await navigator.mediaDevices.getUserMedia({
@@ -144,8 +151,6 @@ export function useAudioCapture({
 
       // ── 시스템 오디오 스트림 획득 ─────────────────────────────────────────
       if (audioSource === 'system' || audioSource === 'both') {
-        // video:false는 일부 브라우저 미지원 → video:true로 요청 후 나중에 중단
-        // displayStream을 그대로 사용 (audio tracks만 추출하면 Chrome에서 stream이 비활성화됨)
         const displayStream = await navigator.mediaDevices.getDisplayMedia({
           video: { width: 1, height: 1, frameRate: 1 }, // 오디오만 필요하므로 최소 해상도
           audio: true,
@@ -161,11 +166,7 @@ export function useAudioCapture({
         sysStreamRef.current = sysStream
       }
 
-      // ── AudioContext + 노드 구성 ──────────────────────────────────────────
-      const ctx = new AudioContext()
-      // async 호출 이후 AudioContext가 suspended 상태일 수 있으므로 명시적으로 resume
-      await ctx.resume()
-      audioContextRef.current = ctx
+      // ── AudioContext 노드 구성 ────────────────────────────────────────────
 
       const processor = ctx.createScriptProcessor(SCRIPT_PROCESSOR_BUFFER_SIZE, 1, 1)
       processorRef.current = processor
@@ -209,7 +210,9 @@ export function useAudioCapture({
               ? err.message
               : '오디오를 시작할 수 없습니다.'
       setError(msg)
-      // 부분적으로 획득한 스트림 정리
+      // 부분적으로 획득한 리소스 정리
+      audioContextRef.current?.close()
+      audioContextRef.current = null
       streamRef.current?.getTracks().forEach((t) => t.stop())
       streamRef.current = null
       sysStreamRef.current?.getTracks().forEach((t) => t.stop())
