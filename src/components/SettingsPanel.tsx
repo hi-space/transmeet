@@ -40,16 +40,18 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
   const handleUpdate = (patch: Partial<Settings>) => {
     const next = { ...settings, ...patch }
 
-    // Target language changed → reset voice/engine to language default
-    if (patch.targetLang && patch.targetLang !== settings.targetLang) {
-      const d = DEFAULT_VOICE[patch.targetLang]
+    // Source language changed → reset voice/engine to language default
+    if (patch.sourceLang && patch.sourceLang !== settings.sourceLang) {
+      const lang = patch.sourceLang === 'auto' ? 'en' : patch.sourceLang
+      const d = DEFAULT_VOICE[lang]
       next.pollyVoiceId = d.id
       next.pollyEngine = d.engine
     }
 
     // Engine changed → ensure current voice supports new engine
+    const ttsLang = next.sourceLang === 'auto' ? 'en' : next.sourceLang
     if (patch.pollyEngine && patch.pollyEngine !== settings.pollyEngine) {
-      const voices = VOICES[next.targetLang]
+      const voices = VOICES[ttsLang]
       const current = voices.find((v) => v.id === next.pollyVoiceId)
       if (!current || !current.engines.includes(patch.pollyEngine)) {
         const fallback = voices.find((v) => v.engines.includes(patch.pollyEngine!))
@@ -60,9 +62,8 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
     onUpdate(next)
   }
 
-  const availableVoices = VOICES[settings.targetLang].filter((v) =>
-    v.engines.includes(settings.pollyEngine)
-  )
+  const ttsLang = settings.sourceLang === 'auto' ? 'en' : settings.sourceLang
+  const availableVoices = VOICES[ttsLang].filter((v) => v.engines.includes(settings.pollyEngine))
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">

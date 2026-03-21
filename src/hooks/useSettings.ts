@@ -31,8 +31,8 @@ const DEFAULT: Settings = {
   targetLang: 'ko',
   sttProvider: 'whisper',
   ttsAutoPlay: true,
-  pollyEngine: 'neural',
-  pollyVoiceId: 'Seoyeon',
+  pollyEngine: 'generative',
+  pollyVoiceId: 'Ruth',
   autoSummarizeInterval: 2,
   translationModel: 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
   translationTiming: 'realtime',
@@ -49,10 +49,11 @@ export function useSettings() {
       const raw = localStorage.getItem(STORAGE_KEY)
       if (raw) {
         const loaded = { ...DEFAULT, ...(JSON.parse(raw) as Partial<Settings>) }
-        // engine이 해당 targetLang을 지원하지 않으면 기본값으로 자동 수정
-        const supportedEngines = LANG_VOICE_ENGINES[loaded.targetLang]
+        // engine이 sourceLang을 지원하지 않으면 기본값으로 자동 수정
+        const ttsLang = loaded.sourceLang === 'auto' ? 'en' : loaded.sourceLang
+        const supportedEngines = LANG_VOICE_ENGINES[ttsLang]
         if (!supportedEngines.includes(loaded.pollyEngine)) {
-          const d = LANG_DEFAULT_VOICE[loaded.targetLang]
+          const d = LANG_DEFAULT_VOICE[ttsLang]
           loaded.pollyEngine = d.engine
           loaded.pollyVoiceId = d.id
           localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded))
