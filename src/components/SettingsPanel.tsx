@@ -13,8 +13,8 @@ interface Props {
 const VOICES: Record<'en' | 'ko', { id: string; label: string; engines: string[] }[]> = {
   en: [
     { id: 'Joanna', label: 'Joanna', engines: ['generative', 'neural', 'standard'] },
-    { id: 'Ruth', label: 'Ruth', engines: ['generative', 'neural', 'standard'] },
-    { id: 'Tiffany', label: 'Tiffany', engines: ['generative', 'neural', 'standard'] },
+    { id: 'Ruth', label: 'Ruth', engines: ['generative', 'neural'] },
+    { id: 'Tiffany', label: 'Tiffany', engines: ['generative'] },
   ],
   ko: [{ id: 'Seoyeon', label: 'Seoyeon', engines: ['neural'] }],
 }
