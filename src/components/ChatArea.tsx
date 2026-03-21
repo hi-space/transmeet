@@ -237,9 +237,13 @@ export default function ChatArea({
 
               {/* Message bubble */}
               <div
+                onClick={() => {
+                  if (msg.streamPhase === 'translating' || msg.streamPhase === 'stt') return
+                  onTranslateMessage?.(msg.id, msg.original, msg.speaker, msg.detectedLanguage)
+                }}
                 className={`rounded-2xl px-3.5 py-2.5 max-w-xs sm:max-w-sm ${cfg.bubbleBg} ${
                   isRight ? 'rounded-tr-sm' : 'rounded-tl-sm'
-                }`}
+                } cursor-pointer active:opacity-70 transition-opacity`}
               >
                 {/* Original text */}
                 <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
