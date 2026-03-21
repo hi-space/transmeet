@@ -438,7 +438,7 @@ export default function Home() {
                       existing.id === msg.messageId
                         ? {
                             ...existing,
-                            translation: msg.partialText ?? '',
+                            original: msg.partialText ?? '',
                             streamPhase: 'translating' as const,
                           }
                         : existing
@@ -457,7 +457,7 @@ export default function Home() {
                       existing.id === msg.messageId
                         ? {
                             ...existing,
-                            translation: msg.translatedText ?? '',
+                            original: msg.translatedText ?? '',
                             streamPhase: 'done' as const,
                           }
                         : existing
@@ -812,13 +812,13 @@ export default function Home() {
 
     setIsTtsPending(true)
 
-    // Optimistic: add 'me' bubble — original = KO input, translation = EN (to be streamed)
+    // Optimistic: add 'me' bubble — original = EN translation (top), translation = KO input (bottom)
     const tempId = `tts-${Date.now()}`
     const optimistic: Message = {
       id: tempId,
       speaker: 'me',
-      original: text,
-      translation: '',
+      original: '',
+      translation: text,
       timestamp: new Date().toISOString(),
       streamPhase: 'stt',
     }
@@ -856,7 +856,7 @@ export default function Home() {
                 ...m,
                 messages: m.messages.map((msg) =>
                   msg.id === tempId
-                    ? { ...msg, translation: translatedText, streamPhase: 'done' as const }
+                    ? { ...msg, original: translatedText, streamPhase: 'done' as const }
                     : msg
                 ),
               }
