@@ -24,7 +24,7 @@ const DEFAULT: Settings = {
   pollyVoiceId: 'Ruth',
   autoSummarizeInterval: 2,
   translationModel: 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
-  translationTiming: 'sentence',
+  translationTiming: 'realtime',
   silenceTimeout: 10000,
 }
 
