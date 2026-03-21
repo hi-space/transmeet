@@ -101,6 +101,7 @@ class ConnectionState:
     # Transcribe mode: deferred segment accumulation (merges consecutive finals before translating)
     seg_buffer: List[tuple] = field(default_factory=list)  # [(text, speaker, detected_lang)]
     seg_flush_task: Optional[asyncio.Task] = None
+    seg_last_speaker: Optional[str] = None  # 버퍼에 있는 마지막 화자 (화자 변경 감지용)
     # Translation timing: "sentence" | "realtime" | "manual"
     translation_timing: str = "sentence"
 
@@ -394,6 +395,7 @@ async def _flush_seg_buffer(state: "ConnectionState", ws: WebSocket) -> None:
         return
     buf = state.seg_buffer[:]
     state.seg_buffer.clear()
+    state.seg_last_speaker = None
 
     # Merge consecutive same-speaker, same-lang entries
     merged: List[tuple] = []
@@ -517,7 +519,18 @@ async def _run_transcribe_streaming(
                         for text, speaker in segments:
                             if not _apply_segment_filters(text, state.source_lang):
                                 continue
+                            # 화자가 바뀌면 기존 버퍼를 즉시 flush 후 새 화자로 시작
+                            if (
+                                state.seg_buffer
+                                and state.seg_last_speaker is not None
+                                and state.seg_last_speaker != speaker
+                            ):
+                                if state.seg_flush_task and not state.seg_flush_task.done():
+                                    state.seg_flush_task.cancel()
+                                    state.seg_flush_task = None
+                                await _flush_seg_buffer(state, ws)
                             state.seg_buffer.append((text, speaker, language))
+                            state.seg_last_speaker = speaker
 
                         timing = state.translation_timing
 
@@ -755,6 +768,7 @@ async def ws_endpoint(
                 state.speaker = data.get("speaker", "speaker1")
                 state.translation_timing = data.get("translationTiming", "sentence") or "sentence"
                 state.seg_buffer.clear()
+                state.seg_last_speaker = None
                 if state.seg_flush_task and not state.seg_flush_task.done():
                     state.seg_flush_task.cancel()
                     state.seg_flush_task = None

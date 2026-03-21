@@ -277,7 +277,8 @@ export default function Home() {
           )
         )
       } else if (msg.type === 'subtitle_stream') {
-        const MERGE_WINDOW_MS = 5000
+        // 같은 화자가 10초 이상 침묵하면 새 말풍선 (타임스탬프 기반)
+        const SILENCE_TIMEOUT_MS = 10000
         if (msg.phase === 'stt_partial') {
           // Word-by-word Transcribe partial — show in pending bubble, not committed messages
           setPendingTranscript({
@@ -321,10 +322,15 @@ export default function Home() {
             const meeting = prev.find((m) => m.id === activeMeetingId)
             const messages = meeting?.messages ?? []
             const lastMsg = messages[messages.length - 1]
+            // 같은 화자이고, 마지막 메시지 이후 10초 이내면 병합
+            const silenceMs =
+              msg.timestamp && lastMsg?.timestamp
+                ? new Date(msg.timestamp).getTime() - new Date(lastMsg.timestamp).getTime()
+                : 0
             const shouldMerge =
               lastMsg &&
               lastMsg.speaker === streamSpeaker &&
-              Date.now() - new Date(lastMsg.timestamp).getTime() < MERGE_WINDOW_MS &&
+              silenceMs < SILENCE_TIMEOUT_MS &&
               lastMsg.streamPhase !== undefined
             if (shouldMerge) {
               // Reuse existing bubble; track messageId -> displayed id
@@ -340,6 +346,8 @@ export default function Home() {
                           ? {
                               ...existing,
                               original: existing.original + ' ' + (msg.originalText ?? ''),
+                              // 타임스탬프 갱신 → 다음 병합 시 silence 계산 기준점 유지
+                              timestamp: msg.timestamp ?? existing.timestamp,
                               translation: '',
                               streamPhase: 'stt' as const,
                             }
