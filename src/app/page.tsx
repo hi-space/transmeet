@@ -149,6 +149,8 @@ export default function Home() {
   const handleSummarizeRef = useRef<() => Promise<void>>(() => Promise.resolve())
   // partial 번역: 마지막으로 번역 요청한 완성 문장 텍스트
   const lastTranslatedPartialRef = useRef<string>('')
+  // realtime 모드 디바운스 타이머
+  const partialDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // sendTranslate ref: handleWsMessage보다 먼저 선언되어야 하므로 ref 패턴 사용
   const sendTranslateRef = useRef<
     (
@@ -316,17 +318,23 @@ export default function Home() {
           const srcLang = settings.sourceLang !== 'auto' ? settings.sourceLang : 'en'
 
           if (settings.partialTranslationMode === 'realtime') {
-            // 모든 partial마다 번역 요청 (이전 텍스트와 달라질 때)
+            // 디바운스: 500ms 이내 추가 partial이 오면 이전 요청 취소
             if (partialText && partialText !== lastTranslatedPartialRef.current) {
-              lastTranslatedPartialRef.current = partialText
-              sendTranslateRef.current(
-                '__pending__',
-                partialText,
-                partialSpeaker,
-                srcLang,
-                settings.targetLang,
-                settings.translationModel
-              )
+              if (partialDebounceRef.current) clearTimeout(partialDebounceRef.current)
+              const capturedText = partialText
+              const capturedSpeaker = partialSpeaker
+              partialDebounceRef.current = setTimeout(() => {
+                partialDebounceRef.current = null
+                lastTranslatedPartialRef.current = capturedText
+                sendTranslateRef.current(
+                  '__pending__',
+                  capturedText,
+                  capturedSpeaker,
+                  srcLang,
+                  settings.targetLang,
+                  settings.translationModel
+                )
+              }, 500)
             }
           } else {
             // sentence: 문장 종결 부호 감지 → 증분 번역
@@ -727,6 +735,10 @@ export default function Home() {
       stopRecording()
       setPendingTranscript(null)
       mergeMapRef.current.clear()
+      if (partialDebounceRef.current) {
+        clearTimeout(partialDebounceRef.current)
+        partialDebounceRef.current = null
+      }
       translationTimeoutsRef.current.forEach((t) => clearTimeout(t))
       translationTimeoutsRef.current.clear()
     } else {
