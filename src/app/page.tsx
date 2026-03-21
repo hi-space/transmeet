@@ -549,15 +549,15 @@ export default function Home() {
                                 isMerged || isProtected
                                   ? existing.original
                                   : (msg.originalText ?? existing.original),
-                              // 병합 자동번역(새 문장만)은 무시 — 전체 재번역 결과를 기다림
-                              translation: isMerged
-                                ? existing.translation
-                                : (msg.translatedText ?? ''),
+                              // 더 긴 번역 채택 — 전체 재번역과 자동번역 중 나중에 오는 긴 쪽 유지
+                              translation:
+                                isMerged &&
+                                (existing.translation ?? '').length >
+                                  (msg.translatedText ?? '').length
+                                  ? existing.translation
+                                  : (msg.translatedText ?? ''),
                               detectedLanguage: msg.detectedLanguage,
-                              streamPhase:
-                                isMerged && existing.streamPhase !== 'done'
-                                  ? ('stt' as const)
-                                  : ('done' as const),
+                              streamPhase: 'done' as const,
                             }
                         : existing
                     ),
