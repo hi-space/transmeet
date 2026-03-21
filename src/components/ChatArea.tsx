@@ -185,18 +185,14 @@ export default function ChatArea({
   onTranslateMessage,
   pendingTranscript,
 }: Props) {
-  const bottomRef = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const isNearBottom = () => {
-    const el = containerRef.current
-    if (!el) return true
-    return el.scrollHeight - el.scrollTop - el.clientHeight < 100
-  }
-
   useEffect(() => {
-    if (isNearBottom()) {
-      bottomRef.current?.scrollIntoView({ behavior: 'auto' })
+    const el = containerRef.current
+    if (!el) return
+    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+    if (distFromBottom < 200) {
+      el.scrollTop = el.scrollHeight
     }
   }, [messages, pendingTranscript])
 
@@ -418,8 +414,6 @@ export default function ChatArea({
           </span>
         </div>
       )}
-
-      <div ref={bottomRef} />
     </div>
   )
 }
