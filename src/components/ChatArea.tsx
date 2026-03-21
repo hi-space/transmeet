@@ -190,10 +190,12 @@ export default function ChatArea({
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-    const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
-    if (distFromBottom < 200) {
-      el.scrollTop = el.scrollHeight
-    }
+    requestAnimationFrame(() => {
+      const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
+      if (distFromBottom < 200) {
+        el.scrollTop = el.scrollHeight
+      }
+    })
   }, [messages, pendingTranscript])
 
   if (messages.length === 0) {
