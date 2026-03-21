@@ -897,6 +897,33 @@ export default function Home() {
     if (audioError) alert(audioError)
   }, [audioError])
 
+  // WS 재연결 감지: 녹음 중에 연결이 끊겼다 재연결되면 startRecording 재전송
+  const prevWsStatusRef = useRef<typeof wsStatus>('disconnected')
+  useEffect(() => {
+    const prev = prevWsStatusRef.current
+    prevWsStatusRef.current = wsStatus
+    if (wsStatus === 'connected' && prev !== 'connected' && isRecording) {
+      console.warn('[WS] Reconnected during recording — resending startRecording')
+      startRecording({
+        sttProvider: settings.sttProvider,
+        sourceLang: settings.sourceLang,
+        targetLang: settings.targetLang,
+        modelId: settings.translationModel,
+        speaker: 'speaker1',
+        translationTiming: settings.translationTiming,
+      })
+    }
+  }, [
+    wsStatus,
+    isRecording,
+    startRecording,
+    settings.sttProvider,
+    settings.sourceLang,
+    settings.targetLang,
+    settings.translationModel,
+    settings.translationTiming,
+  ])
+
   // Connect on page load (and reconnect when active meeting changes); cleanup on unmount
   useEffect(() => {
     if (!HAS_API || !activeMeetingId) return

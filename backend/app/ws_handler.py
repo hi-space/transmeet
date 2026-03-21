@@ -974,6 +974,21 @@ async def ws_endpoint(
                         # Streaming: feed PCM directly into Transcribe session
                         pcm = audio_bytes[44:]          # strip 44-byte WAV header
                         if len(pcm) >= 3200:            # skip chunks < ~100ms
+                            # transcribe_task가 예기치 않게 종료됐으면 자동 재시작
+                            if state.transcribe_task and state.transcribe_task.done():
+                                logger.warning(
+                                    "[ws] transcribe_task died unexpectedly, restarting: connection_id=%s",
+                                    connection_id,
+                                )
+                                state.audio_queue = asyncio.Queue()
+                                state.seg_buffer.clear()
+                                state.seg_last_speaker = None
+                                if state.seg_flush_task and not state.seg_flush_task.done():
+                                    state.seg_flush_task.cancel()
+                                    state.seg_flush_task = None
+                                state.transcribe_task = asyncio.create_task(
+                                    _run_transcribe_streaming(state, ws, connection_id)
+                                )
                             await state.audio_queue.put(pcm)
                     else:
                         # Whisper: silence-gated buffer/flush
