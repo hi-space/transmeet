@@ -277,8 +277,7 @@ export default function Home() {
           )
         )
       } else if (msg.type === 'subtitle_stream') {
-        // 같은 화자가 10초 이상 침묵하면 새 말풍선 (타임스탬프 기반)
-        const SILENCE_TIMEOUT_MS = 10000
+        const SILENCE_TIMEOUT_MS = settings.silenceTimeout
         if (msg.phase === 'stt_partial') {
           // Word-by-word Transcribe partial — show in pending bubble, not committed messages
           setPendingTranscript({
@@ -455,7 +454,7 @@ export default function Home() {
         }
       }
     },
-    [activeMeetingId]
+    [activeMeetingId, settings.silenceTimeout]
   )
 
   const {

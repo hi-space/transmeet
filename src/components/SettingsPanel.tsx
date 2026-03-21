@@ -168,6 +168,37 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
         {/* Divider */}
         <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
 
+        {/* ── Silence timeout ───────────────────────────────────────────────── */}
+        <div className="space-y-2">
+          <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+            말풍선 분리 기준
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              [
+                [3000, '3초'],
+                [5000, '5초'],
+                [10000, '10초'],
+                [20000, '20초'],
+              ] as const
+            ).map(([val, label]) => (
+              <button
+                key={val}
+                onClick={() => handleUpdate({ silenceTimeout: val })}
+                className={pill(settings.silenceTimeout === val)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-slate-400 dark:text-slate-500">
+            같은 화자가 이 시간 이상 침묵하면 새 말풍선 시작
+          </p>
+        </div>
+
+        {/* Divider */}
+        <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
+
         {/* ── Translation model ─────────────────────────────────────────────── */}
         <div className="space-y-2">
           <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
