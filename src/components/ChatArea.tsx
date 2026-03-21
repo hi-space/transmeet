@@ -283,7 +283,7 @@ export default function ChatArea({
 
                 {/* Side action buttons */}
                 {(msg.streamPhase !== 'stt' || msg.original) && (
-                  <div className="flex flex-col gap-1 self-center">
+                  <div className="flex flex-col justify-between self-stretch">
                     {/* TTS play/stop button */}
                     {msg.translation && msg.streamPhase !== 'translating' && (
                       <button
