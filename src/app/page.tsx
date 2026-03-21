@@ -393,11 +393,13 @@ export default function Home() {
               msg.timestamp && lastMsg?.timestamp
                 ? new Date(msg.timestamp).getTime() - new Date(lastMsg.timestamp).getTime()
                 : 0
+            const sentenceCount = (lastMsg?.original.match(/[.?!]/g) ?? []).length
             const shouldMerge =
               lastMsg &&
               lastMsg.speaker === streamSpeaker &&
               silenceMs < SILENCE_TIMEOUT_MS &&
-              lastMsg.streamPhase !== undefined
+              lastMsg.streamPhase !== undefined &&
+              sentenceCount < 3
             if (shouldMerge) {
               // Reuse existing bubble; track messageId -> displayed id
               displayId = lastMsg.id
