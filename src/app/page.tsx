@@ -413,6 +413,8 @@ export default function Home() {
           const streamSpeaker = (msg.speaker as Message['speaker']) ?? 'speaker1'
           let displayId = msg.messageId
           let mergedFullText: string | null = null
+          let newSegmentTextOnly = ''
+          let lastMsgWasTranslated = false
           setMeetings((prev) => {
             const meeting = prev.find((m) => m.id === activeMeetingId)
             const messages = meeting?.messages ?? []
@@ -433,6 +435,9 @@ export default function Home() {
               // Reuse existing bubble; track messageId -> displayed id
               displayId = lastMsg.id
               mergedFullText = (lastMsg.original + ' ' + (msg.originalText ?? '')).trim()
+              newSegmentTextOnly = msg.originalText?.trim() ?? ''
+              // 기존 번역이 완료된 경우 append 번역 사용
+              lastMsgWasTranslated = lastMsg.streamPhase === 'done' && !!lastMsg.translation
               mergeMapRef.current.set(msg.messageId, lastMsg.id)
               mergedMsgIdsRef.current.add(lastMsg.id)
               return prev.map((m) =>
@@ -469,24 +474,37 @@ export default function Home() {
             )
           })
           scheduleTranslationTimeout(displayId)
-          // 병합 시에만 재번역 요청 (전체 병합 텍스트를 번역)
+          // 병합 시에만 재번역 요청
           // 비병합 시: 백엔드 _process_segment가 이미 번역 스트리밍 중 — 추가 요청 불필요
           // mergedFullText !== null ↔ shouldMerge=true (setMeetings 내부 변수 대신 사용)
-          if (mergedFullText && settings.translationTiming !== 'manual') {
+          if (mergedFullText !== null && settings.translationTiming !== 'manual') {
             const isMe = streamSpeaker === 'me'
             const srcLang = isMe
               ? 'ko'
               : (msg.detectedLanguage ??
                 (settings.sourceLang !== 'auto' ? settings.sourceLang : 'en'))
             const tgtLang = isMe ? 'en' : settings.targetLang
-            sendTranslateRef.current(
-              displayId,
-              mergedFullText,
-              streamSpeaker,
-              srcLang,
-              tgtLang,
-              settings.translationModel
-            )
+            if (lastMsgWasTranslated && newSegmentTextOnly) {
+              // 기존 번역 완료 → 새 세그먼트만 번역 후 기존 번역에 append
+              sendTranslateRef.current(
+                `__append__${displayId}`,
+                newSegmentTextOnly,
+                streamSpeaker,
+                srcLang,
+                tgtLang,
+                settings.translationModel
+              )
+            } else {
+              // 기존 번역 없음 or 진행 중 → 전체 병합 텍스트 재번역
+              sendTranslateRef.current(
+                displayId,
+                mergedFullText,
+                streamSpeaker,
+                srcLang,
+                tgtLang,
+                settings.translationModel
+              )
+            }
           }
         } else if (msg.phase === 'translating') {
           // pending 버블 번역 스트리밍
@@ -498,6 +516,8 @@ export default function Home() {
           }
           // append 번역은 done에서만 처리 (스트리밍 생략)
           if (msg.messageId === '__pending_append__') return
+          // final 말풍선 append 번역: 스트리밍 생략 (기존 번역 유지, done에서 append)
+          if (msg.messageId.startsWith('__append__')) return
           // 병합 새 문장 자동번역 스트리밍 무시 (전체 텍스트 재번역 결과 사용)
           if (mergeMapRef.current.has(msg.messageId)) return
           const resolvedId = mergeMapRef.current.get(msg.messageId) ?? msg.messageId
@@ -542,6 +562,39 @@ export default function Home() {
                       translation: prev.translation ? prev.translation + ' ' + appended : appended,
                     }
                   : prev
+              )
+            }
+            return
+          }
+          // final 말풍선 append 번역: 기존 번역에 append 후 done으로 전환
+          if (msg.messageId.startsWith('__append__')) {
+            const targetId = msg.messageId.slice('__append__'.length)
+            const appended = msg.translatedText ?? ''
+            const t = translationTimeoutsRef.current.get(targetId)
+            if (t) {
+              clearTimeout(t)
+              translationTimeoutsRef.current.delete(targetId)
+            }
+            if (appended) {
+              setMeetings((prev) =>
+                prev.map((m) =>
+                  m.id === activeMeetingId
+                    ? {
+                        ...m,
+                        messages: m.messages.map((existing) =>
+                          existing.id === targetId
+                            ? {
+                                ...existing,
+                                translation: existing.translation
+                                  ? existing.translation + ' ' + appended
+                                  : appended,
+                                streamPhase: 'done' as const,
+                              }
+                            : existing
+                        ),
+                      }
+                    : m
+                )
               )
             }
             return

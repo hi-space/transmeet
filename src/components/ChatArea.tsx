@@ -268,7 +268,6 @@ export default function ChatArea({
                 {/* Message bubble */}
                 <div
                   onClick={() => {
-                    if (msg.streamPhase === 'translating' || msg.streamPhase === 'stt') return
                     // 'me': KO(translation) → EN / others: EN(original) → KO
                     const textToTranslate = msg.speaker === 'me' ? msg.translation : msg.original
                     onTranslateMessage?.(msg.id, textToTranslate, msg.speaker, msg.detectedLanguage)
