@@ -488,8 +488,12 @@ export default function Home() {
               : (msg.detectedLanguage ??
                 (settings.sourceLang !== 'auto' ? settings.sourceLang : 'en'))
             const tgtLang = isMe ? 'en' : settings.targetLang
-            if (lastMsgWasTranslated && newSegmentTextOnly) {
-              // 기존 번역 완료 → 새 세그먼트만 번역 후 기존 번역에 append (base 저장)
+            if (
+              settings.translationOutputMode === 'stream' &&
+              lastMsgWasTranslated &&
+              newSegmentTextOnly
+            ) {
+              // [stream 모드] 기존 번역 완료 → 새 세그먼트만 번역 후 기존 번역에 append (base 저장)
               appendBaseRef.current.set(displayId, appendBaseTranslation)
               sendTranslateRef.current(
                 `__append__${displayId}`,
@@ -501,6 +505,7 @@ export default function Home() {
               )
             } else {
               // 기존 번역 없음 or 진행 중 → 전체 병합 텍스트 재번역
+              // [complete 모드] 항상 전체 텍스트로 재번역 (append 없음)
               // 진행 중인 __append__ 무효화 (stale done이 나중에 덮어쓰는 것 방지)
               appendBaseRef.current.delete(displayId)
               sendTranslateRef.current(
@@ -668,30 +673,39 @@ export default function Home() {
                               original: msg.translatedText ?? '',
                               streamPhase: 'done' as const,
                             }
-                          : (() => {
-                              // others: KO 번역 → translation
-                              // isProtected: 병합된 버블은 original 보호 + 더 긴 번역 유지
-                              // (_process_segment의 단일 세그먼트 번역이 병합 재번역을 덮어쓰지 못하게)
-                              const keepExisting =
-                                isProtected &&
-                                (existing.translation ?? '').length >
-                                  (msg.translatedText ?? '').length
-                              return {
+                          : settings.translationOutputMode === 'complete'
+                            ? {
+                                // [complete 모드] 전체 텍스트 재번역 결과 → 단순 교체
                                 ...existing,
-                                original: isProtected
-                                  ? existing.original
-                                  : (msg.originalText ?? existing.original),
-                                translation: keepExisting
-                                  ? existing.translation
-                                  : (msg.translatedText ?? ''),
+                                original: msg.originalText ?? existing.original,
+                                translation: msg.translatedText ?? '',
                                 detectedLanguage: msg.detectedLanguage,
-                                // 기존 번역 유지 시 streamPhase도 유지 — 재번역 스트리밍 중인데
-                                // 짧은 원본 done이 도착해서 done으로 잠기는 race condition 방지
-                                streamPhase: keepExisting
-                                  ? (existing.streamPhase ?? 'done')
-                                  : 'done',
+                                streamPhase: 'done' as const,
                               }
-                            })()
+                            : (() => {
+                                // [stream 모드] others: KO 번역 → translation
+                                // isProtected: 병합된 버블은 original 보호 + 더 긴 번역 유지
+                                // (_process_segment의 단일 세그먼트 번역이 병합 재번역을 덮어쓰지 못하게)
+                                const keepExisting =
+                                  isProtected &&
+                                  (existing.translation ?? '').length >
+                                    (msg.translatedText ?? '').length
+                                return {
+                                  ...existing,
+                                  original: isProtected
+                                    ? existing.original
+                                    : (msg.originalText ?? existing.original),
+                                  translation: keepExisting
+                                    ? existing.translation
+                                    : (msg.translatedText ?? ''),
+                                  detectedLanguage: msg.detectedLanguage,
+                                  // 기존 번역 유지 시 streamPhase도 유지 — 재번역 스트리밍 중인데
+                                  // 짧은 원본 done이 도착해서 done으로 잠기는 race condition 방지
+                                  streamPhase: keepExisting
+                                    ? (existing.streamPhase ?? 'done')
+                                    : 'done',
+                                }
+                              })()
                         : existing
                     ),
                   }
