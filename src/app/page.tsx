@@ -438,22 +438,25 @@ export default function Home() {
             )
           })
           scheduleTranslationTimeout(displayId)
-          // 병합된 경우 전체 텍스트로 재번역 요청 (새 문장만 번역되는 버그 방지)
-          if (mergedFullText && settings.translationTiming !== 'manual') {
+          // 번역 요청: 병합이면 전체 텍스트, 새 버블이면 원본 텍스트
+          if (settings.translationTiming !== 'manual') {
             const isMe = streamSpeaker === 'me'
             const srcLang = isMe
               ? 'ko'
               : (msg.detectedLanguage ??
                 (settings.sourceLang !== 'auto' ? settings.sourceLang : 'en'))
             const tgtLang = isMe ? 'en' : settings.targetLang
-            sendTranslateRef.current(
-              displayId,
-              mergedFullText,
-              streamSpeaker,
-              srcLang,
-              tgtLang,
-              settings.translationModel
-            )
+            const textToTranslate = mergedFullText ?? msg.originalText ?? ''
+            if (textToTranslate) {
+              sendTranslateRef.current(
+                displayId,
+                textToTranslate,
+                streamSpeaker,
+                srcLang,
+                tgtLang,
+                settings.translationModel
+              )
+            }
           }
         } else if (msg.phase === 'translating') {
           // pending 버블 번역 스트리밍
