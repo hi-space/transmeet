@@ -202,8 +202,32 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
               {settings.partialTranslationMode === 'sentence' &&
                 '마침표/물음표 감지 시 pending 번역 업데이트'}
               {settings.partialTranslationMode === 'realtime' &&
-                '인식 중인 모든 partial마다 번역 (API 호출 증가)'}
+                '일정 간격마다 최신 partial 번역 (API 호출 증가)'}
             </p>
+            {settings.partialTranslationMode === 'realtime' && (
+              <div className="mt-2">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">번역 간격</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(
+                    [
+                      [500, '0.5초'],
+                      [1000, '1초'],
+                      [1500, '1.5초'],
+                      [2000, '2초'],
+                      [3000, '3초'],
+                    ] as const
+                  ).map(([val, label]) => (
+                    <button
+                      key={val}
+                      onClick={() => handleUpdate({ partialThrottleMs: val })}
+                      className={pill(settings.partialThrottleMs === val)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Divider */}

@@ -339,7 +339,7 @@ export default function Home() {
                       settings.translationModel
                     )
                   }
-                }, 1500)
+                }, settings.partialThrottleMs)
               }
             }
           } else {
@@ -673,6 +673,7 @@ export default function Home() {
       settings.ttsAutoPlay,
       settings.translationTiming,
       settings.partialTranslationMode,
+      settings.partialThrottleMs,
       settings.sourceLang,
       settings.targetLang,
       settings.translationModel,

@@ -12,6 +12,7 @@ export interface Settings {
   translationModel: string
   translationTiming: 'sentence' | 'realtime' | 'manual'
   partialTranslationMode: 'realtime' | 'sentence'
+  partialThrottleMs: 500 | 1000 | 1500 | 2000 | 3000
   silenceTimeout: 3000 | 5000 | 10000 | 20000
 }
 
@@ -36,6 +37,7 @@ const DEFAULT: Settings = {
   translationModel: 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
   translationTiming: 'realtime',
   partialTranslationMode: 'sentence',
+  partialThrottleMs: 1500,
   silenceTimeout: 10000,
 }
 
