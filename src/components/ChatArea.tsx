@@ -284,38 +284,6 @@ export default function ChatArea({
                 {/* Side action buttons */}
                 {(msg.streamPhase !== 'stt' || msg.original) && (
                   <div className="flex flex-col gap-0.5">
-                    {/* Translate button */}
-                    <button
-                      onClick={() =>
-                        onTranslateMessage?.(
-                          msg.id,
-                          msg.original,
-                          msg.speaker,
-                          msg.detectedLanguage
-                        )
-                      }
-                      title="번역"
-                      className={`flex items-center justify-center w-5 h-5 rounded-full transition-all ${
-                        msg.streamPhase === 'translating'
-                          ? 'bg-indigo-100/80 dark:bg-indigo-900/30 text-indigo-400 dark:text-indigo-500'
-                          : 'opacity-0 group-hover:opacity-100 bg-slate-100/80 dark:bg-white/6 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-600 dark:hover:text-slate-300'
-                      }`}
-                    >
-                      {msg.streamPhase === 'translating' ? (
-                        <svg
-                          className="w-2.5 h-2.5 animate-spin"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                        </svg>
-                      ) : (
-                        <LanguagesIcon className="w-2.5 h-2.5" />
-                      )}
-                    </button>
-
                     {/* TTS play/stop button */}
                     {msg.translation && msg.streamPhase !== 'translating' && (
                       <button
@@ -356,6 +324,38 @@ export default function ChatArea({
                         )}
                       </button>
                     )}
+
+                    {/* Translate button */}
+                    <button
+                      onClick={() =>
+                        onTranslateMessage?.(
+                          msg.id,
+                          msg.original,
+                          msg.speaker,
+                          msg.detectedLanguage
+                        )
+                      }
+                      title="번역"
+                      className={`flex items-center justify-center w-5 h-5 rounded-full transition-all ${
+                        msg.streamPhase === 'translating'
+                          ? 'bg-indigo-100/80 dark:bg-indigo-900/30 text-indigo-400 dark:text-indigo-500'
+                          : 'opacity-0 group-hover:opacity-100 bg-slate-100/80 dark:bg-white/6 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-600 dark:hover:text-slate-300'
+                      }`}
+                    >
+                      {msg.streamPhase === 'translating' ? (
+                        <svg
+                          className="w-2.5 h-2.5 animate-spin"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                        </svg>
+                      ) : (
+                        <LanguagesIcon className="w-2.5 h-2.5" />
+                      )}
+                    </button>
                   </div>
                 )}
               </div>
