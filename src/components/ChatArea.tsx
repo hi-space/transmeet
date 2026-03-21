@@ -240,7 +240,7 @@ export default function ChatArea({
               </div>
 
               {/* Bubble + side buttons row */}
-              <div className={`flex items-center gap-1 ${isRight ? 'flex-row-reverse' : ''}`}>
+              <div className={`flex items-center gap-2 ${isRight ? 'flex-row-reverse' : ''}`}>
                 {/* Message bubble */}
                 <div
                   onClick={() => {
@@ -283,7 +283,7 @@ export default function ChatArea({
 
                 {/* Side action buttons */}
                 {(msg.streamPhase !== 'stt' || msg.original) && (
-                  <div className="flex flex-col gap-0.5">
+                  <div className="flex flex-col gap-1 self-center">
                     {/* TTS play/stop button */}
                     {msg.translation && msg.streamPhase !== 'translating' && (
                       <button
