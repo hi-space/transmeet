@@ -101,6 +101,19 @@ function playBase64Audio(
   })
 }
 
+// ─── Partial 번역 헬퍼 ────────────────────────────────────────────────────────
+
+/**
+ * 텍스트에서 완성된 문장(마지막 .?! 까지)을 반환.
+ * 불완전한 끝 문장은 제외.
+ * 예: "Hello. How are you" → "Hello."
+ *     "Hello. How are you?" → "Hello. How are you?"
+ */
+function extractCompleteSentences(text: string): string {
+  const match = text.match(/^([\s\S]*[.?!])(?:\s|$)/)
+  return match ? match[1].trim() : ''
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -137,8 +150,8 @@ export default function Home() {
   const lastSummarizedCountRef = useRef<Record<string, number>>({})
   // Stable ref for handleSummarize to avoid stale closure in timers
   const handleSummarizeRef = useRef<() => Promise<void>>(() => Promise.resolve())
-  // partial 번역 디바운스 (500ms)
-  const pendingTranslateDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // partial 번역: 마지막으로 번역 요청한 완성 문장 텍스트
+  const lastTranslatedPartialRef = useRef<string>('')
   // sendTranslate ref: handleWsMessage보다 먼저 선언되어야 하므로 ref 패턴 사용
   const sendTranslateRef = useRef<
     (
@@ -302,20 +315,40 @@ export default function Home() {
             speaker: partialSpeaker,
             translation: prev?.translation, // 기존 번역 유지
           }))
-          // 500ms 디바운스로 번역 요청 (잦은 partial 업데이트 방지)
-          if (pendingTranslateDebounceRef.current) clearTimeout(pendingTranslateDebounceRef.current)
-          pendingTranslateDebounceRef.current = setTimeout(() => {
-            pendingTranslateDebounceRef.current = null
+
+          // 문장 종결 부호 감지 → 증분 번역
+          const allComplete = extractCompleteSentences(partialText)
+          const lastTranslated = lastTranslatedPartialRef.current
+          if (allComplete && allComplete !== lastTranslated) {
             const srcLang = settings.sourceLang !== 'auto' ? settings.sourceLang : 'en'
-            sendTranslateRef.current(
-              '__pending__',
-              partialText,
-              partialSpeaker,
-              srcLang,
-              settings.targetLang,
-              settings.translationModel
-            )
-          }, 500)
+            if (allComplete.startsWith(lastTranslated)) {
+              // 새로 완성된 문장만 번역 후 기존 번역에 append
+              const newPart = allComplete.slice(lastTranslated.length).trim()
+              if (newPart) {
+                lastTranslatedPartialRef.current = allComplete
+                sendTranslateRef.current(
+                  '__pending_append__',
+                  newPart,
+                  partialSpeaker,
+                  srcLang,
+                  settings.targetLang,
+                  settings.translationModel
+                )
+              }
+            } else {
+              // Transcribe가 이전 텍스트 수정 → 전체 재번역
+              lastTranslatedPartialRef.current = allComplete
+              setPendingTranscript((prev) => (prev ? { ...prev, translation: '' } : prev))
+              sendTranslateRef.current(
+                '__pending__',
+                allComplete,
+                partialSpeaker,
+                srcLang,
+                settings.targetLang,
+                settings.translationModel
+              )
+            }
+          }
           return
         }
         // 번역 고착 방지: displayId에 대해 15초 타임아웃 설정
@@ -345,11 +378,8 @@ export default function Home() {
 
         if (msg.phase === 'stt') {
           // Final sentence from Transcribe — clear pending bubble (partial ID differs from final ID)
-          // partial 번역 디바운스 취소
-          if (pendingTranslateDebounceRef.current) {
-            clearTimeout(pendingTranslateDebounceRef.current)
-            pendingTranslateDebounceRef.current = null
-          }
+          // partial 번역 상태 리셋
+          lastTranslatedPartialRef.current = ''
           setPendingTranscript(null)
           const streamSpeaker = (msg.speaker as Message['speaker']) ?? 'speaker1'
           let displayId = msg.messageId
@@ -433,6 +463,8 @@ export default function Home() {
             )
             return
           }
+          // append 번역은 done에서만 처리 (스트리밍 생략)
+          if (msg.messageId === '__pending_append__') return
           const resolvedId = mergeMapRef.current.get(msg.messageId) ?? msg.messageId
           scheduleTranslationTimeout(resolvedId)
           setMeetings((prev) =>
@@ -462,6 +494,21 @@ export default function Home() {
             setPendingTranscript((prev) =>
               prev ? { ...prev, translation: msg.translatedText ?? '' } : prev
             )
+            return
+          }
+          // pending 버블 증분 번역 append
+          if (msg.messageId === '__pending_append__') {
+            const appended = msg.translatedText ?? ''
+            if (appended) {
+              setPendingTranscript((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      translation: prev.translation ? prev.translation + ' ' + appended : appended,
+                    }
+                  : prev
+              )
+            }
             return
           }
           const resolvedId = mergeMapRef.current.get(msg.messageId) ?? msg.messageId
