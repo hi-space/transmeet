@@ -15,6 +15,17 @@ export interface Settings {
   silenceTimeout: 3000 | 5000 | 10000 | 20000
 }
 
+// engine → voice 지원 여부 검증용 (SettingsPanel과 동일 데이터)
+const LANG_VOICE_ENGINES: Record<'en' | 'ko', string[]> = {
+  en: ['generative', 'neural', 'standard'],
+  ko: ['neural'],
+}
+
+const LANG_DEFAULT_VOICE: Record<'en' | 'ko', { id: string; engine: Settings['pollyEngine'] }> = {
+  en: { id: 'Ruth', engine: 'generative' },
+  ko: { id: 'Seoyeon', engine: 'neural' },
+}
+
 const DEFAULT: Settings = {
   sourceLang: 'en',
   targetLang: 'ko',
@@ -36,7 +47,18 @@ export function useSettings() {
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) setSettings({ ...DEFAULT, ...(JSON.parse(raw) as Partial<Settings>) })
+      if (raw) {
+        const loaded = { ...DEFAULT, ...(JSON.parse(raw) as Partial<Settings>) }
+        // engine이 해당 targetLang을 지원하지 않으면 기본값으로 자동 수정
+        const supportedEngines = LANG_VOICE_ENGINES[loaded.targetLang]
+        if (!supportedEngines.includes(loaded.pollyEngine)) {
+          const d = LANG_DEFAULT_VOICE[loaded.targetLang]
+          loaded.pollyEngine = d.engine
+          loaded.pollyVoiceId = d.id
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded))
+        }
+        setSettings(loaded)
+      }
     } catch {
       // ignore corrupt storage
     }
