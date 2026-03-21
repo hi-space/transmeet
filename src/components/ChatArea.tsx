@@ -186,14 +186,19 @@ export default function ChatArea({
   pendingTranscript,
 }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
-  const prevLengthRef = useRef(0)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  const isNearBottom = () => {
+    const el = containerRef.current
+    if (!el) return true
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 100
+  }
 
   useEffect(() => {
-    if (messages.length > prevLengthRef.current) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (isNearBottom()) {
+      bottomRef.current?.scrollIntoView({ behavior: 'auto' })
     }
-    prevLengthRef.current = messages.length
-  }, [messages])
+  }, [messages, pendingTranscript])
 
   if (messages.length === 0) {
     return (
@@ -229,7 +234,7 @@ export default function ChatArea({
   }
 
   return (
-    <div className="h-full overflow-y-auto scrollbar-thin px-4 py-4 space-y-2">
+    <div ref={containerRef} className="h-full overflow-y-auto scrollbar-thin px-4 py-4 space-y-2">
       {messages.map((msg) => {
         const cfg = SPEAKER_CONFIG[msg.speaker]
         const isRight = cfg.side === 'right'
