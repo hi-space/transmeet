@@ -470,6 +470,8 @@ export default function Home() {
           }
           // append 번역은 done에서만 처리 (스트리밍 생략)
           if (msg.messageId === '__pending_append__') return
+          // 병합 새 문장 자동번역 스트리밍 무시 (전체 텍스트 재번역 결과 사용)
+          if (mergeMapRef.current.has(msg.messageId)) return
           const resolvedId = mergeMapRef.current.get(msg.messageId) ?? msg.messageId
           scheduleTranslationTimeout(resolvedId)
           setMeetings((prev) =>
@@ -547,9 +549,15 @@ export default function Home() {
                                 isMerged || isProtected
                                   ? existing.original
                                   : (msg.originalText ?? existing.original),
-                              translation: msg.translatedText ?? '',
+                              // 병합 자동번역(새 문장만)은 무시 — 전체 재번역 결과를 기다림
+                              translation: isMerged
+                                ? existing.translation
+                                : (msg.translatedText ?? ''),
                               detectedLanguage: msg.detectedLanguage,
-                              streamPhase: 'done' as const,
+                              streamPhase:
+                                isMerged && existing.streamPhase !== 'done'
+                                  ? ('stt' as const)
+                                  : ('done' as const),
                             }
                         : existing
                     ),
