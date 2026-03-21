@@ -519,8 +519,10 @@ export default function Home() {
             }
           }
         } else if (msg.phase === 'translating') {
-          // complete 모드: 번역 완료 후 한번에 출력 — translating phase 무시
-          if (settings.translationOutputMode === 'complete') return
+          // manual 번역 요청은 complete 모드여도 항상 스트리밍
+          const isManual = msg.messageId.startsWith('__manual__')
+          // complete 모드: manual이 아닌 경우 translating phase 무시
+          if (settings.translationOutputMode === 'complete' && !isManual) return
           // pending 버블 번역 스트리밍
           if (msg.messageId === '__pending__') {
             setPendingTranscript((prev) =>
@@ -560,7 +562,9 @@ export default function Home() {
           }
           // 병합 새 문장 자동번역 스트리밍 무시 (전체 텍스트 재번역 결과 사용)
           if (mergeMapRef.current.has(msg.messageId)) return
-          const resolvedId = mergeMapRef.current.get(msg.messageId) ?? msg.messageId
+          const resolvedId = isManual
+            ? msg.messageId.slice('__manual__'.length)
+            : (mergeMapRef.current.get(msg.messageId) ?? msg.messageId)
           scheduleTranslationTimeout(resolvedId)
           setMeetings((prev) =>
             prev.map((m) =>
@@ -639,6 +643,42 @@ export default function Home() {
                 )
               )
             }
+            return
+          }
+          // manual 번역 done: 실제 messageId 추출 후 단순 교체
+          if (msg.messageId.startsWith('__manual__')) {
+            const targetId = msg.messageId.slice('__manual__'.length)
+            const t = translationTimeoutsRef.current.get(targetId)
+            if (t) {
+              clearTimeout(t)
+              translationTimeoutsRef.current.delete(targetId)
+            }
+            setMeetings((prev) =>
+              prev.map((m) =>
+                m.id === activeMeetingId
+                  ? {
+                      ...m,
+                      messages: m.messages.map((existing) =>
+                        existing.id === targetId
+                          ? existing.speaker === 'me'
+                            ? {
+                                ...existing,
+                                original: msg.translatedText ?? '',
+                                streamPhase: 'done' as const,
+                              }
+                            : {
+                                ...existing,
+                                original: msg.originalText ?? existing.original,
+                                translation: msg.translatedText ?? '',
+                                detectedLanguage: msg.detectedLanguage,
+                                streamPhase: 'done' as const,
+                              }
+                          : existing
+                      ),
+                    }
+                  : m
+              )
+            )
             return
           }
           const resolvedId = mergeMapRef.current.get(msg.messageId) ?? msg.messageId
@@ -1023,7 +1063,15 @@ export default function Home() {
         ? 'ko'
         : (detectedLanguage ?? (settings.sourceLang !== 'auto' ? settings.sourceLang : 'en'))
       const targetLang = isMe ? 'en' : settings.targetLang
-      sendTranslate(id, text, speaker, sourceLang, targetLang, settings.translationModel)
+      // __manual__ 프리픽스: translating phase에서 complete 모드여도 항상 스트리밍
+      sendTranslate(
+        `__manual__${id}`,
+        text,
+        speaker,
+        sourceLang,
+        targetLang,
+        settings.translationModel
+      )
       // Optimistically mark the result field as loading
       setMeetings((prev) =>
         prev.map((m) =>
