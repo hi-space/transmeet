@@ -208,7 +208,7 @@ export default function ChatArea({
   }
 
   return (
-    <div className="h-full overflow-y-auto scrollbar-thin px-4 py-4 space-y-4">
+    <div className="h-full overflow-y-auto scrollbar-thin px-4 py-4 space-y-2">
       {messages.map((msg) => {
         const cfg = SPEAKER_CONFIG[msg.speaker]
         const isRight = cfg.side === 'right'
@@ -245,7 +245,7 @@ export default function ChatArea({
                   if (msg.streamPhase === 'translating' || msg.streamPhase === 'stt') return
                   onTranslateMessage?.(msg.id, msg.original, msg.speaker, msg.detectedLanguage)
                 }}
-                className={`rounded-2xl px-3.5 py-2.5 max-w-xs sm:max-w-sm ${cfg.bubbleBg} ${
+                className={`relative rounded-2xl px-3.5 py-2.5 max-w-xs sm:max-w-sm ${cfg.bubbleBg} ${
                   isRight ? 'rounded-tr-sm' : 'rounded-tl-sm'
                 } cursor-pointer active:opacity-70 transition-opacity`}
               >
@@ -275,82 +275,88 @@ export default function ChatArea({
                     </p>
                   )}
                 </div>
-              </div>
 
-              {/* Action buttons row (translate + TTS) */}
-              {(msg.streamPhase !== 'stt' || msg.original) && (
-                <div
-                  className={`flex items-center gap-1 mt-1 ${isRight ? 'flex-row-reverse' : ''}`}
-                >
-                  {/* Translate button — hover-revealed, spinner while translating; always shown when stuck */}
-                  <button
-                    onClick={() =>
-                      onTranslateMessage?.(msg.id, msg.original, msg.speaker, msg.detectedLanguage)
-                    }
-                    title="번역"
-                    className={`flex items-center justify-center w-6 h-6 rounded-full transition-all ${
-                      msg.streamPhase === 'translating'
-                        ? 'bg-indigo-100/80 dark:bg-indigo-900/30 text-indigo-400 dark:text-indigo-500'
-                        : 'opacity-0 group-hover:opacity-100 bg-slate-100/80 dark:bg-white/6 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-600 dark:hover:text-slate-300'
-                    }`}
+                {/* Action buttons — overlaid inside bubble, no layout impact */}
+                {(msg.streamPhase !== 'stt' || msg.original) && (
+                  <div
+                    className={`absolute top-1.5 flex items-center gap-0.5 ${isRight ? 'left-1.5' : 'right-1.5'}`}
+                    onClick={(e) => e.stopPropagation()}
                   >
-                    {msg.streamPhase === 'translating' ? (
-                      <svg
-                        className="w-3 h-3 animate-spin"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                      </svg>
-                    ) : (
-                      <LanguagesIcon className="w-3 h-3" />
-                    )}
-                  </button>
-
-                  {/* TTS play/stop button */}
-                  {msg.translation && msg.streamPhase !== 'translating' && (
+                    {/* Translate button */}
                     <button
                       onClick={() =>
-                        playingMessageId === msg.id
-                          ? onStopMessage?.()
-                          : onPlayMessage?.(msg.id, msg.original)
+                        onTranslateMessage?.(
+                          msg.id,
+                          msg.original,
+                          msg.speaker,
+                          msg.detectedLanguage
+                        )
                       }
-                      title={
-                        playingMessageId === msg.id
-                          ? isMessageLoading
-                            ? '로딩 중...'
-                            : '재생 중지'
-                          : '번역 음성 재생'
-                      }
-                      className={`flex items-center justify-center w-6 h-6 rounded-full transition-colors ${
-                        playingMessageId === msg.id
-                          ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/50'
-                          : 'opacity-0 group-hover:opacity-100 bg-slate-100/80 dark:bg-white/6 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-600 dark:hover:text-slate-300'
+                      title="번역"
+                      className={`flex items-center justify-center w-5 h-5 rounded-full transition-all ${
+                        msg.streamPhase === 'translating'
+                          ? 'bg-indigo-100/80 dark:bg-indigo-900/30 text-indigo-400 dark:text-indigo-500'
+                          : 'opacity-0 group-hover:opacity-100 bg-white/70 dark:bg-slate-700/70 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
                       }`}
                     >
-                      {playingMessageId === msg.id ? (
-                        isMessageLoading ? (
-                          <svg
-                            className="w-3 h-3 animate-spin"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                          >
-                            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                          </svg>
-                        ) : (
-                          <StopIcon className="w-2.5 h-2.5" />
-                        )
+                      {msg.streamPhase === 'translating' ? (
+                        <svg
+                          className="w-2.5 h-2.5 animate-spin"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                        >
+                          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                        </svg>
                       ) : (
-                        <SpeakerIcon className="w-3 h-3" />
+                        <LanguagesIcon className="w-2.5 h-2.5" />
                       )}
                     </button>
-                  )}
-                </div>
-              )}
+
+                    {/* TTS play/stop button */}
+                    {msg.translation && msg.streamPhase !== 'translating' && (
+                      <button
+                        onClick={() =>
+                          playingMessageId === msg.id
+                            ? onStopMessage?.()
+                            : onPlayMessage?.(msg.id, msg.original)
+                        }
+                        title={
+                          playingMessageId === msg.id
+                            ? isMessageLoading
+                              ? '로딩 중...'
+                              : '재생 중지'
+                            : '번역 음성 재생'
+                        }
+                        className={`flex items-center justify-center w-5 h-5 rounded-full transition-colors ${
+                          playingMessageId === msg.id
+                            ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-500 hover:bg-rose-200 dark:hover:bg-rose-900/50'
+                            : 'opacity-0 group-hover:opacity-100 bg-white/70 dark:bg-slate-700/70 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+                        }`}
+                      >
+                        {playingMessageId === msg.id ? (
+                          isMessageLoading ? (
+                            <svg
+                              className="w-2.5 h-2.5 animate-spin"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                            </svg>
+                          ) : (
+                            <StopIcon className="w-2 h-2" />
+                          )
+                        ) : (
+                          <SpeakerIcon className="w-2.5 h-2.5" />
+                        )}
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )
