@@ -72,7 +72,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
       {/* Sheet / Modal */}
       <div
         className="relative z-10 w-full sm:max-w-sm glass-panel sm:rounded-2xl rounded-t-2xl shadow-xl shadow-black/20 slide-up-fade flex flex-col"
-        style={{ maxHeight: '75dvh' }}
+        style={{ maxHeight: '65dvh' }}
       >
         {/* Scrollable content */}
         <div
