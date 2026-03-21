@@ -944,6 +944,10 @@ export default function Home() {
       pendingPartialRef.current = ''
       translationTimeoutsRef.current.forEach((t) => clearTimeout(t))
       translationTimeoutsRef.current.clear()
+      // 녹음 종료 시 자동 요약 (autoSummarizeMessageCount > 0 일 때)
+      if (settings.autoSummarizeMessageCount > 0) {
+        handleSummarizeRef.current()
+      }
     } else {
       await startAudio()
       startRecording({
@@ -966,6 +970,7 @@ export default function Home() {
     settings.targetLang,
     settings.translationModel,
     settings.translationTiming,
+    settings.autoSummarizeMessageCount,
   ])
 
   // ─── Task #8: Summarize ─────────────────────────────────────────────────────
@@ -1052,14 +1057,16 @@ export default function Home() {
     handleSummarizeRef.current = handleSummarize
   })
 
-  // Auto-summary: every 10 new messages
+  // Auto-summary: every N new messages (disabled when 0)
   useEffect(() => {
+    const n = settings.autoSummarizeMessageCount
+    if (n === 0) return
     const count = activeMeeting?.messages.length ?? 0
     const lastCount = lastSummarizedCountRef.current[activeMeetingId ?? ''] ?? 0
-    if (count >= 10 && count - lastCount >= 10) {
+    if (count >= n && count - lastCount >= n) {
       handleSummarizeRef.current()
     }
-  }, [activeMeeting?.messages.length, activeMeetingId])
+  }, [activeMeeting?.messages.length, activeMeetingId, settings.autoSummarizeMessageCount])
 
   // ─── Task #9: TTS ────────────────────────────────────────────────────────────
 

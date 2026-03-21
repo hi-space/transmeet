@@ -240,6 +240,39 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
           {/* Divider */}
           <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
 
+          {/* ── Auto summarize ───────────────────────────────────────────────── */}
+          <div className="space-y-2">
+            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              자동 요약
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {(
+                [
+                  [0, '비활성화'],
+                  [5, '5개마다'],
+                  [10, '10개마다'],
+                  [20, '20개마다'],
+                ] as const
+              ).map(([val, label]) => (
+                <button
+                  key={val}
+                  onClick={() => handleUpdate({ autoSummarizeMessageCount: val })}
+                  className={pill(settings.autoSummarizeMessageCount === val)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500">
+              {settings.autoSummarizeMessageCount === 0
+                ? '자동 요약 비활성화 · 녹음 종료 시에도 요약 안 함'
+                : `메시지 ${settings.autoSummarizeMessageCount}개마다 자동 요약 · 녹음 종료 시에도 요약`}
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
+
           {/* ── Partial translation mode ─────────────────────────────────────── */}
           <div className="space-y-2">
             <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
