@@ -514,6 +514,8 @@ export default function Home() {
             }
           }
         } else if (msg.phase === 'translating') {
+          // complete 모드: 번역 완료 후 한번에 출력 — translating phase 무시
+          if (settings.translationOutputMode === 'complete') return
           // pending 버블 번역 스트리밍
           if (msg.messageId === '__pending__') {
             setPendingTranscript((prev) =>
@@ -786,6 +788,7 @@ export default function Home() {
       settings.sourceLang,
       settings.targetLang,
       settings.translationModel,
+      settings.translationOutputMode,
     ]
   )
 

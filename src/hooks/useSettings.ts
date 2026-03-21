@@ -15,6 +15,7 @@ export interface Settings {
   partialTranslationMode: 'realtime' | 'sentence'
   partialThrottleMs: 500 | 1000 | 1500 | 2000 | 3000
   silenceTimeout: 3000 | 5000 | 10000 | 20000
+  translationOutputMode: 'stream' | 'complete'
 }
 
 // engine → voice 지원 여부 검증용 (SettingsPanel과 동일 데이터)
@@ -41,6 +42,7 @@ const DEFAULT: Settings = {
   partialTranslationMode: 'sentence',
   partialThrottleMs: 1500,
   silenceTimeout: 10000,
+  translationOutputMode: 'stream',
 }
 
 const STORAGE_KEY = 'transmeet-settings'

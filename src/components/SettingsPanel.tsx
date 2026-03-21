@@ -210,6 +210,36 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
           {/* Divider */}
           <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
 
+          {/* ── Translation output mode ──────────────────────────────────────── */}
+          <div className="space-y-2">
+            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              번역 출력 모드
+            </p>
+            <div className="flex gap-1.5">
+              {(
+                [
+                  ['stream', '스트리밍'],
+                  ['complete', '완성 후 출력'],
+                ] as const
+              ).map(([val, label]) => (
+                <button
+                  key={val}
+                  onClick={() => handleUpdate({ translationOutputMode: val })}
+                  className={pill(settings.translationOutputMode === val)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500">
+              {settings.translationOutputMode === 'stream' && '토큰 단위로 실시간 스트리밍 출력'}
+              {settings.translationOutputMode === 'complete' && '번역 완료 후 한번에 출력'}
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
+
           {/* ── Partial translation mode ─────────────────────────────────────── */}
           <div className="space-y-2">
             <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
