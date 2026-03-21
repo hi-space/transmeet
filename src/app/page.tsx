@@ -12,7 +12,6 @@ import { Meeting, Message } from '@/types/meeting'
 import { useAudioCapture } from '@/hooks/useAudioCapture'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import { useSettings } from '@/hooks/useSettings'
-import { useInterval } from '@/hooks/useInterval'
 import { useAuth } from '@/context/AuthContext'
 import type { WsServerMessage } from '@/lib/websocket'
 import { api, toMeeting, parseSummary } from '@/lib/api'
@@ -143,8 +142,6 @@ export default function Home() {
   const msgAudioRef = useRef<HTMLAudioElement | null>(null)
   // Maps stream messageId -> displayed message id (for consecutive-message merging)
   const mergeMapRef = useRef<Map<string, string>>(new Map())
-  // Tracks displayed message IDs that have been merged into (protects their original text)
-  const mergedMsgIdsRef = useRef<Set<string>>(new Set())
 
   // Track last auto-summarized message count per meeting
   const lastSummarizedCountRef = useRef<Record<string, number>>({})
@@ -316,37 +313,53 @@ export default function Home() {
             translation: prev?.translation, // 기존 번역 유지
           }))
 
-          // 문장 종결 부호 감지 → 증분 번역
-          const allComplete = extractCompleteSentences(partialText)
-          const lastTranslated = lastTranslatedPartialRef.current
-          if (allComplete && allComplete !== lastTranslated) {
-            const srcLang = settings.sourceLang !== 'auto' ? settings.sourceLang : 'en'
-            if (allComplete.startsWith(lastTranslated)) {
-              // 새로 완성된 문장만 번역 후 기존 번역에 append
-              const newPart = allComplete.slice(lastTranslated.length).trim()
-              if (newPart) {
+          const srcLang = settings.sourceLang !== 'auto' ? settings.sourceLang : 'en'
+
+          if (settings.partialTranslationMode === 'realtime') {
+            // 모든 partial마다 번역 요청 (이전 텍스트와 달라질 때)
+            if (partialText && partialText !== lastTranslatedPartialRef.current) {
+              lastTranslatedPartialRef.current = partialText
+              sendTranslateRef.current(
+                '__pending__',
+                partialText,
+                partialSpeaker,
+                srcLang,
+                settings.targetLang,
+                settings.translationModel
+              )
+            }
+          } else {
+            // sentence: 문장 종결 부호 감지 → 증분 번역
+            const allComplete = extractCompleteSentences(partialText)
+            const lastTranslated = lastTranslatedPartialRef.current
+            if (allComplete && allComplete !== lastTranslated) {
+              if (allComplete.startsWith(lastTranslated)) {
+                // 새로 완성된 문장만 번역 후 기존 번역에 append
+                const newPart = allComplete.slice(lastTranslated.length).trim()
+                if (newPart) {
+                  lastTranslatedPartialRef.current = allComplete
+                  sendTranslateRef.current(
+                    '__pending_append__',
+                    newPart,
+                    partialSpeaker,
+                    srcLang,
+                    settings.targetLang,
+                    settings.translationModel
+                  )
+                }
+              } else {
+                // Transcribe가 이전 텍스트 수정 → 전체 재번역
                 lastTranslatedPartialRef.current = allComplete
+                setPendingTranscript((prev) => (prev ? { ...prev, translation: '' } : prev))
                 sendTranslateRef.current(
-                  '__pending_append__',
-                  newPart,
+                  '__pending__',
+                  allComplete,
                   partialSpeaker,
                   srcLang,
                   settings.targetLang,
                   settings.translationModel
                 )
               }
-            } else {
-              // Transcribe가 이전 텍스트 수정 → 전체 재번역
-              lastTranslatedPartialRef.current = allComplete
-              setPendingTranscript((prev) => (prev ? { ...prev, translation: '' } : prev))
-              sendTranslateRef.current(
-                '__pending__',
-                allComplete,
-                partialSpeaker,
-                srcLang,
-                settings.targetLang,
-                settings.translationModel
-              )
             }
           }
           return
@@ -405,7 +418,6 @@ export default function Home() {
               displayId = lastMsg.id
               mergedFullText = (lastMsg.original + ' ' + (msg.originalText ?? '')).trim()
               mergeMapRef.current.set(msg.messageId, lastMsg.id)
-              mergedMsgIdsRef.current.add(lastMsg.id)
               return prev.map((m) =>
                 m.id === activeMeetingId
                   ? {
@@ -440,25 +452,24 @@ export default function Home() {
             )
           })
           scheduleTranslationTimeout(displayId)
-          // 번역 요청: 병합이면 전체 텍스트, 새 버블이면 원본 텍스트
-          if (settings.translationTiming !== 'manual') {
+          // 병합 시에만 재번역 요청 (전체 병합 텍스트를 번역)
+          // 비병합 시: 백엔드 _process_segment가 이미 번역 스트리밍 중 — 추가 요청 불필요
+          // mergedFullText !== null ↔ shouldMerge=true (setMeetings 내부 변수 대신 사용)
+          if (mergedFullText && settings.translationTiming !== 'manual') {
             const isMe = streamSpeaker === 'me'
             const srcLang = isMe
               ? 'ko'
               : (msg.detectedLanguage ??
                 (settings.sourceLang !== 'auto' ? settings.sourceLang : 'en'))
             const tgtLang = isMe ? 'en' : settings.targetLang
-            const textToTranslate = mergedFullText ?? msg.originalText ?? ''
-            if (textToTranslate) {
-              sendTranslateRef.current(
-                displayId,
-                textToTranslate,
-                streamSpeaker,
-                srcLang,
-                tgtLang,
-                settings.translationModel
-              )
-            }
+            sendTranslateRef.current(
+              displayId,
+              mergedFullText,
+              streamSpeaker,
+              srcLang,
+              tgtLang,
+              settings.translationModel
+            )
           }
         } else if (msg.phase === 'translating') {
           // pending 버블 번역 스트리밍
@@ -520,8 +531,14 @@ export default function Home() {
           }
           const resolvedId = mergeMapRef.current.get(msg.messageId) ?? msg.messageId
           const isMerged = mergeMapRef.current.has(msg.messageId)
-          const isProtected = mergedMsgIdsRef.current.has(resolvedId)
           mergeMapRef.current.delete(msg.messageId)
+
+          if (isMerged) {
+            // 백엔드의 원본(단일 세그먼트) 번역 결과 무시
+            // — 병합된 전체 텍스트 재번역(displayId로 요청한 것)이 별도로 도착함
+            return
+          }
+
           // 타임아웃 해제
           const t = translationTimeoutsRef.current.get(resolvedId)
           if (t) {
@@ -543,19 +560,10 @@ export default function Home() {
                               streamPhase: 'done' as const,
                             }
                           : {
-                              // others: Preserve original if merged; KO 번역 → translation
+                              // others: KO 번역 → translation
                               ...existing,
-                              original:
-                                isMerged || isProtected
-                                  ? existing.original
-                                  : (msg.originalText ?? existing.original),
-                              // 더 긴 번역 채택 — 전체 재번역과 자동번역 중 나중에 오는 긴 쪽 유지
-                              translation:
-                                isMerged &&
-                                (existing.translation ?? '').length >
-                                  (msg.translatedText ?? '').length
-                                  ? existing.translation
-                                  : (msg.translatedText ?? ''),
+                              original: msg.originalText ?? existing.original,
+                              translation: msg.translatedText ?? '',
                               detectedLanguage: msg.detectedLanguage,
                               streamPhase: 'done' as const,
                             }
@@ -650,6 +658,7 @@ export default function Home() {
       settings.silenceTimeout,
       settings.ttsAutoPlay,
       settings.translationTiming,
+      settings.partialTranslationMode,
       settings.sourceLang,
       settings.targetLang,
       settings.translationModel,
@@ -718,7 +727,6 @@ export default function Home() {
       stopRecording()
       setPendingTranscript(null)
       mergeMapRef.current.clear()
-      mergedMsgIdsRef.current.clear()
       translationTimeoutsRef.current.forEach((t) => clearTimeout(t))
       translationTimeoutsRef.current.clear()
     } else {
@@ -837,22 +845,6 @@ export default function Home() {
       handleSummarizeRef.current()
     }
   }, [activeMeeting?.messages.length, activeMeetingId])
-
-  // Auto-summary: configurable interval while recording (0 = disabled)
-  const autoSummarizeMs =
-    isRecording && settings.autoSummarizeInterval > 0
-      ? settings.autoSummarizeInterval * 60 * 1000
-      : null
-  useInterval(() => {
-    console.log('[auto-summary] interval tick', {
-      isRecording,
-      autoSummarizeInterval: settings.autoSummarizeInterval,
-      autoSummarizeMs,
-      isSummarizing,
-      msgCount: activeMeeting?.messages.length,
-    })
-    handleSummarizeRef.current()
-  }, autoSummarizeMs)
 
   // ─── Task #9: TTS ────────────────────────────────────────────────────────────
 
@@ -1057,7 +1049,6 @@ export default function Home() {
   const handleSelectMeeting = useCallback(
     (id: string) => {
       mergeMapRef.current.clear()
-      mergedMsgIdsRef.current.clear()
       setActiveMeetingId(id)
       setSidebarOpen(false)
       if (HAS_API) loadMeetingMessages(id)

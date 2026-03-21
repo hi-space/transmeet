@@ -177,6 +177,38 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
           {/* Divider */}
           <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
 
+          {/* ── Partial translation mode ─────────────────────────────────────── */}
+          <div className="space-y-2">
+            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              Partial 번역 모드
+            </p>
+            <div className="flex gap-1.5">
+              {(
+                [
+                  ['sentence', '문장 경계'],
+                  ['realtime', '실시간'],
+                ] as const
+              ).map(([val, label]) => (
+                <button
+                  key={val}
+                  onClick={() => handleUpdate({ partialTranslationMode: val })}
+                  className={pill(settings.partialTranslationMode === val)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500">
+              {settings.partialTranslationMode === 'sentence' &&
+                '마침표/물음표 감지 시 pending 번역 업데이트'}
+              {settings.partialTranslationMode === 'realtime' &&
+                '인식 중인 모든 partial마다 번역 (API 호출 증가)'}
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
+
           {/* ── Silence timeout ─────────────────────────────────────────────── */}
           <div className="space-y-2">
             <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
@@ -229,38 +261,6 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
                   {label}
                 </button>
               ))}
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
-
-          {/* ── Auto-summarize settings ─────────────────────────────────────── */}
-          <div className="space-y-3">
-            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-              자동 요약
-            </p>
-            <div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">요약 주기 (녹음 중)</p>
-              <div className="flex flex-wrap gap-1.5">
-                {(
-                  [
-                    [0, 'Off'],
-                    [1, '1분'],
-                    [2, '2분'],
-                    [5, '5분'],
-                    [10, '10분'],
-                  ] as const
-                ).map(([val, label]) => (
-                  <button
-                    key={val}
-                    onClick={() => handleUpdate({ autoSummarizeInterval: val })}
-                    className={pill(settings.autoSummarizeInterval === val)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
 
