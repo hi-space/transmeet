@@ -40,22 +40,44 @@ export function parseSummary(raw: string): string {
   return raw.trim()
 }
 
+// 녹음 시와 동일한 10초 기준으로 연속 동일 화자 메시지 병합
+const MERGE_TIMEOUT_MS = 10000
+
+function mergeLoadedMessages(messages: Message[]): Message[] {
+  return messages.reduce<Message[]>((acc, msg) => {
+    const last = acc[acc.length - 1]
+    if (!last) return [msg]
+    const silenceMs = new Date(msg.timestamp).getTime() - new Date(last.timestamp).getTime()
+    if (last.speaker === msg.speaker && silenceMs < MERGE_TIMEOUT_MS) {
+      acc[acc.length - 1] = {
+        ...last,
+        original: [last.original, msg.original].filter(Boolean).join(' '),
+        translation: [last.translation, msg.translation].filter(Boolean).join(' '),
+        timestamp: msg.timestamp,
+      }
+      return acc
+    }
+    return [...acc, msg]
+  }, [])
+}
+
 export function toMeeting(m: ApiMeeting): Meeting {
+  const rawMessages = (m.messages ?? []).map(
+    (msg): Message => ({
+      id: msg.id,
+      speaker: VALID_SPEAKERS[msg.speaker] ?? 'speaker1',
+      original: msg.originalText,
+      translation: msg.translatedText,
+      detectedLanguage: msg.detectedLanguage,
+      timestamp: msg.timestamp,
+    })
+  )
   return {
     id: m.meetingId,
     title: m.title,
     startedAt: m.createdAt,
-    messages: (m.messages ?? []).map(
-      (msg): Message => ({
-        id: msg.id,
-        speaker: VALID_SPEAKERS[msg.speaker] ?? 'speaker1',
-        original: msg.originalText,
-        translation: msg.translatedText,
-        detectedLanguage: msg.detectedLanguage,
-        timestamp: msg.timestamp,
-      })
-    ),
-    summary: m.summary ? parseSummary(m.summary) : undefined, // returns trimmed string
+    messages: mergeLoadedMessages(rawMessages),
+    summary: m.summary ? parseSummary(m.summary) : undefined,
   }
 }
 

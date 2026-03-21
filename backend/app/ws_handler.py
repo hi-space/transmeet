@@ -667,6 +667,7 @@ async def _handle_tts_request(
     polly_engine: str,
     polly_voice_id: str,
     timestamp: str,
+    meeting_id: str = "",
 ) -> None:
     """KO→EN 번역 스트리밍 후 Polly TTS 합성."""
     prompt = (
@@ -743,6 +744,35 @@ async def _handle_tts_request(
             "translatedText": translated_text,
             "timestamp": timestamp,
         })
+
+    # ── Persist to DynamoDB ────────────────────────────────────────────────────
+    # speaker="me": original=EN(translated), translation=KO(source text)
+    if meeting_id and translated_text:
+        try:
+            async with dynamodb_client() as ddb:
+                await ddb.update_item(
+                    TableName=config.MEETINGS_TABLE,
+                    Key={"meetingId": {"S": meeting_id}},
+                    UpdateExpression=(
+                        "SET messages = list_append(if_not_exists(messages, :empty), :msg), "
+                        "#updatedAt = :ts"
+                    ),
+                    ExpressionAttributeNames={"#updatedAt": "updatedAt"},
+                    ExpressionAttributeValues={
+                        ":msg": {"L": [{"M": {
+                            "id": {"S": message_id},
+                            "speaker": {"S": "me"},
+                            "originalText": {"S": translated_text},
+                            "translatedText": {"S": text},
+                            "detectedLanguage": {"S": "ko"},
+                            "timestamp": {"S": timestamp},
+                        }}]},
+                        ":empty": {"L": []},
+                        ":ts": {"S": timestamp},
+                    },
+                )
+        except Exception:
+            logger.exception("[tts_request] DynamoDB save failed for messageId=%s", message_id)
 
 
 # ─── Summary streaming ───────────────────────────────────────────────────────
@@ -910,6 +940,7 @@ async def ws_endpoint(
                         _handle_tts_request(
                             ws, msg_id, tts_text, model_id,
                             polly_engine, polly_voice_id, _iso_now(),
+                            meeting_id=state.meeting_id or "",
                         )
                     )
 
