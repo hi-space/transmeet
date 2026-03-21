@@ -142,6 +142,8 @@ export default function Home() {
   const msgAudioRef = useRef<HTMLAudioElement | null>(null)
   // Maps stream messageId -> displayed message id (for consecutive-message merging)
   const mergeMapRef = useRef<Map<string, string>>(new Map())
+  // 병합 대상 bubble ID 추적 — _process_segment done이 병합 버블을 덮어쓰는 것을 방지
+  const mergedMsgIdsRef = useRef<Set<string>>(new Set())
 
   // Track last auto-summarized message count per meeting
   const lastSummarizedCountRef = useRef<Record<string, number>>({})
@@ -432,6 +434,7 @@ export default function Home() {
               displayId = lastMsg.id
               mergedFullText = (lastMsg.original + ' ' + (msg.originalText ?? '')).trim()
               mergeMapRef.current.set(msg.messageId, lastMsg.id)
+              mergedMsgIdsRef.current.add(lastMsg.id)
               return prev.map((m) =>
                 m.id === activeMeetingId
                   ? {
@@ -545,6 +548,8 @@ export default function Home() {
           }
           const resolvedId = mergeMapRef.current.get(msg.messageId) ?? msg.messageId
           const isMerged = mergeMapRef.current.has(msg.messageId)
+          // 병합 대상 버블인지 확인 — _process_segment done이 병합 텍스트를 덮어쓰지 않도록 보호
+          const isProtected = mergedMsgIdsRef.current.has(resolvedId)
           mergeMapRef.current.delete(msg.messageId)
 
           if (isMerged) {
@@ -575,9 +580,18 @@ export default function Home() {
                             }
                           : {
                               // others: KO 번역 → translation
+                              // isProtected: 병합된 버블은 original 보호 + 더 긴 번역 유지
+                              // (_process_segment의 단일 세그먼트 번역이 병합 재번역을 덮어쓰지 못하게)
                               ...existing,
-                              original: msg.originalText ?? existing.original,
-                              translation: msg.translatedText ?? '',
+                              original: isProtected
+                                ? existing.original
+                                : (msg.originalText ?? existing.original),
+                              translation:
+                                isProtected &&
+                                (existing.translation ?? '').length >
+                                  (msg.translatedText ?? '').length
+                                  ? existing.translation
+                                  : (msg.translatedText ?? ''),
                               detectedLanguage: msg.detectedLanguage,
                               streamPhase: 'done' as const,
                             }
@@ -742,6 +756,7 @@ export default function Home() {
       stopRecording()
       setPendingTranscript(null)
       mergeMapRef.current.clear()
+      mergedMsgIdsRef.current.clear()
       if (partialThrottleRef.current) {
         clearTimeout(partialThrottleRef.current)
         partialThrottleRef.current = null
@@ -1069,6 +1084,7 @@ export default function Home() {
   const handleSelectMeeting = useCallback(
     (id: string) => {
       mergeMapRef.current.clear()
+      mergedMsgIdsRef.current.clear()
       setActiveMeetingId(id)
       setSidebarOpen(false)
       if (HAS_API) loadMeetingMessages(id)
