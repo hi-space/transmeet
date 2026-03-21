@@ -97,7 +97,9 @@ export default function MeetingSidebar({
                     {meeting.title}
                   </div>
                   <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-                    {formatDate(meeting.startedAt)} · {meeting.messages.length}개
+                    {formatDate(meeting.startedAt)}
+                    {' · '}
+                    {meeting.messageCount ?? meeting.messages.length}개
                   </div>
                 </button>
 

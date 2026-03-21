@@ -62,7 +62,7 @@ export const handler = async (
         const result = await ddb.send(
           new ScanCommand({
             TableName: process.env.MEETINGS_TABLE,
-            ProjectionExpression: 'meetingId, title, createdAt, #st',
+            ProjectionExpression: 'meetingId, title, createdAt, #st, messageCount',
             ExpressionAttributeNames: { '#st': 'status' },
           })
         );

@@ -15,5 +15,6 @@ export interface Meeting {
   title: string
   startedAt: string
   messages: Message[]
+  messageCount?: number // 목록 API에서 messages 없이 반환되는 경우 사용
   summary?: string // raw markdown
 }

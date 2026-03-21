@@ -18,6 +18,7 @@ export interface ApiMeeting {
   createdAt: string
   updatedAt?: string
   messages?: ApiMessage[]
+  messageCount?: number
   summary?: string
   summarizedAt?: string
 }
@@ -77,6 +78,7 @@ export function toMeeting(m: ApiMeeting): Meeting {
     title: m.title,
     startedAt: m.createdAt,
     messages: mergeLoadedMessages(rawMessages),
+    messageCount: m.messageCount,
     summary: m.summary ? parseSummary(m.summary) : undefined,
   }
 }

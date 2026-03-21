@@ -283,7 +283,8 @@ async def _process_segment(
                 Key={"meetingId": {"S": meeting_id}},
                 UpdateExpression=(
                     "SET messages = list_append(if_not_exists(messages, :empty), :msg), "
-                    "#updatedAt = :ts"
+                    "#updatedAt = :ts "
+                    "ADD messageCount :one"
                 ),
                 ExpressionAttributeNames={"#updatedAt": "updatedAt"},
                 ExpressionAttributeValues={
@@ -297,6 +298,7 @@ async def _process_segment(
                     }}]},
                     ":empty": {"L": []},
                     ":ts": {"S": timestamp},
+                    ":one": {"N": "1"},
                 },
             )
 
@@ -755,7 +757,8 @@ async def _handle_tts_request(
                     Key={"meetingId": {"S": meeting_id}},
                     UpdateExpression=(
                         "SET messages = list_append(if_not_exists(messages, :empty), :msg), "
-                        "#updatedAt = :ts"
+                        "#updatedAt = :ts "
+                        "ADD messageCount :one"
                     ),
                     ExpressionAttributeNames={"#updatedAt": "updatedAt"},
                     ExpressionAttributeValues={
@@ -769,6 +772,7 @@ async def _handle_tts_request(
                         }}]},
                         ":empty": {"L": []},
                         ":ts": {"S": timestamp},
+                        ":one": {"N": "1"},
                     },
                 )
         except Exception:
