@@ -70,7 +70,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
       <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
 
       {/* Sheet / Modal */}
-      <div className="relative z-10 w-full sm:max-w-sm glass-panel sm:rounded-2xl rounded-t-2xl p-5 shadow-xl shadow-black/20 slide-up-fade">
+      <div className="relative z-10 w-full sm:max-w-sm glass-panel sm:rounded-2xl rounded-t-2xl p-5 shadow-xl shadow-black/20 slide-up-fade max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
@@ -265,12 +265,12 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
           </p>
 
           {/* Auto play toggle */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3">
             <span className="text-sm text-slate-600 dark:text-slate-300">자동 재생</span>
             <button
               onClick={() => handleUpdate({ ttsAutoPlay: !settings.ttsAutoPlay })}
               aria-label="TTS 자동 재생 토글"
-              className={`relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none ${
+              className={`relative shrink-0 w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none ${
                 settings.ttsAutoPlay ? 'bg-indigo-500' : 'bg-slate-200 dark:bg-white/15'
               }`}
             >
