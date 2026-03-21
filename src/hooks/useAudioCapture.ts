@@ -144,26 +144,27 @@ export function useAudioCapture({
 
       // ── 시스템 오디오 스트림 획득 ─────────────────────────────────────────
       if (audioSource === 'system' || audioSource === 'both') {
-        // video:false는 일부 브라우저에서 미지원 → video:true 후 track 즉시 중단
+        // video:false는 일부 브라우저 미지원 → video:true로 요청 후 나중에 중단
+        // displayStream을 그대로 사용 (audio tracks만 추출하면 Chrome에서 stream이 비활성화됨)
         const displayStream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
           audio: true,
         })
-        displayStream.getVideoTracks().forEach((t) => t.stop())
 
-        const audioTracks = displayStream.getAudioTracks()
-        if (audioTracks.length === 0) {
+        if (displayStream.getAudioTracks().length === 0) {
           displayStream.getTracks().forEach((t) => t.stop())
           throw new Error(
             '시스템 오디오를 가져올 수 없습니다. 화면 공유 시 "오디오 공유"를 체크해 주세요.'
           )
         }
-        sysStream = new MediaStream(audioTracks)
+        sysStream = displayStream
         sysStreamRef.current = sysStream
       }
 
       // ── AudioContext + 노드 구성 ──────────────────────────────────────────
       const ctx = new AudioContext()
+      // async 호출 이후 AudioContext가 suspended 상태일 수 있으므로 명시적으로 resume
+      await ctx.resume()
       audioContextRef.current = ctx
 
       const processor = ctx.createScriptProcessor(SCRIPT_PROCESSOR_BUFFER_SIZE, 1, 1)
@@ -188,6 +189,8 @@ export function useAudioCapture({
         const sysSource = ctx.createMediaStreamSource(sysStream)
         if (!micStream) sysSource.connect(analyser) // system-only: analyser에도 연결
         sysSource.connect(processor) // PCM 수집 (AudioContext가 자동 믹싱)
+        // AudioContext 연결 후 video track 중단 (연결 전 중단 시 stream 비활성화 가능)
+        sysStream.getVideoTracks().forEach((t) => t.stop())
       }
 
       chunkTimerRef.current = setInterval(flushChunk, chunkDurationMs)
