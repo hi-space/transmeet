@@ -149,8 +149,9 @@ export default function Home() {
   const handleSummarizeRef = useRef<() => Promise<void>>(() => Promise.resolve())
   // partial 번역: 마지막으로 번역 요청한 완성 문장 텍스트
   const lastTranslatedPartialRef = useRef<string>('')
-  // realtime 모드 디바운스 타이머
-  const partialDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // realtime 모드 스로틀: 1.5초 간격으로 최신 partial 번역
+  const partialThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingPartialRef = useRef<string>('')
   // sendTranslate ref: handleWsMessage보다 먼저 선언되어야 하므로 ref 패턴 사용
   const sendTranslateRef = useRef<
     (
@@ -318,23 +319,28 @@ export default function Home() {
           const srcLang = settings.sourceLang !== 'auto' ? settings.sourceLang : 'en'
 
           if (settings.partialTranslationMode === 'realtime') {
-            // 디바운스: 500ms 이내 추가 partial이 오면 이전 요청 취소
-            if (partialText && partialText !== lastTranslatedPartialRef.current) {
-              if (partialDebounceRef.current) clearTimeout(partialDebounceRef.current)
-              const capturedText = partialText
-              const capturedSpeaker = partialSpeaker
-              partialDebounceRef.current = setTimeout(() => {
-                partialDebounceRef.current = null
-                lastTranslatedPartialRef.current = capturedText
-                sendTranslateRef.current(
-                  '__pending__',
-                  capturedText,
-                  capturedSpeaker,
-                  srcLang,
-                  settings.targetLang,
-                  settings.translationModel
-                )
-              }, 500)
+            // 스로틀: 타이머가 없을 때만 새 타이머 등록 (1.5초 간격)
+            // partial마다 최신 텍스트를 pendingPartialRef에 저장하고,
+            // 타이머 만료 시 최신 텍스트로 번역 — 연속 발화 중에도 주기적으로 번역됨
+            if (partialText) {
+              pendingPartialRef.current = partialText
+              if (!partialThrottleRef.current) {
+                partialThrottleRef.current = setTimeout(() => {
+                  partialThrottleRef.current = null
+                  const text = pendingPartialRef.current
+                  if (text && text !== lastTranslatedPartialRef.current) {
+                    lastTranslatedPartialRef.current = text
+                    sendTranslateRef.current(
+                      '__pending__',
+                      text,
+                      partialSpeaker,
+                      srcLang,
+                      settings.targetLang,
+                      settings.translationModel
+                    )
+                  }
+                }, 1500)
+              }
             }
           } else {
             // sentence: 문장 종결 부호 감지 → 증분 번역
@@ -735,10 +741,11 @@ export default function Home() {
       stopRecording()
       setPendingTranscript(null)
       mergeMapRef.current.clear()
-      if (partialDebounceRef.current) {
-        clearTimeout(partialDebounceRef.current)
-        partialDebounceRef.current = null
+      if (partialThrottleRef.current) {
+        clearTimeout(partialThrottleRef.current)
+        partialThrottleRef.current = null
       }
+      pendingPartialRef.current = ''
       translationTimeoutsRef.current.forEach((t) => clearTimeout(t))
       translationTimeoutsRef.current.clear()
     } else {
