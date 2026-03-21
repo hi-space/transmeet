@@ -280,30 +280,14 @@ export default function ChatArea({
                   <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
                     {msg.original}
                   </p>
-                  {/* Translation — three states */}
+                  {/* Translation — 번역 텍스트 표시, 번역 중이면 커서 표시 */}
                   <div className={`border-t ${cfg.dividerColor} mt-1.5 pt-1.5`}>
-                    {msg.streamPhase === 'stt' && !msg.translation ? (
-                      // 번역 대기 중 (기존 번역 없음)
-                      <span className="flex items-center gap-1">
-                        <span className={`text-xs ${cfg.translationColor}`}>번역 중</span>
-                        {[0, 0.1, 0.2].map((d, i) => (
-                          <span
-                            key={i}
-                            className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600 animate-bounce"
-                            style={{ animationDelay: `${d}s` }}
-                          />
-                        ))}
-                      </span>
-                    ) : (
-                      // 번역 있음 — 스트리밍 중이면 커서 표시
-                      <p className={`text-xs leading-relaxed ${cfg.translationColor}`}>
-                        {msg.translation}
-                        {(msg.streamPhase === 'translating' ||
-                          (msg.streamPhase === 'stt' && !!msg.translation)) && (
-                          <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
-                        )}
-                      </p>
-                    )}
+                    <p className={`text-xs leading-relaxed ${cfg.translationColor}`}>
+                      {msg.translation}
+                      {(msg.streamPhase === 'translating' || msg.streamPhase === 'stt') && (
+                        <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
+                      )}
+                    </p>
                   </div>
                 </div>
 

@@ -144,6 +144,8 @@ export default function Home() {
   const mergeMapRef = useRef<Map<string, string>>(new Map())
   // 병합 대상 bubble ID 추적 — _process_segment done이 병합 버블을 덮어쓰는 것을 방지
   const mergedMsgIdsRef = useRef<Set<string>>(new Set())
+  // append 번역 기준 번역문 저장 — 스트리밍 중 base + partial 합산에 사용
+  const appendBaseRef = useRef<Map<string, string>>(new Map())
 
   // Track last auto-summarized message count per meeting
   const lastSummarizedCountRef = useRef<Record<string, number>>({})
@@ -415,6 +417,7 @@ export default function Home() {
           let mergedFullText: string | null = null
           let newSegmentTextOnly = ''
           let lastMsgWasTranslated = false
+          let appendBaseTranslation = ''
           setMeetings((prev) => {
             const meeting = prev.find((m) => m.id === activeMeetingId)
             const messages = meeting?.messages ?? []
@@ -438,6 +441,7 @@ export default function Home() {
               newSegmentTextOnly = msg.originalText?.trim() ?? ''
               // 기존 번역이 완료된 경우 append 번역 사용
               lastMsgWasTranslated = lastMsg.streamPhase === 'done' && !!lastMsg.translation
+              appendBaseTranslation = lastMsg.translation ?? ''
               mergeMapRef.current.set(msg.messageId, lastMsg.id)
               mergedMsgIdsRef.current.add(lastMsg.id)
               return prev.map((m) =>
@@ -485,7 +489,8 @@ export default function Home() {
                 (settings.sourceLang !== 'auto' ? settings.sourceLang : 'en'))
             const tgtLang = isMe ? 'en' : settings.targetLang
             if (lastMsgWasTranslated && newSegmentTextOnly) {
-              // 기존 번역 완료 → 새 세그먼트만 번역 후 기존 번역에 append
+              // 기존 번역 완료 → 새 세그먼트만 번역 후 기존 번역에 append (base 저장)
+              appendBaseRef.current.set(displayId, appendBaseTranslation)
               sendTranslateRef.current(
                 `__append__${displayId}`,
                 newSegmentTextOnly,
@@ -516,8 +521,32 @@ export default function Home() {
           }
           // append 번역은 done에서만 처리 (스트리밍 생략)
           if (msg.messageId === '__pending_append__') return
-          // final 말풍선 append 번역: 스트리밍 생략 (기존 번역 유지, done에서 append)
-          if (msg.messageId.startsWith('__append__')) return
+          // final 말풍선 append 번역: base + partial 합산하여 실시간 스트리밍 표시
+          if (msg.messageId.startsWith('__append__')) {
+            const targetId = msg.messageId.slice('__append__'.length)
+            const base = appendBaseRef.current.get(targetId) ?? ''
+            const partial = msg.partialTranslation ?? ''
+            scheduleTranslationTimeout(targetId)
+            setMeetings((prev) =>
+              prev.map((m) =>
+                m.id === activeMeetingId
+                  ? {
+                      ...m,
+                      messages: m.messages.map((existing) =>
+                        existing.id === targetId
+                          ? {
+                              ...existing,
+                              translation: base ? base + ' ' + partial : partial,
+                              streamPhase: 'translating' as const,
+                            }
+                          : existing
+                      ),
+                    }
+                  : m
+              )
+            )
+            return
+          }
           // 병합 새 문장 자동번역 스트리밍 무시 (전체 텍스트 재번역 결과 사용)
           if (mergeMapRef.current.has(msg.messageId)) return
           const resolvedId = mergeMapRef.current.get(msg.messageId) ?? msg.messageId
@@ -566,9 +595,11 @@ export default function Home() {
             }
             return
           }
-          // final 말풍선 append 번역: 기존 번역에 append 후 done으로 전환
+          // final 말풍선 append 번역: base + 완성 번역으로 교체 후 done으로 전환
           if (msg.messageId.startsWith('__append__')) {
             const targetId = msg.messageId.slice('__append__'.length)
+            const base = appendBaseRef.current.get(targetId) ?? ''
+            appendBaseRef.current.delete(targetId)
             const appended = msg.translatedText ?? ''
             const t = translationTimeoutsRef.current.get(targetId)
             if (t) {
@@ -585,9 +616,7 @@ export default function Home() {
                           existing.id === targetId
                             ? {
                                 ...existing,
-                                translation: existing.translation
-                                  ? existing.translation + ' ' + appended
-                                  : appended,
+                                translation: base ? base + ' ' + appended : appended,
                                 streamPhase: 'done' as const,
                               }
                             : existing
