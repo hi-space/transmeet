@@ -136,6 +136,17 @@ export default function Home() {
   const lastSummarizedCountRef = useRef<Record<string, number>>({})
   // Stable ref for handleSummarize to avoid stale closure in timers
   const handleSummarizeRef = useRef<() => Promise<void>>(() => Promise.resolve())
+  // sendTranslate ref: handleWsMessage보다 먼저 선언되어야 하므로 ref 패턴 사용
+  const sendTranslateRef = useRef<
+    (
+      messageId: string,
+      originalText: string,
+      speaker: string,
+      sourceLang?: string,
+      targetLang?: string,
+      modelId?: string
+    ) => void
+  >(() => {})
   // Safety: reset isSummarizing if WS done/error event is never received
   const isSummarizingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Per-message translation timeouts: auto-unblock messages stuck in stt/translating
@@ -317,6 +328,7 @@ export default function Home() {
           setPendingTranscript(null)
           const streamSpeaker = (msg.speaker as Message['speaker']) ?? 'speaker1'
           let displayId = msg.messageId
+          let mergedFullText: string | null = null
           setMeetings((prev) => {
             const meeting = prev.find((m) => m.id === activeMeetingId)
             const messages = meeting?.messages ?? []
@@ -334,6 +346,7 @@ export default function Home() {
             if (shouldMerge) {
               // Reuse existing bubble; track messageId -> displayed id
               displayId = lastMsg.id
+              mergedFullText = (lastMsg.original + ' ' + (msg.originalText ?? '')).trim()
               mergeMapRef.current.set(msg.messageId, lastMsg.id)
               mergedMsgIdsRef.current.add(lastMsg.id)
               return prev.map((m) =>
@@ -347,7 +360,7 @@ export default function Home() {
                               original: existing.original + ' ' + (msg.originalText ?? ''),
                               // 타임스탬프 갱신 → 다음 병합 시 silence 계산 기준점 유지
                               timestamp: msg.timestamp ?? existing.timestamp,
-                              translation: '',
+                              // 기존 번역 유지 — 재번역 완료 시 교체됨
                               streamPhase: 'stt' as const,
                             }
                           : existing
@@ -370,6 +383,23 @@ export default function Home() {
             )
           })
           scheduleTranslationTimeout(displayId)
+          // 병합된 경우 전체 텍스트로 재번역 요청 (새 문장만 번역되는 버그 방지)
+          if (mergedFullText && settings.translationTiming !== 'manual') {
+            const isMe = streamSpeaker === 'me'
+            const srcLang = isMe
+              ? 'ko'
+              : (msg.detectedLanguage ??
+                (settings.sourceLang !== 'auto' ? settings.sourceLang : 'en'))
+            const tgtLang = isMe ? 'en' : settings.targetLang
+            sendTranslateRef.current(
+              displayId,
+              mergedFullText,
+              streamSpeaker,
+              srcLang,
+              tgtLang,
+              settings.translationModel
+            )
+          }
         } else if (msg.phase === 'translating') {
           const resolvedId = mergeMapRef.current.get(msg.messageId) ?? msg.messageId
           scheduleTranslationTimeout(resolvedId)
@@ -516,7 +546,15 @@ export default function Home() {
         }
       }
     },
-    [activeMeetingId, settings.silenceTimeout, settings.ttsAutoPlay]
+    [
+      activeMeetingId,
+      settings.silenceTimeout,
+      settings.ttsAutoPlay,
+      settings.translationTiming,
+      settings.sourceLang,
+      settings.targetLang,
+      settings.translationModel,
+    ]
   )
 
   const {
@@ -533,6 +571,11 @@ export default function Home() {
     meetingId: activeMeetingId,
     onMessage: handleWsMessage,
   })
+
+  // sendTranslateRef 업데이트 (handleWsMessage 선언 이후에 useWebSocket이 오므로 ref로 전달)
+  useEffect(() => {
+    sendTranslateRef.current = sendTranslate
+  }, [sendTranslate])
 
   // ─── Task #3: Audio capture ─────────────────────────────────────────────────
 
