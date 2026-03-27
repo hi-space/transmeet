@@ -242,26 +242,30 @@ async def _process_segment(
     )
 
     translated_text = ""
-    async with bedrock_client() as br:
-        stream_resp = await br.converse_stream(
-            modelId=bedrock_model_id,
-            messages=[{"role": "user", "content": [{"text": prompt}]}],
-            inferenceConfig={"maxTokens": 1024},
-        )
-        async for event in stream_resp["stream"]:
-            delta = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
-            if not delta:
-                continue
-            translated_text += delta
-            await ws.send_json({
-                "type": "subtitle_stream",
-                "messageId": message_id,
-                "phase": "translating",
-                "speaker": speaker,
-                "originalText": original_text,
-                "partialTranslation": translated_text,
-                "timestamp": timestamp,
-            })
+    try:
+        async with bedrock_client() as br:
+            stream_resp = await br.converse_stream(
+                modelId=bedrock_model_id,
+                messages=[{"role": "user", "content": [{"text": prompt}]}],
+                inferenceConfig={"maxTokens": 1024},
+            )
+            async for event in stream_resp["stream"]:
+                delta = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
+                if not delta:
+                    continue
+                translated_text += delta
+                await ws.send_json({
+                    "type": "subtitle_stream",
+                    "messageId": message_id,
+                    "phase": "translating",
+                    "speaker": speaker,
+                    "originalText": original_text,
+                    "partialTranslation": translated_text,
+                    "timestamp": timestamp,
+                })
+    except Exception:
+        logger.exception("[process_segment] Bedrock translation failed for message_id=%s", message_id)
+        # 번역 실패해도 done phase는 보내야 프론트엔드 말풍선이 stuck 안 됨
 
     # ── 3: Push final subtitle ─────────────────────────────────────────────────
     await ws.send_json({
@@ -572,6 +576,13 @@ async def _run_transcribe_streaming(
             raise
         except Exception:
             logger.exception("[Transcribe] _collect_results error for connection_id=%s", connection_id)
+        finally:
+            # output stream이 어떤 이유로 끝나든 _send_audio()가 queue.get()에 블록되지 않도록 sentinel 전송
+            # → gather()가 완료되고 transcribe_task.done()이 True → 다음 sendAudio에서 자동 재시작 발동
+            try:
+                state.audio_queue.put_nowait(None)
+            except Exception:
+                pass
 
     try:
         await asyncio.gather(_send_audio(), _collect_results())
