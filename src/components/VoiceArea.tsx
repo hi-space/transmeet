@@ -16,14 +16,14 @@ const SPEAKER_CONFIG: Record<
     label: 'Speaker 1',
     nameColor: 'text-blue-600 dark:text-blue-400',
     cardBg:
-      'bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100/80 dark:border-blue-500/10 shadow-blue-100/40 dark:shadow-blue-950/20',
+      'bg-white/60 dark:bg-slate-800/40 border border-blue-200/70 dark:border-blue-500/25',
     translationColor: 'text-slate-500 dark:text-slate-400',
   },
   speaker2: {
     label: 'Speaker 2',
     nameColor: 'text-emerald-600 dark:text-emerald-400',
     cardBg:
-      'bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-100/80 dark:border-emerald-500/10 shadow-emerald-100/40 dark:shadow-emerald-950/20',
+      'bg-white/60 dark:bg-slate-800/40 border border-emerald-200/70 dark:border-emerald-500/25',
     translationColor: 'text-slate-500 dark:text-slate-400',
   },
 }
