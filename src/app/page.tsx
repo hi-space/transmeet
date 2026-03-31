@@ -8,6 +8,7 @@ import SummaryPanel from '@/components/SummaryPanel'
 import ControlPanel from '@/components/ControlPanel'
 import SettingsPanel from '@/components/SettingsPanel'
 import AuthScreen from '@/components/AuthScreen'
+import MobileTabBar from '@/components/MobileTabBar'
 import { Meeting, Message } from '@/types/meeting'
 import { useAudioCapture } from '@/hooks/useAudioCapture'
 import { useWebSocket } from '@/hooks/useWebSocket'
@@ -124,6 +125,9 @@ export default function Home() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [activeTab, setActiveTab] = useState<'voice' | 'notes'>('voice')
+  const [hasNewVoice, setHasNewVoice] = useState(false)
+  const [hasNewNotes, setHasNewNotes] = useState(false)
   const [ttsInput, setTtsInput] = useState('')
   const [isSummarizing, setIsSummarizing] = useState(false)
   const [isTtsPending, setIsTtsPending] = useState(false)
@@ -175,6 +179,15 @@ export default function Home() {
   const mergeAliasRef = useRef<Map<string, string>>(new Map())
 
   const activeMeeting = meetings.find((m) => m.id === activeMeetingId) ?? meetings[0]
+
+  // 탭 배지: 비활성 탭에 새 메시지 도착 시 표시
+  useEffect(() => {
+    const msgs = activeMeeting?.messages ?? []
+    if (msgs.length === 0) return
+    const lastMsg = msgs[msgs.length - 1]
+    if (lastMsg.speaker !== 'me' && activeTab === 'notes') setHasNewVoice(true)
+    if (lastMsg.speaker === 'me' && activeTab === 'voice') setHasNewNotes(true)
+  }, [activeMeeting?.messages?.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // pendingTranscript를 ref로 동기화 — handleWsMessage 클로저에서 stale 없이 읽기 위해
   useEffect(() => {
@@ -1270,17 +1283,88 @@ export default function Home() {
         </aside>
 
         <div className="flex-1 overflow-hidden min-w-0 flex flex-col">
-          <ChatArea
-            messages={activeMeeting?.messages ?? []}
-            isRecording={isRecording}
-            isProcessing={isTtsPending}
-            playingMessageId={playingMessageId}
-            isMessageLoading={isMessageLoading}
-            onPlayMessage={handlePlayMessage}
-            onStopMessage={handleStopAllAudio}
-            onTranslateMessage={handleTranslateMessage}
-            pendingTranscript={pendingTranscript}
+          {/* 모바일 탭 바 */}
+          <MobileTabBar
+            activeTab={activeTab}
+            onTabChange={(tab) => {
+              setActiveTab(tab)
+              if (tab === 'voice') setHasNewVoice(false)
+              if (tab === 'notes') setHasNewNotes(false)
+            }}
+            hasNewVoice={hasNewVoice}
+            hasNewNotes={hasNewNotes}
           />
+
+          {/* 데스크톱: 좌우 분할 */}
+          <div className="hidden lg:flex flex-1 overflow-hidden min-w-0">
+            {/* 음성 입력 영역 */}
+            <div className="flex-1 flex flex-col border-r border-slate-200/40 dark:border-white/6 min-w-0">
+              <div className="px-3 py-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-500 border-b border-slate-200/40 dark:border-white/6 flex-shrink-0 tracking-wide uppercase">
+                음성 입력
+              </div>
+              <ChatArea
+                messages={activeMeeting?.messages ?? []}
+                filterSpeakers={['speaker1', 'speaker2']}
+                isRecording={isRecording}
+                isProcessing={isTtsPending}
+                playingMessageId={playingMessageId}
+                isMessageLoading={isMessageLoading}
+                onPlayMessage={handlePlayMessage}
+                onStopMessage={handleStopAllAudio}
+                onTranslateMessage={handleTranslateMessage}
+                pendingTranscript={pendingTranscript}
+              />
+            </div>
+            {/* 내 메모 영역 */}
+            <div className="flex-1 flex flex-col min-w-0">
+              <div className="px-3 py-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-500 border-b border-slate-200/40 dark:border-white/6 flex-shrink-0 tracking-wide uppercase">
+                내 메모
+              </div>
+              <ChatArea
+                messages={activeMeeting?.messages ?? []}
+                filterSpeakers={['me']}
+                isRecording={isRecording}
+                isProcessing={isTtsPending}
+                playingMessageId={playingMessageId}
+                isMessageLoading={isMessageLoading}
+                onPlayMessage={handlePlayMessage}
+                onStopMessage={handleStopAllAudio}
+                onTranslateMessage={handleTranslateMessage}
+                pendingTranscript={null}
+              />
+            </div>
+          </div>
+
+          {/* 모바일: 탭별 콘텐츠 */}
+          <div className="flex lg:hidden flex-1 overflow-hidden min-w-0">
+            {activeTab === 'voice' ? (
+              <ChatArea
+                messages={activeMeeting?.messages ?? []}
+                filterSpeakers={['speaker1', 'speaker2']}
+                isRecording={isRecording}
+                isProcessing={isTtsPending}
+                playingMessageId={playingMessageId}
+                isMessageLoading={isMessageLoading}
+                onPlayMessage={handlePlayMessage}
+                onStopMessage={handleStopAllAudio}
+                onTranslateMessage={handleTranslateMessage}
+                pendingTranscript={pendingTranscript}
+              />
+            ) : (
+              <ChatArea
+                messages={activeMeeting?.messages ?? []}
+                filterSpeakers={['me']}
+                isRecording={isRecording}
+                isProcessing={isTtsPending}
+                playingMessageId={playingMessageId}
+                isMessageLoading={isMessageLoading}
+                onPlayMessage={handlePlayMessage}
+                onStopMessage={handleStopAllAudio}
+                onTranslateMessage={handleTranslateMessage}
+                pendingTranscript={null}
+              />
+            )}
+          </div>
         </div>
 
         {summaryOpen && (
@@ -1318,6 +1402,7 @@ export default function Home() {
         onStopTts={handleStopAllAudio}
         audioLevel={audioLevel}
         isTtsPending={isTtsPending}
+        activeTab={activeTab}
       />
 
       {settingsOpen && (

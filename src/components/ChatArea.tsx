@@ -154,6 +154,7 @@ function formatTime(iso: string) {
 
 interface Props {
   messages: Message[]
+  filterSpeakers?: SpeakerRole[]
   isRecording: boolean
   isProcessing?: boolean // true while a TTS message is being translated
   playingMessageId?: string | null
@@ -176,6 +177,7 @@ interface Props {
 
 export default function ChatArea({
   messages,
+  filterSpeakers,
   isRecording,
   isProcessing,
   playingMessageId,
@@ -187,6 +189,22 @@ export default function ChatArea({
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
 
+  const filteredMessages = filterSpeakers
+    ? messages.filter((m) => filterSpeakers.includes(m.speaker))
+    : messages
+
+  // pendingTranscript는 filterSpeakers에 해당 화자가 포함될 때만 표시
+  const showPending =
+    isRecording &&
+    pendingTranscript &&
+    pendingTranscript.text &&
+    (!filterSpeakers || filterSpeakers.includes(pendingTranscript.speaker as SpeakerRole))
+
+  // 녹음 인디케이터는 음성 영역(speaker1/speaker2)에만 표시
+  const showRecordingIndicator =
+    isRecording &&
+    (!filterSpeakers || filterSpeakers.includes('speaker1') || filterSpeakers.includes('speaker2'))
+
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
@@ -196,9 +214,9 @@ export default function ChatArea({
         el.scrollTop = el.scrollHeight
       }
     })
-  }, [messages, pendingTranscript])
+  }, [filteredMessages, pendingTranscript])
 
-  if (messages.length === 0) {
+  if (filteredMessages.length === 0 && !showPending) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center px-8 select-none">
         <div
@@ -223,9 +241,11 @@ export default function ChatArea({
           </svg>
         </div>
         <p className="text-sm text-slate-400 dark:text-slate-500 leading-relaxed">
-          {isRecording
-            ? '음성을 인식하고 있습니다...'
-            : '녹음을 시작하면\n대화 내용이 여기에 표시됩니다'}
+          {filterSpeakers?.includes('me')
+            ? '한글로 입력하면\n번역된 내용이 여기에 표시됩니다'
+            : isRecording
+              ? '음성을 인식하고 있습니다...'
+              : '녹음을 시작하면\n대화 내용이 여기에 표시됩니다'}
         </p>
       </div>
     )
@@ -233,7 +253,7 @@ export default function ChatArea({
 
   return (
     <div ref={containerRef} className="h-full overflow-y-auto scrollbar-thin px-4 py-4 space-y-2">
-      {messages.map((msg) => {
+      {filteredMessages.map((msg) => {
         const cfg = SPEAKER_CONFIG[msg.speaker]
         const isRight = cfg.side === 'right'
 
@@ -374,16 +394,16 @@ export default function ChatArea({
         )
       })}
       {/* Pending Transcribe bubble: word-by-word partial transcript */}
-      {isRecording && pendingTranscript && pendingTranscript.text && (
+      {showPending && (
         <PendingBubble
-          speaker={pendingTranscript.speaker}
-          text={pendingTranscript.text}
-          translation={pendingTranscript.translation}
+          speaker={pendingTranscript!.speaker}
+          text={pendingTranscript!.text}
+          translation={pendingTranscript!.translation}
         />
       )}
 
       {/* Recording indicator: shows while waiting for next subtitle */}
-      {isRecording && (
+      {showRecordingIndicator && (
         <div className="flex items-center gap-2 px-3 py-2 mx-2 mb-1 rounded-xl bg-rose-50/60 dark:bg-rose-900/15 border border-rose-100/60 dark:border-rose-500/10 w-fit">
           <span className="flex gap-[3px] items-end h-3">
             {[0, 0.15, 0.3].map((d, i) => (
