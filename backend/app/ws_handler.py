@@ -482,11 +482,13 @@ async def _run_transcribe_streaming(
 
     async def _collect_results() -> None:
         nonlocal detected_lang
+        # TranscriptResultStream은 AsyncIterable이므로 __aiter__()로 iterator를 먼저 획득
+        output_iter = stream.output_stream.__aiter__()
         try:
             while True:
                 try:
                     event = await asyncio.wait_for(
-                        stream.output_stream.__anext__(),
+                        output_iter.__anext__(),
                         timeout=30.0,
                     )
                 except StopAsyncIteration:
