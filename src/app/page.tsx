@@ -1327,6 +1327,7 @@ export default function Home() {
                 isMessageLoading={isMessageLoading}
                 onPlayMessage={handlePlayMessage}
                 onStopMessage={handleStopAllAudio}
+                onTranslateMessage={handleTranslateMessage}
               />
             </div>
           </div>
@@ -1353,6 +1354,7 @@ export default function Home() {
                 isMessageLoading={isMessageLoading}
                 onPlayMessage={handlePlayMessage}
                 onStopMessage={handleStopAllAudio}
+                onTranslateMessage={handleTranslateMessage}
               />
             )}
           </div>
