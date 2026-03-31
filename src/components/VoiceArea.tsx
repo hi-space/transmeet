@@ -15,8 +15,7 @@ const SPEAKER_CONFIG: Record<
   speaker1: {
     label: 'Speaker 1',
     nameColor: 'text-blue-600 dark:text-blue-400',
-    cardBg:
-      'bg-white/60 dark:bg-slate-800/40 border border-blue-200/70 dark:border-blue-500/25',
+    cardBg: 'bg-white/60 dark:bg-slate-800/40 border border-blue-200/70 dark:border-blue-500/25',
     translationColor: 'text-slate-500 dark:text-slate-400',
   },
   speaker2: {
