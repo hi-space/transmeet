@@ -430,16 +430,18 @@ export default function Home() {
           setMeetings((prev) =>
             prev.map((m) => {
               if (m.id !== activeMeetingId) return m
-              // 병합 조건: 같은 화자 + silenceTimeout 이내 + sentenceCount < 3
+              // 병합 조건:
+              // - 이전 말풍선이 미완성 문장(종결부호 없음) → 무조건 병합
+              // - 이전 말풍선이 완성 문장 → 같은 화자 + silenceTimeout 이내일 때만 병합
               const lastMsg = m.messages.at(-1)
+              const isSentenceComplete = /[.?!。？！]\s*$/.test((lastMsg?.original ?? '').trimEnd())
               const timeDiff = lastMsg
                 ? Date.now() - new Date(lastMsg.timestamp).getTime()
                 : Infinity
               const canMerge =
                 lastMsg &&
                 lastMsg.speaker === streamSpeaker &&
-                timeDiff < SILENCE_TIMEOUT_MS &&
-                (lastMsg.sentenceCount ?? 1) < 3
+                (!isSentenceComplete || timeDiff < SILENCE_TIMEOUT_MS)
               if (canMerge && lastMsg) {
                 // 기존 말풍선에 텍스트 append + alias 등록
                 mergeAliasRef.current.set(msg.messageId, lastMsg.id)
@@ -451,7 +453,6 @@ export default function Home() {
                           ...existing,
                           original: existing.original + ' ' + (msg.originalText ?? ''),
                           streamPhase: 'stt' as const,
-                          sentenceCount: (existing.sentenceCount ?? 1) + 1,
                         }
                       : existing
                   ),
@@ -465,7 +466,6 @@ export default function Home() {
                 translation: carryoverTranslation,
                 streamPhase: 'stt',
                 timestamp: msg.timestamp,
-                sentenceCount: 1,
               }
               return { ...m, messages: [...m.messages, newMsg] }
             })
