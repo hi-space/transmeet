@@ -10,6 +10,7 @@ import SettingsPanel from '@/components/SettingsPanel'
 import AuthScreen from '@/components/AuthScreen'
 import MobileTabBar from '@/components/MobileTabBar'
 import NotesArea from '@/components/NotesArea'
+import VoiceArea from '@/components/VoiceArea'
 import { Meeting, Message } from '@/types/meeting'
 import { useAudioCapture } from '@/hooks/useAudioCapture'
 import { useWebSocket } from '@/hooks/useWebSocket'
@@ -1303,9 +1304,8 @@ export default function Home() {
               <div className="px-3 py-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-500 border-b border-slate-200/40 dark:border-white/6 flex-shrink-0 tracking-wide uppercase">
                 음성 입력
               </div>
-              <ChatArea
+              <VoiceArea
                 messages={activeMeeting?.messages ?? []}
-                filterSpeakers={['speaker1', 'speaker2']}
                 isRecording={isRecording}
                 isProcessing={isTtsPending}
                 playingMessageId={playingMessageId}
@@ -1335,9 +1335,8 @@ export default function Home() {
           {/* 모바일: 탭별 콘텐츠 */}
           <div className="flex lg:hidden flex-1 overflow-hidden min-w-0">
             {activeTab === 'voice' ? (
-              <ChatArea
+              <VoiceArea
                 messages={activeMeeting?.messages ?? []}
-                filterSpeakers={['speaker1', 'speaker2']}
                 isRecording={isRecording}
                 isProcessing={isTtsPending}
                 playingMessageId={playingMessageId}
