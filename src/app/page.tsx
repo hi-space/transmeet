@@ -9,6 +9,7 @@ import ControlPanel from '@/components/ControlPanel'
 import SettingsPanel from '@/components/SettingsPanel'
 import AuthScreen from '@/components/AuthScreen'
 import MobileTabBar from '@/components/MobileTabBar'
+import NotesArea from '@/components/NotesArea'
 import { Meeting, Message } from '@/types/meeting'
 import { useAudioCapture } from '@/hooks/useAudioCapture'
 import { useWebSocket } from '@/hooks/useWebSocket'
@@ -1320,17 +1321,12 @@ export default function Home() {
               <div className="px-3 py-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-500 border-b border-slate-200/40 dark:border-white/6 flex-shrink-0 tracking-wide uppercase">
                 내 메모
               </div>
-              <ChatArea
+              <NotesArea
                 messages={activeMeeting?.messages ?? []}
-                filterSpeakers={['me']}
-                isRecording={isRecording}
-                isProcessing={isTtsPending}
                 playingMessageId={playingMessageId}
                 isMessageLoading={isMessageLoading}
                 onPlayMessage={handlePlayMessage}
                 onStopMessage={handleStopAllAudio}
-                onTranslateMessage={handleTranslateMessage}
-                pendingTranscript={null}
               />
             </div>
           </div>
@@ -1351,17 +1347,12 @@ export default function Home() {
                 pendingTranscript={pendingTranscript}
               />
             ) : (
-              <ChatArea
+              <NotesArea
                 messages={activeMeeting?.messages ?? []}
-                filterSpeakers={['me']}
-                isRecording={isRecording}
-                isProcessing={isTtsPending}
                 playingMessageId={playingMessageId}
                 isMessageLoading={isMessageLoading}
                 onPlayMessage={handlePlayMessage}
                 onStopMessage={handleStopAllAudio}
-                onTranslateMessage={handleTranslateMessage}
-                pendingTranscript={null}
               />
             )}
           </div>
