@@ -130,6 +130,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'voice' | 'notes'>('voice')
   const [hasNewVoice, setHasNewVoice] = useState(false)
   const [hasNewNotes, setHasNewNotes] = useState(false)
+  const [notesCollapsed, setNotesCollapsed] = useState(false)
   const [ttsInput, setTtsInput] = useState('')
   const [isSummarizing, setIsSummarizing] = useState(false)
   const [isTtsPending, setIsTtsPending] = useState(false)
@@ -1301,8 +1302,32 @@ export default function Home() {
           <div className="hidden lg:flex flex-1 overflow-hidden min-w-0">
             {/* 음성 입력 영역 */}
             <div className="flex-1 flex flex-col border-r border-slate-200/40 dark:border-white/6 min-w-0">
-              <div className="px-3 py-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-500 border-b border-slate-200/40 dark:border-white/6 flex-shrink-0 tracking-wide uppercase">
-                음성 입력
+              <div className="px-3 py-1.5 border-b border-slate-200/40 dark:border-white/6 flex-shrink-0 flex items-center justify-between">
+                <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 tracking-wide uppercase">
+                  음성 입력
+                </span>
+                {/* 내 메모 접힌 상태: 펼치기 버튼 */}
+                {notesCollapsed && (
+                  <button
+                    onClick={() => setNotesCollapsed(false)}
+                    title="내 메모 펼치기"
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-slate-100/60 dark:hover:bg-white/6 transition-colors"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-3 h-3"
+                    >
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                    </svg>
+                    내 메모
+                  </button>
+                )}
               </div>
               <VoiceArea
                 messages={activeMeeting?.messages ?? []}
@@ -1316,20 +1341,41 @@ export default function Home() {
                 pendingTranscript={pendingTranscript}
               />
             </div>
-            {/* 내 메모 영역 */}
-            <div className="flex-1 flex flex-col min-w-0">
-              <div className="px-3 py-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-500 border-b border-slate-200/40 dark:border-white/6 flex-shrink-0 tracking-wide uppercase">
-                내 메모
+            {/* 내 메모 영역 — 접기 가능 */}
+            {!notesCollapsed && (
+              <div className="w-80 flex-shrink-0 flex flex-col min-w-0">
+                <div className="px-3 py-1.5 border-b border-slate-200/40 dark:border-white/6 flex-shrink-0 flex items-center justify-between">
+                  <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 tracking-wide uppercase">
+                    내 메모
+                  </span>
+                  <button
+                    onClick={() => setNotesCollapsed(true)}
+                    title="내 메모 접기"
+                    className="w-5 h-5 flex items-center justify-center rounded text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100/60 dark:hover:bg-white/6 transition-colors"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-3 h-3"
+                    >
+                      <polyline points="15 18 9 12 15 6" />
+                    </svg>
+                  </button>
+                </div>
+                <NotesArea
+                  messages={activeMeeting?.messages ?? []}
+                  playingMessageId={playingMessageId}
+                  isMessageLoading={isMessageLoading}
+                  onPlayMessage={handlePlayMessage}
+                  onStopMessage={handleStopAllAudio}
+                  onTranslateMessage={handleTranslateMessage}
+                />
               </div>
-              <NotesArea
-                messages={activeMeeting?.messages ?? []}
-                playingMessageId={playingMessageId}
-                isMessageLoading={isMessageLoading}
-                onPlayMessage={handlePlayMessage}
-                onStopMessage={handleStopAllAudio}
-                onTranslateMessage={handleTranslateMessage}
-              />
-            </div>
+            )}
           </div>
 
           {/* 모바일: 탭별 콘텐츠 */}
