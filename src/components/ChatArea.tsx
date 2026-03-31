@@ -218,7 +218,7 @@ export default function ChatArea({
 
   if (filteredMessages.length === 0 && !showPending) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center px-8 select-none">
+      <div className="flex flex-col items-center justify-center flex-1 min-h-0 text-center px-8 select-none">
         <div
           className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-colors ${
             isRecording
@@ -252,7 +252,10 @@ export default function ChatArea({
   }
 
   return (
-    <div ref={containerRef} className="h-full overflow-y-auto scrollbar-thin px-4 py-4 space-y-2">
+    <div
+      ref={containerRef}
+      className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-4 py-4 space-y-2"
+    >
       {filteredMessages.map((msg) => {
         const cfg = SPEAKER_CONFIG[msg.speaker]
         const isRight = cfg.side === 'right'

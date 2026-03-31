@@ -51,7 +51,7 @@ export default function NotesArea({
 
   if (myMessages.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center px-8 select-none">
+      <div className="flex flex-col items-center justify-center flex-1 min-h-0 text-center px-8 select-none">
         <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 bg-slate-100/80 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500">
           <svg
             viewBox="0 0 24 24"
@@ -76,7 +76,10 @@ export default function NotesArea({
   }
 
   return (
-    <div ref={containerRef} className="h-full overflow-y-auto scrollbar-thin px-4 py-3 space-y-3">
+    <div
+      ref={containerRef}
+      className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-4 py-3 space-y-3"
+    >
       {myMessages.map((msg) => {
         const isPlaying = playingMessageId === msg.id
         const isTranslating = msg.streamPhase === 'translating' || msg.streamPhase === 'stt'
