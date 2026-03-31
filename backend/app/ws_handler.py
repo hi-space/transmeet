@@ -93,6 +93,8 @@ class ConnectionState:
     source_lang: str = "auto"
     model_id: str = field(default_factory=lambda: config.BEDROCK_MODEL_ID)
     speaker: str = "speaker1"
+    # Transcribe: final 결과로 확인된 마지막 화자 (partial에서 provisional로 사용)
+    last_confirmed_speaker: str = "speaker1"
     # Whisper mode: buffer/flush
     audio_buffer: List[bytes] = field(default_factory=list)
     flush_task: Optional[asyncio.Task] = None
@@ -155,6 +157,11 @@ def _extract_segments(
     items = alt.items or []
     transcript_text = (alt.transcript or "").strip()
 
+    logger.debug(
+        "[_extract_segments] use_speaker_labels=%s items_count=%d transcript=%r",
+        use_speaker_labels, len(items), transcript_text,
+    )
+
     if not use_speaker_labels or not items:
         return [(transcript_text, default_speaker)] if transcript_text else []
 
@@ -182,6 +189,7 @@ def _extract_segments(
         text = " ".join(current_words).strip()
         if text:
             segments.append((text, _speaker_key(current_label)))
+    logger.debug("[_extract_segments] result segments=%s", [(t[:30], s) for t, s in segments])
     return segments
 
 
@@ -456,8 +464,10 @@ async def _run_transcribe_streaming(
         client = TranscribeStreamingClient(region=config.REGION)
         stream = await client.start_stream_transcription(**kwargs)
         logger.info(
-            "[Transcribe] Session started: connection_id=%s lang=%s diarized=%s",
-            connection_id, mapped_lang or "auto", use_speaker_labels,
+            "[Transcribe] Session started: connection_id=%s sourceLang=%s mapped_lang=%s "
+            "show_speaker_label=%s kwargs_keys=%s",
+            connection_id, lang_code, mapped_lang or "auto",
+            use_speaker_labels, list(kwargs.keys()),
         )
     except Exception:
         logger.exception("[Transcribe] Failed to start session for connection_id=%s", connection_id)
@@ -516,12 +526,14 @@ async def _run_transcribe_streaming(
 
                     if result.is_partial:
                         # Live partial → pending bubble on frontend (not committed)
+                        # last_confirmed_speaker: 마지막 final에서 확인된 화자 사용
+                        # (첫 발화 전엔 default "speaker1", 이후엔 실제 화자 반영)
                         try:
                             await ws.send_json({
                                 "type": "subtitle_stream",
                                 "phase": "stt_partial",
                                 "messageId": "partial",
-                                "speaker": state.speaker,
+                                "speaker": state.last_confirmed_speaker,
                                 "originalText": transcript_text,
                                 "timestamp": _iso_now(),
                             })
@@ -531,6 +543,13 @@ async def _run_transcribe_streaming(
                         # Final sentence → accumulate for deferred translation
                         segments = _extract_segments(alt, use_speaker_labels, state.speaker)
                         segments = _merge_consecutive_same_speaker(segments)
+                        logger.info(
+                            "[Transcribe] Final result: transcript=%r segments=%s",
+                            transcript_text, [(t[:40], s) for t, s in segments],
+                        )
+                        # partial speaker를 다음 발화에 반영하기 위해 마지막 화자 저장
+                        if segments:
+                            state.last_confirmed_speaker = segments[-1][1]
 
                         # Language for translation
                         if state.source_lang not in ("auto", "", None):
@@ -918,12 +937,23 @@ async def ws_endpoint(
                 state.translation_timing = data.get("translationTiming", "sentence") or "sentence"
                 state.seg_buffer.clear()
                 state.seg_last_speaker = None
+                state.last_confirmed_speaker = "speaker1"
                 if state.seg_flush_task and not state.seg_flush_task.done():
                     state.seg_flush_task.cancel()
                     state.seg_flush_task = None
+
+                # startRecording 시 diarization 가능 여부 미리 계산해서 로그
+                _dbg_mapped = (
+                    LANG_CODE_MAP.get(state.source_lang)
+                    if state.source_lang not in ("auto", "", None)
+                    else None
+                )
+                _dbg_diarize = _dbg_mapped in DIARIZATION_SUPPORTED_LANGS if _dbg_mapped else False
                 logger.info(
-                    "[ws] startRecording: provider=%s sourceLang=%s targetLang=%s",
-                    state.stt_provider, state.source_lang, state.target_lang,
+                    "[ws] startRecording: provider=%s sourceLang=%s mapped_lang=%s "
+                    "use_speaker_labels=%s targetLang=%s speaker=%s",
+                    state.stt_provider, state.source_lang, _dbg_mapped,
+                    _dbg_diarize, state.target_lang, state.speaker,
                 )
 
                 if state.stt_provider == "transcribe":
