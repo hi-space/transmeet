@@ -8,7 +8,6 @@ const SPEAKER_CONFIG: Record<
   {
     label: string
     nameColor: string
-    accentBar: string
     cardBg: string
     translationColor: string
   }
@@ -16,15 +15,15 @@ const SPEAKER_CONFIG: Record<
   speaker1: {
     label: 'Speaker 1',
     nameColor: 'text-blue-600 dark:text-blue-400',
-    accentBar: 'bg-blue-400 dark:bg-blue-500',
-    cardBg: 'bg-white/60 dark:bg-slate-800/40 border border-slate-200/60 dark:border-white/8',
+    cardBg:
+      'bg-blue-50/70 dark:bg-blue-950/30 border border-blue-100/80 dark:border-blue-500/10 shadow-blue-100/40 dark:shadow-blue-950/20',
     translationColor: 'text-slate-500 dark:text-slate-400',
   },
   speaker2: {
     label: 'Speaker 2',
     nameColor: 'text-emerald-600 dark:text-emerald-400',
-    accentBar: 'bg-emerald-400 dark:bg-emerald-500',
-    cardBg: 'bg-white/60 dark:bg-slate-800/40 border border-slate-200/60 dark:border-white/8',
+    cardBg:
+      'bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-100/80 dark:border-emerald-500/10 shadow-emerald-100/40 dark:shadow-emerald-950/20',
     translationColor: 'text-slate-500 dark:text-slate-400',
   },
 }
@@ -143,16 +142,21 @@ export default function VoiceArea({
             onClick={() =>
               onTranslateMessage?.(msg.id, msg.original, msg.speaker, msg.detectedLanguage)
             }
-            className={`group relative rounded-xl overflow-hidden shadow-sm shadow-slate-200/30 dark:shadow-black/20 cursor-pointer transition-colors hover:brightness-105 active:opacity-70 ${cfg.cardBg}`}
+            className={`group relative rounded-xl shadow-sm cursor-pointer transition-opacity hover:opacity-90 active:opacity-70 ${cfg.cardBg}`}
           >
-            {/* 좌측 액센트 바 */}
-            <div className={`absolute left-0 top-0 bottom-0 w-[3px] ${cfg.accentBar}`} />
-
-            <div className="pl-4 pr-3 py-3">
-              {/* 헤더: 화자명 + 시간 */}
-              <div className="flex items-center justify-between mb-2">
-                <span className={`text-xs font-semibold ${cfg.nameColor}`}>{cfg.label}</span>
-                <div className="flex items-center gap-2">
+            <div className="px-4 py-3">
+              {/* 헤더: 화자명 · 시간 */}
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className={`text-xs font-semibold ${cfg.nameColor}`}>{cfg.label}</span>
+                  <span className="text-[10px] text-slate-300 dark:text-slate-600 select-none">
+                    ·
+                  </span>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 tabular-nums">
+                    {formatTime(msg.timestamp)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
                   {/* TTS 재생 버튼 */}
                   {msg.original && !isTranslating && (
                     <button
@@ -205,9 +209,6 @@ export default function VoiceArea({
                       )}
                     </button>
                   )}
-                  <span className="text-[10px] text-slate-400 dark:text-slate-500 tabular-nums">
-                    {formatTime(msg.timestamp)}
-                  </span>
                 </div>
               </div>
 
@@ -239,14 +240,9 @@ export default function VoiceArea({
           const sp = pendingTranscript!.speaker as 'speaker1' | 'speaker2'
           const cfg = SPEAKER_CONFIG[sp] ?? SPEAKER_CONFIG.speaker1
           return (
-            <div
-              className={`relative rounded-xl overflow-hidden shadow-sm shadow-slate-200/30 dark:shadow-black/20 border border-dashed border-slate-300/60 dark:border-slate-600/40 bg-white/40 dark:bg-slate-800/30`}
-            >
-              <div
-                className={`absolute left-0 top-0 bottom-0 w-[3px] ${cfg.accentBar} opacity-40`}
-              />
-              <div className="pl-4 pr-3 py-3">
-                <div className="flex items-center justify-between mb-2">
+            <div className="relative rounded-xl shadow-sm border border-dashed border-slate-300/60 dark:border-slate-600/40 bg-white/40 dark:bg-slate-800/30">
+              <div className="px-4 py-3">
+                <div className="mb-1.5">
                   <span className={`text-xs font-semibold ${cfg.nameColor} opacity-60`}>
                     {cfg.label}
                   </span>
