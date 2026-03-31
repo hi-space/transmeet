@@ -483,7 +483,20 @@ async def _run_transcribe_streaming(
     async def _collect_results() -> None:
         nonlocal detected_lang
         try:
-            async for event in stream.output_stream:
+            while True:
+                try:
+                    event = await asyncio.wait_for(
+                        stream.output_stream.__anext__(),
+                        timeout=30.0,
+                    )
+                except StopAsyncIteration:
+                    break
+                except asyncio.TimeoutError:
+                    logger.warning(
+                        "[Transcribe] Stream idle 30s — ending session for connection_id=%s",
+                        connection_id,
+                    )
+                    break
                 if not isinstance(event, TranscribeEvent):
                     continue
                 for result in event.transcript.results:

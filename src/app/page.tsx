@@ -169,6 +169,8 @@ export default function Home() {
   const isSummarizingRef = useRef(false)
   // Per-message translation timeouts: auto-unblock messages stuck in stt/translating
   const translationTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  // STT health watchdog: last time any STT event was received (for stuck session detection)
+  const lastSttActivityTimeRef = useRef<number>(Date.now())
 
   const activeMeeting = meetings.find((m) => m.id === activeMeetingId) ?? meetings[0]
 
@@ -316,6 +318,7 @@ export default function Home() {
           )
         )
       } else if (msg.type === 'subtitle_stream') {
+        lastSttActivityTimeRef.current = Date.now()
         const SILENCE_TIMEOUT_MS = settings.silenceTimeout
         if (msg.phase === 'stt_partial') {
           // Word-by-word Transcribe partial — show in pending bubble, not committed messages
@@ -735,6 +738,36 @@ export default function Home() {
     settings.targetLang,
     settings.translationModel,
     settings.translationTiming,
+  ])
+
+  // STT 헬스 워치독: Transcribe 녹음 중 25초 무응답 시 startRecording 재전송 (백엔드 세션 자동 재시작 유도)
+  useEffect(() => {
+    if (!isRecording || settings.sttProvider !== 'transcribe' || wsStatus !== 'connected') return
+    lastSttActivityTimeRef.current = Date.now()
+    const id = setInterval(() => {
+      if (Date.now() - lastSttActivityTimeRef.current > 25_000) {
+        console.warn('[STT-Watchdog] 25s 무응답 — startRecording 재전송')
+        startRecording({
+          sttProvider: settings.sttProvider,
+          sourceLang: settings.sourceLang,
+          targetLang: settings.targetLang,
+          modelId: settings.translationModel,
+          speaker: 'speaker1',
+          translationTiming: settings.translationTiming,
+        })
+        lastSttActivityTimeRef.current = Date.now()
+      }
+    }, 10_000)
+    return () => clearInterval(id)
+  }, [
+    isRecording,
+    settings.sttProvider,
+    wsStatus,
+    settings.sourceLang,
+    settings.targetLang,
+    settings.translationModel,
+    settings.translationTiming,
+    startRecording,
   ])
 
   // Connect on page load (and reconnect when active meeting changes); cleanup on unmount

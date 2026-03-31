@@ -86,6 +86,11 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
       keepaliveRef.current = setInterval(() => {
         if (wsRef.current?.readyState === WebSocket.OPEN) {
           wsRef.current.send(JSON.stringify({ action: 'ping' }))
+          // Clear previous pong timeout before setting a new one (prevents accumulation)
+          if (pongTimeoutRef.current) {
+            clearTimeout(pongTimeoutRef.current)
+            pongTimeoutRef.current = null
+          }
           // If no pong within 60s, connection is dead — force reconnect
           pongTimeoutRef.current = setTimeout(() => {
             console.warn('[WS] Pong timeout — forcing reconnect')
