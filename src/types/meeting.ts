@@ -8,6 +8,7 @@ export interface Message {
   detectedLanguage?: 'ko' | 'en'
   streamPhase?: 'stt' | 'translating' | 'done'
   timestamp: string
+  sentenceCount?: number // 병합된 문장 수 (기본값 1)
 }
 
 export interface Meeting {

@@ -171,6 +171,8 @@ export default function Home() {
   const translationTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   // STT health watchdog: last time any STT event was received (for stuck session detection)
   const lastSttActivityTimeRef = useRef<number>(Date.now())
+  // 말풍선 병합: 병합된 신규 messageId → 기존 말풍선 id 매핑
+  const mergeAliasRef = useRef<Map<string, string>>(new Map())
 
   const activeMeeting = meetings.find((m) => m.id === activeMeetingId) ?? meetings[0]
 
@@ -425,19 +427,48 @@ export default function Home() {
           lastTranslatedPartialRef.current = ''
           setPendingTranscript(null)
           const streamSpeaker = (msg.speaker as Message['speaker']) ?? 'speaker1'
-          // 항상 새 말풍선 생성 — partial 번역을 즉시 표시하고 backend 최종 번역으로 교체
-          const newMsg: Message = {
-            id: msg.messageId,
-            speaker: streamSpeaker,
-            original: msg.originalText ?? '',
-            translation: carryoverTranslation,
-            streamPhase: 'stt',
-            timestamp: msg.timestamp,
-          }
           setMeetings((prev) =>
-            prev.map((m) =>
-              m.id === activeMeetingId ? { ...m, messages: [...m.messages, newMsg] } : m
-            )
+            prev.map((m) => {
+              if (m.id !== activeMeetingId) return m
+              // 병합 조건: 같은 화자 + silenceTimeout 이내 + sentenceCount < 3
+              const lastMsg = m.messages.at(-1)
+              const timeDiff = lastMsg
+                ? Date.now() - new Date(lastMsg.timestamp).getTime()
+                : Infinity
+              const canMerge =
+                lastMsg &&
+                lastMsg.speaker === streamSpeaker &&
+                timeDiff < SILENCE_TIMEOUT_MS &&
+                (lastMsg.sentenceCount ?? 1) < 3
+              if (canMerge && lastMsg) {
+                // 기존 말풍선에 텍스트 append + alias 등록
+                mergeAliasRef.current.set(msg.messageId, lastMsg.id)
+                return {
+                  ...m,
+                  messages: m.messages.map((existing) =>
+                    existing.id === lastMsg.id
+                      ? {
+                          ...existing,
+                          original: existing.original + ' ' + (msg.originalText ?? ''),
+                          streamPhase: 'stt' as const,
+                          sentenceCount: (existing.sentenceCount ?? 1) + 1,
+                        }
+                      : existing
+                  ),
+                }
+              }
+              // 조건 불충족 — 새 말풍선 생성
+              const newMsg: Message = {
+                id: msg.messageId,
+                speaker: streamSpeaker,
+                original: msg.originalText ?? '',
+                translation: carryoverTranslation,
+                streamPhase: 'stt',
+                timestamp: msg.timestamp,
+                sentenceCount: 1,
+              }
+              return { ...m, messages: [...m.messages, newMsg] }
+            })
           )
           scheduleTranslationTimeout(msg.messageId)
         } else if (msg.phase === 'translating') {
@@ -454,7 +485,9 @@ export default function Home() {
           }
           // append 번역은 done에서만 처리 (스트리밍 생략)
           if (msg.messageId === '__pending_append__') return
-          const resolvedId = isManual ? msg.messageId.slice('__manual__'.length) : msg.messageId
+          const resolvedId = isManual
+            ? msg.messageId.slice('__manual__'.length)
+            : (mergeAliasRef.current.get(msg.messageId) ?? msg.messageId)
           scheduleTranslationTimeout(resolvedId)
           setMeetings((prev) =>
             prev.map((m) =>
@@ -536,11 +569,15 @@ export default function Home() {
             )
             return
           }
-          // 타임아웃 해제
-          const t = translationTimeoutsRef.current.get(msg.messageId)
+          // 타임아웃 해제 (alias된 경우 alias 기준으로 해제)
+          const aliasedId = mergeAliasRef.current.get(msg.messageId)
+          const resolvedDoneId = aliasedId ?? msg.messageId
+          const isMerged = !!aliasedId
+          if (isMerged) mergeAliasRef.current.delete(msg.messageId)
+          const t = translationTimeoutsRef.current.get(resolvedDoneId)
           if (t) {
             clearTimeout(t)
-            translationTimeoutsRef.current.delete(msg.messageId)
+            translationTimeoutsRef.current.delete(resolvedDoneId)
           }
           setMeetings((prev) =>
             prev.map((m) =>
@@ -548,18 +585,25 @@ export default function Home() {
                 ? {
                     ...m,
                     messages: m.messages.map((existing) =>
-                      existing.id === msg.messageId
+                      existing.id === resolvedDoneId
                         ? existing.speaker === 'me'
                           ? {
                               // 'me': EN 번역 결과 → original, KO 원본(translation) 유지
                               ...existing,
-                              original: msg.translatedText ?? '',
+                              original: isMerged
+                                ? (existing.original || '') + ' ' + (msg.translatedText ?? '')
+                                : (msg.translatedText ?? ''),
                               streamPhase: 'done' as const,
                             }
                           : {
                               ...existing,
-                              original: msg.originalText ?? existing.original,
-                              translation: msg.translatedText ?? '',
+                              // 병합 시 원문은 stt phase에서 이미 append됨
+                              original: isMerged
+                                ? existing.original
+                                : (msg.originalText ?? existing.original),
+                              translation: isMerged
+                                ? (existing.translation || '') + ' ' + (msg.translatedText ?? '')
+                                : (msg.translatedText ?? ''),
                               detectedLanguage: msg.detectedLanguage,
                               streamPhase: 'done' as const,
                             }
@@ -651,6 +695,7 @@ export default function Home() {
     },
     [
       activeMeetingId,
+      settings.silenceTimeout,
       settings.ttsAutoPlay,
       settings.translationTiming,
       settings.partialTranslationMode,
