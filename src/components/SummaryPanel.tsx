@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 
 interface Props {
   summary?: string // raw markdown
@@ -93,6 +93,19 @@ function MarkdownSummary({ text }: { text: string }) {
 // ─── Panel ───────────────────────────────────────────────────────────────────
 
 export default function SummaryPanel({ summary, onClose, onSummarize, isSummarizing }: Props) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    if (!summary) return
+    try {
+      await navigator.clipboard.writeText(summary)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
   return (
     <div className="flex flex-col h-full w-full glass-sidebar border-l border-slate-200/60 dark:border-indigo-500/10">
       {/* Header */}
@@ -117,6 +130,45 @@ export default function SummaryPanel({ summary, onClose, onSummarize, isSummariz
         </div>
 
         <div className="flex items-center gap-1">
+          {summary && (
+            <button
+              onClick={handleCopy}
+              title="Markdown 복사"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600/50 transition-colors"
+            >
+              {copied ? (
+                <>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    className="w-3 h-3 text-green-500"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>복사됨</span>
+                </>
+              ) : (
+                <>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    className="w-3 h-3"
+                  >
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                  </svg>
+                  <span>복사</span>
+                </>
+              )}
+            </button>
+          )}
+
           {onSummarize && (
             <button
               onClick={onSummarize}
