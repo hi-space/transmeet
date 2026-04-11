@@ -177,6 +177,42 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
           {/* Divider */}
           <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
 
+          {/* ── Transcribe 언어 ────────────────────────────────────────────── */}
+          <div className="space-y-2">
+            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              Transcribe 언어
+            </p>
+            <div className="flex gap-1.5">
+              {(
+                [
+                  ['en', 'English → 한국어'],
+                  ['ko', '한국어 → English'],
+                ] as const
+              ).map(([val, label]) => (
+                <button
+                  key={val}
+                  onClick={() =>
+                    handleUpdate({
+                      sourceLang: val,
+                      targetLang: val === 'en' ? 'ko' : 'en',
+                    })
+                  }
+                  className={pill(settings.sourceLang === val)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500">
+              {settings.sourceLang === 'ko'
+                ? '한국어 음성 인식 → 영어 번역 · 화자 분리 미지원'
+                : '영어 음성 인식 → 한국어 번역'}
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
+
           {/* ── Translation timing ──────────────────────────────────────────── */}
           <div className="space-y-2">
             <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">

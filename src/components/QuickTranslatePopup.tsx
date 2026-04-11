@@ -106,7 +106,14 @@ export default function QuickTranslatePopup({
 
     // WS 연결 시 스트리밍 번역
     if (wsConnected && sendTranslate) {
-      sendTranslate('__quick__', text, 'me', 'ko', 'en', settings.translationModel)
+      sendTranslate(
+        '__quick__',
+        text,
+        'me',
+        settings.targetLang,
+        settings.sourceLang,
+        settings.translationModel
+      )
       return
     }
 
@@ -243,7 +250,9 @@ export default function QuickTranslatePopup({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="한국어를 입력하세요..."
+              placeholder={
+                settings.sourceLang === 'ko' ? 'Enter English text...' : '한국어를 입력하세요...'
+              }
               rows={3}
               className="w-full px-3 py-2.5 text-sm rounded-xl bg-white/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 resize-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
