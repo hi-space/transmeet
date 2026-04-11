@@ -148,6 +148,10 @@ export default function Home() {
   const [isCreatingMeeting, setIsCreatingMeeting] = useState(false)
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null)
   const [isMessageLoading, setIsMessageLoading] = useState(false)
+  const [quickTranslateStream, setQuickTranslateStream] = useState<{
+    text: string
+    phase: 'translating' | 'done'
+  } | null>(null)
 
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null)
   const msgAudioRef = useRef<HTMLAudioElement | null>(null)
@@ -496,6 +500,11 @@ export default function Home() {
           const isManual = msg.messageId.startsWith('__manual__')
           // complete 모드: manual이 아닌 경우 translating phase 무시
           if (settings.translationOutputMode === 'complete' && !isManual) return
+          // 빠른 번역 팝업 스트리밍
+          if (msg.messageId === '__quick__') {
+            setQuickTranslateStream({ text: msg.partialTranslation ?? '', phase: 'translating' })
+            return
+          }
           // pending 버블 번역 스트리밍
           if (msg.messageId === '__pending__') {
             setPendingTranscript((prev) =>
@@ -531,6 +540,11 @@ export default function Home() {
             )
           )
         } else if (msg.phase === 'done') {
+          // 빠른 번역 팝업 완료
+          if (msg.messageId === '__quick__') {
+            setQuickTranslateStream({ text: msg.translatedText ?? '', phase: 'done' })
+            return
+          }
           // pending 버블 번역 완료
           if (msg.messageId === '__pending__') {
             setPendingTranscript((prev) =>
@@ -1467,7 +1481,14 @@ export default function Home() {
       )}
 
       {quickTranslateOpen && (
-        <QuickTranslatePopup settings={settings} onClose={() => setQuickTranslateOpen(false)} />
+        <QuickTranslatePopup
+          settings={settings}
+          onClose={() => setQuickTranslateOpen(false)}
+          sendTranslate={sendTranslate}
+          wsConnected={wsStatus === 'connected'}
+          stream={quickTranslateStream}
+          onResetStream={() => setQuickTranslateStream(null)}
+        />
       )}
     </main>
   )

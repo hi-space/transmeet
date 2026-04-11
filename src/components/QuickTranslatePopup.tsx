@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { api } from '@/lib/api'
 import type { Settings } from '@/hooks/useSettings'
 import { useQuickTranslateHistory, type TranslationRecord } from '@/hooks/useQuickTranslateHistory'
@@ -8,6 +8,17 @@ import { useQuickTranslateHistory, type TranslationRecord } from '@/hooks/useQui
 interface Props {
   settings: Settings
   onClose: () => void
+  sendTranslate?: (
+    messageId: string,
+    originalText: string,
+    speaker: string,
+    sourceLang?: string,
+    targetLang?: string,
+    modelId?: string
+  ) => void
+  wsConnected?: boolean
+  stream?: { text: string; phase: 'translating' | 'done' } | null
+  onResetStream?: () => void
 }
 
 // ─── Audio helper (동일 패턴: page.tsx playBase64Audio) ────────────────────────
@@ -38,15 +49,50 @@ function playBase64Audio(
 
 // ─── Component ─────────────────────────────────────────────────────────────────
 
-export default function QuickTranslatePopup({ settings, onClose }: Props) {
+export default function QuickTranslatePopup({
+  settings,
+  onClose,
+  sendTranslate,
+  wsConnected,
+  stream,
+  onResetStream,
+}: Props) {
   const [input, setInput] = useState('')
   const [result, setResult] = useState<{ englishText: string; audioData?: string } | null>(null)
   const [isTranslating, setIsTranslating] = useState(false)
+  const [isLoadingTts, setIsLoadingTts] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
+  const pendingInputRef = useRef<string>('')
   const { history, addRecord, deleteRecord, clearAll } = useQuickTranslateHistory()
+
+  // 스트리밍 번역 done → TTS 요청 + 결과 확정
+  useEffect(() => {
+    if (!stream || stream.phase !== 'done' || !stream.text) return
+    const englishText = stream.text
+    const koreanText = pendingInputRef.current
+    setIsTranslating(false)
+    setIsLoadingTts(true)
+    // TTS만 요청 (translateFirst=false)
+    api.tts
+      .synthesize(englishText, settings.pollyEngine, settings.pollyVoiceId, false)
+      .then((res) => {
+        setResult({ englishText, audioData: res.audioData })
+        addRecord({ koreanText, englishText, audioData: res.audioData })
+      })
+      .catch(() => {
+        // TTS 실패해도 번역 결과는 표시
+        setResult({ englishText })
+        addRecord({ koreanText, englishText })
+      })
+      .finally(() => {
+        setIsLoadingTts(false)
+        onResetStream?.()
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stream?.phase])
 
   const handleTranslate = useCallback(async () => {
     const text = input.trim()
@@ -55,7 +101,16 @@ export default function QuickTranslatePopup({ settings, onClose }: Props) {
     setIsTranslating(true)
     setError(null)
     setResult(null)
+    onResetStream?.()
+    pendingInputRef.current = text
 
+    // WS 연결 시 스트리밍 번역
+    if (wsConnected && sendTranslate) {
+      sendTranslate('__quick__', text, 'me', 'ko', 'en', settings.translationModel)
+      return
+    }
+
+    // fallback: REST 동기 번역
     try {
       const res = await api.tts.synthesize(
         text,
@@ -75,7 +130,7 @@ export default function QuickTranslatePopup({ settings, onClose }: Props) {
     } finally {
       setIsTranslating(false)
     }
-  }, [input, isTranslating, settings, addRecord])
+  }, [input, isTranslating, settings, addRecord, wsConnected, sendTranslate, onResetStream])
 
   const handlePlay = useCallback(
     async (audioData?: string) => {
@@ -197,7 +252,7 @@ export default function QuickTranslatePopup({ settings, onClose }: Props) {
           {/* Translate button */}
           <button
             onClick={handleTranslate}
-            disabled={!input.trim() || isTranslating}
+            disabled={!input.trim() || isTranslating || isLoadingTts}
             className="w-full py-2 rounded-xl text-sm font-medium text-white bg-gradient-to-r from-indigo-500 to-violet-600 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isTranslating ? (
@@ -231,8 +286,45 @@ export default function QuickTranslatePopup({ settings, onClose }: Props) {
             </div>
           )}
 
-          {/* Result */}
-          {result && (
+          {/* Streaming result */}
+          {isTranslating && stream && stream.text && (
+            <div className="mt-3 p-3 rounded-xl bg-indigo-50/60 dark:bg-indigo-900/20 border border-indigo-200/60 dark:border-indigo-500/20">
+              <p className="text-sm text-indigo-500 dark:text-indigo-400 leading-relaxed">
+                {stream.text}
+                <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
+              </p>
+            </div>
+          )}
+
+          {/* TTS 로딩 */}
+          {isLoadingTts && stream?.phase === 'done' && (
+            <div className="mt-3 p-3 rounded-xl bg-indigo-50/60 dark:bg-indigo-900/20 border border-indigo-200/60 dark:border-indigo-500/20">
+              <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+                {stream.text}
+              </p>
+              <div className="flex items-center gap-1 mt-2 text-[11px] text-indigo-500">
+                <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
+                </svg>
+                음성 생성 중...
+              </div>
+            </div>
+          )}
+
+          {/* Final result */}
+          {result && !isTranslating && !isLoadingTts && (
             <div className="mt-3 p-3 rounded-xl bg-indigo-50/60 dark:bg-indigo-900/20 border border-indigo-200/60 dark:border-indigo-500/20">
               <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
                 {result.englishText}

@@ -44,7 +44,7 @@ function MarkdownSummary({ text }: { text: string }) {
           return (
             <h3
               key={i}
-              className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider pt-4 pb-1 first:pt-0"
+              className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider pt-4 pb-1 first:pt-0"
             >
               {t.slice(3)}
             </h3>
@@ -52,7 +52,7 @@ function MarkdownSummary({ text }: { text: string }) {
 
         if (t.startsWith('### '))
           return (
-            <h4 key={i} className="text-xs font-semibold text-slate-600 dark:text-slate-300 pt-2">
+            <h4 key={i} className="text-sm font-semibold text-slate-600 dark:text-slate-300 pt-2">
               {renderInline(t.slice(4))}
             </h4>
           )
@@ -61,7 +61,7 @@ function MarkdownSummary({ text }: { text: string }) {
           return (
             <div key={i} className="flex items-start gap-2 py-0.5">
               <span className="flex-shrink-0 w-1 h-1 rounded-full bg-indigo-400 dark:bg-indigo-500 mt-[6px]" />
-              <span className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              <span className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                 {renderInline(t.slice(2))}
               </span>
             </div>
@@ -71,17 +71,17 @@ function MarkdownSummary({ text }: { text: string }) {
         if (numMatch)
           return (
             <div key={i} className="flex items-start gap-2 py-0.5">
-              <span className="flex-shrink-0 text-[10px] font-bold text-indigo-500 w-4 text-right mt-0.5">
+              <span className="flex-shrink-0 text-[11px] font-bold text-indigo-500 w-4 text-right mt-0.5">
                 {numMatch[1]}.
               </span>
-              <span className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              <span className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                 {renderInline(numMatch[2])}
               </span>
             </div>
           )
 
         return (
-          <p key={i} className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+          <p key={i} className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
             {renderInline(t)}
           </p>
         )
