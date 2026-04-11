@@ -7,6 +7,8 @@ interface Props {
   isRecording: boolean
   wsStatus?: WsStatus
   onToggleSidebar: () => void
+  onToggleQuickTranslate: () => void
+  quickTranslateOpen: boolean
   onToggleSummary: () => void
   summaryOpen: boolean
   onToggleSettings: () => void
@@ -17,6 +19,8 @@ export default function Header({
   isRecording,
   wsStatus,
   onToggleSidebar,
+  onToggleQuickTranslate,
+  quickTranslateOpen,
   onToggleSummary,
   summaryOpen,
   onToggleSettings,
@@ -110,6 +114,34 @@ export default function Header({
               </span>
             </div>
           )}
+
+          {/* Quick translate */}
+          <button
+            onClick={onToggleQuickTranslate}
+            aria-label="빠른 번역"
+            className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-200 ${
+              quickTranslateOpen
+                ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/15'
+                : 'text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10'
+            }`}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-[18px] h-[18px]"
+            >
+              <path d="m5 8 6 6" />
+              <path d="m4 14 6-6 2-3" />
+              <path d="M2 5h12" />
+              <path d="M7 2h1" />
+              <path d="m22 22-5-10-5 10" />
+              <path d="M14 18h6" />
+            </svg>
+          </button>
 
           {/* Summary toggle */}
           <button

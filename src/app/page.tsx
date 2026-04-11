@@ -7,6 +7,7 @@ import ChatArea from '@/components/ChatArea'
 import SummaryPanel from '@/components/SummaryPanel'
 import ControlPanel from '@/components/ControlPanel'
 import SettingsPanel from '@/components/SettingsPanel'
+import QuickTranslatePopup from '@/components/QuickTranslatePopup'
 import AuthScreen from '@/components/AuthScreen'
 import MobileTabBar from '@/components/MobileTabBar'
 import NotesArea from '@/components/NotesArea'
@@ -15,6 +16,7 @@ import { Meeting, Message } from '@/types/meeting'
 import { useAudioCapture } from '@/hooks/useAudioCapture'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import { useSettings } from '@/hooks/useSettings'
+import { useSummaryResize } from '@/hooks/useSummaryResize'
 import { useAuth } from '@/context/AuthContext'
 import type { WsServerMessage } from '@/lib/websocket'
 import { api, toMeeting, parseSummary } from '@/lib/api'
@@ -121,12 +123,14 @@ function extractCompleteSentences(text: string): string {
 export default function Home() {
   const { user, isLoading: authLoading, setUser, logout } = useAuth()
   const { settings, updateSettings } = useSettings()
+  const { width: summaryWidth, handleMouseDown: handleSummaryResize } = useSummaryResize(384)
 
   const [meetings, setMeetings] = useState<Meeting[]>(HAS_API ? [] : MOCK_MEETINGS)
   const [activeMeetingId, setActiveMeetingId] = useState(HAS_API ? '' : MOCK_MEETINGS[0].id)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [quickTranslateOpen, setQuickTranslateOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'voice' | 'notes'>('voice')
   const [hasNewVoice, setHasNewVoice] = useState(false)
   const [hasNewNotes, setHasNewNotes] = useState(false)
@@ -1250,6 +1254,8 @@ export default function Home() {
         isRecording={isRecording}
         wsStatus={wsStatus}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
+        onToggleQuickTranslate={() => setQuickTranslateOpen((v) => !v)}
+        quickTranslateOpen={quickTranslateOpen}
         onToggleSummary={() => setSummaryOpen((v) => !v)}
         summaryOpen={summaryOpen}
         onToggleSettings={() => setSettingsOpen((v) => !v)}
@@ -1406,7 +1412,16 @@ export default function Home() {
         </div>
 
         {summaryOpen && (
-          <div className="hidden sm:flex w-64 flex-shrink-0">
+          <div
+            className="hidden sm:flex flex-shrink-0 relative"
+            data-summary-width={summaryWidth}
+            style={{ width: summaryWidth }}
+          >
+            {/* 리사이즈 핸들 */}
+            <div
+              onMouseDown={handleSummaryResize}
+              className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-indigo-400/40 active:bg-indigo-500/50 transition-colors"
+            />
             <SummaryPanel
               summary={activeMeeting?.summary}
               onClose={() => setSummaryOpen(false)}
@@ -1449,6 +1464,10 @@ export default function Home() {
           onUpdate={updateSettings}
           onClose={() => setSettingsOpen(false)}
         />
+      )}
+
+      {quickTranslateOpen && (
+        <QuickTranslatePopup settings={settings} onClose={() => setQuickTranslateOpen(false)} />
       )}
     </main>
   )
