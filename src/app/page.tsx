@@ -135,7 +135,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<'voice' | 'notes' | 'summary'>('voice')
   const [hasNewVoice, setHasNewVoice] = useState(false)
   const [hasNewNotes, setHasNewNotes] = useState(false)
-  const [notesCollapsed, setNotesCollapsed] = useState(false)
+  const [notesCollapsed, setNotesCollapsed] = useState(true)
   const [ttsInput, setTtsInput] = useState('')
   const [isSummarizing, setIsSummarizing] = useState(false)
   const [isTtsPending, setIsTtsPending] = useState(false)
