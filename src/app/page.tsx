@@ -712,6 +712,7 @@ export default function Home() {
           setIsTtsPending(false)
         }
       } else if (msg.type === 'summary_stream') {
+        console.log('[summary_stream] phase=%s activeMeetingId=%s', msg.phase, activeMeetingId)
         if (msg.phase === 'delta') {
           setMeetings((prev) =>
             prev.map((m) =>
@@ -728,6 +729,7 @@ export default function Home() {
               m.id === activeMeetingId ? { ...m, summary: msg.summary ?? m.summary } : m
             )
           )
+          isSummarizingRef.current = false
           setIsSummarizing(false)
         } else if (msg.phase === 'error') {
           if (isSummarizingTimeoutRef.current) {
@@ -920,6 +922,13 @@ export default function Home() {
   // force=false (기본): 자동 요약 트리거 — 이미 진행 중이면 skip
   const handleSummarize = useCallback(
     async (force = false) => {
+      console.log(
+        '[handleSummarize] force=%s isSummarizing=%s activeMeetingId=%s wsStatus=%s',
+        force,
+        isSummarizingRef.current,
+        activeMeetingId,
+        wsStatus
+      )
       if (isSummarizingRef.current) {
         if (!force) return
         // 강제 리셋: 기존 safety timeout 취소 후 즉시 재시도
@@ -970,6 +979,12 @@ export default function Home() {
             ...(m.translation && { translation: m.translation }),
           }))
         const sent = sendSummarize(activeMeetingId, wsMessages)
+        console.log(
+          '[handleSummarize] WS sent=%s msgCount=%d wsMessages=%d',
+          sent,
+          msgCount,
+          wsMessages.length
+        )
         if (sent) {
           setMeetings((prev) =>
             prev.map((m) => (m.id === activeMeetingId ? { ...m, summary: '' } : m))

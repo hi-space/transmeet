@@ -113,6 +113,29 @@ class ConnectionState:
 active_connections: Dict[str, ConnectionState] = {}
 
 
+_ws_send_locks: Dict[int, asyncio.Lock] = {}
+
+
+async def _safe_send(ws: WebSocket, data: dict) -> None:
+    """Send JSON via WebSocket with a per-connection lock.
+
+    Starlette WebSocket does not support concurrent send_json calls;
+    without serialization, concurrent tasks (translation + summary) can
+    corrupt frames or silently block.
+    """
+    ws_id = id(ws)
+    lock = _ws_send_locks.get(ws_id)
+    if lock is None:
+        lock = asyncio.Lock()
+        _ws_send_locks[ws_id] = lock
+    async with lock:
+        await ws.send_json(data)  # raw send inside lock
+
+
+def _cleanup_ws_lock(ws: WebSocket) -> None:
+    _ws_send_locks.pop(id(ws), None)
+
+
 def _iso_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -233,7 +256,7 @@ async def _process_segment(
     target_lang_label = "Korean" if translation_target == "ko" else "English"
 
     # ── 1: Push STT result immediately ─────────────────────────────────────────
-    await ws.send_json({
+    await _safe_send(ws, {
         "type": "subtitle_stream",
         "messageId": message_id,
         "phase": "stt",
@@ -262,7 +285,7 @@ async def _process_segment(
                 if not delta:
                     continue
                 translated_text += delta
-                await ws.send_json({
+                await _safe_send(ws, {
                     "type": "subtitle_stream",
                     "messageId": message_id,
                     "phase": "translating",
@@ -276,7 +299,7 @@ async def _process_segment(
         # 번역 실패해도 done phase는 보내야 프론트엔드 말풍선이 stuck 안 됨
 
     # ── 3: Push final subtitle ─────────────────────────────────────────────────
-    await ws.send_json({
+    await _safe_send(ws, {
         "type": "subtitle_stream",
         "messageId": message_id,
         "phase": "done",
@@ -375,7 +398,7 @@ async def _retranslate_segment(
             if not delta:
                 continue
             translated_text += delta
-            await ws.send_json({
+            await _safe_send(ws, {
                 "type": "subtitle_stream",
                 "messageId": message_id,
                 "phase": "translating",
@@ -386,7 +409,7 @@ async def _retranslate_segment(
             })
 
     logger.info("[retranslate] done: translatedText=%r", translated_text)
-    await ws.send_json({
+    await _safe_send(ws, {
         "type": "subtitle_stream",
         "messageId": message_id,
         "phase": "done",
@@ -529,7 +552,7 @@ async def _run_transcribe_streaming(
                         # last_confirmed_speaker: 마지막 final에서 확인된 화자 사용
                         # (첫 발화 전엔 default "speaker1", 이후엔 실제 화자 반영)
                         try:
-                            await ws.send_json({
+                            await _safe_send(ws, {
                                 "type": "subtitle_stream",
                                 "phase": "stt_partial",
                                 "messageId": "partial",
@@ -678,7 +701,7 @@ async def _flush_audio_buffer(
     except Exception:
         logger.exception("[ws] Audio buffer flush failed for connection_id=%s", connection_id)
         try:
-            await ws.send_json({
+            await _safe_send(ws, {
                 "type": "error",
                 "message": "Processing failed. Please try again.",
                 "timestamp": _iso_now(),
@@ -736,7 +759,7 @@ async def _handle_tts_request(
                 if not delta:
                     continue
                 translated_text += delta
-                await ws.send_json({
+                await _safe_send(ws, {
                     "type": "tts_stream",
                     "messageId": message_id,
                     "phase": "translating",
@@ -746,7 +769,7 @@ async def _handle_tts_request(
     except Exception:
         logger.exception("[tts_request] Bedrock streaming failed for messageId=%s", message_id)
         try:
-            await ws.send_json({
+            await _safe_send(ws, {
                 "type": "tts_stream",
                 "messageId": message_id,
                 "phase": "error",
@@ -773,7 +796,7 @@ async def _handle_tts_request(
             audio_bytes = await polly_resp["AudioStream"].read()
         audio_data = base64.b64encode(audio_bytes).decode("utf-8")
 
-        await ws.send_json({
+        await _safe_send(ws, {
             "type": "tts_stream",
             "messageId": message_id,
             "phase": "done",
@@ -784,7 +807,7 @@ async def _handle_tts_request(
     except Exception:
         logger.exception("[tts_request] Polly synthesis failed for messageId=%s", message_id)
         # Still send done without audio so frontend can show the translation
-        await ws.send_json({
+        await _safe_send(ws, {
             "type": "tts_stream",
             "messageId": message_id,
             "phase": "done",
@@ -862,7 +885,7 @@ async def _stream_summary(
                     lines.append(f"[{speaker}] {orig}")
 
         if not lines:
-            await ws.send_json({"type": "summary_stream", "phase": "error", "error": "No messages to summarize"})
+            await _safe_send(ws, {"type": "summary_stream", "phase": "error", "error": "No messages to summarize"})
             return
         transcript = "\n".join(lines)
 
@@ -890,7 +913,7 @@ async def _stream_summary(
                 if not delta:
                     continue
                 summary += delta
-                await ws.send_json({"type": "summary_stream", "phase": "delta", "text": delta})
+                await _safe_send(ws, {"type": "summary_stream", "phase": "delta", "text": delta})
 
         async with dynamodb_client() as ddb:
             await ddb.update_item(
@@ -903,12 +926,12 @@ async def _stream_summary(
                 },
             )
 
-        await ws.send_json({"type": "summary_stream", "phase": "done", "summary": summary})
+        await _safe_send(ws, {"type": "summary_stream", "phase": "done", "summary": summary})
 
     except Exception:
         logger.exception("[ws] _stream_summary failed for meeting_id=%s", meeting_id)
         try:
-            await ws.send_json({"type": "summary_stream", "phase": "error", "error": "Summary generation failed"})
+            await _safe_send(ws, {"type": "summary_stream", "phase": "error", "error": "Summary generation failed"})
         except Exception:
             pass
 
@@ -932,7 +955,7 @@ async def ws_endpoint(
             action = data.get("action")
 
             if action == "ping":
-                await ws.send_json({"type": "pong", "timestamp": _iso_now()})
+                await _safe_send(ws, {"type": "pong", "timestamp": _iso_now()})
 
             elif action == "startRecording":
                 # ── Cancel / reset any previous session ──────────────────────
@@ -1090,3 +1113,4 @@ async def ws_endpoint(
         if state.seg_flush_task and not state.seg_flush_task.done():
             state.seg_flush_task.cancel()
         active_connections.pop(connection_id, None)
+        _cleanup_ws_lock(ws)
