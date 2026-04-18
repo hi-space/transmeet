@@ -515,15 +515,8 @@ export default function Home() {
             setQuickTranslateStream({ text: msg.partialTranslation ?? '', phase: 'translating' })
             return
           }
-          // pending 버블 번역 스트리밍
-          if (msg.messageId === '__pending__') {
-            setPendingTranscript((prev) =>
-              prev ? { ...prev, translation: msg.partialTranslation ?? '' } : prev
-            )
-            return
-          }
-          // append 번역은 done에서만 처리 (스트리밍 생략)
-          if (msg.messageId === '__pending_append__') return
+          // pending/append 자동 번역: translating 무시, done에서 한번에 업데이트
+          if (msg.messageId === '__pending__' || msg.messageId === '__pending_append__') return
           // 자동 번역: translating phase 무시, done에서 한번에 업데이트
           if (!isManual) return
           const resolvedId = msg.messageId.slice('__manual__'.length)
