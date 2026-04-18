@@ -1,19 +1,25 @@
 'use client'
 
 interface Props {
-  activeTab: 'voice' | 'notes'
-  onTabChange: (tab: 'voice' | 'notes') => void
+  activeTab: 'voice' | 'notes' | 'summary'
+  onTabChange: (tab: 'voice' | 'notes' | 'summary') => void
   hasNewVoice?: boolean
   hasNewNotes?: boolean
+}
+
+const TAB_LABELS: Record<string, string> = {
+  voice: '음성 입력',
+  notes: '내 메모',
+  summary: '요약',
 }
 
 export default function MobileTabBar({ activeTab, onTabChange, hasNewVoice, hasNewNotes }: Props) {
   return (
     <div className="lg:hidden flex items-center flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-      {(['voice', 'notes'] as const).map((tab) => {
+      {(['voice', 'notes', 'summary'] as const).map((tab) => {
         const isActive = activeTab === tab
-        const label = tab === 'voice' ? '음성 입력' : '내 메모'
-        const hasBadge = tab === 'voice' ? hasNewVoice : hasNewNotes
+        const label = TAB_LABELS[tab]
+        const hasBadge = tab === 'voice' ? hasNewVoice : tab === 'notes' ? hasNewNotes : false
         return (
           <button
             key={tab}

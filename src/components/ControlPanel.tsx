@@ -12,7 +12,7 @@ interface Props {
   onStopTts: () => void
   audioLevel?: number // 0–1, real-time mic amplitude
   isTtsPending?: boolean
-  activeTab?: 'voice' | 'notes' // 모바일 탭 상태
+  activeTab?: 'voice' | 'notes' | 'summary'
 }
 
 export default function ControlPanel({

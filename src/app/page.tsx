@@ -132,7 +132,7 @@ export default function Home() {
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [quickTranslateOpen, setQuickTranslateOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<'voice' | 'notes'>('voice')
+  const [activeTab, setActiveTab] = useState<'voice' | 'notes' | 'summary'>('voice')
   const [hasNewVoice, setHasNewVoice] = useState(false)
   const [hasNewNotes, setHasNewNotes] = useState(false)
   const [notesCollapsed, setNotesCollapsed] = useState(false)
@@ -197,8 +197,8 @@ export default function Home() {
     const msgs = activeMeeting?.messages ?? []
     if (msgs.length === 0) return
     const lastMsg = msgs[msgs.length - 1]
-    if (lastMsg.speaker !== 'me' && activeTab === 'notes') setHasNewVoice(true)
-    if (lastMsg.speaker === 'me' && activeTab === 'voice') setHasNewNotes(true)
+    if (lastMsg.speaker !== 'me' && activeTab !== 'voice') setHasNewVoice(true)
+    if (lastMsg.speaker === 'me' && activeTab !== 'notes') setHasNewNotes(true)
   }, [activeMeeting?.messages?.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // pendingTranscript를 ref로 동기화 — handleWsMessage 클로저에서 stale 없이 읽기 위해
@@ -1282,8 +1282,6 @@ export default function Home() {
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
         onToggleQuickTranslate={() => setQuickTranslateOpen((v) => !v)}
         quickTranslateOpen={quickTranslateOpen}
-        onToggleSummary={() => setSummaryOpen((v) => !v)}
-        summaryOpen={summaryOpen}
         onToggleSettings={() => setSettingsOpen((v) => !v)}
         onLogout={HAS_COGNITO ? logout : undefined}
       />
@@ -1349,12 +1347,36 @@ export default function Home() {
                 <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 tracking-wide uppercase">
                   음성 입력
                 </span>
-                {/* 내 메모 접힌 상태: 펼치기 버튼 */}
-                {notesCollapsed && (
+                <div className="flex items-center gap-1">
+                  {notesCollapsed && (
+                    <button
+                      onClick={() => setNotesCollapsed(false)}
+                      title="내 메모 펼치기"
+                      className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium text-slate-400 dark:text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="w-3 h-3"
+                      >
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                      </svg>
+                      내 메모
+                    </button>
+                  )}
                   <button
-                    onClick={() => setNotesCollapsed(false)}
-                    title="내 메모 펼치기"
-                    className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium text-slate-400 dark:text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                    onClick={() => setSummaryOpen((v) => !v)}
+                    title="요약 보기"
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors ${
+                      summaryOpen
+                        ? 'text-cyan-600 dark:text-cyan-500 bg-cyan-50 dark:bg-cyan-500/10'
+                        : 'text-slate-400 dark:text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                    }`}
                   >
                     <svg
                       viewBox="0 0 24 24"
@@ -1362,15 +1384,16 @@ export default function Home() {
                       stroke="currentColor"
                       strokeWidth="2"
                       strokeLinecap="round"
-                      strokeLinejoin="round"
                       className="w-3 h-3"
                     >
-                      <path d="M12 20h9" />
-                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                      <polyline points="14 2 14 8 20 8" />
+                      <line x1="16" x2="8" y1="13" y2="13" />
+                      <line x1="16" x2="8" y1="17" y2="17" />
                     </svg>
-                    내 메모
+                    요약
                   </button>
-                )}
+                </div>
               </div>
               <VoiceArea
                 messages={activeMeeting?.messages ?? []}
@@ -1435,7 +1458,7 @@ export default function Home() {
                 onTranslateMessage={handleTranslateMessage}
                 pendingTranscript={pendingTranscript}
               />
-            ) : (
+            ) : activeTab === 'notes' ? (
               <NotesArea
                 messages={activeMeeting?.messages ?? []}
                 playingMessageId={playingMessageId}
@@ -1443,6 +1466,12 @@ export default function Home() {
                 onPlayMessage={handlePlayMessage}
                 onStopMessage={handleStopAllAudio}
                 onTranslateMessage={handleTranslateMessage}
+              />
+            ) : (
+              <SummaryPanel
+                summary={activeMeeting?.summary}
+                onSummarize={() => handleSummarize(true)}
+                isSummarizing={isSummarizing}
               />
             )}
           </div>
@@ -1468,20 +1497,6 @@ export default function Home() {
           </div>
         )}
       </div>
-
-      {summaryOpen && (
-        <div
-          className="sm:hidden flex-shrink-0 border-t border-slate-200 dark:border-slate-800"
-          style={{ maxHeight: '45vh' }}
-        >
-          <SummaryPanel
-            summary={activeMeeting?.summary}
-            onClose={() => setSummaryOpen(false)}
-            onSummarize={() => handleSummarize(true)}
-            isSummarizing={isSummarizing}
-          />
-        </div>
-      )}
 
       <ControlPanel
         isRecording={isRecording}
