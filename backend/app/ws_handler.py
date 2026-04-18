@@ -862,7 +862,6 @@ async def _stream_summary(
     instead of reading from DynamoDB. This ensures summaries work during
     live recording when messages may not yet be persisted.
     """
-    logger.warning("[_stream_summary] START meetingId=%s inline=%s model=%s", meeting_id, len(inline_messages) if inline_messages else 0, model_id)
     try:
         lines: List[str] = []
         if inline_messages:
@@ -901,7 +900,6 @@ async def _stream_summary(
             f"---\n{transcript}"
         )
 
-        logger.warning("[_stream_summary] calling Bedrock with %d lines", len(lines))
         summary = ""
         async with bedrock_client() as br:
             stream_resp = await br.converse_stream(
@@ -910,18 +908,13 @@ async def _stream_summary(
                 messages=[{"role": "user", "content": [{"text": user_prompt}]}],
                 inferenceConfig={"maxTokens": 4096},
             )
-            first_delta = True
             async for event in stream_resp["stream"]:
                 delta = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
                 if not delta:
                     continue
-                if first_delta:
-                    logger.warning("[_stream_summary] first delta received")
-                    first_delta = False
                 summary += delta
                 await _safe_send(ws, {"type": "summary_stream", "phase": "delta", "text": delta})
 
-        logger.warning("[_stream_summary] done, summary_len=%d", len(summary))
         async with dynamodb_client() as ddb:
             await ddb.update_item(
                 TableName=config.MEETINGS_TABLE,
@@ -960,9 +953,6 @@ async def ws_endpoint(
         while True:
             data = await ws.receive_json()
             action = data.get("action")
-            if action not in ("ping", "sendAudio"):
-                logger.warning("[ws] action=%s connection_id=%s", action, connection_id)
-
             if action == "ping":
                 await _safe_send(ws, {"type": "pong", "timestamp": _iso_now()})
 
@@ -1037,7 +1027,6 @@ async def ws_endpoint(
             elif action == "summarize":
                 mid = data.get("meetingId") or state.meeting_id
                 inline_messages = data.get("messages")
-                logger.warning("[ws] summarize received: meetingId=%s inline_count=%s", mid, len(inline_messages) if inline_messages else 0)
                 if mid:
                     asyncio.create_task(_stream_summary(ws, mid, state.model_id, inline_messages=inline_messages))
 

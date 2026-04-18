@@ -163,6 +163,8 @@ export default function Home() {
 
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null)
   const msgAudioRef = useRef<HTMLAudioElement | null>(null)
+  const meetingsRef = useRef(meetings)
+  meetingsRef.current = meetings
   // partial 번역 carry over: handleWsMessage가 memoize되어 pendingTranscript가 deps에 없으므로 ref로 동기화
   const pendingTranscriptRef = useRef<typeof pendingTranscript>(null)
 
@@ -712,14 +714,6 @@ export default function Home() {
           setIsTtsPending(false)
         }
       } else if (msg.type === 'summary_stream') {
-        console.log(
-          '[summary_stream] phase=%s activeMeetingId=%s text=%s',
-          msg.phase,
-          activeMeetingId,
-          msg.phase === 'delta'
-            ? (msg.text ?? '').slice(0, 30)
-            : (msg.summary?.slice(0, 30) ?? msg.error ?? '')
-        )
         if (msg.phase === 'delta') {
           setMeetings((prev) =>
             prev.map((m) =>
@@ -929,13 +923,6 @@ export default function Home() {
   // force=false (기본): 자동 요약 트리거 — 이미 진행 중이면 skip
   const handleSummarize = useCallback(
     async (force = false) => {
-      console.log(
-        '[handleSummarize] force=%s isSummarizing=%s activeMeetingId=%s wsStatus=%s',
-        force,
-        isSummarizingRef.current,
-        activeMeetingId,
-        wsStatus
-      )
       if (isSummarizingRef.current) {
         if (!force) return
         // 강제 리셋: 기존 safety timeout 취소 후 즉시 재시도
@@ -949,12 +936,8 @@ export default function Home() {
 
       if (!activeMeetingId) return
 
-      // Read current messages
-      let currentMessages: Message[] = []
-      setMeetings((prev) => {
-        currentMessages = prev.find((m) => m.id === activeMeetingId)?.messages ?? []
-        return prev // no-op — just reading
-      })
+      const currentMessages =
+        meetingsRef.current.find((m) => m.id === activeMeetingId)?.messages ?? []
       const msgCount = currentMessages.length
 
       if (msgCount === 0) return
@@ -980,18 +963,8 @@ export default function Home() {
       if (wsStatus === 'connected') {
         const wsMessages = currentMessages
           .filter((m) => m.original)
-          .map((m) => ({
-            speaker: m.speaker,
-            original: m.original,
-            ...(m.translation && { translation: m.translation }),
-          }))
+          .map((m) => ({ speaker: m.speaker, original: m.original }))
         const sent = sendSummarize(activeMeetingId, wsMessages)
-        console.log(
-          '[handleSummarize] WS sent=%s msgCount=%d wsMessages=%d',
-          sent,
-          msgCount,
-          wsMessages.length
-        )
         if (sent) {
           setMeetings((prev) =>
             prev.map((m) => (m.id === activeMeetingId ? { ...m, summary: '' } : m))
