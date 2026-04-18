@@ -63,15 +63,15 @@ export default function MeetingSidebar({
   }
 
   return (
-    <div className="flex flex-col h-full w-72 glass-sidebar border-r border-slate-200/60 dark:border-indigo-500/10">
+    <div className="flex flex-col h-full w-72 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800">
       {/* Header */}
-      <div className="px-4 h-12 flex items-center justify-between flex-shrink-0 border-b border-slate-100/70 dark:border-white/5">
+      <div className="px-4 h-12 flex items-center justify-between flex-shrink-0 border-b border-slate-100 dark:border-slate-800">
         <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
           회의 목록
         </span>
         <button
           onClick={onClose}
-          className="lg:hidden w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/8 transition-colors"
+          className="lg:hidden w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
           aria-label="닫기"
         >
           <svg
@@ -102,11 +102,11 @@ export default function MeetingSidebar({
               <div
                 key={meeting.id}
                 className={`
-                  group relative border-b border-slate-100/50 dark:border-white/4
+                  group relative border-b border-slate-100 dark:border-slate-800
                   ${
                     isActive
-                      ? 'bg-indigo-50/90 dark:bg-indigo-500/12 border-l-2 border-l-indigo-500'
-                      : 'hover:bg-slate-50/70 dark:hover:bg-white/4'
+                      ? 'bg-slate-100 dark:bg-slate-800 border-l-2 border-l-emerald-500'
+                      : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
                   }
                 `}
               >
@@ -133,7 +133,7 @@ export default function MeetingSidebar({
                       }}
                       onBlur={() => commitEdit(meeting)}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-full text-sm font-medium bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-500/40 rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-indigo-400 text-slate-700 dark:text-slate-200"
+                      className="w-full text-sm font-medium bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-500/40 rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-emerald-400 text-slate-700 dark:text-slate-200"
                     />
                   ) : (
                     <div
@@ -143,7 +143,7 @@ export default function MeetingSidebar({
                       }}
                       className={`text-sm font-medium truncate ${
                         isActive
-                          ? 'text-indigo-600 dark:text-indigo-400'
+                          ? 'text-slate-900 dark:text-slate-100'
                           : 'text-slate-700 dark:text-slate-200'
                       }`}
                     >
@@ -166,7 +166,7 @@ export default function MeetingSidebar({
                         e.stopPropagation()
                         startEditing(meeting)
                       }}
-                      className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-all"
+                      className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all"
                       aria-label="제목 편집"
                       title="제목 편집"
                     >
@@ -190,7 +190,7 @@ export default function MeetingSidebar({
                         onGenerateTitle(meeting.id)
                       }}
                       disabled={generatingTitleId === meeting.id}
-                      className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                       aria-label="제목 생성"
                       title="AI로 제목 생성"
                     >
@@ -249,7 +249,7 @@ export default function MeetingSidebar({
 
                 {/* Inline confirm */}
                 {isConfirming && (
-                  <div className="absolute inset-0 flex items-center justify-between px-3 bg-red-50/95 dark:bg-red-950/80 backdrop-blur-sm">
+                  <div className="absolute inset-0 flex items-center justify-between px-3 bg-red-50 dark:bg-red-950">
                     <span className="text-xs text-red-600 dark:text-red-400 font-medium">
                       삭제하시겠습니까?
                     </span>
@@ -283,11 +283,11 @@ export default function MeetingSidebar({
       </div>
 
       {/* New meeting button */}
-      <div className="p-3 flex-shrink-0 border-t border-slate-100/70 dark:border-white/5">
+      <div className="p-3 flex-shrink-0 border-t border-slate-100 dark:border-slate-800">
         <button
           onClick={onNewMeeting}
           disabled={isCreating}
-          className="w-full py-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-600 text-white text-xs font-semibold hover:opacity-90 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-indigo-500/20 flex items-center justify-center gap-1.5"
+          className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-emerald-500/20 flex items-center justify-center gap-1.5"
         >
           {isCreating ? (
             <>

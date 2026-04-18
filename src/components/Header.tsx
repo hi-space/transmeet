@@ -38,16 +38,14 @@ export default function Header({
   }, [])
 
   return (
-    <header className="glass-header relative z-50 h-12 flex items-center px-4 flex-shrink-0">
-      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-400/40 dark:via-indigo-500/25 to-transparent" />
-
+    <header className="bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 relative z-50 h-12 flex items-center px-4 flex-shrink-0">
       <div className="flex items-center justify-between w-full">
         {/* Left: hamburger (mobile) + logo */}
         <div className="flex items-center gap-1.5">
           {/* Hamburger - mobile only */}
           <button
             onClick={onToggleSidebar}
-            className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all"
+            className="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
             aria-label="메뉴"
           >
             <svg
@@ -66,7 +64,7 @@ export default function Header({
 
           {/* Logo */}
           <div className="flex items-center gap-2">
-            <div className="relative w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-md flex-shrink-0">
+            <div className="relative w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center shadow-md flex-shrink-0">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -81,9 +79,7 @@ export default function Header({
                 <line x1="12" x2="12" y1="19" y2="22" />
               </svg>
             </div>
-            <span className="text-sm font-bold bg-gradient-to-r from-indigo-600 to-violet-600 dark:from-indigo-400 dark:to-violet-400 bg-clip-text text-transparent">
-              TransMeet
-            </span>
+            <span className="text-sm font-bold text-slate-900 dark:text-slate-100">TransMeet</span>
           </div>
         </div>
 
@@ -91,15 +87,15 @@ export default function Header({
         <div className="flex items-center gap-1">
           {/* Recording indicator */}
           {isRecording && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-rose-50 dark:bg-rose-900/20 border border-rose-200/60 dark:border-rose-500/20 mr-1">
-              <span className="blink-dot w-1.5 h-1.5 rounded-full bg-rose-500" />
-              <span className="text-[10px] font-semibold text-rose-500 tracking-wide">녹음 중</span>
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-red-50 dark:bg-red-950 mr-1">
+              <span className="blink-dot w-1.5 h-1.5 rounded-full bg-red-500" />
+              <span className="text-[10px] font-semibold text-red-500 tracking-wide">녹음 중</span>
             </div>
           )}
 
           {/* WebSocket status — shown when connecting or errored */}
           {!isRecording && wsStatus === 'connecting' && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-50 dark:bg-amber-900/20 border border-amber-200/60 dark:border-amber-500/20 mr-1">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-50 dark:bg-amber-950 mr-1">
               <span className="blink-dot w-1.5 h-1.5 rounded-full bg-amber-500" />
               <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 tracking-wide">
                 연결 중
@@ -107,7 +103,7 @@ export default function Header({
             </div>
           )}
           {wsStatus === 'error' && (
-            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-red-50 dark:bg-red-900/20 border border-red-200/60 dark:border-red-500/20 mr-1">
+            <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-red-50 dark:bg-red-950 mr-1">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
               <span className="text-[10px] font-semibold text-red-500 tracking-wide">
                 연결 오류
@@ -121,8 +117,8 @@ export default function Header({
             aria-label="빠른 번역"
             className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-200 ${
               quickTranslateOpen
-                ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/15'
-                : 'text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10'
+                ? 'text-emerald-600 dark:text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
             <svg
@@ -149,8 +145,8 @@ export default function Header({
             aria-label="요약 보기"
             className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-200 ${
               summaryOpen
-                ? 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/15'
-                : 'text-slate-500 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10'
+                ? 'text-emerald-600 dark:text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
             <svg
@@ -172,7 +168,7 @@ export default function Header({
           <button
             onClick={onToggleSettings}
             aria-label="설정"
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all duration-200"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200"
           >
             <svg
               viewBox="0 0 24 24"
@@ -192,7 +188,7 @@ export default function Header({
             <button
               onClick={onLogout}
               aria-label="로그아웃"
-              className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-rose-600 dark:text-slate-400 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-all duration-200"
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all duration-200"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -213,7 +209,7 @@ export default function Header({
           <button
             onClick={() => document.documentElement.classList.toggle('dark')}
             aria-label="테마 전환"
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all duration-200"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200"
           >
             {isDark ? (
               <svg

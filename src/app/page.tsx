@@ -1231,7 +1231,7 @@ export default function Home() {
   // Auth gate — show loading spinner while session is being restored
   if (HAS_COGNITO && authLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-50 to-indigo-50 dark:from-[#070614] dark:to-[#0b0820]">
+      <div className="flex items-center justify-center h-screen bg-white dark:bg-slate-950">
         <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 text-sm">
           <svg
             className="w-4 h-4 animate-spin"
@@ -1254,7 +1254,7 @@ export default function Home() {
 
   if (isLoadingMeetings) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-slate-50 to-indigo-50 dark:from-[#070614] dark:to-[#0b0820]">
+      <div className="flex items-center justify-center h-screen bg-white dark:bg-slate-950">
         <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 text-sm">
           <svg
             className="w-4 h-4 animate-spin"
@@ -1274,9 +1274,7 @@ export default function Home() {
   return (
     <main className="relative flex flex-col overflow-hidden font-sans" style={{ height: '100dvh' }}>
       {/* Background */}
-      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-slate-50 via-indigo-50/60 to-violet-50/80 dark:from-[#070614] dark:via-[#0b0820] dark:to-[#0f0828]" />
-      <div className="orb-a absolute top-[8%] left-[3%] w-72 h-72 rounded-full bg-indigo-300/20 dark:bg-indigo-600/18 blur-3xl pointer-events-none -z-10" />
-      <div className="orb-b absolute top-[35%] right-[5%] w-96 h-96 rounded-full bg-violet-300/15 dark:bg-violet-700/14 blur-3xl pointer-events-none -z-10" />
+      <div className="absolute inset-0 -z-10 bg-white dark:bg-slate-950" />
 
       <Header
         isRecording={isRecording}
@@ -1323,7 +1321,7 @@ export default function Home() {
         <div className="flex-1 overflow-hidden min-w-0 flex flex-col">
           {/* 현재 회의 제목 */}
           {activeMeeting && (
-            <div className="px-4 h-10 flex items-center gap-2 flex-shrink-0 border-b border-slate-200/40 dark:border-white/6 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
+            <div className="px-4 h-10 flex items-center gap-2 flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
               <EditableTitle
                 title={activeMeeting.title}
                 onSave={(newTitle) => handleUpdateTitle(activeMeeting.id, newTitle)}
@@ -1346,8 +1344,8 @@ export default function Home() {
           {/* 데스크톱: 좌우 분할 */}
           <div className="hidden lg:flex flex-1 overflow-hidden min-w-0">
             {/* 음성 입력 영역 */}
-            <div className="flex-1 flex flex-col border-r border-slate-200/40 dark:border-white/6 min-w-0">
-              <div className="px-3 py-1.5 border-b border-slate-200/40 dark:border-white/6 flex-shrink-0 flex items-center justify-between">
+            <div className="flex-1 flex flex-col border-r border-slate-200 dark:border-slate-800 min-w-0">
+              <div className="px-3 py-1.5 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 flex items-center justify-between">
                 <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 tracking-wide uppercase">
                   음성 입력
                 </span>
@@ -1356,7 +1354,7 @@ export default function Home() {
                   <button
                     onClick={() => setNotesCollapsed(false)}
                     title="내 메모 펼치기"
-                    className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium text-slate-400 dark:text-slate-500 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-slate-100/60 dark:hover:bg-white/6 transition-colors"
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                   >
                     <svg
                       viewBox="0 0 24 24"
@@ -1389,14 +1387,14 @@ export default function Home() {
             {/* 내 메모 영역 — 접기 가능 */}
             {!notesCollapsed && (
               <div className="w-80 flex-shrink-0 flex flex-col min-w-0">
-                <div className="px-3 py-1.5 border-b border-slate-200/40 dark:border-white/6 flex-shrink-0 flex items-center justify-between">
+                <div className="px-3 py-1.5 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 flex items-center justify-between">
                   <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 tracking-wide uppercase">
                     내 메모
                   </span>
                   <button
                     onClick={() => setNotesCollapsed(true)}
                     title="내 메모 접기"
-                    className="w-5 h-5 flex items-center justify-center rounded text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100/60 dark:hover:bg-white/6 transition-colors"
+                    className="w-5 h-5 flex items-center justify-center rounded text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                   >
                     <svg
                       viewBox="0 0 24 24"
@@ -1459,7 +1457,7 @@ export default function Home() {
             {/* 리사이즈 핸들 */}
             <div
               onMouseDown={handleSummaryResize}
-              className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-indigo-400/40 active:bg-indigo-500/50 transition-colors"
+              className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-slate-300 dark:hover:bg-slate-600 active:bg-slate-400 dark:active:bg-slate-500 transition-colors"
             />
             <SummaryPanel
               summary={activeMeeting?.summary}
@@ -1473,7 +1471,7 @@ export default function Home() {
 
       {summaryOpen && (
         <div
-          className="sm:hidden flex-shrink-0 border-t border-slate-200/60 dark:border-indigo-500/10"
+          className="sm:hidden flex-shrink-0 border-t border-slate-200 dark:border-slate-800"
           style={{ maxHeight: '45vh' }}
         >
           <SummaryPanel

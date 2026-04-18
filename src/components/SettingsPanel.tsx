@@ -29,8 +29,8 @@ const DEFAULT_VOICE: Record<'en' | 'ko', { id: string; engine: Settings['pollyEn
 const pill = (active: boolean) =>
   `px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
     active
-      ? 'bg-indigo-500 text-white shadow-sm shadow-indigo-500/30'
-      : 'bg-slate-100 dark:bg-white/6 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10'
+      ? 'bg-emerald-600 text-white'
+      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
   }`
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -72,7 +72,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
 
       {/* Sheet / Modal */}
       <div
-        className="relative z-10 w-full sm:max-w-sm glass-panel sm:rounded-2xl rounded-t-2xl shadow-xl shadow-black/20 slide-up-fade flex flex-col"
+        className="relative z-10 w-full sm:max-w-sm bg-white dark:bg-slate-900 sm:rounded-2xl rounded-t-2xl shadow-xl shadow-black/20 slide-up-fade flex flex-col"
         style={{ maxHeight: '65dvh' }}
       >
         {/* Scrollable content */}
@@ -89,7 +89,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
                 stroke="currentColor"
                 strokeWidth="2"
                 strokeLinecap="round"
-                className="w-4 h-4 text-indigo-500"
+                className="w-4 h-4 text-slate-500"
               >
                 <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
                 <circle cx="12" cy="12" r="3" />
@@ -98,7 +98,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
             </div>
             <button
               onClick={onClose}
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/8 transition-all"
+              className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
             >
               <svg
                 viewBox="0 0 24 24"
@@ -144,7 +144,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
           </div>
 
           {/* Divider */}
-          <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
+          <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
 
           {/* ── STT engine ─────────────────────────────────────────────────── */}
           <div className="space-y-2">
@@ -175,7 +175,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
           </div>
 
           {/* Divider */}
-          <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
+          <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
 
           {/* ── Transcribe 언어 ────────────────────────────────────────────── */}
           <div className="space-y-2">
@@ -211,7 +211,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
           </div>
 
           {/* Divider */}
-          <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
+          <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
 
           {/* ── Translation timing ──────────────────────────────────────────── */}
           <div className="space-y-2">
@@ -244,7 +244,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
           </div>
 
           {/* Divider */}
-          <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
+          <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
 
           {/* ── Translation output mode ──────────────────────────────────────── */}
           <div className="space-y-2">
@@ -274,7 +274,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
           </div>
 
           {/* Divider */}
-          <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
+          <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
 
           {/* ── Auto summarize ───────────────────────────────────────────────── */}
           <div className="space-y-2">
@@ -307,7 +307,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
           </div>
 
           {/* Divider */}
-          <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
+          <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
 
           {/* ── Partial translation mode ─────────────────────────────────────── */}
           <div className="space-y-2">
@@ -363,7 +363,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
           </div>
 
           {/* Divider */}
-          <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
+          <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
 
           {/* ── Silence timeout ─────────────────────────────────────────────── */}
           <div className="space-y-2">
@@ -394,7 +394,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
           </div>
 
           {/* Divider */}
-          <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
+          <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
 
           {/* ── Translation model ───────────────────────────────────────────── */}
           <div className="space-y-2">
@@ -421,7 +421,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
           </div>
 
           {/* Divider */}
-          <div className="my-4 h-px bg-slate-200/60 dark:bg-white/8" />
+          <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
 
           {/* ── TTS settings ────────────────────────────────────────────────── */}
           <div className="space-y-4">
@@ -436,7 +436,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
                 onClick={() => handleUpdate({ ttsAutoPlay: !settings.ttsAutoPlay })}
                 aria-label="TTS 자동 재생 토글"
                 className={`relative shrink-0 w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none ${
-                  settings.ttsAutoPlay ? 'bg-indigo-500' : 'bg-slate-200 dark:bg-white/15'
+                  settings.ttsAutoPlay ? 'bg-emerald-600' : 'bg-slate-200 dark:bg-slate-700'
                 }`}
               >
                 <span

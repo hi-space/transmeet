@@ -15,14 +15,13 @@ const SPEAKER_CONFIG: Record<
   speaker1: {
     label: 'Speaker 1',
     nameColor: 'text-blue-600 dark:text-blue-400',
-    cardBg: 'bg-white/60 dark:bg-slate-800/40 border border-blue-200/70 dark:border-blue-500/25',
+    cardBg: 'bg-blue-50 dark:bg-blue-950 border border-slate-200 dark:border-slate-800',
     translationColor: 'text-slate-500 dark:text-slate-400',
   },
   speaker2: {
     label: 'Speaker 2',
     nameColor: 'text-emerald-600 dark:text-emerald-400',
-    cardBg:
-      'bg-white/60 dark:bg-slate-800/40 border border-emerald-200/70 dark:border-emerald-500/25',
+    cardBg: 'bg-emerald-50 dark:bg-emerald-950 border border-slate-200 dark:border-slate-800',
     translationColor: 'text-slate-500 dark:text-slate-400',
   },
 }
@@ -98,7 +97,7 @@ export default function VoiceArea({
         <div
           className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-colors ${
             isRecording
-              ? 'bg-rose-100/80 dark:bg-rose-900/30 text-rose-500'
+              ? 'bg-red-100/80 dark:bg-red-900/30 text-red-500'
               : 'bg-slate-100/80 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500'
           }`}
         >
@@ -141,7 +140,7 @@ export default function VoiceArea({
             onClick={() =>
               onTranslateMessage?.(msg.id, msg.original, msg.speaker, msg.detectedLanguage)
             }
-            className={`group relative rounded-xl shadow-sm cursor-pointer transition-opacity hover:opacity-90 active:opacity-70 ${cfg.cardBg}`}
+            className={`group relative rounded-xl cursor-pointer transition-opacity hover:opacity-90 active:opacity-70 ${cfg.cardBg}`}
           >
             <div className="px-4 py-3">
               {/* 헤더: 화자명 · 시간 */}
@@ -172,7 +171,7 @@ export default function VoiceArea({
                       }
                       className={`flex items-center justify-center w-5 h-5 rounded-full transition-all ${
                         isPlaying
-                          ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-500'
+                          ? 'bg-red-100 dark:bg-red-900/30 text-red-500'
                           : 'opacity-0 group-hover:opacity-100 bg-slate-100/80 dark:bg-white/8 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-white/12'
                       }`}
                     >
@@ -239,7 +238,7 @@ export default function VoiceArea({
           const sp = pendingTranscript!.speaker as 'speaker1' | 'speaker2'
           const cfg = SPEAKER_CONFIG[sp] ?? SPEAKER_CONFIG.speaker1
           return (
-            <div className="relative rounded-xl shadow-sm border border-dashed border-slate-300/60 dark:border-slate-600/40 bg-white/40 dark:bg-slate-800/30">
+            <div className="relative rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-white/40 dark:bg-slate-800/30">
               <div className="px-4 py-3">
                 <div className="mb-1.5">
                   <span className={`text-xs font-semibold ${cfg.nameColor} opacity-60`}>
@@ -265,17 +264,17 @@ export default function VoiceArea({
 
       {/* 녹음 인디케이터 */}
       {isRecording && (
-        <div className="flex items-center gap-2 px-3 py-2 mx-1 rounded-xl bg-rose-50/60 dark:bg-rose-900/15 border border-rose-100/60 dark:border-rose-500/10 w-fit">
+        <div className="flex items-center gap-2 px-3 py-2 mx-1 rounded-xl bg-red-50/60 dark:bg-red-900/15 border border-red-100/60 dark:border-red-500/10 w-fit">
           <span className="flex gap-[3px] items-end h-3">
             {[0, 0.15, 0.3].map((d, i) => (
               <span
                 key={i}
-                className="w-[3px] rounded-full bg-rose-400 dark:bg-rose-500 animate-bounce"
+                className="w-[3px] rounded-full bg-red-400 dark:bg-red-500 animate-bounce"
                 style={{ animationDelay: `${d}s`, height: i === 1 ? '12px' : '8px' }}
               />
             ))}
           </span>
-          <span className="text-[11px] text-rose-500 dark:text-rose-400 font-medium">
+          <span className="text-[11px] text-red-500 dark:text-red-400 font-medium">
             {isProcessing ? '번역 중...' : '음성 인식 중...'}
           </span>
         </div>

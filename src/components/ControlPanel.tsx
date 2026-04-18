@@ -27,9 +27,7 @@ export default function ControlPanel({
   activeTab = 'voice',
 }: Props) {
   return (
-    <div className="glass-footer relative z-20 px-4 pt-2 pb-4 flex-shrink-0">
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-400/40 dark:via-indigo-500/25 to-transparent" />
-
+    <div className="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 relative z-20 px-4 pt-2 pb-4 flex-shrink-0">
       {/* Waveform — visible while recording, scales with real audio level */}
       {isRecording && (
         <div
@@ -39,7 +37,7 @@ export default function ControlPanel({
           {WAVE_DELAYS.map((delay, i) => (
             <div
               key={i}
-              className="wave-bar w-[2px] rounded-full bg-gradient-to-t from-rose-500 to-rose-300"
+              className="wave-bar w-[2px] rounded-full bg-red-500"
               style={{ height: WAVE_HEIGHTS[i], animationDelay: `${delay}s` }}
             />
           ))}
@@ -57,8 +55,8 @@ export default function ControlPanel({
           <div className="relative flex-shrink-0">
             {isRecording && (
               <>
-                <span className="pulse-ring-1 absolute inset-0 rounded-full bg-rose-500/30" />
-                <span className="pulse-ring-2 absolute inset-0 rounded-full bg-rose-500/20" />
+                <span className="pulse-ring-1 absolute inset-0 rounded-full bg-red-400" />
+                <span className="pulse-ring-2 absolute inset-0 rounded-full bg-red-400/50" />
               </>
             )}
             <button
@@ -69,8 +67,8 @@ export default function ControlPanel({
                 transition-all duration-300 shadow-lg
                 ${
                   isRecording
-                    ? 'bg-gradient-to-br from-rose-500 to-red-600 shadow-rose-500/40 scale-105'
-                    : 'bg-gradient-to-br from-indigo-500 to-violet-600 shadow-indigo-500/30 hover:scale-105 active:scale-95'
+                    ? 'bg-red-500 hover:bg-red-600 shadow-red-500/20 scale-105'
+                    : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20 hover:scale-105 active:scale-95'
                 }
               `}
             >
@@ -103,7 +101,7 @@ export default function ControlPanel({
         </div>
 
         {/* 데스크톱 전용 구분선 */}
-        <div className="hidden lg:block w-px h-6 bg-slate-200/60 dark:bg-white/8 flex-shrink-0" />
+        <div className="hidden lg:block w-px h-6 bg-slate-200 dark:bg-slate-800 flex-shrink-0" />
 
         {/* 입력 영역 — 데스크톱 항상 표시, 모바일은 notes 탭일 때만 */}
         <div
@@ -116,7 +114,7 @@ export default function ControlPanel({
             <button
               onClick={onStopTts}
               aria-label="TTS 중지"
-              className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-rose-50 dark:bg-rose-900/20 border border-rose-200/60 dark:border-rose-500/20 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-900/30 active:scale-95 transition-all"
+              className="flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-500/20 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 active:scale-95 transition-all"
             >
               <svg viewBox="0 0 24 24" fill="currentColor" className="w-3.5 h-3.5">
                 <rect x="5" y="5" width="14" height="14" rx="2" />
@@ -137,7 +135,7 @@ export default function ControlPanel({
             }}
             disabled={isTtsPending}
             placeholder="한글로 입력하면 영어로 번역됩니다..."
-            className="flex-1 min-w-0 px-3.5 py-2.5 rounded-2xl bg-white/70 dark:bg-white/5 border border-slate-200/70 dark:border-white/10 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-400/50 focus:border-indigo-300/70 dark:focus:border-indigo-500/40 backdrop-blur-sm transition-colors disabled:opacity-60"
+            className="flex-1 min-w-0 px-3.5 py-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-emerald-400/50 focus:border-emerald-300/70 dark:focus:border-emerald-500/40 transition-colors disabled:opacity-60"
           />
 
           {/* Send button */}
@@ -145,7 +143,7 @@ export default function ControlPanel({
             onClick={onSend}
             disabled={!ttsInput.trim() || isTtsPending}
             aria-label="전송"
-            className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-md shadow-indigo-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none hover:opacity-90 active:scale-95 transition-all"
+            className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none active:scale-95 transition-all"
           >
             {isTtsPending ? (
               <svg

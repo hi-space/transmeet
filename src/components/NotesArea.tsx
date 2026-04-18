@@ -92,7 +92,7 @@ export default function NotesArea({
             </span>
 
             <div
-              className="group relative rounded-xl px-4 py-3 bg-white/60 dark:bg-slate-800/40 border border-slate-200/60 dark:border-white/8 shadow-sm shadow-slate-200/30 dark:shadow-black/20 cursor-pointer transition-colors hover:bg-white/80 dark:hover:bg-slate-800/60 active:opacity-70"
+              className="group relative rounded-xl px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 cursor-pointer transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-700 active:opacity-70"
               onClick={() =>
                 onTranslateMessage?.(msg.id, msg.translation, msg.speaker, msg.detectedLanguage)
               }
@@ -108,7 +108,7 @@ export default function NotesArea({
               </p>
 
               {/* 영어 번역 */}
-              <p className="mt-1.5 text-sm text-indigo-500 dark:text-indigo-400 leading-relaxed">
+              <p className="mt-1.5 text-sm text-emerald-600 dark:text-emerald-500 leading-relaxed">
                 {msg.original}
                 {isTranslating && (
                   <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
@@ -127,7 +127,7 @@ export default function NotesArea({
                   }
                   className={`absolute right-3 top-3 flex items-center justify-center w-6 h-6 rounded-full transition-all ${
                     isPlaying
-                      ? 'bg-rose-100 dark:bg-rose-900/30 text-rose-500'
+                      ? 'bg-red-100 dark:bg-red-900/30 text-red-500'
                       : 'opacity-0 group-hover:opacity-100 bg-slate-100/80 dark:bg-white/8 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-white/12 hover:text-slate-600 dark:hover:text-slate-300'
                   }`}
                 >
