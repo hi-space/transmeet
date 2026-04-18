@@ -106,6 +106,19 @@ function playBase64Audio(
   })
 }
 
+// ─── Partial 번역 헬퍼 ────────────────────────────────────────────────────────
+
+/**
+ * 텍스트에서 완성된 문장(마지막 .?! 까지)을 반환.
+ * 불완전한 끝 문장은 제외.
+ * 예: "Hello. How are you" → "Hello."
+ *     "Hello. How are you?" → "Hello. How are you?"
+ */
+function extractCompleteSentences(text: string): string {
+  const match = text.match(/^([\s\S]*[.?!])(?:\s|$)/)
+  return match ? match[1].trim() : ''
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -130,6 +143,7 @@ export default function Home() {
     messageId: string
     text: string
     speaker: string
+    translation?: string
   } | null>(null)
   const [isLoadingMeetings, setIsLoadingMeetings] = useState(HAS_API)
   const [isCreatingMeeting, setIsCreatingMeeting] = useState(false)
@@ -142,9 +156,29 @@ export default function Home() {
 
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null)
   const msgAudioRef = useRef<HTMLAudioElement | null>(null)
+  // partial 번역 carry over: handleWsMessage가 memoize되어 pendingTranscript가 deps에 없으므로 ref로 동기화
+  const pendingTranscriptRef = useRef<typeof pendingTranscript>(null)
 
+  // Track last auto-summarized message count per meeting
   const lastSummarizedCountRef = useRef<Record<string, number>>({})
+  // Stable ref for handleSummarize to avoid stale closure in timers
   const handleSummarizeRef = useRef<() => Promise<void>>(() => Promise.resolve())
+  // partial 번역: 마지막으로 번역 요청한 완성 문장 텍스트
+  const lastTranslatedPartialRef = useRef<string>('')
+  // realtime 모드 스로틀: 1.5초 간격으로 최신 partial 번역
+  const partialThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingPartialRef = useRef<string>('')
+  // sendTranslate ref: handleWsMessage보다 먼저 선언되어야 하므로 ref 패턴 사용
+  const sendTranslateRef = useRef<
+    (
+      messageId: string,
+      originalText: string,
+      speaker: string,
+      sourceLang?: string,
+      targetLang?: string,
+      modelId?: string
+    ) => void
+  >(() => {})
   // Safety: reset isSummarizing if WS done/error event is never received
   const isSummarizingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Ref-based isSummarizing: stuck 감지 및 force reset에 사용 (state와 동기화)
@@ -166,6 +200,11 @@ export default function Home() {
     if (lastMsg.speaker !== 'me' && activeTab !== 'voice') setHasNewVoice(true)
     if (lastMsg.speaker === 'me' && activeTab !== 'notes') setHasNewNotes(true)
   }, [activeMeeting?.messages?.length]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // pendingTranscript를 ref로 동기화 — handleWsMessage 클로저에서 stale 없이 읽기 위해
+  useEffect(() => {
+    pendingTranscriptRef.current = pendingTranscript
+  }, [pendingTranscript])
 
   // isSummarizing ref 동기화
   useEffect(() => {
@@ -321,11 +360,76 @@ export default function Home() {
         lastSttActivityTimeRef.current = Date.now()
         const SILENCE_TIMEOUT_MS = settings.silenceTimeout
         if (msg.phase === 'stt_partial') {
-          setPendingTranscript({
+          // Word-by-word Transcribe partial — show in pending bubble, not committed messages
+          const partialText = msg.originalText ?? ''
+          const partialSpeaker = msg.speaker ?? 'speaker1'
+          setPendingTranscript((prev) => ({
             messageId: msg.messageId,
-            text: msg.originalText ?? '',
-            speaker: msg.speaker ?? 'speaker1',
-          })
+            text: partialText,
+            speaker: partialSpeaker,
+            translation: prev?.translation, // 기존 번역 유지
+          }))
+
+          const srcLang = settings.sourceLang !== 'auto' ? settings.sourceLang : 'en'
+
+          if (settings.partialTranslationMode === 'realtime') {
+            // 스로틀: 타이머가 없을 때만 새 타이머 등록 (1.5초 간격)
+            // partial마다 최신 텍스트를 pendingPartialRef에 저장하고,
+            // 타이머 만료 시 최신 텍스트로 번역 — 연속 발화 중에도 주기적으로 번역됨
+            if (partialText) {
+              pendingPartialRef.current = partialText
+              if (!partialThrottleRef.current) {
+                partialThrottleRef.current = setTimeout(() => {
+                  partialThrottleRef.current = null
+                  const text = pendingPartialRef.current
+                  if (text && text !== lastTranslatedPartialRef.current) {
+                    lastTranslatedPartialRef.current = text
+                    sendTranslateRef.current(
+                      '__pending__',
+                      text,
+                      partialSpeaker,
+                      srcLang,
+                      settings.targetLang,
+                      settings.translationModel
+                    )
+                  }
+                }, settings.partialThrottleMs)
+              }
+            }
+          } else {
+            // sentence: 문장 종결 부호 감지 → 증분 번역
+            const allComplete = extractCompleteSentences(partialText)
+            const lastTranslated = lastTranslatedPartialRef.current
+            if (allComplete && allComplete !== lastTranslated) {
+              if (allComplete.startsWith(lastTranslated)) {
+                // 새로 완성된 문장만 번역 후 기존 번역에 append
+                const newPart = allComplete.slice(lastTranslated.length).trim()
+                if (newPart) {
+                  lastTranslatedPartialRef.current = allComplete
+                  sendTranslateRef.current(
+                    '__pending_append__',
+                    newPart,
+                    partialSpeaker,
+                    srcLang,
+                    settings.targetLang,
+                    settings.translationModel
+                  )
+                }
+              } else {
+                // Transcribe가 이전 텍스트 수정 → 전체 재번역
+                lastTranslatedPartialRef.current = allComplete
+                setPendingTranscript((prev) => (prev ? { ...prev, translation: '' } : prev))
+                sendTranslateRef.current(
+                  '__pending__',
+                  allComplete,
+                  partialSpeaker,
+                  srcLang,
+                  settings.targetLang,
+                  settings.translationModel
+                )
+              }
+            }
+          }
           return
         }
         // 번역 고착 방지: displayId에 대해 15초 타임아웃 설정
@@ -354,6 +458,10 @@ export default function Home() {
         }
 
         if (msg.phase === 'stt') {
+          // Final sentence from Transcribe — clear pending bubble
+          // partial 번역을 carry over: pending bubble에 쌓인 번역을 새 말풍선 초기값으로 설정
+          const carryoverTranslation = pendingTranscriptRef.current?.translation ?? ''
+          lastTranslatedPartialRef.current = ''
           setPendingTranscript(null)
           const streamSpeaker = (msg.speaker as Message['speaker']) ?? 'speaker1'
           setMeetings((prev) =>
@@ -387,11 +495,12 @@ export default function Home() {
                   ),
                 }
               }
+              // 조건 불충족 — 새 말풍선 생성
               const newMsg: Message = {
                 id: msg.messageId,
                 speaker: streamSpeaker,
                 original: msg.originalText ?? '',
-                translation: '',
+                translation: carryoverTranslation,
                 streamPhase: 'stt',
                 timestamp: msg.timestamp,
               }
@@ -400,14 +509,27 @@ export default function Home() {
           )
           scheduleTranslationTimeout(msg.messageId)
         } else if (msg.phase === 'translating') {
+          // manual 번역 요청은 complete 모드여도 항상 스트리밍
           const isManual = msg.messageId.startsWith('__manual__')
-          if (!isManual) return
+          // complete 모드: manual이 아닌 경우 translating phase 무시
+          if (settings.translationOutputMode === 'complete' && !isManual) return
           // 빠른 번역 팝업 스트리밍
           if (msg.messageId === '__quick__') {
             setQuickTranslateStream({ text: msg.partialTranslation ?? '', phase: 'translating' })
             return
           }
-          const resolvedId = msg.messageId.slice('__manual__'.length)
+          // pending 버블 번역 스트리밍
+          if (msg.messageId === '__pending__') {
+            setPendingTranscript((prev) =>
+              prev ? { ...prev, translation: msg.partialTranslation ?? '' } : prev
+            )
+            return
+          }
+          // append 번역은 done에서만 처리 (스트리밍 생략)
+          if (msg.messageId === '__pending_append__') return
+          const resolvedId = isManual
+            ? msg.messageId.slice('__manual__'.length)
+            : (mergeAliasRef.current.get(msg.messageId) ?? msg.messageId)
           scheduleTranslationTimeout(resolvedId)
           setMeetings((prev) =>
             prev.map((m) =>
@@ -436,7 +558,29 @@ export default function Home() {
             setQuickTranslateStream({ text: msg.translatedText ?? '', phase: 'done' })
             return
           }
-          // manual 번역 done
+          // pending 버블 번역 완료
+          if (msg.messageId === '__pending__') {
+            setPendingTranscript((prev) =>
+              prev ? { ...prev, translation: msg.translatedText ?? '' } : prev
+            )
+            return
+          }
+          // pending 버블 증분 번역 append
+          if (msg.messageId === '__pending_append__') {
+            const appended = msg.translatedText ?? ''
+            if (appended) {
+              setPendingTranscript((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      translation: prev.translation ? prev.translation + ' ' + appended : appended,
+                    }
+                  : prev
+              )
+            }
+            return
+          }
+          // manual 번역 done: 실제 messageId 추출 후 단순 교체
           if (msg.messageId.startsWith('__manual__')) {
             const targetId = msg.messageId.slice('__manual__'.length)
             const t = translationTimeoutsRef.current.get(targetId)
@@ -596,7 +740,18 @@ export default function Home() {
         }
       }
     },
-    [activeMeetingId, settings.silenceTimeout, settings.ttsAutoPlay]
+    [
+      activeMeetingId,
+      settings.silenceTimeout,
+      settings.ttsAutoPlay,
+      settings.translationTiming,
+      settings.partialTranslationMode,
+      settings.partialThrottleMs,
+      settings.sourceLang,
+      settings.targetLang,
+      settings.translationModel,
+      settings.translationOutputMode,
+    ]
   )
 
   const {
@@ -613,6 +768,11 @@ export default function Home() {
     meetingId: activeMeetingId,
     onMessage: handleWsMessage,
   })
+
+  // sendTranslateRef 업데이트 (handleWsMessage 선언 이후에 useWebSocket이 오므로 ref로 전달)
+  useEffect(() => {
+    sendTranslateRef.current = sendTranslate
+  }, [sendTranslate])
 
   // ─── Task #3: Audio capture ─────────────────────────────────────────────────
 
@@ -713,6 +873,11 @@ export default function Home() {
       stopAudio()
       stopRecording()
       setPendingTranscript(null)
+      if (partialThrottleRef.current) {
+        clearTimeout(partialThrottleRef.current)
+        partialThrottleRef.current = null
+      }
+      pendingPartialRef.current = ''
       translationTimeoutsRef.current.forEach((t) => clearTimeout(t))
       translationTimeoutsRef.current.clear()
       // 녹음 종료 시 자동 요약 (autoSummarizeMessageCount > 0 일 때)

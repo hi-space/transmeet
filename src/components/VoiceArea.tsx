@@ -54,6 +54,7 @@ interface Props {
     messageId: string
     text: string
     speaker: string
+    translation?: string
   } | null
 }
 
@@ -250,6 +251,14 @@ export default function VoiceArea({
                   {pendingTranscript!.text}
                   <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
                 </p>
+                {pendingTranscript!.translation && (
+                  <p
+                    className={`mt-1.5 text-sm leading-relaxed ${cfg.translationColor} opacity-80`}
+                  >
+                    {pendingTranscript!.translation}
+                    <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
+                  </p>
+                )}
               </div>
             </div>
           )

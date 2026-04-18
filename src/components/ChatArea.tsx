@@ -98,7 +98,15 @@ const SPEAKER_CONFIG: Record<
   },
 }
 
-function PendingBubble({ speaker, text }: { speaker: string; text: string }) {
+function PendingBubble({
+  speaker,
+  text,
+  translation,
+}: {
+  speaker: string
+  text: string
+  translation?: string
+}) {
   const speakerKey: SpeakerRole = speaker in SPEAKER_CONFIG ? (speaker as SpeakerRole) : 'speaker1'
   const cfg = SPEAKER_CONFIG[speakerKey]
   const isRight = cfg.side === 'right'
@@ -119,6 +127,14 @@ function PendingBubble({ speaker, text }: { speaker: string; text: string }) {
             {text}
             <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
           </p>
+          {translation && (
+            <div className={`border-t ${cfg.dividerColor} mt-1.5 pt-1.5`}>
+              <p className={`text-xs leading-relaxed ${cfg.translationColor}`}>
+                {translation}
+                <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -152,6 +168,7 @@ interface Props {
     messageId: string
     text: string
     speaker: string
+    translation?: string
   } | null
 }
 
@@ -283,16 +300,15 @@ export default function ChatArea({
                   <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
                     {msg.original}
                   </p>
-                  {(msg.translation || msg.streamPhase === 'translating') && (
-                    <div className={`border-t ${cfg.dividerColor} mt-1.5 pt-1.5`}>
-                      <p className={`text-xs leading-relaxed ${cfg.translationColor}`}>
-                        {msg.translation}
-                        {msg.streamPhase === 'translating' && (
-                          <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
-                        )}
-                      </p>
-                    </div>
-                  )}
+                  {/* Translation — 번역 텍스트 표시, 번역 중이면 커서 표시 */}
+                  <div className={`border-t ${cfg.dividerColor} mt-1.5 pt-1.5`}>
+                    <p className={`text-xs leading-relaxed ${cfg.translationColor}`}>
+                      {msg.translation}
+                      {(msg.streamPhase === 'translating' || msg.streamPhase === 'stt') && (
+                        <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
+                      )}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Side action buttons */}
@@ -379,7 +395,11 @@ export default function ChatArea({
       })}
       {/* Pending Transcribe bubble: word-by-word partial transcript */}
       {showPending && (
-        <PendingBubble speaker={pendingTranscript!.speaker} text={pendingTranscript!.text} />
+        <PendingBubble
+          speaker={pendingTranscript!.speaker}
+          text={pendingTranscript!.text}
+          translation={pendingTranscript!.translation}
+        />
       )}
 
       {/* Recording indicator: shows while waiting for next subtitle */}
