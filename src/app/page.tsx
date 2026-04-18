@@ -734,7 +734,15 @@ export default function Home() {
             clearTimeout(isSummarizingTimeoutRef.current)
             isSummarizingTimeoutRef.current = null
           }
+          isSummarizingRef.current = false
           setIsSummarizing(false)
+          setMeetings((prev) =>
+            prev.map((m) =>
+              m.id === activeMeetingId
+                ? { ...m, summary: `요약 실패: ${msg.error ?? '알 수 없는 오류'}` }
+                : m
+            )
+          )
         }
       }
     },
@@ -925,12 +933,13 @@ export default function Home() {
 
       if (!activeMeetingId) return
 
-      // Read current messages count
-      let msgCount = 0
+      // Read current messages
+      let currentMessages: Message[] = []
       setMeetings((prev) => {
-        msgCount = prev.find((m) => m.id === activeMeetingId)?.messages.length ?? 0
+        currentMessages = prev.find((m) => m.id === activeMeetingId)?.messages ?? []
         return prev // no-op — just reading
       })
+      const msgCount = currentMessages.length
 
       if (msgCount === 0) return
 
@@ -953,7 +962,14 @@ export default function Home() {
 
       // WS 경로: connected이고 실제로 send 성공한 경우에만
       if (wsStatus === 'connected') {
-        const sent = sendSummarize(activeMeetingId)
+        const wsMessages = currentMessages
+          .filter((m) => m.original)
+          .map((m) => ({
+            speaker: m.speaker,
+            original: m.original,
+            ...(m.translation && { translation: m.translation }),
+          }))
+        const sent = sendSummarize(activeMeetingId, wsMessages)
         if (sent) {
           setMeetings((prev) =>
             prev.map((m) => (m.id === activeMeetingId ? { ...m, summary: '' } : m))

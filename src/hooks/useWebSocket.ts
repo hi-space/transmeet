@@ -235,12 +235,24 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     ws.send(JSON.stringify({ action: 'stopRecording', meetingId: meetingIdRef.current }))
   }, [])
 
-  const sendSummarize = useCallback((meetingId: string): boolean => {
-    const ws = wsRef.current
-    if (!ws || ws.readyState !== WebSocket.OPEN) return false
-    ws.send(JSON.stringify({ action: 'summarize', meetingId }))
-    return true
-  }, [])
+  const sendSummarize = useCallback(
+    (
+      meetingId: string,
+      messages?: { speaker: string; original: string; translation?: string }[]
+    ): boolean => {
+      const ws = wsRef.current
+      if (!ws || ws.readyState !== WebSocket.OPEN) return false
+      ws.send(
+        JSON.stringify({
+          action: 'summarize',
+          meetingId,
+          ...(messages && { messages }),
+        })
+      )
+      return true
+    },
+    []
+  )
 
   const sendTtsRequest = useCallback(
     (

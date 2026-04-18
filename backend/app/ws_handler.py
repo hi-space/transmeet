@@ -826,26 +826,44 @@ async def _handle_tts_request(
 
 # ─── Summary streaming ───────────────────────────────────────────────────────
 
-async def _stream_summary(ws: WebSocket, meeting_id: str, model_id: str) -> None:
-    """Fetch meeting messages and stream a summary via converse_stream."""
-    try:
-        async with dynamodb_client() as ddb:
-            result = await ddb.get_item(
-                TableName=config.MEETINGS_TABLE,
-                Key={"meetingId": {"S": meeting_id}},
-            )
-        raw_messages = result.get("Item", {}).get("messages", {}).get("L", [])
+async def _stream_summary(
+    ws: WebSocket,
+    meeting_id: str,
+    model_id: str,
+    *,
+    inline_messages: Optional[list] = None,
+) -> None:
+    """Fetch meeting messages and stream a summary via converse_stream.
 
-        if not raw_messages:
+    If inline_messages is provided (from frontend), use those directly
+    instead of reading from DynamoDB. This ensures summaries work during
+    live recording when messages may not yet be persisted.
+    """
+    try:
+        lines: List[str] = []
+        if inline_messages:
+            for m in inline_messages:
+                speaker = m.get("speaker", "")
+                orig = m.get("original", "")
+                if orig:
+                    lines.append(f"[{speaker}] {orig}")
+        else:
+            async with dynamodb_client() as ddb:
+                result = await ddb.get_item(
+                    TableName=config.MEETINGS_TABLE,
+                    Key={"meetingId": {"S": meeting_id}},
+                )
+            raw_messages = result.get("Item", {}).get("messages", {}).get("L", [])
+            for m in raw_messages:
+                mv = m.get("M", {})
+                speaker = mv.get("speaker", {}).get("S", "")
+                orig = mv.get("originalText", {}).get("S", "")
+                if orig:
+                    lines.append(f"[{speaker}] {orig}")
+
+        if not lines:
             await ws.send_json({"type": "summary_stream", "phase": "error", "error": "No messages to summarize"})
             return
-
-        lines: List[str] = []
-        for m in raw_messages:
-            mv = m.get("M", {})
-            speaker = mv.get("speaker", {}).get("S", "")
-            orig = mv.get("originalText", {}).get("S", "")
-            lines.append(f"[{speaker}] {orig}")
         transcript = "\n".join(lines)
 
         system_prompt = "You are a professional meeting summarizer. Analyze meeting transcripts and produce clear, structured Korean summaries."
@@ -986,8 +1004,9 @@ async def ws_endpoint(
 
             elif action == "summarize":
                 mid = data.get("meetingId") or state.meeting_id
+                inline_messages = data.get("messages")
                 if mid:
-                    asyncio.create_task(_stream_summary(ws, mid, state.model_id))
+                    asyncio.create_task(_stream_summary(ws, mid, state.model_id, inline_messages=inline_messages))
 
             elif action == "ttsRequest":
                 msg_id = data.get("messageId") or generate_message_id()
