@@ -300,15 +300,16 @@ export default function ChatArea({
                   <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
                     {msg.original}
                   </p>
-                  {/* Translation — 번역 텍스트 표시, 번역 중이면 커서 표시 */}
-                  <div className={`border-t ${cfg.dividerColor} mt-1.5 pt-1.5`}>
-                    <p className={`text-xs leading-relaxed ${cfg.translationColor}`}>
-                      {msg.translation}
-                      {(msg.streamPhase === 'translating' || msg.streamPhase === 'stt') && (
-                        <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
-                      )}
-                    </p>
-                  </div>
+                  {(msg.translation || msg.streamPhase === 'translating') && (
+                    <div className={`border-t ${cfg.dividerColor} mt-1.5 pt-1.5`}>
+                      <p className={`text-xs leading-relaxed ${cfg.translationColor}`}>
+                        {msg.translation}
+                        {msg.streamPhase === 'translating' && (
+                          <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
+                        )}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Side action buttons */}

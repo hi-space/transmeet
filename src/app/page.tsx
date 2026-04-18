@@ -509,10 +509,7 @@ export default function Home() {
           )
           scheduleTranslationTimeout(msg.messageId)
         } else if (msg.phase === 'translating') {
-          // manual 번역 요청은 complete 모드여도 항상 스트리밍
           const isManual = msg.messageId.startsWith('__manual__')
-          // complete 모드: manual이 아닌 경우 translating phase 무시
-          if (settings.translationOutputMode === 'complete' && !isManual) return
           // 빠른 번역 팝업 스트리밍
           if (msg.messageId === '__quick__') {
             setQuickTranslateStream({ text: msg.partialTranslation ?? '', phase: 'translating' })
@@ -527,9 +524,9 @@ export default function Home() {
           }
           // append 번역은 done에서만 처리 (스트리밍 생략)
           if (msg.messageId === '__pending_append__') return
-          const resolvedId = isManual
-            ? msg.messageId.slice('__manual__'.length)
-            : (mergeAliasRef.current.get(msg.messageId) ?? msg.messageId)
+          // 자동 번역: translating phase 무시, done에서 한번에 업데이트
+          if (!isManual) return
+          const resolvedId = msg.messageId.slice('__manual__'.length)
           scheduleTranslationTimeout(resolvedId)
           setMeetings((prev) =>
             prev.map((m) =>
@@ -750,7 +747,6 @@ export default function Home() {
       settings.sourceLang,
       settings.targetLang,
       settings.translationModel,
-      settings.translationOutputMode,
     ]
   )
 
