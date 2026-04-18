@@ -162,7 +162,9 @@ export class TransmeetStack extends cdk.Stack {
     );
 
     // /meetings/{id}/title
-    meetingResource.addResource('title').addMethod('POST', meetingsIntegration);
+    const titleResource = meetingResource.addResource('title');
+    titleResource.addMethod('POST', meetingsIntegration);
+    titleResource.addMethod('PUT', meetingsIntegration);
 
     // /tts
     restApi.root.addResource('tts').addMethod('POST', ttsIntegration);

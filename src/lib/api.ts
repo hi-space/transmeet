@@ -123,6 +123,11 @@ export const api = {
       apiFetch<{ title: string; meetingId: string }>(`/meetings/${id}/title`, {
         method: 'POST',
       }),
+    updateTitle: (id: string, title: string) =>
+      apiFetch<{ title: string; meetingId: string }>(`/meetings/${id}/title`, {
+        method: 'PUT',
+        body: JSON.stringify({ title }),
+      }),
   },
   tts: {
     synthesize: (

@@ -12,6 +12,7 @@ import AuthScreen from '@/components/AuthScreen'
 import MobileTabBar from '@/components/MobileTabBar'
 import NotesArea from '@/components/NotesArea'
 import VoiceArea from '@/components/VoiceArea'
+import EditableTitle from '@/components/EditableTitle'
 import { Meeting, Message } from '@/types/meeting'
 import { useAudioCapture } from '@/hooks/useAudioCapture'
 import { useWebSocket } from '@/hooks/useWebSocket'
@@ -300,6 +301,19 @@ export default function Home() {
     },
     [generatingTitleId]
   )
+
+  const handleUpdateTitle = useCallback(async (id: string, title: string) => {
+    if (!HAS_API) {
+      setMeetings((prev) => prev.map((m) => (m.id === id ? { ...m, title } : m)))
+      return
+    }
+    try {
+      await api.meetings.updateTitle(id, title)
+      setMeetings((prev) => prev.map((m) => (m.id === id ? { ...m, title } : m)))
+    } catch {
+      // Silent — user can retry
+    }
+  }, [])
 
   // ─── Issue #30: Delete meeting ─────────────────────────────────────────────
 
@@ -1299,6 +1313,7 @@ export default function Home() {
             onClose={() => setSidebarOpen(false)}
             onNewMeeting={handleNewMeeting}
             onDelete={handleDeleteMeeting}
+            onUpdateTitle={handleUpdateTitle}
             onGenerateTitle={handleGenerateTitle}
             generatingTitleId={generatingTitleId}
             isCreating={isCreatingMeeting}
@@ -1306,6 +1321,16 @@ export default function Home() {
         </aside>
 
         <div className="flex-1 overflow-hidden min-w-0 flex flex-col">
+          {/* 현재 회의 제목 */}
+          {activeMeeting && (
+            <div className="px-4 h-10 flex items-center gap-2 flex-shrink-0 border-b border-slate-200/40 dark:border-white/6 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
+              <EditableTitle
+                title={activeMeeting.title}
+                onSave={(newTitle) => handleUpdateTitle(activeMeeting.id, newTitle)}
+                className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate cursor-default"
+              />
+            </div>
+          )}
           {/* 모바일 탭 바 */}
           <MobileTabBar
             activeTab={activeTab}

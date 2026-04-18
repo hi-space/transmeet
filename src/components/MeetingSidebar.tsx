@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Meeting } from '@/types/meeting'
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
   onClose: () => void
   onNewMeeting: () => void
   onDelete: (id: string) => void
+  onUpdateTitle: (id: string, title: string) => void
   onGenerateTitle: (id: string) => void
   generatingTitleId: string | null
   isCreating?: boolean
@@ -26,14 +27,43 @@ export default function MeetingSidebar({
   onClose,
   onNewMeeting,
   onDelete,
+  onUpdateTitle,
   onGenerateTitle,
   generatingTitleId,
   isCreating,
 }: Props) {
   const [confirmId, setConfirmId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editTitle, setEditTitle] = useState('')
+  const editInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editingId && editInputRef.current) {
+      editInputRef.current.focus()
+      editInputRef.current.select()
+    }
+  }, [editingId])
+
+  function startEditing(meeting: Meeting) {
+    setConfirmId(null)
+    setEditingId(meeting.id)
+    setEditTitle(meeting.title)
+  }
+
+  function commitEdit(meeting: Meeting) {
+    const trimmed = editTitle.trim()
+    setEditingId(null)
+    if (trimmed && trimmed !== meeting.title) {
+      onUpdateTitle(meeting.id, trimmed)
+    }
+  }
+
+  function cancelEdit() {
+    setEditingId(null)
+  }
 
   return (
-    <div className="flex flex-col h-full w-56 glass-sidebar border-r border-slate-200/60 dark:border-indigo-500/10">
+    <div className="flex flex-col h-full w-72 glass-sidebar border-r border-slate-200/60 dark:border-indigo-500/10">
       {/* Header */}
       <div className="px-4 h-12 flex items-center justify-between flex-shrink-0 border-b border-slate-100/70 dark:border-white/5">
         <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
@@ -67,6 +97,7 @@ export default function MeetingSidebar({
           meetings.map((meeting) => {
             const isActive = meeting.id === activeMeetingId
             const isConfirming = confirmId === meeting.id
+            const isEditing = editingId === meeting.id
             return (
               <div
                 key={meeting.id}
@@ -81,21 +112,44 @@ export default function MeetingSidebar({
               >
                 <button
                   onClick={() => {
-                    if (isConfirming) return
+                    if (isConfirming || isEditing) return
                     onSelect(meeting.id)
                     onClose()
                   }}
                   className="w-full text-left px-4 py-3 pr-16 transition-colors"
                 >
-                  <div
-                    className={`text-sm font-medium truncate ${
-                      isActive
-                        ? 'text-indigo-600 dark:text-indigo-400'
-                        : 'text-slate-700 dark:text-slate-200'
-                    }`}
-                  >
-                    {meeting.title}
-                  </div>
+                  {isEditing ? (
+                    <input
+                      ref={editInputRef}
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          commitEdit(meeting)
+                        } else if (e.key === 'Escape') {
+                          cancelEdit()
+                        }
+                      }}
+                      onBlur={() => commitEdit(meeting)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full text-sm font-medium bg-white dark:bg-slate-800 border border-indigo-300 dark:border-indigo-500/40 rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-indigo-400 text-slate-700 dark:text-slate-200"
+                    />
+                  ) : (
+                    <div
+                      onDoubleClick={(e) => {
+                        e.stopPropagation()
+                        startEditing(meeting)
+                      }}
+                      className={`text-sm font-medium truncate ${
+                        isActive
+                          ? 'text-indigo-600 dark:text-indigo-400'
+                          : 'text-slate-700 dark:text-slate-200'
+                      }`}
+                    >
+                      {meeting.title}
+                    </div>
+                  )}
                   <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
                     {formatDate(meeting.startedAt)}
                     {' · '}
@@ -104,8 +158,31 @@ export default function MeetingSidebar({
                 </button>
 
                 {/* Action buttons (hover) */}
-                {!isConfirming && (
+                {!isConfirming && !isEditing && (
                   <div className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-all">
+                    {/* Edit title button */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        startEditing(meeting)
+                      }}
+                      className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition-all"
+                      aria-label="제목 편집"
+                      title="제목 편집"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="w-3 h-3"
+                      >
+                        <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                        <path d="m15 5 4 4" />
+                      </svg>
+                    </button>
                     {/* Generate title button */}
                     <button
                       onClick={(e) => {
@@ -146,6 +223,7 @@ export default function MeetingSidebar({
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
+                        setEditingId(null)
                         setConfirmId(meeting.id)
                       }}
                       className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"

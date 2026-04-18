@@ -162,6 +162,32 @@ export const handler = async (
         return respond(201, newMeeting);
       }
 
+      case 'PUT': {
+        if (resource.endsWith('/title')) {
+          if (!meetingId) {
+            return respond(400, { error: 'Missing meeting id' });
+          }
+          const body = JSON.parse(event.body ?? '{}') as { title?: string };
+          const title = (body.title ?? '').trim();
+          if (!title) {
+            return respond(400, { error: 'Title cannot be empty' });
+          }
+          await ddb.send(
+            new UpdateCommand({
+              TableName: process.env.MEETINGS_TABLE,
+              Key: { meetingId },
+              UpdateExpression: 'SET title = :t, updatedAt = :u',
+              ExpressionAttributeValues: {
+                ':t': title,
+                ':u': new Date().toISOString(),
+              },
+            })
+          );
+          return respond(200, { title, meetingId });
+        }
+        return respond(404, { error: 'Not found' });
+      }
+
       case 'DELETE': {
         // DELETE /meetings/{id}
         if (!meetingId) {
