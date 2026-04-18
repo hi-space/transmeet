@@ -254,7 +254,7 @@ export default function QuickTranslatePopup({
                 settings.sourceLang === 'ko' ? 'Enter English text...' : '한국어를 입력하세요...'
               }
               rows={3}
-              className="w-full px-3 py-2.5 text-sm rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              className="w-full px-3 py-2.5 text-sm rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
           </div>
 
@@ -262,7 +262,7 @@ export default function QuickTranslatePopup({
           <button
             onClick={handleTranslate}
             disabled={!input.trim() || isTranslating || isLoadingTts}
-            className="w-full py-2 rounded-xl text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-2 rounded-xl text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isTranslating ? (
               <>
@@ -297,8 +297,8 @@ export default function QuickTranslatePopup({
 
           {/* Streaming result */}
           {isTranslating && stream && stream.text && (
-            <div className="mt-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800">
-              <p className="text-sm text-emerald-700 dark:text-emerald-300 leading-relaxed">
+            <div className="mt-3 p-3 rounded-xl bg-cyan-50 dark:bg-cyan-950 border border-cyan-200 dark:border-cyan-800">
+              <p className="text-sm text-cyan-700 dark:text-cyan-300 leading-relaxed">
                 {stream.text}
                 <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
               </p>
@@ -307,11 +307,11 @@ export default function QuickTranslatePopup({
 
           {/* TTS 로딩 */}
           {isLoadingTts && stream?.phase === 'done' && (
-            <div className="mt-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800">
+            <div className="mt-3 p-3 rounded-xl bg-cyan-50 dark:bg-cyan-950 border border-cyan-200 dark:border-cyan-800">
               <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
                 {stream.text}
               </p>
-              <div className="flex items-center gap-1 mt-2 text-[11px] text-emerald-600 dark:text-emerald-400">
+              <div className="flex items-center gap-1 mt-2 text-[11px] text-cyan-600 dark:text-cyan-400">
                 <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
                   <circle
                     className="opacity-25"
@@ -334,7 +334,7 @@ export default function QuickTranslatePopup({
 
           {/* Final result */}
           {result && !isTranslating && !isLoadingTts && (
-            <div className="mt-3 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950 border border-emerald-200 dark:border-emerald-800">
+            <div className="mt-3 p-3 rounded-xl bg-cyan-50 dark:bg-cyan-950 border border-cyan-200 dark:border-cyan-800">
               <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
                 {result.englishText}
               </p>
@@ -343,7 +343,7 @@ export default function QuickTranslatePopup({
                 <button
                   onClick={() => handlePlay(result.audioData)}
                   disabled={isPlaying || !result.audioData}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-500/20 hover:bg-emerald-200 dark:hover:bg-emerald-500/30 transition-all disabled:opacity-40"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-cyan-700 dark:text-cyan-300 bg-cyan-100 dark:bg-cyan-500/20 hover:bg-cyan-200 dark:hover:bg-cyan-500/30 transition-all disabled:opacity-40"
                 >
                   {isPlaying ? (
                     <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -442,7 +442,7 @@ export default function QuickTranslatePopup({
                         <button
                           onClick={() => handleHistoryPlay(record)}
                           disabled={isPlaying}
-                          className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-500/10 transition-all disabled:opacity-40"
+                          className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium text-cyan-600 dark:text-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/10 transition-all disabled:opacity-40"
                         >
                           <svg viewBox="0 0 24 24" fill="currentColor" className="w-2.5 h-2.5">
                             <path d="M8 5v14l11-7z" />

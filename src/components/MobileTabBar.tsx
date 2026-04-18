@@ -20,8 +20,8 @@ export default function MobileTabBar({ activeTab, onTabChange, hasNewVoice, hasN
             onClick={() => onTabChange(tab)}
             className={`flex-1 relative flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${
               isActive
-                ? 'text-emerald-600 dark:text-emerald-500'
-                : 'text-slate-500 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-500'
+                ? 'text-cyan-600 dark:text-cyan-500'
+                : 'text-slate-500 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-500'
             }`}
           >
             {label}
@@ -29,7 +29,7 @@ export default function MobileTabBar({ activeTab, onTabChange, hasNewVoice, hasN
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
             )}
             {isActive && (
-              <span className="absolute bottom-0 left-1/4 right-1/4 h-[2px] rounded-full bg-emerald-500" />
+              <span className="absolute bottom-0 left-1/4 right-1/4 h-[2px] rounded-full bg-cyan-500" />
             )}
           </button>
         )

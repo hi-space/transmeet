@@ -105,7 +105,7 @@ export default function MeetingSidebar({
                   group relative border-b border-slate-100 dark:border-slate-800
                   ${
                     isActive
-                      ? 'bg-slate-100 dark:bg-slate-800 border-l-2 border-l-emerald-500'
+                      ? 'bg-slate-100 dark:bg-slate-800 border-l-2 border-l-cyan-500'
                       : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'
                   }
                 `}
@@ -133,7 +133,7 @@ export default function MeetingSidebar({
                       }}
                       onBlur={() => commitEdit(meeting)}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-full text-sm font-medium bg-white dark:bg-slate-800 border border-emerald-300 dark:border-emerald-500/40 rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-emerald-400 text-slate-700 dark:text-slate-200"
+                      className="w-full text-sm font-medium bg-white dark:bg-slate-800 border border-cyan-300 dark:border-cyan-500/40 rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-cyan-400 text-slate-700 dark:text-slate-200"
                     />
                   ) : (
                     <div
@@ -166,7 +166,7 @@ export default function MeetingSidebar({
                         e.stopPropagation()
                         startEditing(meeting)
                       }}
-                      className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition-all"
+                      className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-500/10 transition-all"
                       aria-label="제목 편집"
                       title="제목 편집"
                     >
@@ -190,7 +190,7 @@ export default function MeetingSidebar({
                         onGenerateTitle(meeting.id)
                       }}
                       disabled={generatingTitleId === meeting.id}
-                      className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      className="w-6 h-6 flex items-center justify-center rounded-md text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-500 hover:bg-cyan-50 dark:hover:bg-cyan-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                       aria-label="제목 생성"
                       title="AI로 제목 생성"
                     >
@@ -287,7 +287,7 @@ export default function MeetingSidebar({
         <button
           onClick={onNewMeeting}
           disabled={isCreating}
-          className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-emerald-500/20 flex items-center justify-center gap-1.5"
+          className="w-full py-2 rounded-xl bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-semibold active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm shadow-cyan-500/20 flex items-center justify-center gap-1.5"
         >
           {isCreating ? (
             <>

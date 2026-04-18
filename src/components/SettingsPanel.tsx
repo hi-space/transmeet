@@ -29,7 +29,7 @@ const DEFAULT_VOICE: Record<'en' | 'ko', { id: string; engine: Settings['pollyEn
 const pill = (active: boolean) =>
   `px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
     active
-      ? 'bg-emerald-600 text-white'
+      ? 'bg-cyan-600 text-white'
       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
   }`
 
@@ -436,7 +436,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
                 onClick={() => handleUpdate({ ttsAutoPlay: !settings.ttsAutoPlay })}
                 aria-label="TTS 자동 재생 토글"
                 className={`relative shrink-0 w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none ${
-                  settings.ttsAutoPlay ? 'bg-emerald-600' : 'bg-slate-200 dark:bg-slate-700'
+                  settings.ttsAutoPlay ? 'bg-cyan-600' : 'bg-slate-200 dark:bg-slate-700'
                 }`}
               >
                 <span

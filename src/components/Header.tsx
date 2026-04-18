@@ -64,7 +64,7 @@ export default function Header({
 
           {/* Logo */}
           <div className="flex items-center gap-2">
-            <div className="relative w-7 h-7 rounded-lg bg-emerald-600 flex items-center justify-center shadow-md flex-shrink-0">
+            <div className="relative w-7 h-7 rounded-lg bg-cyan-600 flex items-center justify-center shadow-md flex-shrink-0">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -117,7 +117,7 @@ export default function Header({
             aria-label="빠른 번역"
             className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-200 ${
               quickTranslateOpen
-                ? 'text-emerald-600 dark:text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10'
+                ? 'text-cyan-600 dark:text-cyan-500 bg-cyan-50 dark:bg-cyan-500/10'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
@@ -145,7 +145,7 @@ export default function Header({
             aria-label="요약 보기"
             className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-200 ${
               summaryOpen
-                ? 'text-emerald-600 dark:text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10'
+                ? 'text-cyan-600 dark:text-cyan-500 bg-cyan-50 dark:bg-cyan-500/10'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >

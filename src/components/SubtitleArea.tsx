@@ -35,8 +35,8 @@ export default function SubtitleArea() {
 
       {/* Translation — KO */}
       <div className="flex flex-col flex-1 min-h-0">
-        <SectionLabel lang="KO" label="번역" color="emerald" />
-        <div className="flex-1 min-h-0 rounded-2xl overflow-hidden bg-emerald-50 dark:bg-emerald-950 border border-slate-200 dark:border-slate-800 relative">
+        <SectionLabel lang="KO" label="번역" color="cyan" />
+        <div className="flex-1 min-h-0 rounded-2xl overflow-hidden bg-cyan-50 dark:bg-cyan-950 border border-slate-200 dark:border-slate-800 relative">
           <div className="relative h-full overflow-y-auto scrollbar-thin p-4">
             <EmptyState
               icon={
@@ -58,9 +58,9 @@ export default function SubtitleArea() {
                 </svg>
               }
               message="실시간 한글 번역이 여기에 표시됩니다"
-              iconBg="bg-emerald-100 dark:bg-emerald-900"
-              iconColor="text-emerald-500 dark:text-emerald-400"
-              textColor="text-emerald-500 dark:text-emerald-400"
+              iconBg="bg-cyan-100 dark:bg-cyan-900"
+              iconColor="text-cyan-500 dark:text-cyan-400"
+              textColor="text-cyan-500 dark:text-cyan-400"
             />
           </div>
         </div>
@@ -76,24 +76,22 @@ function SectionLabel({
 }: {
   lang: string
   label: string
-  color: 'slate' | 'emerald'
+  color: 'slate' | 'cyan'
 }) {
-  const isEmerald = color === 'emerald'
+  const isCyan = color === 'cyan'
   return (
     <div className="flex items-center gap-2 mb-1.5 px-1">
       <span
         className={`text-[11px] font-bold uppercase tracking-widest ${
-          isEmerald
-            ? 'text-emerald-600 dark:text-emerald-500'
-            : 'text-slate-400 dark:text-slate-500'
+          isCyan ? 'text-cyan-600 dark:text-cyan-500' : 'text-slate-400 dark:text-slate-500'
         }`}
       >
         {label}
       </span>
       <span
         className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md tracking-wide ${
-          isEmerald
-            ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400'
+          isCyan
+            ? 'bg-cyan-100 dark:bg-cyan-900 text-cyan-600 dark:text-cyan-400'
             : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500'
         }`}
       >

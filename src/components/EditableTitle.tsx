@@ -54,7 +54,7 @@ export default function EditableTitle({ title, onSave, className, inputClassName
         onClick={(e) => e.stopPropagation()}
         className={
           inputClassName ??
-          'w-full text-sm font-medium bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-emerald-500 text-slate-700 dark:text-slate-200'
+          'w-full text-sm font-medium bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-cyan-500 text-slate-700 dark:text-slate-200'
         }
       />
     )

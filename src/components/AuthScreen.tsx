@@ -55,21 +55,21 @@ export default function AuthScreen({ onAuth }: Props) {
   }
 
   const inputClass =
-    'w-full px-3 py-2.5 text-sm rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500'
+    'w-full px-3 py-2.5 text-sm rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500'
 
   const btnPrimary =
-    'w-full py-2.5 rounded-lg text-sm font-semibold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed'
+    'w-full py-2.5 rounded-lg text-sm font-semibold bg-cyan-600 hover:bg-cyan-700 text-white shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed'
 
   return (
     <div className="flex items-center justify-center h-screen bg-white dark:bg-slate-950">
       {/* Background orbs */}
-      <div className="absolute top-[8%] left-[3%] w-72 h-72 rounded-full bg-emerald-300/10 dark:bg-emerald-600/8 blur-3xl pointer-events-none" />
+      <div className="absolute top-[8%] left-[3%] w-72 h-72 rounded-full bg-cyan-300/10 dark:bg-cyan-600/8 blur-3xl pointer-events-none" />
       <div className="absolute top-[35%] right-[5%] w-96 h-96 rounded-full bg-slate-300/5 dark:bg-slate-600/5 blur-3xl pointer-events-none" />
 
       <div className="relative w-full max-w-sm mx-4">
         {/* Logo */}
         <div className="flex items-center justify-center gap-2.5 mb-8">
-          <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center shadow-lg">
+          <div className="w-9 h-9 rounded-xl bg-cyan-600 flex items-center justify-center shadow-lg">
             <svg
               viewBox="0 0 24 24"
               fill="none"

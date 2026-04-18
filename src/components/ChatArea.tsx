@@ -67,10 +67,10 @@ const SPEAKER_CONFIG: Record<
     label: 'Speaker 1',
     abbr: 'S1',
     side: 'left',
-    nameColor: 'text-blue-600 dark:text-blue-400',
-    avatarBg: 'bg-blue-100 dark:bg-blue-900',
-    avatarText: 'text-blue-600 dark:text-blue-400',
-    bubbleBg: 'bg-blue-50 dark:bg-blue-950',
+    nameColor: 'text-cyan-600 dark:text-cyan-400',
+    avatarBg: 'bg-cyan-100 dark:bg-cyan-900',
+    avatarText: 'text-cyan-600 dark:text-cyan-400',
+    bubbleBg: 'bg-white dark:bg-slate-800 border-l-[3px] border-l-cyan-400 dark:border-l-cyan-500',
     translationColor: 'text-slate-500 dark:text-slate-400',
     dividerColor: 'border-slate-200 dark:border-slate-700',
   },
@@ -78,10 +78,11 @@ const SPEAKER_CONFIG: Record<
     label: 'Speaker 2',
     abbr: 'S2',
     side: 'left',
-    nameColor: 'text-emerald-600 dark:text-emerald-400',
-    avatarBg: 'bg-emerald-100 dark:bg-emerald-900',
-    avatarText: 'text-emerald-600 dark:text-emerald-400',
-    bubbleBg: 'bg-emerald-50 dark:bg-emerald-950',
+    nameColor: 'text-amber-600 dark:text-amber-400',
+    avatarBg: 'bg-amber-100 dark:bg-amber-900',
+    avatarText: 'text-amber-600 dark:text-amber-400',
+    bubbleBg:
+      'bg-white dark:bg-slate-800 border-l-[3px] border-l-amber-400 dark:border-l-amber-500',
     translationColor: 'text-slate-500 dark:text-slate-400',
     dividerColor: 'border-slate-200 dark:border-slate-700',
   },
@@ -368,7 +369,7 @@ export default function ChatArea({
                       title="번역"
                       className={`flex items-center justify-center w-5 h-5 rounded-full transition-all ${
                         msg.streamPhase === 'translating'
-                          ? 'bg-emerald-100 dark:bg-emerald-900 text-emerald-600 dark:text-emerald-400'
+                          ? 'bg-cyan-100 dark:bg-cyan-900 text-cyan-600 dark:text-cyan-400'
                           : 'opacity-0 group-hover:opacity-100 bg-slate-100/80 dark:bg-white/6 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-600 dark:hover:text-slate-300'
                       }`}
                     >

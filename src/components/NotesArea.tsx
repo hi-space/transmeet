@@ -108,7 +108,7 @@ export default function NotesArea({
               </p>
 
               {/* 영어 번역 */}
-              <p className="mt-1.5 text-sm text-emerald-600 dark:text-emerald-500 leading-relaxed">
+              <p className="mt-1.5 text-sm text-cyan-600 dark:text-cyan-500 leading-relaxed">
                 {msg.original}
                 {isTranslating && (
                   <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />

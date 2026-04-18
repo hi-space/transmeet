@@ -1354,7 +1354,7 @@ export default function Home() {
                   <button
                     onClick={() => setNotesCollapsed(false)}
                     title="내 메모 펼치기"
-                    className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium text-slate-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                    className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium text-slate-400 dark:text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                   >
                     <svg
                       viewBox="0 0 24 24"
