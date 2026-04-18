@@ -712,7 +712,14 @@ export default function Home() {
           setIsTtsPending(false)
         }
       } else if (msg.type === 'summary_stream') {
-        console.log('[summary_stream] phase=%s activeMeetingId=%s', msg.phase, activeMeetingId)
+        console.log(
+          '[summary_stream] phase=%s activeMeetingId=%s text=%s',
+          msg.phase,
+          activeMeetingId,
+          msg.phase === 'delta'
+            ? (msg.text ?? '').slice(0, 30)
+            : (msg.summary?.slice(0, 30) ?? msg.error ?? '')
+        )
         if (msg.phase === 'delta') {
           setMeetings((prev) =>
             prev.map((m) =>
