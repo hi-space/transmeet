@@ -106,6 +106,13 @@ function playBase64Audio(
   })
 }
 
+const MAX_SENTENCES_PER_BUBBLE = 3
+
+function countSentences(text: string): number {
+  const matches = text.match(/[.?!。？！]/g)
+  return matches ? matches.length : 0
+}
+
 // ─── Partial 번역 헬퍼 ────────────────────────────────────────────────────────
 
 /**
@@ -478,6 +485,7 @@ export default function Home() {
               const canMerge =
                 lastMsg &&
                 lastMsg.speaker === streamSpeaker &&
+                countSentences(lastMsg.original) < MAX_SENTENCES_PER_BUBBLE &&
                 (!isSentenceComplete || timeDiff < SILENCE_TIMEOUT_MS)
               if (canMerge && lastMsg) {
                 // 기존 말풍선에 텍스트 append + alias 등록
