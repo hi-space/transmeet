@@ -1410,15 +1410,8 @@ export default function Home() {
             {/* 내 메모 영역 — 접기 가능 */}
             {!notesCollapsed && (
               <div className="w-80 flex-shrink-0 flex flex-col min-w-0">
-                <div className="px-3 py-1.5 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 flex items-center justify-between">
-                  <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 tracking-wide uppercase">
-                    내 메모
-                  </span>
-                  <button
-                    onClick={() => setNotesCollapsed(true)}
-                    title="내 메모 접기"
-                    className="w-5 h-5 flex items-center justify-center rounded text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  >
+                <div className="px-4 h-12 flex items-center justify-between flex-shrink-0 border-b border-slate-200 dark:border-slate-800">
+                  <div className="flex items-center gap-2">
                     <svg
                       viewBox="0 0 24 24"
                       fill="none"
@@ -1426,9 +1419,30 @@ export default function Home() {
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      className="w-3 h-3"
+                      className="w-4 h-4 text-slate-500"
                     >
-                      <polyline points="15 18 9 12 15 6" />
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                    </svg>
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                      내 메모
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setNotesCollapsed(true)}
+                    title="내 메모 닫기"
+                    aria-label="닫기"
+                    className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      className="w-4 h-4"
+                    >
+                      <path d="M18 6 6 18M6 6l12 12" />
                     </svg>
                   </button>
                 </div>
