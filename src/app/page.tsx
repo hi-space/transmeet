@@ -228,7 +228,7 @@ export default function Home() {
 
     api.meetings
       .list()
-      .then(async (list) => {
+      .then((list) => {
         if (list.length === 0) {
           return api.meetings.create('새 회의').then((m) => {
             const meeting = toMeeting(m)
@@ -239,11 +239,10 @@ export default function Home() {
         const mapped = list.map(toMeeting)
         setMeetings(mapped)
         setActiveMeetingId(mapped[0].id)
-        // list API omits messages — fetch full data for the first (active) meeting
-        await loadMeetingMessages(mapped[0].id)
+        setIsLoadingMeetings(false)
+        loadMeetingMessages(mapped[0].id)
       })
       .catch(() => {
-        // API unavailable — fall back to mock data
         setMeetings(MOCK_MEETINGS)
         setActiveMeetingId(MOCK_MEETINGS[0].id)
       })
