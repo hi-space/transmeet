@@ -246,36 +246,6 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
           {/* Divider */}
           <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
 
-          {/* ── Translation output mode ──────────────────────────────────────── */}
-          <div className="space-y-2">
-            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-              번역 출력 모드
-            </p>
-            <div className="flex gap-1.5">
-              {(
-                [
-                  ['stream', '스트리밍'],
-                  ['complete', '완성 후 출력'],
-                ] as const
-              ).map(([val, label]) => (
-                <button
-                  key={val}
-                  onClick={() => handleUpdate({ translationOutputMode: val })}
-                  className={pill(settings.translationOutputMode === val)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500">
-              {settings.translationOutputMode === 'stream' && '토큰 단위로 실시간 스트리밍 출력'}
-              {settings.translationOutputMode === 'complete' && '번역 완료 후 한번에 출력'}
-            </p>
-          </div>
-
-          {/* Divider */}
-          <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
-
           {/* ── Auto summarize ───────────────────────────────────────────────── */}
           <div className="space-y-2">
             <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
@@ -304,62 +274,6 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
                 ? '자동 요약 비활성화 · 녹음 종료 시에도 요약 안 함'
                 : `메시지 ${settings.autoSummarizeMessageCount}개마다 자동 요약 · 녹음 종료 시에도 요약`}
             </p>
-          </div>
-
-          {/* Divider */}
-          <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
-
-          {/* ── Partial translation mode ─────────────────────────────────────── */}
-          <div className="space-y-2">
-            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-              Partial 번역 모드
-            </p>
-            <div className="flex gap-1.5">
-              {(
-                [
-                  ['sentence', '문장 경계'],
-                  ['realtime', '실시간'],
-                ] as const
-              ).map(([val, label]) => (
-                <button
-                  key={val}
-                  onClick={() => handleUpdate({ partialTranslationMode: val })}
-                  className={pill(settings.partialTranslationMode === val)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500">
-              {settings.partialTranslationMode === 'sentence' &&
-                '마침표/물음표 감지 시 pending 번역 업데이트'}
-              {settings.partialTranslationMode === 'realtime' &&
-                '일정 간격마다 최신 partial 번역 (API 호출 증가)'}
-            </p>
-            {settings.partialTranslationMode === 'realtime' && (
-              <div className="mt-2">
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">번역 간격</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(
-                    [
-                      [500, '0.5초'],
-                      [1000, '1초'],
-                      [1500, '1.5초'],
-                      [2000, '2초'],
-                      [3000, '3초'],
-                    ] as const
-                  ).map(([val, label]) => (
-                    <button
-                      key={val}
-                      onClick={() => handleUpdate({ partialThrottleMs: val })}
-                      className={pill(settings.partialThrottleMs === val)}
-                    >
-                      {label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Divider */}
