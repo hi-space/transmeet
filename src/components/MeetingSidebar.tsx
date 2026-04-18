@@ -63,7 +63,7 @@ export default function MeetingSidebar({
   }
 
   return (
-    <div className="flex flex-col h-full w-72 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800">
+    <div className="flex flex-col h-full w-72 glass-sidebar border-r border-slate-200/60 dark:border-cyan-500/10">
       {/* Header */}
       <div className="px-4 h-12 flex items-center justify-between flex-shrink-0 border-b border-slate-100 dark:border-slate-800">
         <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">

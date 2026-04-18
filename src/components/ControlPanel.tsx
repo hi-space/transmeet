@@ -27,7 +27,7 @@ export default function ControlPanel({
   activeTab = 'voice',
 }: Props) {
   return (
-    <div className="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 relative z-20 px-4 pt-2 pb-4 flex-shrink-0">
+    <div className="glass-footer relative z-20 px-4 pt-2 pb-4 flex-shrink-0">
       {/* Waveform — visible while recording, scales with real audio level */}
       {isRecording && (
         <div

@@ -107,7 +107,7 @@ export default function SummaryPanel({ summary, onClose, onSummarize, isSummariz
   }
 
   return (
-    <div className="flex flex-col h-full w-full bg-white dark:bg-slate-950 border-l border-slate-200 dark:border-slate-800">
+    <div className="flex flex-col h-full w-full glass-sidebar border-l border-slate-200/60 dark:border-cyan-500/10">
       {/* Header */}
       <div className="px-4 h-12 flex items-center justify-between flex-shrink-0 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center gap-2">
