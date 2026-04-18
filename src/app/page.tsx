@@ -1320,10 +1320,11 @@ export default function Home() {
           {/* 현재 회의 제목 */}
           {activeMeeting && (
             <div className="px-4 h-10 flex items-center gap-2 flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+              <span className="w-2 h-2 rounded-full bg-cyan-400 flex-shrink-0" />
               <EditableTitle
                 title={activeMeeting.title}
                 onSave={(newTitle) => handleUpdateTitle(activeMeeting.id, newTitle)}
-                className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate cursor-default"
+                className="text-sm font-semibold text-cyan-700 dark:text-cyan-300 truncate cursor-default"
               />
             </div>
           )}

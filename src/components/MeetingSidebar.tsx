@@ -20,14 +20,6 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
 }
 
-const MEETING_COLORS = [
-  { dot: 'bg-cyan-400', text: 'text-cyan-700 dark:text-cyan-300' },
-  { dot: 'bg-amber-400', text: 'text-amber-700 dark:text-amber-300' },
-  { dot: 'bg-rose-400', text: 'text-rose-700 dark:text-rose-300' },
-  { dot: 'bg-violet-400', text: 'text-violet-700 dark:text-violet-300' },
-  { dot: 'bg-teal-400', text: 'text-teal-700 dark:text-teal-300' },
-]
-
 export default function MeetingSidebar({
   meetings,
   activeMeetingId,
@@ -102,11 +94,10 @@ export default function MeetingSidebar({
             회의 없음
           </div>
         ) : (
-          meetings.map((meeting, idx) => {
+          meetings.map((meeting) => {
             const isActive = meeting.id === activeMeetingId
             const isConfirming = confirmId === meeting.id
             const isEditing = editingId === meeting.id
-            const color = MEETING_COLORS[idx % MEETING_COLORS.length]
             return (
               <div
                 key={meeting.id}
@@ -150,11 +141,12 @@ export default function MeetingSidebar({
                         e.stopPropagation()
                         startEditing(meeting)
                       }}
-                      className={`text-sm font-medium truncate flex items-center gap-1.5 ${
-                        isActive ? color.text : 'text-slate-700 dark:text-slate-200'
+                      className={`text-sm font-medium truncate ${
+                        isActive
+                          ? 'text-slate-900 dark:text-slate-100'
+                          : 'text-slate-700 dark:text-slate-200'
                       }`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${color.dot}`} />
                       {meeting.title}
                     </div>
                   )}
