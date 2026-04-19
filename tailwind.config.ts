@@ -25,24 +25,6 @@ const config: Config = {
             '--tw-prose-th-borders': theme('colors.slate.200'),
             '--tw-prose-td-borders': theme('colors.slate.100'),
             '--tw-prose-hr': theme('colors.slate.200'),
-          },
-        },
-        invert: {
-          css: {
-            '--tw-prose-body': theme('colors.slate.300'),
-            '--tw-prose-headings': theme('colors.cyan.400'),
-            '--tw-prose-bold': theme('colors.slate.200'),
-            '--tw-prose-bullets': theme('colors.cyan.400'),
-            '--tw-prose-counters': theme('colors.cyan.400'),
-            '--tw-prose-th-borders': theme('colors.slate.700'),
-            '--tw-prose-td-borders': theme('colors.slate.800'),
-            '--tw-prose-hr': theme('colors.slate.800'),
-          },
-        },
-        sm: {
-          css: {
-            fontSize: '0.875rem',
-            lineHeight: '1.625',
             'h1': {
               fontSize: '1rem',
               fontWeight: '700',
@@ -141,6 +123,18 @@ const config: Config = {
               padding: '0.4375rem 0.625rem',
               verticalAlign: 'top',
             },
+          },
+        },
+        invert: {
+          css: {
+            '--tw-prose-body': theme('colors.slate.300'),
+            '--tw-prose-headings': theme('colors.cyan.400'),
+            '--tw-prose-bold': theme('colors.slate.200'),
+            '--tw-prose-bullets': theme('colors.cyan.400'),
+            '--tw-prose-counters': theme('colors.cyan.400'),
+            '--tw-prose-th-borders': theme('colors.slate.700'),
+            '--tw-prose-td-borders': theme('colors.slate.800'),
+            '--tw-prose-hr': theme('colors.slate.800'),
           },
         },
       }),
