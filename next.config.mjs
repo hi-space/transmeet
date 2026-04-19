@@ -11,9 +11,9 @@ const withPWA = withPWAInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  output: 'export', // static HTML/JS/CSS for S3+CloudFront hosting
-  trailingSlash: true, // /page → /page/index.html for S3 path resolution
-  transpilePackages: ['react-markdown', 'remark-gfm'],
+  output: 'export',
+  trailingSlash: true,
+  experimental: { esmExternals: 'loose' },
 }
 
 export default withPWA(nextConfig)
