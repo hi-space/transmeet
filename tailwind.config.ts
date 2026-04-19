@@ -43,6 +43,15 @@ const config: Config = {
           css: {
             fontSize: '0.875rem',
             lineHeight: '1.625',
+            'h1': {
+              fontSize: '1rem',
+              fontWeight: '700',
+              letterSpacing: '0.025em',
+              marginTop: '1rem',
+              marginBottom: '0.375rem',
+              color: 'var(--tw-prose-headings)',
+              '&:first-child': { marginTop: '0' },
+            },
             'h2': {
               fontSize: '0.9375rem',
               fontWeight: '700',
