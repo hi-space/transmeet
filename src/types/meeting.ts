@@ -8,6 +8,8 @@ export interface Message {
   detectedLanguage?: 'ko' | 'en'
   streamPhase?: 'stt' | 'translating' | 'done'
   timestamp: string
+  qaResponse?: string
+  qaStreamPhase?: 'streaming' | 'done' | 'error'
 }
 
 export interface Meeting {

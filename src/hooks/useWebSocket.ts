@@ -301,6 +301,29 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     [] // stable — all deps via refs
   )
 
+  const sendQaRequest = useCallback(
+    (
+      messageId: string,
+      question: string,
+      messages?: { speaker: string; original: string }[],
+      modelId?: string
+    ): boolean => {
+      const ws = wsRef.current
+      if (!ws || ws.readyState !== WebSocket.OPEN) return false
+      ws.send(
+        JSON.stringify({
+          action: 'qaRequest',
+          messageId,
+          question,
+          ...(messages && { messages }),
+          ...(modelId && { modelId }),
+        })
+      )
+      return true
+    },
+    []
+  )
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -322,5 +345,6 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     sendSummarize,
     sendTranslate,
     sendTtsRequest,
+    sendQaRequest,
   }
 }

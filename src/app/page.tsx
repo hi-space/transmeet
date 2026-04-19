@@ -747,6 +747,66 @@ export default function Home() {
             )
           )
         }
+      } else if (msg.type === 'qa_stream') {
+        const qaMsgId = msg.messageId
+        if (msg.phase === 'delta') {
+          setMeetings((prev) =>
+            prev.map((m) =>
+              m.id === activeMeetingId
+                ? {
+                    ...m,
+                    messages: m.messages.map((existing) =>
+                      existing.id === qaMsgId
+                        ? {
+                            ...existing,
+                            qaResponse: (existing.qaResponse ?? '') + (msg.text ?? ''),
+                            qaStreamPhase: 'streaming' as const,
+                          }
+                        : existing
+                    ),
+                  }
+                : m
+            )
+          )
+        } else if (msg.phase === 'done') {
+          setMeetings((prev) =>
+            prev.map((m) =>
+              m.id === activeMeetingId
+                ? {
+                    ...m,
+                    messages: m.messages.map((existing) =>
+                      existing.id === qaMsgId
+                        ? {
+                            ...existing,
+                            qaResponse: msg.answer ?? existing.qaResponse,
+                            qaStreamPhase: 'done' as const,
+                          }
+                        : existing
+                    ),
+                  }
+                : m
+            )
+          )
+        } else if (msg.phase === 'error') {
+          setMeetings((prev) =>
+            prev.map((m) =>
+              m.id === activeMeetingId
+                ? {
+                    ...m,
+                    messages: m.messages.map((existing) =>
+                      existing.id === qaMsgId
+                        ? {
+                            ...existing,
+                            qaResponse: msg.error ?? 'Q&A 실패',
+                            qaStreamPhase: 'error' as const,
+                          }
+                        : existing
+                    ),
+                  }
+                : m
+            )
+          )
+        }
       }
     },
     [
@@ -772,6 +832,7 @@ export default function Home() {
     sendSummarize,
     sendTranslate,
     sendTtsRequest,
+    sendQaRequest,
   } = useWebSocket({
     meetingId: activeMeetingId,
     onMessage: handleWsMessage,
@@ -1080,6 +1141,38 @@ export default function Home() {
       settings.targetLang,
       settings.translationModel,
     ]
+  )
+
+  // ─── Q&A assistant ──────────────────────────────────────────────────────────
+
+  const handleAskQuestion = useCallback(
+    (messageId: string, question: string) => {
+      if (!question.trim() || wsStatus !== 'connected') return
+      const meeting = meetings.find((m) => m.id === activeMeetingId)
+      if (!meeting) return
+
+      const messageContext = meeting.messages
+        .filter((m) => m.original)
+        .map((m) => ({ speaker: m.speaker, original: m.original }))
+
+      setMeetings((prev) =>
+        prev.map((m) =>
+          m.id === activeMeetingId
+            ? {
+                ...m,
+                messages: m.messages.map((existing) =>
+                  existing.id === messageId
+                    ? { ...existing, qaResponse: '', qaStreamPhase: 'streaming' as const }
+                    : existing
+                ),
+              }
+            : m
+        )
+      )
+
+      sendQaRequest(messageId, question, messageContext)
+    },
+    [wsStatus, meetings, activeMeetingId, sendQaRequest]
   )
 
   // ─── Per-message TTS ─────────────────────────────────────────────────────────
@@ -1461,6 +1554,7 @@ export default function Home() {
                   onPlayMessage={handlePlayMessage}
                   onStopMessage={handleStopAllAudio}
                   onTranslateMessage={handleTranslateMessage}
+                  onAskQuestion={handleAskQuestion}
                 />
               </div>
             )}
@@ -1488,6 +1582,7 @@ export default function Home() {
                 onPlayMessage={handlePlayMessage}
                 onStopMessage={handleStopAllAudio}
                 onTranslateMessage={handleTranslateMessage}
+                onAskQuestion={handleAskQuestion}
               />
             ) : (
               <SummaryPanel

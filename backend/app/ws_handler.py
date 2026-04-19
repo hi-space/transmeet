@@ -936,6 +936,62 @@ async def _stream_summary(
             pass
 
 
+# ─── Q&A streaming ─────────────────────────────────────────────────────────
+
+async def _stream_qa_answer(
+    ws: WebSocket,
+    message_id: str,
+    question: str,
+    model_id: str,
+    *,
+    inline_messages: Optional[list] = None,
+) -> None:
+    try:
+        lines: List[str] = []
+        if inline_messages:
+            for m in inline_messages:
+                speaker = m.get("speaker", "")
+                orig = m.get("original", "")
+                if orig:
+                    lines.append(f"[{speaker}] {orig}")
+
+        if not lines:
+            await _safe_send(ws, {"type": "qa_stream", "messageId": message_id, "phase": "error", "error": "No meeting context"})
+            return
+        transcript = "\n".join(lines)
+
+        system_prompt = (
+            "당신은 회의 어시스턴트입니다. 아래 회의 내용만을 기반으로 질문에 답변하세요.\n"
+            "회의 내용에 없는 정보는 \"회의에서 언급되지 않았습니다\"라고 답변하세요.\n"
+            "외부 지식을 사용하지 마세요. 답변은 한국어로 간결하게 작성하세요."
+        )
+        user_prompt = f"[회의 내용]\n{transcript}\n\n[질문]\n{question}"
+
+        answer = ""
+        async with bedrock_client() as br:
+            stream_resp = await br.converse_stream(
+                modelId=model_id,
+                system=[{"text": system_prompt}],
+                messages=[{"role": "user", "content": [{"text": user_prompt}]}],
+                inferenceConfig={"maxTokens": 2048},
+            )
+            async for event in stream_resp["stream"]:
+                delta = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
+                if not delta:
+                    continue
+                answer += delta
+                await _safe_send(ws, {"type": "qa_stream", "messageId": message_id, "phase": "delta", "text": delta})
+
+        await _safe_send(ws, {"type": "qa_stream", "messageId": message_id, "phase": "done", "answer": answer})
+
+    except Exception:
+        logger.exception("[ws] _stream_qa_answer failed for message_id=%s", message_id)
+        try:
+            await _safe_send(ws, {"type": "qa_stream", "messageId": message_id, "phase": "error", "error": "Q&A generation failed"})
+        except Exception:
+            pass
+
+
 # ─── WebSocket endpoint ──────────────────────────────────────────────────────
 
 @router.websocket("/ws")
@@ -1060,6 +1116,16 @@ async def ws_endpoint(
                             ws, msg_id, orig_text, speaker,
                             source_lang, target_lang, model_id, _iso_now(),
                         )
+                    )
+
+            elif action == "qaRequest":
+                msg_id = data.get("messageId") or generate_message_id()
+                question = (data.get("question") or "").strip()
+                model_id = data.get("modelId") or config.QA_MODEL_ID
+                inline_messages = data.get("messages")
+                if msg_id and question:
+                    asyncio.create_task(
+                        _stream_qa_answer(ws, msg_id, question, model_id, inline_messages=inline_messages)
                     )
 
             elif action == "sendAudio":

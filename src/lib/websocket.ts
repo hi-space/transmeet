@@ -39,6 +39,15 @@ export interface SummaryStreamServerMessage {
   error?: string
 }
 
+export interface QaStreamServerMessage {
+  type: 'qa_stream'
+  messageId: string
+  phase: 'delta' | 'done' | 'error'
+  text?: string
+  answer?: string
+  error?: string
+}
+
 export interface ErrorServerMessage {
   type: 'error'
   message: string
@@ -55,5 +64,6 @@ export type WsServerMessage =
   | SubtitleStreamServerMessage
   | TtsStreamServerMessage
   | SummaryStreamServerMessage
+  | QaStreamServerMessage
   | ErrorServerMessage
   | PongServerMessage
