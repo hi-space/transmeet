@@ -668,19 +668,6 @@ export default function Home() {
                 : m
             )
           )
-
-          if (msg.speaker === 'me') {
-            setTimeout(() => {
-              const updated = meetingsRef.current.find((mt) => mt.id === activeMeetingId)
-              const meMsg = updated?.messages.find((mt) => mt.id === resolvedDoneId)
-              if (meMsg?.translation) {
-                const ctx = (updated?.messages ?? [])
-                  .filter((mt) => mt.original)
-                  .map((mt) => ({ speaker: mt.speaker, original: mt.original }))
-                sendQaRequestRef.current(resolvedDoneId, meMsg.translation, ctx)
-              }
-            }, 0)
-          }
         }
       } else if (msg.type === 'tts_stream') {
         if (msg.phase === 'translating') {
@@ -721,6 +708,16 @@ export default function Home() {
                 : m
             )
           )
+          setTimeout(() => {
+            const updated = meetingsRef.current.find((mt) => mt.id === activeMeetingId)
+            const meMsg = updated?.messages.find((mt) => mt.id === msg.messageId)
+            if (meMsg?.translation) {
+              const ctx = (updated?.messages ?? [])
+                .filter((mt) => mt.original)
+                .map((mt) => ({ speaker: mt.speaker, original: mt.original }))
+              sendQaRequestRef.current(msg.messageId, meMsg.translation, ctx)
+            }
+          }, 0)
           setIsTtsPending(false)
           if (msg.audioData && settings.ttsAutoPlay) {
             playBase64Audio(msg.audioData, (audio) => {
