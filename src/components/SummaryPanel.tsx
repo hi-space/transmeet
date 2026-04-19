@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface Props {
   summary?: string // raw markdown
@@ -9,83 +11,12 @@ interface Props {
   isSummarizing?: boolean
 }
 
-// ─── Inline bold renderer ────────────────────────────────────────────────────
-
-function renderInline(text: string): ReactNode {
-  const parts = text.split(/(\*\*[^*]+\*\*)/)
-  if (parts.length === 1) return text
-  return parts.map((part, i) =>
-    part.startsWith('**') && part.endsWith('**') ? (
-      <strong key={i} className="font-semibold text-slate-700 dark:text-slate-200">
-        {part.slice(2, -2)}
-      </strong>
-    ) : (
-      part
-    )
-  )
-}
-
 // ─── Markdown renderer ───────────────────────────────────────────────────────
 
 function MarkdownSummary({ text }: { text: string }) {
-  const lines = text.split('\n')
-
   return (
-    <div className="space-y-0.5">
-      {lines.map((line, i) => {
-        const t = line.trim()
-
-        if (!t) return <div key={i} className="h-2" />
-
-        if (t === '---')
-          return <hr key={i} className="my-3 border-slate-200 dark:border-slate-800" />
-
-        if (t.startsWith('## '))
-          return (
-            <h3
-              key={i}
-              className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider pt-4 pb-1 first:pt-0"
-            >
-              {t.slice(3)}
-            </h3>
-          )
-
-        if (t.startsWith('### '))
-          return (
-            <h4 key={i} className="text-sm font-semibold text-slate-600 dark:text-slate-300 pt-2">
-              {renderInline(t.slice(4))}
-            </h4>
-          )
-
-        if (t.startsWith('- ') || t.startsWith('* '))
-          return (
-            <div key={i} className="flex items-start gap-2 py-0.5">
-              <span className="flex-shrink-0 w-1 h-1 rounded-full bg-slate-400 dark:bg-slate-500 mt-[6px]" />
-              <span className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                {renderInline(t.slice(2))}
-              </span>
-            </div>
-          )
-
-        const numMatch = t.match(/^(\d+)\.\s+(.+)/)
-        if (numMatch)
-          return (
-            <div key={i} className="flex items-start gap-2 py-0.5">
-              <span className="flex-shrink-0 text-[11px] font-bold text-slate-500 w-4 text-right mt-0.5">
-                {numMatch[1]}.
-              </span>
-              <span className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                {renderInline(numMatch[2])}
-              </span>
-            </div>
-          )
-
-        return (
-          <p key={i} className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-            {renderInline(t)}
-          </p>
-        )
-      })}
+    <div className="prose-sm prose-slate dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_h2]:text-xs [&_h2]:font-bold [&_h2]:uppercase [&_h2]:tracking-wider [&_h2]:pt-4 [&_h2]:pb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_table]:text-xs">
+      <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
     </div>
   )
 }
