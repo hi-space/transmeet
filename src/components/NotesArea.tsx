@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { Message } from '@/types/meeting'
 
 function formatTime(iso: string) {
@@ -181,7 +182,7 @@ export default function NotesArea({
                 }`}
               >
                 <div className="prose-sm prose-slate dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-                  <ReactMarkdown>{msg.qaResponse ?? ''}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.qaResponse ?? ''}</ReactMarkdown>
                   {isQaStreaming && (
                     <span className="inline-block w-[2px] h-[0.7em] bg-indigo-500 ml-[2px] align-middle animate-pulse" />
                   )}
