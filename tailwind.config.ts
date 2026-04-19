@@ -18,7 +18,7 @@ const config: Config = {
         DEFAULT: {
           css: {
             '--tw-prose-body': theme('colors.slate.600'),
-            '--tw-prose-headings': theme('colors.slate.900'),
+            '--tw-prose-headings': theme('colors.cyan.700'),
             '--tw-prose-bold': theme('colors.slate.700'),
             '--tw-prose-bullets': theme('colors.slate.400'),
             '--tw-prose-counters': theme('colors.slate.500'),
@@ -30,7 +30,7 @@ const config: Config = {
         invert: {
           css: {
             '--tw-prose-body': theme('colors.slate.300'),
-            '--tw-prose-headings': theme('colors.slate.100'),
+            '--tw-prose-headings': theme('colors.cyan.400'),
             '--tw-prose-bold': theme('colors.slate.200'),
             '--tw-prose-bullets': theme('colors.slate.500'),
             '--tw-prose-counters': theme('colors.slate.400'),
@@ -44,19 +44,21 @@ const config: Config = {
             fontSize: '0.875rem',
             lineHeight: '1.625',
             'h2': {
-              fontSize: '0.75rem',
+              fontSize: '0.9375rem',
               fontWeight: '700',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
+              letterSpacing: '0.025em',
               marginTop: '1rem',
-              marginBottom: '0.25rem',
+              marginBottom: '0.375rem',
+              color: 'var(--tw-prose-headings)',
               '&:first-child': { marginTop: '0' },
             },
             'h3': {
-              fontSize: '0.875rem',
+              fontSize: '0.8125rem',
               fontWeight: '600',
+              letterSpacing: '0.01em',
               marginTop: '0.75rem',
               marginBottom: '0.25rem',
+              color: 'var(--tw-prose-headings)',
             },
             'p': {
               marginTop: '0.25rem',
