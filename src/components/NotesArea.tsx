@@ -181,7 +181,7 @@ export default function NotesArea({
                     : 'bg-indigo-50 dark:bg-indigo-900/20 text-slate-700 dark:text-slate-300 border border-indigo-100 dark:border-indigo-800'
                 }`}
               >
-                <div className="prose-sm prose-slate dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                <div className="prose prose-sm prose-slate dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.qaResponse ?? ''}</ReactMarkdown>
                   {isQaStreaming && (
                     <span className="inline-block w-[2px] h-[0.7em] bg-indigo-500 ml-[2px] align-middle animate-pulse" />

@@ -15,7 +15,7 @@ interface Props {
 
 function MarkdownSummary({ text }: { text: string }) {
   return (
-    <div className="prose-sm prose-slate dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&_h2]:text-xs [&_h2]:font-bold [&_h2]:uppercase [&_h2]:tracking-wider [&_h2]:pt-4 [&_h2]:pb-1 [&_h3]:text-sm [&_h3]:font-semibold [&_table]:text-xs">
+    <div className="prose prose-sm prose-slate dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
       <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
     </div>
   )
