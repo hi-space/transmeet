@@ -188,6 +188,14 @@ export default function Home() {
       modelId?: string
     ) => void
   >(() => {})
+  const sendQaRequestRef = useRef<
+    (
+      messageId: string,
+      question: string,
+      messages?: { speaker: string; original: string }[],
+      modelId?: string
+    ) => boolean
+  >(() => false)
   // Safety: reset isSummarizing if WS done/error event is never received
   const isSummarizingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // Ref-based isSummarizing: stuck 감지 및 force reset에 사용 (state와 동기화)
@@ -660,6 +668,19 @@ export default function Home() {
                 : m
             )
           )
+
+          if (msg.speaker === 'me') {
+            setTimeout(() => {
+              const updated = meetingsRef.current.find((mt) => mt.id === activeMeetingId)
+              const meMsg = updated?.messages.find((mt) => mt.id === resolvedDoneId)
+              if (meMsg?.translation) {
+                const ctx = (updated?.messages ?? [])
+                  .filter((mt) => mt.original)
+                  .map((mt) => ({ speaker: mt.speaker, original: mt.original }))
+                sendQaRequestRef.current(resolvedDoneId, meMsg.translation, ctx)
+              }
+            }, 0)
+          }
         }
       } else if (msg.type === 'tts_stream') {
         if (msg.phase === 'translating') {
@@ -842,6 +863,10 @@ export default function Home() {
   useEffect(() => {
     sendTranslateRef.current = sendTranslate
   }, [sendTranslate])
+
+  useEffect(() => {
+    sendQaRequestRef.current = sendQaRequest
+  }, [sendQaRequest])
 
   // ─── Task #3: Audio capture ─────────────────────────────────────────────────
 
@@ -1141,38 +1166,6 @@ export default function Home() {
       settings.targetLang,
       settings.translationModel,
     ]
-  )
-
-  // ─── Q&A assistant ──────────────────────────────────────────────────────────
-
-  const handleAskQuestion = useCallback(
-    (messageId: string, question: string) => {
-      if (!question.trim() || wsStatus !== 'connected') return
-      const meeting = meetings.find((m) => m.id === activeMeetingId)
-      if (!meeting) return
-
-      const messageContext = meeting.messages
-        .filter((m) => m.original)
-        .map((m) => ({ speaker: m.speaker, original: m.original }))
-
-      setMeetings((prev) =>
-        prev.map((m) =>
-          m.id === activeMeetingId
-            ? {
-                ...m,
-                messages: m.messages.map((existing) =>
-                  existing.id === messageId
-                    ? { ...existing, qaResponse: '', qaStreamPhase: 'streaming' as const }
-                    : existing
-                ),
-              }
-            : m
-        )
-      )
-
-      sendQaRequest(messageId, question, messageContext)
-    },
-    [wsStatus, meetings, activeMeetingId, sendQaRequest]
   )
 
   // ─── Per-message TTS ─────────────────────────────────────────────────────────
@@ -1554,7 +1547,6 @@ export default function Home() {
                   onPlayMessage={handlePlayMessage}
                   onStopMessage={handleStopAllAudio}
                   onTranslateMessage={handleTranslateMessage}
-                  onAskQuestion={handleAskQuestion}
                 />
               </div>
             )}
@@ -1582,7 +1574,6 @@ export default function Home() {
                 onPlayMessage={handlePlayMessage}
                 onStopMessage={handleStopAllAudio}
                 onTranslateMessage={handleTranslateMessage}
-                onAskQuestion={handleAskQuestion}
               />
             ) : (
               <SummaryPanel
