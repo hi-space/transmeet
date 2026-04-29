@@ -85,7 +85,7 @@ export function useAudioCapture({
   const streamRef = useRef<MediaStream | null>(null) // mic stream
   const sysStreamRef = useRef<MediaStream | null>(null) // system audio stream
   const samplesRef = useRef<Float32Array[]>([])
-  const chunkTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const workerRef = useRef<Worker | null>(null)
   const levelAnimRef = useRef<number | null>(null)
   const onChunkRef = useRef(onChunk)
 
@@ -194,7 +194,12 @@ export function useAudioCapture({
         // 녹화 중 video track 중단 시 Chrome에서 stream 전체가 비활성화되어 묵음이 됨
       }
 
-      chunkTimerRef.current = setInterval(flushChunk, chunkDurationMs)
+      const worker = new Worker(new URL('../workers/audio-timer.worker.ts', import.meta.url))
+      worker.onmessage = (e) => {
+        if (e.data.type === 'tick') flushChunk()
+      }
+      worker.postMessage({ type: 'start', interval: chunkDurationMs })
+      workerRef.current = worker
       levelAnimRef.current = requestAnimationFrame(updateLevel)
       setIsRecording(true)
     } catch (err) {
@@ -223,9 +228,10 @@ export function useAudioCapture({
   const stop = useCallback(() => {
     flushChunk()
 
-    if (chunkTimerRef.current) {
-      clearInterval(chunkTimerRef.current)
-      chunkTimerRef.current = null
+    if (workerRef.current) {
+      workerRef.current.postMessage({ type: 'stop' })
+      workerRef.current.terminate()
+      workerRef.current = null
     }
     if (levelAnimRef.current) {
       cancelAnimationFrame(levelAnimRef.current)
@@ -253,7 +259,10 @@ export function useAudioCapture({
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (chunkTimerRef.current) clearInterval(chunkTimerRef.current)
+      if (workerRef.current) {
+        workerRef.current.postMessage({ type: 'stop' })
+        workerRef.current.terminate()
+      }
       if (levelAnimRef.current) cancelAnimationFrame(levelAnimRef.current)
       processorRef.current?.disconnect()
       analyserRef.current?.disconnect()
