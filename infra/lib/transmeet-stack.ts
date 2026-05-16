@@ -12,6 +12,9 @@ import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as route53 from 'aws-cdk-lib/aws-route53';
+import * as targets from 'aws-cdk-lib/aws-route53-targets';
+import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import { Construct } from 'constructs';
 import * as path from 'path';
 
@@ -19,6 +22,8 @@ const WHISPER_ENDPOINT = 'whisper-large';
 const BEDROCK_MODEL_ID = 'global.anthropic.claude-haiku-4-5-20251001-v1:0';
 const REGION = 'us-east-1';
 const MEETINGS_TABLE = 'transmeet-meetings';
+const ROOT_DOMAIN = 'hi-yoo.com';
+const APP_DOMAIN = 'transmeet.hi-yoo.com';
 
 export class TransmeetStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -183,11 +188,24 @@ export class TransmeetStack extends cdk.Stack {
     });
     frontendBucket.grantRead(oai);
 
+    // ─── Route53 + ACM (custom domain) ─────────────────────────────────────────
+
+    const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
+      domainName: ROOT_DOMAIN,
+    });
+
+    const certificate = new acm.Certificate(this, 'FrontendCertificate', {
+      domainName: APP_DOMAIN,
+      validation: acm.CertificateValidation.fromDns(hostedZone),
+    });
+
     const distribution = new cloudfront.Distribution(
       this,
       'FrontendDistribution',
       {
         comment: 'TransMeet frontend',
+        domainNames: [APP_DOMAIN],
+        certificate,
         defaultBehavior: {
           origin: new origins.S3Origin(frontendBucket, {
             originAccessIdentity: oai,
@@ -208,6 +226,14 @@ export class TransmeetStack extends cdk.Stack {
         priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
       }
     );
+
+    new route53.ARecord(this, 'FrontendAliasRecord', {
+      zone: hostedZone,
+      recordName: APP_DOMAIN,
+      target: route53.RecordTarget.fromAlias(
+        new targets.CloudFrontTarget(distribution)
+      ),
+    });
 
     // ─── ECR ────────────────────────────────────────────────────────────────────
 
@@ -395,6 +421,12 @@ export class TransmeetStack extends cdk.Stack {
       value: `https://${distribution.distributionDomainName}`,
       exportName: 'TransmeetCloudFrontUrl',
       description: 'CloudFront distribution URL',
+    });
+
+    new cdk.CfnOutput(this, 'CustomDomainUrl', {
+      value: `https://${APP_DOMAIN}`,
+      exportName: 'TransmeetCustomDomainUrl',
+      description: 'Custom domain URL',
     });
 
     new cdk.CfnOutput(this, 'MeetingsTableName', {
