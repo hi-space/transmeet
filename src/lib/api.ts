@@ -116,9 +116,12 @@ export const api = {
       }),
     delete: (id: string) => apiFetch<void>(`/meetings/${id}`, { method: 'DELETE' }),
     summarize: (id: string) =>
-      apiFetch<{ summary: string; meetingId: string }>(`/meetings/${id}/summarize`, {
-        method: 'POST',
-      }),
+      apiFetch<{ summary: string; meetingId: string; title?: string }>(
+        `/meetings/${id}/summarize`,
+        {
+          method: 'POST',
+        }
+      ),
     generateTitle: (id: string) =>
       apiFetch<{ title: string; meetingId: string }>(`/meetings/${id}/title`, {
         method: 'POST',

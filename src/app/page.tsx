@@ -234,6 +234,11 @@ export default function Home() {
     try {
       const full = await api.meetings.get(id)
       const meeting = toMeeting(full)
+      // 이미 요약이 있다면 현재 메시지 수를 마지막 요약 시점으로 간주 —
+      // 로드 자체가 자동 요약을 재실행하지 않도록 한다.
+      if (meeting.summary) {
+        lastSummarizedCountRef.current[id] = meeting.messages.length
+      }
       setMeetings((prev) => prev.map((m) => (m.id === id ? meeting : m)))
     } catch {
       // silent — sidebar still shows the meeting
@@ -745,7 +750,9 @@ export default function Home() {
           }
           setMeetings((prev) =>
             prev.map((m) =>
-              m.id === activeMeetingId ? { ...m, summary: msg.summary ?? m.summary } : m
+              m.id === activeMeetingId
+                ? { ...m, summary: msg.summary ?? m.summary, title: msg.title ?? m.title }
+                : m
             )
           )
           isSummarizingRef.current = false
@@ -1067,10 +1074,14 @@ export default function Home() {
 
       // REST API fallback
       try {
-        const { summary } = await api.meetings.summarize(activeMeetingId)
+        const { summary, title } = await api.meetings.summarize(activeMeetingId)
         lastSummarizedCountRef.current[activeMeetingId] = msgCount
         setMeetings((prev) =>
-          prev.map((m) => (m.id === activeMeetingId ? { ...m, summary: parseSummary(summary) } : m))
+          prev.map((m) =>
+            m.id === activeMeetingId
+              ? { ...m, summary: parseSummary(summary), title: title ?? m.title }
+              : m
+          )
         )
         setSummaryOpen(true)
       } catch {

@@ -36,6 +36,7 @@ export interface SummaryStreamServerMessage {
   phase: 'delta' | 'done' | 'error'
   text?: string
   summary?: string
+  title?: string
   error?: string
 }
 
