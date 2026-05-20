@@ -39,7 +39,7 @@ import logging
 import struct
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
 from amazon_transcribe.client import TranscribeStreamingClient
@@ -242,6 +242,9 @@ async def _process_segment(
 
     Steps: push STT result → stream Bedrock translation → push final subtitle
            → persist to DynamoDB.
+
+    WS 송신 실패가 DDB 저장을 막지 않는다 — 페이지 새로고침/연결 끊김 도중에도
+    이미 트랜스크립트가 만들어진 발화는 반드시 영구 저장되어야 한다.
     """
     message_id = generate_message_id()
     meeting_id = state.meeting_id
@@ -256,14 +259,17 @@ async def _process_segment(
     target_lang_label = "Korean" if translation_target == "ko" else "English"
 
     # ── 1: Push STT result immediately ─────────────────────────────────────────
-    await _safe_send(ws, {
-        "type": "subtitle_stream",
-        "messageId": message_id,
-        "phase": "stt",
-        "speaker": speaker,
-        "originalText": original_text,
-        "timestamp": timestamp,
-    })
+    try:
+        await _safe_send(ws, {
+            "type": "subtitle_stream",
+            "messageId": message_id,
+            "phase": "stt",
+            "speaker": speaker,
+            "originalText": original_text,
+            "timestamp": timestamp,
+        })
+    except Exception:
+        logger.warning("[process_segment] WS send (stt) failed for message_id=%s", message_id)
 
     # ── 2: Stream translation via Bedrock ──────────────────────────────────────
     prompt = (
@@ -285,56 +291,69 @@ async def _process_segment(
                 if not delta:
                     continue
                 translated_text += delta
-                await _safe_send(ws, {
-                    "type": "subtitle_stream",
-                    "messageId": message_id,
-                    "phase": "translating",
-                    "speaker": speaker,
-                    "originalText": original_text,
-                    "partialTranslation": translated_text,
-                    "timestamp": timestamp,
-                })
+                try:
+                    await _safe_send(ws, {
+                        "type": "subtitle_stream",
+                        "messageId": message_id,
+                        "phase": "translating",
+                        "speaker": speaker,
+                        "originalText": original_text,
+                        "partialTranslation": translated_text,
+                        "timestamp": timestamp,
+                    })
+                except Exception:
+                    # WS may be closing — keep accumulating translation for DB save
+                    pass
     except Exception:
         logger.exception("[process_segment] Bedrock translation failed for message_id=%s", message_id)
         # 번역 실패해도 done phase는 보내야 프론트엔드 말풍선이 stuck 안 됨
 
     # ── 3: Push final subtitle ─────────────────────────────────────────────────
-    await _safe_send(ws, {
-        "type": "subtitle_stream",
-        "messageId": message_id,
-        "phase": "done",
-        "speaker": speaker,
-        "originalText": original_text,
-        "translatedText": translated_text,
-        "detectedLanguage": detected_language,
-        "timestamp": timestamp,
-    })
+    try:
+        await _safe_send(ws, {
+            "type": "subtitle_stream",
+            "messageId": message_id,
+            "phase": "done",
+            "speaker": speaker,
+            "originalText": original_text,
+            "translatedText": translated_text,
+            "detectedLanguage": detected_language,
+            "timestamp": timestamp,
+        })
+    except Exception:
+        logger.warning("[process_segment] WS send (done) failed for message_id=%s", message_id)
 
     # ── 4: Persist to DynamoDB ─────────────────────────────────────────────────
     if meeting_id:
-        async with dynamodb_client() as ddb:
-            await ddb.update_item(
-                TableName=config.MEETINGS_TABLE,
-                Key={"meetingId": {"S": meeting_id}},
-                UpdateExpression=(
-                    "SET messages = list_append(if_not_exists(messages, :empty), :msg), "
-                    "#updatedAt = :ts "
-                    "ADD messageCount :one"
-                ),
-                ExpressionAttributeNames={"#updatedAt": "updatedAt"},
-                ExpressionAttributeValues={
-                    ":msg": {"L": [{"M": {
-                        "id": {"S": message_id},
-                        "speaker": {"S": speaker},
-                        "originalText": {"S": original_text},
-                        "translatedText": {"S": translated_text},
-                        "detectedLanguage": {"S": detected_language},
-                        "timestamp": {"S": timestamp},
-                    }}]},
-                    ":empty": {"L": []},
-                    ":ts": {"S": timestamp},
-                    ":one": {"N": "1"},
-                },
+        try:
+            async with dynamodb_client() as ddb:
+                await ddb.update_item(
+                    TableName=config.MEETINGS_TABLE,
+                    Key={"meetingId": {"S": meeting_id}},
+                    UpdateExpression=(
+                        "SET messages = list_append(if_not_exists(messages, :empty), :msg), "
+                        "#updatedAt = :ts "
+                        "ADD messageCount :one"
+                    ),
+                    ExpressionAttributeNames={"#updatedAt": "updatedAt"},
+                    ExpressionAttributeValues={
+                        ":msg": {"L": [{"M": {
+                            "id": {"S": message_id},
+                            "speaker": {"S": speaker},
+                            "originalText": {"S": original_text},
+                            "translatedText": {"S": translated_text},
+                            "detectedLanguage": {"S": detected_language},
+                            "timestamp": {"S": timestamp},
+                        }}]},
+                        ":empty": {"L": []},
+                        ":ts": {"S": timestamp},
+                        ":one": {"N": "1"},
+                    },
+                )
+        except Exception:
+            logger.exception(
+                "[process_segment] DynamoDB save failed for message_id=%s meeting_id=%s",
+                message_id, meeting_id,
             )
 
 
@@ -849,6 +868,55 @@ async def _handle_tts_request(
 
 # ─── Summary streaming ───────────────────────────────────────────────────────
 
+_DEFAULT_TITLE_PREFIX = "Meeting "
+
+
+async def _generate_title_if_default(
+    meeting_id: str,
+    current_title: str,
+    transcript_lines: List[str],
+    model_id: str,
+) -> Optional[str]:
+    """Generate and persist an AI title only when the current title is the auto-default.
+
+    Returns the new title on success, None if skipped or failed.
+    """
+    if not current_title.startswith(_DEFAULT_TITLE_PREFIX):
+        return None
+    if not transcript_lines:
+        return None
+    try:
+        head = "\n".join(transcript_lines[:20])
+        prompt = (
+            "다음 회의 내용을 보고 짧은 제목을 생성하세요 (10-20자, 한국어). "
+            f"제목만 출력하세요.\n\n{head}"
+        )
+        async with bedrock_client() as br:
+            resp = await br.converse(
+                modelId=model_id,
+                messages=[{"role": "user", "content": [{"text": prompt}]}],
+                inferenceConfig={"maxTokens": 64},
+            )
+        title = (resp.get("output", {}).get("message", {}).get("content", [{}])[0].get("text", "") or "").strip()
+        if not title:
+            return None
+        async with dynamodb_client() as ddb:
+            await ddb.update_item(
+                TableName=config.MEETINGS_TABLE,
+                Key={"meetingId": {"S": meeting_id}},
+                UpdateExpression="SET title = :t, #updatedAt = :u",
+                ExpressionAttributeNames={"#updatedAt": "updatedAt"},
+                ExpressionAttributeValues={
+                    ":t": {"S": title},
+                    ":u": {"S": _iso_now()},
+                },
+            )
+        return title
+    except Exception:
+        logger.exception("[title] auto-generate failed for meeting_id=%s", meeting_id)
+        return None
+
+
 async def _stream_summary(
     ws: WebSocket,
     meeting_id: str,
@@ -864,18 +932,27 @@ async def _stream_summary(
     """
     try:
         lines: List[str] = []
+        current_title = ""
         if inline_messages:
             for m in inline_messages:
                 speaker = m.get("speaker", "")
                 orig = m.get("original", "")
                 if orig:
                     lines.append(f"[{speaker}] {orig}")
+            async with dynamodb_client() as ddb:
+                meta = await ddb.get_item(
+                    TableName=config.MEETINGS_TABLE,
+                    Key={"meetingId": {"S": meeting_id}},
+                    ProjectionExpression="title",
+                )
+            current_title = meta.get("Item", {}).get("title", {}).get("S", "")
         else:
             async with dynamodb_client() as ddb:
                 result = await ddb.get_item(
                     TableName=config.MEETINGS_TABLE,
                     Key={"meetingId": {"S": meeting_id}},
                 )
+            current_title = result.get("Item", {}).get("title", {}).get("S", "")
             raw_messages = result.get("Item", {}).get("messages", {}).get("L", [])
             for m in raw_messages:
                 mv = m.get("M", {})
@@ -926,7 +1003,12 @@ async def _stream_summary(
                 },
             )
 
-        await _safe_send(ws, {"type": "summary_stream", "phase": "done", "summary": summary})
+        new_title = await _generate_title_if_default(meeting_id, current_title, lines, model_id)
+
+        done_payload: Dict[str, Any] = {"type": "summary_stream", "phase": "done", "summary": summary}
+        if new_title:
+            done_payload["title"] = new_title
+        await _safe_send(ws, done_payload)
 
     except Exception:
         logger.exception("[ws] _stream_summary failed for meeting_id=%s", meeting_id)
