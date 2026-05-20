@@ -115,12 +115,12 @@ export class TransmeetStack extends cdk.Stack {
     const summarizeFn = new NodejsFunction(this, 'SummarizeFn', {
       functionName: 'transmeet-summarize',
       entry: path.join(__dirname, '../lambda/summarize/index.ts'),
-      timeout: cdk.Duration.seconds(120),
+      timeout: cdk.Duration.minutes(5),
       ...commonNodejsFunctionProps,
       environment: {
         ...commonEnv,
-        // Sonnet for higher-quality meeting summaries
-        SUMMARIZE_MODEL_ID: 'global.anthropic.claude-sonnet-4-6',
+        // Opus 4.7 for highest-quality meeting summaries
+        SUMMARIZE_MODEL_ID: 'global.anthropic.claude-opus-4-7',
       },
     });
 
