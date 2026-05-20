@@ -55,15 +55,22 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           return respond(200, result.Item)
         }
 
-        // GET /meetings - list all
-        const result = await ddb.send(
-          new ScanCommand({
-            TableName: process.env.MEETINGS_TABLE,
-            ProjectionExpression: 'meetingId, title, createdAt, #st, messageCount',
-            ExpressionAttributeNames: { '#st': 'status' },
-          })
-        )
-        const items = (result.Items ?? []).sort(
+        // GET /meetings - list all (paginate through ScanCommand 1MB pages)
+        const items: Record<string, unknown>[] = []
+        let lastKey: Record<string, unknown> | undefined
+        do {
+          const page = await ddb.send(
+            new ScanCommand({
+              TableName: process.env.MEETINGS_TABLE,
+              ProjectionExpression: 'meetingId, title, createdAt, #st, messageCount',
+              ExpressionAttributeNames: { '#st': 'status' },
+              ExclusiveStartKey: lastKey,
+            })
+          )
+          if (page.Items) items.push(...page.Items)
+          lastKey = page.LastEvaluatedKey
+        } while (lastKey)
+        items.sort(
           (a, b) =>
             new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime()
         )
@@ -142,7 +149,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         const now = new Date().toISOString()
         const newMeeting = {
           meetingId: randomUUID(),
-          title: body.title ?? `Meeting ${new Date().toLocaleString('ko-KR')}`,
+          title: body.title ?? `Meeting ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}`,
           status: 'active',
           createdAt: now,
           updatedAt: now,
