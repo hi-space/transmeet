@@ -971,6 +971,49 @@ export default function Home() {
     settings.translationTiming,
   ])
 
+  // 녹음 중 언어 방향 변경 감지 → STT 세션 재시작.
+  // Transcribe 는 startRecording 시점의 sourceLang 으로 language_code 를 고정하므로
+  // (backend/app/ws_handler.py: _run_transcribe_streaming), 재전송하지 않으면
+  // 헤더 토글을 눌러도 인식 언어가 그대로 남는다.
+  const prevSourceLangRef = useRef(settings.sourceLang)
+  useEffect(() => {
+    const prev = prevSourceLangRef.current
+    prevSourceLangRef.current = settings.sourceLang
+    if (prev === settings.sourceLang) return
+    if (!isRecording || wsStatus !== 'connected') return
+
+    console.warn(
+      '[WS] sourceLang changed during recording (%s → %s) — restarting STT session',
+      prev,
+      settings.sourceLang
+    )
+    // 이전 언어로 쌓인 partial 은 버린다 — 새 언어 결과와 섞이면 안 된다
+    setPendingTranscript(null)
+    lastTranslatedPartialRef.current = ''
+    pendingPartialRef.current = ''
+    if (partialThrottleRef.current) {
+      clearTimeout(partialThrottleRef.current)
+      partialThrottleRef.current = null
+    }
+    startRecording({
+      sttProvider: settings.sttProvider,
+      sourceLang: settings.sourceLang,
+      targetLang: settings.targetLang,
+      modelId: settings.translationModel,
+      speaker: 'speaker1',
+      translationTiming: settings.translationTiming,
+    })
+  }, [
+    settings.sourceLang,
+    isRecording,
+    wsStatus,
+    startRecording,
+    settings.sttProvider,
+    settings.targetLang,
+    settings.translationModel,
+    settings.translationTiming,
+  ])
+
   // STT 헬스 워치독: Transcribe 녹음 중 25초 무응답 시 startRecording 재전송 (백엔드 세션 자동 재시작 유도)
   useEffect(() => {
     if (!isRecording || settings.sttProvider !== 'transcribe' || wsStatus !== 'connected') return
