@@ -349,6 +349,37 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
           {/* Divider */}
           <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
 
+          {/* ── Max sentences per bubble ─────────────────────────────────────── */}
+          <div className="space-y-2">
+            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              말풍선당 최대 문장 수
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {(
+                [
+                  [1, '문장마다'],
+                  [2, '2문장'],
+                  [3, '3문장'],
+                  [5, '5문장'],
+                ] as const
+              ).map(([val, label]) => (
+                <button
+                  key={val}
+                  onClick={() => handleUpdate({ maxSentencesPerBubble: val })}
+                  className={pill(settings.maxSentencesPerBubble === val)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500">
+              이 문장 수에 도달하면 새 말풍선 시작. 단, 문장이 중간에 끊긴 경우는 항상 이어붙입니다
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
+
           {/* ── Translation model ───────────────────────────────────────────── */}
           <div className="space-y-2">
             <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">

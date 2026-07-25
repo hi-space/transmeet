@@ -106,8 +106,6 @@ function playBase64Audio(
   })
 }
 
-const MAX_SENTENCES_PER_BUBBLE = 3
-
 function countSentences(text: string): number {
   const matches = text.match(/[.?!。？！]/g)
   return matches ? matches.length : 0
@@ -420,6 +418,7 @@ export default function Home() {
       } else if (msg.type === 'subtitle_stream') {
         lastSttActivityTimeRef.current = Date.now()
         const SILENCE_TIMEOUT_MS = settings.silenceTimeout
+        const MAX_SENTENCES = settings.maxSentencesPerBubble
         if (msg.phase === 'stt_partial') {
           // Word-by-word Transcribe partial — show in pending bubble, not committed messages
           const partialText = msg.originalText ?? ''
@@ -528,9 +527,10 @@ export default function Home() {
           setMeetings((prev) =>
             prev.map((m) => {
               if (m.id !== activeMeetingId) return m
-              // 병합 조건:
-              // - 이전 말풍선이 미완성 문장(종결부호 없음) → 무조건 병합
-              // - 이전 말풍선이 완성 문장 → 같은 화자 + silenceTimeout 이내일 때만 병합
+              // 병합 조건 (같은 화자일 때만):
+              // - 이전 말풍선이 미완성 문장(종결부호 없음) → 무조건 병합.
+              //   잘린 문장을 이어붙이는 처리라 문장 수 상한/침묵 시간보다 우선한다.
+              // - 이전 말풍선이 완성 문장 → 문장 수 상한 미만 + silenceTimeout 이내일 때만 병합
               const lastMsg = m.messages.at(-1)
               const isSentenceComplete = /[.?!。？！]\s*$/.test((lastMsg?.original ?? '').trimEnd())
               const timeDiff = lastMsg
@@ -539,8 +539,9 @@ export default function Home() {
               const canMerge =
                 lastMsg &&
                 lastMsg.speaker === streamSpeaker &&
-                countSentences(lastMsg.original) < MAX_SENTENCES_PER_BUBBLE &&
-                (!isSentenceComplete || timeDiff < SILENCE_TIMEOUT_MS)
+                (!isSentenceComplete ||
+                  (countSentences(lastMsg.original) < MAX_SENTENCES &&
+                    timeDiff < SILENCE_TIMEOUT_MS))
               if (canMerge && lastMsg) {
                 // 기존 말풍선에 텍스트 append + alias 등록
                 mergeAliasRef.current.set(msg.messageId, lastMsg.id)
@@ -876,6 +877,7 @@ export default function Home() {
     [
       activeMeetingId,
       settings.silenceTimeout,
+      settings.maxSentencesPerBubble,
       settings.ttsAutoPlay,
       settings.translationTiming,
       settings.partialTranslationMode,

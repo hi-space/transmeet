@@ -15,6 +15,8 @@ export interface Settings {
   partialTranslationMode: 'realtime' | 'sentence'
   partialThrottleMs: 500 | 1000 | 1500 | 2000 | 3000
   silenceTimeout: 3000 | 5000 | 10000 | 20000
+  /** 말풍선 하나에 합칠 최대 문장 수. 1이면 문장마다 새 말풍선 */
+  maxSentencesPerBubble: 1 | 2 | 3 | 5
   autoSummarizeMessageCount: number
 }
 
@@ -42,6 +44,7 @@ const DEFAULT: Settings = {
   partialTranslationMode: 'sentence',
   partialThrottleMs: 1500,
   silenceTimeout: 10000,
+  maxSentencesPerBubble: 3,
   autoSummarizeMessageCount: 10,
 }
 
