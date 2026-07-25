@@ -18,6 +18,8 @@ export interface Settings {
   /** 말풍선 하나에 합칠 최대 문장 수. 1이면 문장마다 새 말풍선 */
   maxSentencesPerBubble: 1 | 2 | 3 | 5
   autoSummarizeMessageCount: number
+  /** 음성 입력 말풍선 글자 크기 — 화면 공유 시 크게 키운다 */
+  voiceFontSize: 'compact' | 'md' | 'lg' | 'xl'
 }
 
 // engine → voice 지원 여부 검증용 (SettingsPanel과 동일 데이터)
@@ -46,6 +48,7 @@ const DEFAULT: Settings = {
   silenceTimeout: 10000,
   maxSentencesPerBubble: 3,
   autoSummarizeMessageCount: 10,
+  voiceFontSize: 'compact',
 }
 
 const STORAGE_KEY = 'transmeet-settings'

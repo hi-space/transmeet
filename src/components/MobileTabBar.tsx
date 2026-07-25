@@ -5,6 +5,8 @@ interface Props {
   onTabChange: (tab: 'voice' | 'notes' | 'summary') => void
   hasNewVoice?: boolean
   hasNewNotes?: boolean
+  /** 음성 탭에서만 노출되는 글자 크기 선택기 */
+  fontSizeControl?: React.ReactNode
 }
 
 const TAB_LABELS: Record<string, string> = {
@@ -13,7 +15,13 @@ const TAB_LABELS: Record<string, string> = {
   summary: '요약',
 }
 
-export default function MobileTabBar({ activeTab, onTabChange, hasNewVoice, hasNewNotes }: Props) {
+export default function MobileTabBar({
+  activeTab,
+  onTabChange,
+  hasNewVoice,
+  hasNewNotes,
+  fontSizeControl,
+}: Props) {
   return (
     <div className="lg:hidden flex items-center flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
       {(['voice', 'notes', 'summary'] as const).map((tab) => {
@@ -40,6 +48,9 @@ export default function MobileTabBar({ activeTab, onTabChange, hasNewVoice, hasN
           </button>
         )
       })}
+      {activeTab === 'voice' && fontSizeControl && (
+        <div className="flex-shrink-0 pr-3 pl-1">{fontSizeControl}</div>
+      )}
     </div>
   )
 }

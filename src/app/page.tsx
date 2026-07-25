@@ -11,7 +11,7 @@ import QuickTranslatePopup from '@/components/QuickTranslatePopup'
 import AuthScreen from '@/components/AuthScreen'
 import MobileTabBar from '@/components/MobileTabBar'
 import NotesArea from '@/components/NotesArea'
-import VoiceArea from '@/components/VoiceArea'
+import VoiceArea, { VoiceFontSizeControl } from '@/components/VoiceArea'
 import EditableTitle from '@/components/EditableTitle'
 import { Meeting, Message } from '@/types/meeting'
 import { useAudioCapture } from '@/hooks/useAudioCapture'
@@ -1484,6 +1484,12 @@ export default function Home() {
             }}
             hasNewVoice={hasNewVoice}
             hasNewNotes={hasNewNotes}
+            fontSizeControl={
+              <VoiceFontSizeControl
+                fontSize={settings.voiceFontSize}
+                onChange={(size) => updateSettings({ voiceFontSize: size })}
+              />
+            }
           />
 
           {/* 데스크톱: 좌우 분할 */}
@@ -1495,6 +1501,11 @@ export default function Home() {
                   음성 입력
                 </span>
                 <div className="flex items-center gap-1">
+                  <VoiceFontSizeControl
+                    fontSize={settings.voiceFontSize}
+                    onChange={(size) => updateSettings({ voiceFontSize: size })}
+                  />
+                  <span className="w-px h-3.5 bg-slate-200 dark:bg-slate-700 mx-0.5" />
                   {notesCollapsed && (
                     <button
                       onClick={() => setNotesCollapsed(false)}
@@ -1552,6 +1563,7 @@ export default function Home() {
                 onStopMessage={handleStopAllAudio}
                 onTranslateMessage={handleTranslateMessage}
                 pendingTranscript={pendingTranscript}
+                fontSize={settings.voiceFontSize}
               />
             </div>
             {/* 내 메모 영역 — 접기 가능 */}
@@ -1618,6 +1630,7 @@ export default function Home() {
                 onStopMessage={handleStopAllAudio}
                 onTranslateMessage={handleTranslateMessage}
                 pendingTranscript={pendingTranscript}
+                fontSize={settings.voiceFontSize}
               />
             ) : activeTab === 'notes' ? (
               <NotesArea
