@@ -437,7 +437,9 @@ export default function MeetingSidebar({
                       const isEditing = editingId === meeting.id
                       const date = formatDate(meeting.startedAt)
                       const time = formatTime(meeting.startedAt)
-                      const count = meeting.messageCount ?? meeting.messages.length
+                      // messageCount: 목록 API 값(messages 미포함), messages.length: 로드/실시간 값.
+                      // 둘 중 큰 값을 쓴다 — 녹음 중에는 후자가, 목록만 불러온 상태에선 전자가 크다.
+                      const count = Math.max(meeting.messageCount ?? 0, meeting.messages.length)
                       return (
                         <div
                           key={meeting.id}

@@ -171,6 +171,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           createdAt: now,
           updatedAt: now,
           messages: [],
+          // 목록 API 는 messages 를 투사하지 않는다. 빈 회의 자동 정리가
+          // messageCount === 0 을 근거로 삼으므로 생성 시점부터 0 을 기록한다.
+          messageCount: 0,
           summary: null,
         }
         await ddb.send(

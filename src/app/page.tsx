@@ -126,6 +126,18 @@ function extractCompleteSentences(text: string): string {
   return match ? match[1].trim() : ''
 }
 
+// ─── 빈 회의 정리 ─────────────────────────────────────────────────────────────
+
+/**
+ * 내용이 하나도 없는 회의인지 판단 — 진입 시 자동 정리 대상.
+ * messageCount 는 목록 API 가 내려주는 값. 과거 레코드에는 없을 수 있으므로
+ * undefined 는 "알 수 없음"으로 보고 절대 삭제하지 않는다 (메시지 있는 회의 유실 방지).
+ */
+function isPrunable(m: Meeting): boolean {
+  if (m.summary) return false
+  return m.messageCount === 0
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -206,6 +218,8 @@ export default function Home() {
   const lastSttActivityTimeRef = useRef<number>(Date.now())
   // 말풍선 병합: 병합된 신규 messageId → 기존 말풍선 id 매핑
   const mergeAliasRef = useRef<Map<string, string>>(new Map())
+  // 마운트 초기화(새 회의 생성)를 한 번만 실행하기 위한 가드
+  const didInitRef = useRef(false)
 
   const activeMeeting = meetings.find((m) => m.id === activeMeetingId) ?? meetings[0]
 
@@ -247,28 +261,53 @@ export default function Home() {
 
   useEffect(() => {
     if (!HAS_API) return
+    // StrictMode 는 개발 중 effect 를 두 번 실행한다 — 회의가 두 개 생기지 않도록 막는다
+    if (didInitRef.current) return
+    didInitRef.current = true
 
-    api.meetings
-      .list()
-      .then((list) => {
-        if (list.length === 0) {
-          return api.meetings.create('새 회의').then((m) => {
-            const meeting = toMeeting(m)
-            setMeetings([meeting])
-            setActiveMeetingId(meeting.id)
-          })
-        }
-        const mapped = list.map(toMeeting)
-        setMeetings(mapped)
-        setActiveMeetingId(mapped[0].id)
-        setIsLoadingMeetings(false)
-        loadMeetingMessages(mapped[0].id)
-      })
-      .catch(() => {
+    async function init() {
+      let list: Meeting[]
+      try {
+        list = (await api.meetings.list()).map(toMeeting)
+      } catch {
         setMeetings(MOCK_MEETINGS)
         setActiveMeetingId(MOCK_MEETINGS[0].id)
-      })
-      .finally(() => setIsLoadingMeetings(false))
+        setIsLoadingMeetings(false)
+        return
+      }
+
+      // 진입할 때마다 빈 회의를 새로 만든다 — 이전 회의에 이어 붙지 않게
+      let created: Meeting
+      try {
+        created = toMeeting(await api.meetings.create())
+      } catch {
+        // 생성 실패 시엔 기존 목록으로 동작. 정리도 건너뛴다 —
+        // 새 회의가 없으면 빈 회의라도 남겨야 녹음할 대상이 있다.
+        if (list.length > 0) {
+          setMeetings(list)
+          setActiveMeetingId(list[0].id)
+          setIsLoadingMeetings(false)
+          loadMeetingMessages(list[0].id)
+        } else {
+          setIsLoadingMeetings(false)
+        }
+        return
+      }
+
+      // 이전에 만들어졌지만 아무 내용도 없는 회의는 정리한다
+      const stale = list.filter(isPrunable)
+      const staleIds = new Set(stale.map((m) => m.id))
+      setMeetings([created, ...list.filter((m) => !staleIds.has(m.id))])
+      setActiveMeetingId(created.id)
+      setIsLoadingMeetings(false)
+
+      // 삭제는 화면을 그린 뒤 백그라운드로 — 실패해도 사용자 흐름을 막지 않는다
+      for (const m of stale) {
+        api.meetings.delete(m.id).catch(() => {})
+      }
+    }
+
+    init()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Task #10: Create new meeting ──────────────────────────────────────────
