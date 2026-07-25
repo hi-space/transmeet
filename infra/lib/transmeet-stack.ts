@@ -423,6 +423,12 @@ export class TransmeetStack extends cdk.Stack {
       description: 'CloudFront distribution URL',
     });
 
+    new cdk.CfnOutput(this, 'CloudFrontDistributionId', {
+      value: distribution.distributionId,
+      exportName: 'TransmeetCloudFrontDistributionId',
+      description: 'CloudFront distribution ID (for cache invalidation)',
+    });
+
     new cdk.CfnOutput(this, 'CustomDomainUrl', {
       value: `https://${APP_DOMAIN}`,
       exportName: 'TransmeetCustomDomainUrl',

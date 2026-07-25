@@ -42,6 +42,7 @@ deploy_frontend() {
 
   BUCKET=$(jq -r '.TransmeetStack.FrontendBucketName' "$OUTPUTS_FILE")
   CF_URL=$(jq -r '.TransmeetStack.CloudFrontUrl' "$OUTPUTS_FILE")
+  CF_ID=$(jq -r '.TransmeetStack.CloudFrontDistributionId // empty' "$OUTPUTS_FILE")
 
   info "Uploading to S3 bucket: $BUCKET"
   aws s3 sync "$APP_DIR/out" "s3://$BUCKET" --delete \
@@ -52,7 +53,34 @@ deploy_frontend() {
     --cache-control "no-cache" \
     --include "*.html"
 
+  invalidate_cloudfront "$CF_ID"
+
   info "Frontend deployed: $CF_URL"
+}
+
+# HTML/서비스워커는 no-cache 로 올라가지만 엣지 캐시가 남을 수 있어 명시적으로 무효화한다.
+# 해시가 붙은 /_next/static/* 는 immutable 이므로 무효화 대상에서 제외한다.
+invalidate_cloudfront() {
+  local cf_id="$1"
+
+  if [ -z "$cf_id" ]; then
+    warn "CloudFrontDistributionId not in outputs.json — skipping invalidation."
+    warn "Run './deploy.sh infra' to add it, or invalidate manually."
+    return 0
+  fi
+
+  info "Invalidating CloudFront cache: $cf_id"
+  local invalidation_id
+  invalidation_id=$(aws cloudfront create-invalidation \
+    --distribution-id "$cf_id" \
+    --paths "/" "/index.html" "/404.html" "/index.txt" "/sw.js" "/manifest.json" \
+    --query 'Invalidation.Id' --output text)
+
+  info "Waiting for invalidation $invalidation_id to complete..."
+  aws cloudfront wait invalidation-completed \
+    --distribution-id "$cf_id" --id "$invalidation_id"
+
+  info "Invalidation complete."
 }
 
 case "$COMMAND" in
