@@ -38,6 +38,12 @@ function formatTime(iso: string) {
   })
 }
 
+/** 오늘/어제 그룹은 날짜가 헤더에 드러나므로 시각만, 그 외는 날짜와 시각을 함께 표시 */
+function formatDateTime(iso: string, timeOnly: boolean) {
+  if (Number.isNaN(startedAtMs(iso))) return '날짜 없음'
+  return timeOnly ? formatTime(iso) : `${formatDate(iso)} ${formatTime(iso)}`
+}
+
 function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
 }
@@ -308,9 +314,7 @@ export default function MeetingSidebar({
                             </div>
                           )}
                           <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-                            {groupItem.showTime
-                              ? formatTime(meeting.startedAt)
-                              : formatDate(meeting.startedAt)}
+                            {formatDateTime(meeting.startedAt, groupItem.showTime)}
                             {' · '}
                             {meeting.messageCount ?? meeting.messages.length}개
                           </div>
