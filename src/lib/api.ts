@@ -138,11 +138,13 @@ export const api = {
       engine?: string,
       voiceId?: string,
       translateFirst = true,
-      modelId?: string
+      modelId?: string,
+      // 번역 방향 (미지정 시 서버 기본값 ko → en)
+      langs?: { sourceLang: 'ko' | 'en'; targetLang: 'ko' | 'en' }
     ) =>
       apiFetch<TtsResponse>('/tts', {
         method: 'POST',
-        body: JSON.stringify({ text, translateFirst, engine, voiceId, modelId }),
+        body: JSON.stringify({ text, translateFirst, engine, voiceId, modelId, ...langs }),
       }),
   },
 }

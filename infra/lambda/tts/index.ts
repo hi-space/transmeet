@@ -37,6 +37,8 @@ export const handler = async (
     voiceId?: string;
     engine?: string;
     modelId?: string;
+    sourceLang?: string;
+    targetLang?: string;
   };
 
   try {
@@ -49,7 +51,21 @@ export const handler = async (
     };
   }
 
-  const { text, translateFirst = true, voiceId = 'Ruth', engine = 'generative', modelId } = body;
+  const {
+    text,
+    translateFirst = true,
+    voiceId = 'Ruth',
+    engine = 'generative',
+    modelId,
+    sourceLang,
+    targetLang,
+  } = body;
+
+  // 기본 방향은 ko → en (기존 동작 유지)
+  const langLabel = (lang: string | undefined, fallback: 'Korean' | 'English') =>
+    lang === 'ko' ? 'Korean' : lang === 'en' ? 'English' : fallback;
+  const sourceLabel = langLabel(sourceLang, 'Korean');
+  const targetLabel = langLabel(targetLang, 'English');
 
   if (!text?.trim()) {
     return {
@@ -60,9 +76,9 @@ export const handler = async (
   }
 
   try {
-    let englishText = text;
+    let translatedText = text;
 
-    // Step 1: Translate KO -> EN via Bedrock (if requested)
+    // Step 1: Translate via Bedrock (if requested)
     if (translateFirst) {
       const bedrockRes = await bedrock.send(
         new ConverseCommand({
@@ -70,14 +86,14 @@ export const handler = async (
           messages: [
             {
               role: 'user',
-              content: [{ text: `Translate the following Korean text to natural, fluent English. Return only the translated text.\n\n${text}` }],
+              content: [{ text: `Translate the following ${sourceLabel} text to natural, fluent ${targetLabel}. Return only the translated text.\n\n${text}` }],
             },
           ],
           inferenceConfig: { maxTokens: 1024 },
         })
       );
 
-      englishText = bedrockRes.output?.message?.content?.[0]?.text ?? text;
+      translatedText = bedrockRes.output?.message?.content?.[0]?.text ?? text;
     }
 
     // Korean voice (Seoyeon) only supports neural — override generative/standard
@@ -87,7 +103,7 @@ export const handler = async (
     // Step 2: Synthesize speech with Polly TTS
     const pollyRes = await polly.send(
       new SynthesizeSpeechCommand({
-        Text: englishText,
+        Text: translatedText,
         OutputFormat: OutputFormat.MP3,
         VoiceId: (voiceId as VoiceId) ?? VoiceId.Ruth,
         Engine: pollyEngine,
@@ -102,7 +118,7 @@ export const handler = async (
       headers,
       body: JSON.stringify({
         audioData: audioBase64,
-        translatedText: englishText,
+        translatedText,
         format: 'mp3',
       }),
     };

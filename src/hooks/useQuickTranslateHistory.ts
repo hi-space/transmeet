@@ -4,11 +4,16 @@ import { useState, useCallback, useEffect } from 'react'
 
 export interface TranslationRecord {
   id: string
-  koreanText: string
-  englishText: string
+  sourceText: string
+  targetText: string
+  sourceLang?: 'ko' | 'en'
+  targetLang?: 'ko' | 'en'
   audioData?: string
   createdAt: string
 }
+
+// 방향 설정 이전 버전은 koreanText/englishText 로 저장했다 (항상 ko→en)
+type LegacyRecord = TranslationRecord & { koreanText?: string; englishText?: string }
 
 const STORAGE_KEY = 'transmeet-quick-translate-history'
 const MAX_ITEMS = 20
@@ -17,7 +22,15 @@ function loadHistory(): TranslationRecord[] {
   if (typeof window === 'undefined') return []
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? (JSON.parse(raw) as TranslationRecord[]) : []
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as LegacyRecord[]
+    return parsed.map(({ koreanText, englishText, ...r }) => ({
+      ...r,
+      sourceText: r.sourceText ?? koreanText ?? '',
+      targetText: r.targetText ?? englishText ?? '',
+      sourceLang: r.sourceLang ?? (koreanText !== undefined ? 'ko' : undefined),
+      targetLang: r.targetLang ?? (englishText !== undefined ? 'en' : undefined),
+    }))
   } catch {
     return []
   }

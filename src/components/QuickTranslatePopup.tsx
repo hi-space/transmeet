@@ -21,6 +21,35 @@ interface Props {
   onResetStream?: () => void
 }
 
+// ─── 번역 방향 (외부 헤더/설정과 독립, 팝업 전용) ──────────────────────────────
+
+type Lang = 'ko' | 'en'
+
+const DIRECTION_KEY = 'transmeet-quick-translate-direction'
+const DEFAULT_DIRECTION: Lang = 'ko' // 기본: 한국어 → English
+
+const DIRECTIONS: { source: Lang; from: string; to: string; title: string }[] = [
+  { source: 'ko', from: '한', to: 'EN', title: '한국어 → English' },
+  { source: 'en', from: 'EN', to: '한', title: 'English → 한국어' },
+]
+
+// 출력 언어에 맞는 Polly 목소리 (ko 는 Seoyeon/neural 만 지원)
+const TTS_VOICE: Record<Lang, { voiceId: string; engine: string }> = {
+  en: { voiceId: 'Ruth', engine: 'generative' },
+  ko: { voiceId: 'Seoyeon', engine: 'neural' },
+}
+
+const PLACEHOLDER: Record<Lang, string> = {
+  ko: '한국어를 입력하세요...',
+  en: 'Enter English text...',
+}
+
+function loadDirection(): Lang {
+  if (typeof window === 'undefined') return DEFAULT_DIRECTION
+  const raw = localStorage.getItem(DIRECTION_KEY)
+  return raw === 'ko' || raw === 'en' ? raw : DEFAULT_DIRECTION
+}
+
 // ─── Audio helper (동일 패턴: page.tsx playBase64Audio) ────────────────────────
 
 function playBase64Audio(
@@ -58,7 +87,7 @@ export default function QuickTranslatePopup({
   onResetStream,
 }: Props) {
   const [input, setInput] = useState('')
-  const [result, setResult] = useState<{ englishText: string; audioData?: string } | null>(null)
+  const [result, setResult] = useState<{ text: string; audioData?: string } | null>(null)
   const [isTranslating, setIsTranslating] = useState(false)
   const [isLoadingTts, setIsLoadingTts] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
@@ -68,24 +97,56 @@ export default function QuickTranslatePopup({
   const pendingInputRef = useRef<string>('')
   const { history, addRecord, deleteRecord, clearAll } = useQuickTranslateHistory()
 
+  // 번역 방향은 헤더/설정과 독립적으로 팝업 안에서 관리한다 (기본 한→EN)
+  const [sourceLang, setSourceLang] = useState<Lang>(DEFAULT_DIRECTION)
+  const targetLang: Lang = sourceLang === 'ko' ? 'en' : 'ko'
+  const pendingLangsRef = useRef<{ source: Lang; target: Lang }>({ source: 'ko', target: 'en' })
+
+  // SSR-safe: 저장된 방향은 마운트 후 반영
+  useEffect(() => {
+    setSourceLang(loadDirection())
+  }, [])
+
+  const handleChangeDirection = useCallback((next: Lang) => {
+    setSourceLang(next)
+    try {
+      localStorage.setItem(DIRECTION_KEY, next)
+    } catch {
+      // ignore
+    }
+  }, [])
+
   // 스트리밍 번역 done → TTS 요청 + 결과 확정
   useEffect(() => {
     if (!stream || stream.phase !== 'done' || !stream.text) return
-    const englishText = stream.text
-    const koreanText = pendingInputRef.current
+    const translated = stream.text
+    const original = pendingInputRef.current
+    const { source, target } = pendingLangsRef.current
+    const voice = TTS_VOICE[target]
     setIsTranslating(false)
     setIsLoadingTts(true)
     // TTS만 요청 (translateFirst=false)
     api.tts
-      .synthesize(englishText, settings.pollyEngine, settings.pollyVoiceId, false)
+      .synthesize(translated, voice.engine, voice.voiceId, false)
       .then((res) => {
-        setResult({ englishText, audioData: res.audioData })
-        addRecord({ koreanText, englishText, audioData: res.audioData })
+        setResult({ text: translated, audioData: res.audioData })
+        addRecord({
+          sourceText: original,
+          targetText: translated,
+          sourceLang: source,
+          targetLang: target,
+          audioData: res.audioData,
+        })
       })
       .catch(() => {
         // TTS 실패해도 번역 결과는 표시
-        setResult({ englishText })
-        addRecord({ koreanText, englishText })
+        setResult({ text: translated })
+        addRecord({
+          sourceText: original,
+          targetText: translated,
+          sourceLang: source,
+          targetLang: target,
+        })
       })
       .finally(() => {
         setIsLoadingTts(false)
@@ -103,33 +164,31 @@ export default function QuickTranslatePopup({
     setResult(null)
     onResetStream?.()
     pendingInputRef.current = text
+    pendingLangsRef.current = { source: sourceLang, target: targetLang }
 
     // WS 연결 시 스트리밍 번역
     if (wsConnected && sendTranslate) {
-      sendTranslate(
-        '__quick__',
-        text,
-        'me',
-        settings.targetLang,
-        settings.sourceLang,
-        settings.translationModel
-      )
+      sendTranslate('__quick__', text, 'me', sourceLang, targetLang, settings.translationModel)
       return
     }
 
     // fallback: REST 동기 번역
+    const voice = TTS_VOICE[targetLang]
     try {
       const res = await api.tts.synthesize(
         text,
-        settings.pollyEngine,
-        settings.pollyVoiceId,
+        voice.engine,
+        voice.voiceId,
         true,
-        settings.translationModel
+        settings.translationModel,
+        { sourceLang, targetLang }
       )
-      setResult({ englishText: res.translatedText, audioData: res.audioData })
+      setResult({ text: res.translatedText, audioData: res.audioData })
       addRecord({
-        koreanText: text,
-        englishText: res.translatedText,
+        sourceText: text,
+        targetText: res.translatedText,
+        sourceLang,
+        targetLang,
         audioData: res.audioData,
       })
     } catch {
@@ -137,7 +196,17 @@ export default function QuickTranslatePopup({
     } finally {
       setIsTranslating(false)
     }
-  }, [input, isTranslating, settings, addRecord, wsConnected, sendTranslate, onResetStream])
+  }, [
+    input,
+    isTranslating,
+    sourceLang,
+    targetLang,
+    settings.translationModel,
+    addRecord,
+    wsConnected,
+    sendTranslate,
+    onResetStream,
+  ])
 
   const handlePlay = useCallback(
     async (audioData?: string) => {
@@ -244,15 +313,48 @@ export default function QuickTranslatePopup({
             </button>
           </div>
 
+          {/* 번역 방향 — 헤더 설정과 별개로 이 팝업에서만 적용된다 */}
+          <div className="mb-3 flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800/80 w-fit">
+            {DIRECTIONS.map(({ source, from, to, title }) => {
+              const active = sourceLang === source
+              return (
+                <button
+                  key={source}
+                  onClick={() => handleChangeDirection(source)}
+                  title={title}
+                  aria-label={title}
+                  aria-pressed={active}
+                  className={`flex items-center gap-0.5 px-2 py-1 rounded-md text-[11px] font-bold tracking-tight transition-all ${
+                    active
+                      ? 'bg-white dark:bg-slate-700 text-cyan-700 dark:text-cyan-300 shadow-sm'
+                      : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+                  }`}
+                >
+                  <span>{from}</span>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="w-2.5 h-2.5 opacity-60"
+                  >
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                  <span>{to}</span>
+                </button>
+              )
+            })}
+          </div>
+
           {/* Input */}
           <div className="mb-3">
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={
-                settings.sourceLang === 'ko' ? 'Enter English text...' : '한국어를 입력하세요...'
-              }
+              placeholder={PLACEHOLDER[sourceLang]}
               rows={3}
               className="w-full px-3 py-2.5 text-sm rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
@@ -336,7 +438,7 @@ export default function QuickTranslatePopup({
           {result && !isTranslating && !isLoadingTts && (
             <div className="mt-3 p-3 rounded-xl bg-cyan-50 dark:bg-cyan-950 border border-cyan-200 dark:border-cyan-800">
               <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
-                {result.englishText}
+                {result.text}
               </p>
               <div className="flex items-center gap-2 mt-2">
                 {/* TTS Play */}
@@ -371,7 +473,7 @@ export default function QuickTranslatePopup({
 
                 {/* Copy */}
                 <button
-                  onClick={() => handleCopy(result.englishText)}
+                  onClick={() => handleCopy(result.text)}
                   className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
                 >
                   {copied ? (
@@ -432,10 +534,10 @@ export default function QuickTranslatePopup({
                     className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
                   >
                     <p className="text-xs text-slate-500 dark:text-slate-400 mb-1 line-clamp-1">
-                      {record.koreanText}
+                      {record.sourceText}
                     </p>
                     <p className="text-sm text-slate-700 dark:text-slate-200 line-clamp-2">
-                      {record.englishText}
+                      {record.targetText}
                     </p>
                     <div className="flex items-center gap-1.5 mt-1.5">
                       {record.audioData && (
@@ -451,7 +553,7 @@ export default function QuickTranslatePopup({
                         </button>
                       )}
                       <button
-                        onClick={() => handleCopy(record.englishText)}
+                        onClick={() => handleCopy(record.targetText)}
                         className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
                       >
                         <svg
