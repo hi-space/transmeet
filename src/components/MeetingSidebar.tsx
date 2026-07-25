@@ -471,7 +471,7 @@ export default function MeetingSidebar({
                                 }}
                                 onBlur={() => commitEdit(meeting)}
                                 onClick={(e) => e.stopPropagation()}
-                                className="w-full text-[13px] font-semibold bg-white dark:bg-slate-900 border border-cyan-300 dark:border-cyan-500/40 rounded-md px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-cyan-400 text-slate-800 dark:text-slate-100"
+                                className="w-full text-sm font-semibold bg-white dark:bg-slate-900 border border-cyan-300 dark:border-cyan-500/40 rounded-md px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-cyan-400 text-slate-800 dark:text-slate-100"
                               />
                             ) : (
                               <div
@@ -479,7 +479,7 @@ export default function MeetingSidebar({
                                   e.stopPropagation()
                                   startEditing(meeting)
                                 }}
-                                className={`text-[13px] font-semibold leading-snug truncate pr-16 ${
+                                className={`text-sm font-semibold leading-snug truncate pr-16 ${
                                   isActive
                                     ? 'text-cyan-900 dark:text-cyan-100'
                                     : 'text-slate-800 dark:text-slate-100'
@@ -491,7 +491,7 @@ export default function MeetingSidebar({
                             )}
 
                             {/* 2행: 날짜 / 시간 / 메시지 수 — 얇은 구분선으로 항목을 나눈다 */}
-                            <div className="mt-1.5 flex items-center gap-2 text-[11px] tabular-nums">
+                            <div className="mt-1.5 flex items-center gap-2 text-xs tabular-nums">
                               <span
                                 className={`font-medium ${
                                   isActive
