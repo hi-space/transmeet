@@ -16,11 +16,21 @@ interface Props {
   isCreating?: boolean
 }
 
+// startedAt 이 비어 있거나 파싱 불가한 회의도 들어올 수 있다.
+// NaN 을 반환하는 비교 함수는 정렬 결과 전체를 뒤섞으므로 항상 유효한 값을 돌려준다.
+function startedAtMs(iso: string | undefined): number {
+  if (!iso) return NaN
+  const ms = Date.parse(iso)
+  return Number.isNaN(ms) ? NaN : ms
+}
+
 function formatDate(iso: string) {
+  if (Number.isNaN(startedAtMs(iso))) return '날짜 없음'
   return new Date(iso).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })
 }
 
 function formatTime(iso: string) {
+  if (Number.isNaN(startedAtMs(iso))) return '날짜 없음'
   return new Date(iso).toLocaleTimeString('ko-KR', {
     hour: '2-digit',
     minute: '2-digit',
@@ -40,23 +50,48 @@ interface MeetingGroup {
   meetings: Meeting[]
 }
 
-/** 최근 회의는 오늘/어제/이번 주로, 그보다 오래된 회의는 월별로 묶는다 */
+/** 최근 회의는 오늘/어제/이번 주/지난 주로, 그보다 오래된 회의는 월별로 묶는다 */
 function buildGroups(meetings: Meeting[]): MeetingGroup[] {
   const today = startOfDay(new Date())
   const dayMs = 86400000
   const yesterday = today - dayMs
-  // 주 시작은 월요일 기준
+  // 주 시작은 월요일 기준. 월요일에는 이번 주 구간이 비므로 지난 주까지 함께 둔다
   const weekStart = today - ((new Date(today).getDay() + 6) % 7) * dayMs
+  const lastWeekStart = weekStart - 7 * dayMs
 
   const groups: MeetingGroup[] = []
   const byKey = new Map<string, MeetingGroup>()
 
-  const sorted = [...meetings].sort(
-    (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()
-  )
+  // 최신순. 날짜 없는 회의는 맨 뒤로 밀되 id 로 순서를 고정한다.
+  const sorted = [...meetings].sort((a, b) => {
+    const am = startedAtMs(a.startedAt)
+    const bm = startedAtMs(b.startedAt)
+    const aInvalid = Number.isNaN(am)
+    const bInvalid = Number.isNaN(bm)
+    if (aInvalid || bInvalid) {
+      if (aInvalid && bInvalid) return a.id.localeCompare(b.id)
+      return aInvalid ? 1 : -1
+    }
+    if (am !== bm) return bm - am
+    return a.id.localeCompare(b.id)
+  })
 
   for (const meeting of sorted) {
-    const date = new Date(meeting.startedAt)
+    const ms = startedAtMs(meeting.startedAt)
+    if (Number.isNaN(ms)) {
+      const key = 'unknown'
+      const existing = byKey.get(key)
+      if (existing) {
+        existing.meetings.push(meeting)
+      } else {
+        const group = { key, label: '날짜 없음', showTime: false, meetings: [meeting] }
+        byKey.set(key, group)
+        groups.push(group)
+      }
+      continue
+    }
+
+    const date = new Date(ms)
     const day = startOfDay(date)
 
     let key: string
@@ -74,6 +109,9 @@ function buildGroups(meetings: Meeting[]): MeetingGroup[] {
     } else if (day >= weekStart) {
       key = 'this-week'
       label = '이번 주'
+    } else if (day >= lastWeekStart) {
+      key = 'last-week'
+      label = '지난 주'
     } else {
       key = `month-${date.getFullYear()}-${date.getMonth()}`
       label = `${date.getFullYear()}년 ${date.getMonth() + 1}월`
