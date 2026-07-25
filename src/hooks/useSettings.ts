@@ -74,6 +74,16 @@ export function useSettings() {
   const updateSettings = (patch: Partial<Settings>) => {
     setSettings((prev) => {
       const next = { ...prev, ...patch }
+
+      // sourceLang 이 바뀌면 TTS 목소리/엔진을 해당 언어 기본값으로 되돌린다.
+      // (ko 는 Seoyeon/neural 만 지원하므로 en 설정이 그대로 남으면 재생이 실패한다)
+      if (patch.sourceLang && patch.sourceLang !== prev.sourceLang) {
+        const lang = patch.sourceLang === 'auto' ? 'en' : patch.sourceLang
+        const d = LANG_DEFAULT_VOICE[lang]
+        next.pollyVoiceId = patch.pollyVoiceId ?? d.id
+        next.pollyEngine = patch.pollyEngine ?? d.engine
+      }
+
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
       } catch {

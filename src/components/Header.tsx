@@ -11,6 +11,9 @@ interface Props {
   quickTranslateOpen: boolean
   onToggleSettings: () => void
   onLogout?: () => void
+  /** 'en' = English → 한국어, 'ko' = 한국어 → English */
+  sourceLang: 'en' | 'ko' | 'auto'
+  onChangeLangDirection: (source: 'en' | 'ko') => void
 }
 
 export default function Header({
@@ -21,6 +24,8 @@ export default function Header({
   quickTranslateOpen,
   onToggleSettings,
   onLogout,
+  sourceLang,
+  onChangeLangDirection,
 }: Props) {
   const [isDark, setIsDark] = useState(false)
 
@@ -76,6 +81,46 @@ export default function Header({
               </svg>
             </div>
             <span className="text-sm font-bold text-slate-900 dark:text-slate-100">TransMeet</span>
+          </div>
+
+          {/* 언어 방향 — 자주 바꾸는 설정이라 설정 다이얼로그 대신 헤더에 노출 */}
+          <div className="ml-1 sm:ml-3 flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800/80">
+            {(
+              [
+                ['en', 'EN', '한', 'English → 한국어'],
+                ['ko', '한', 'EN', '한국어 → English'],
+              ] as const
+            ).map(([val, from, to, title]) => {
+              const active = sourceLang === val
+              return (
+                <button
+                  key={val}
+                  onClick={() => onChangeLangDirection(val)}
+                  title={title}
+                  aria-label={title}
+                  aria-pressed={active}
+                  className={`flex items-center gap-0.5 px-2 py-1 rounded-md text-[11px] font-bold tracking-tight transition-all ${
+                    active
+                      ? 'bg-white dark:bg-slate-700 text-cyan-700 dark:text-cyan-300 shadow-sm'
+                      : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+                  }`}
+                >
+                  <span>{from}</span>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="w-2.5 h-2.5 opacity-60"
+                  >
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                  <span>{to}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
 

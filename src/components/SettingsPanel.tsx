@@ -21,11 +21,6 @@ const VOICES: Record<'en' | 'ko', { id: string; label: string; engines: string[]
   ko: [{ id: 'Seoyeon', label: 'Seoyeon', engines: ['neural'] }],
 }
 
-const DEFAULT_VOICE: Record<'en' | 'ko', { id: string; engine: Settings['pollyEngine'] }> = {
-  en: { id: 'Ruth', engine: 'generative' },
-  ko: { id: 'Seoyeon', engine: 'neural' },
-}
-
 // ─── Style helpers ───────────────────────────────────────────────────────────
 
 const pill = (active: boolean) =>
@@ -51,17 +46,10 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
     }
   }, [canUseSystemAudio, settings.audioSource, onUpdate])
 
-  // Wrap onUpdate so language/engine changes auto-correct dependent fields
+  // Wrap onUpdate so engine changes auto-correct dependent fields.
+  // sourceLang 변경에 따른 목소리 보정은 useSettings 에서 처리한다 (헤더 토글도 같은 경로).
   const handleUpdate = (patch: Partial<Settings>) => {
     const next = { ...settings, ...patch }
-
-    // Source language changed → reset voice/engine to language default
-    if (patch.sourceLang && patch.sourceLang !== settings.sourceLang) {
-      const lang = patch.sourceLang === 'auto' ? 'en' : patch.sourceLang
-      const d = DEFAULT_VOICE[lang]
-      next.pollyVoiceId = d.id
-      next.pollyEngine = d.engine
-    }
 
     // Engine changed → ensure current voice supports new engine
     const ttsLang = next.sourceLang === 'auto' ? 'en' : next.sourceLang
@@ -203,41 +191,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
             )}
           </div>
 
-          {/* Divider */}
-          <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
-
-          {/* ── Transcribe 언어 ────────────────────────────────────────────── */}
-          <div className="space-y-2">
-            <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-              Transcribe 언어
-            </p>
-            <div className="flex gap-1.5">
-              {(
-                [
-                  ['en', 'English → 한국어'],
-                  ['ko', '한국어 → English'],
-                ] as const
-              ).map(([val, label]) => (
-                <button
-                  key={val}
-                  onClick={() =>
-                    handleUpdate({
-                      sourceLang: val,
-                      targetLang: val === 'en' ? 'ko' : 'en',
-                    })
-                  }
-                  className={pill(settings.sourceLang === val)}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500">
-              {settings.sourceLang === 'ko'
-                ? '한국어 음성 인식 → 영어 번역 · 화자 분리 미지원'
-                : '영어 음성 인식 → 한국어 번역'}
-            </p>
-          </div>
+          {/* 언어 방향(English ↔ 한국어)은 자주 바꾸므로 헤더 토글로 옮겼다 */}
 
           {/* Divider */}
           <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />

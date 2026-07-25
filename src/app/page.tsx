@@ -1385,6 +1385,10 @@ export default function Home() {
         quickTranslateOpen={quickTranslateOpen}
         onToggleSettings={() => setSettingsOpen((v) => !v)}
         onLogout={HAS_COGNITO ? logout : undefined}
+        sourceLang={settings.sourceLang}
+        onChangeLangDirection={(source) =>
+          updateSettings({ sourceLang: source, targetLang: source === 'en' ? 'ko' : 'en' })
+        }
       />
 
       <div className="flex flex-1 overflow-hidden">
