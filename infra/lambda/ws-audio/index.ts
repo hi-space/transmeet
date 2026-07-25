@@ -282,6 +282,8 @@ export const handler = async (
           Key: { meetingId },
           UpdateExpression:
             'SET messages = list_append(if_not_exists(messages, :empty), :msg), #updatedAt = :ts',
+          // 존재하지 않는 회의에 append 하면 createdAt 없는 유령 레코드가 생긴다
+          ConditionExpression: 'attribute_exists(meetingId)',
           ExpressionAttributeNames: { '#updatedAt': 'updatedAt' },
           ExpressionAttributeValues: {
             ':msg': [

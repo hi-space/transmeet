@@ -44,6 +44,7 @@ from uuid import uuid4
 
 from amazon_transcribe.client import TranscribeStreamingClient
 from amazon_transcribe.model import TranscriptEvent as TranscribeEvent
+from botocore.exceptions import ClientError
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from .aws_clients import (
@@ -335,6 +336,9 @@ async def _process_segment(
                         "#updatedAt = :ts "
                         "ADD messageCount :one"
                     ),
+                    # 삭제되었거나 존재하지 않는 회의에 append 하면 createdAt/title 이 없는
+                    # 유령 레코드가 생겨 목록 정렬을 망가뜨린다.
+                    ConditionExpression="attribute_exists(meetingId)",
                     ExpressionAttributeNames={"#updatedAt": "updatedAt"},
                     ExpressionAttributeValues={
                         ":msg": {"L": [{"M": {
@@ -349,6 +353,17 @@ async def _process_segment(
                         ":ts": {"S": timestamp},
                         ":one": {"N": "1"},
                     },
+                )
+        except ClientError as err:
+            if err.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
+                logger.warning(
+                    "[process_segment] Skipped save — meeting does not exist: meeting_id=%s",
+                    meeting_id,
+                )
+            else:
+                logger.exception(
+                    "[process_segment] DynamoDB save failed for message_id=%s meeting_id=%s",
+                    message_id, meeting_id,
                 )
         except Exception:
             logger.exception(
@@ -847,6 +862,7 @@ async def _handle_tts_request(
                         "#updatedAt = :ts "
                         "ADD messageCount :one"
                     ),
+                    ConditionExpression="attribute_exists(meetingId)",
                     ExpressionAttributeNames={"#updatedAt": "updatedAt"},
                     ExpressionAttributeValues={
                         ":msg": {"L": [{"M": {
@@ -862,6 +878,14 @@ async def _handle_tts_request(
                         ":one": {"N": "1"},
                     },
                 )
+        except ClientError as err:
+            if err.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
+                logger.warning(
+                    "[tts_request] Skipped save — meeting does not exist: meeting_id=%s",
+                    meeting_id,
+                )
+            else:
+                logger.exception("[tts_request] DynamoDB save failed for messageId=%s", message_id)
         except Exception:
             logger.exception("[tts_request] DynamoDB save failed for messageId=%s", message_id)
 

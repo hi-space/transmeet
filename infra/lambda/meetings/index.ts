@@ -33,6 +33,26 @@ interface MeetingMessage {
   translatedText: string
 }
 
+// createdAt 이 없거나 파싱 불가한 레코드도 존재할 수 있다(중단된 세션/과거 데이터).
+// NaN 을 반환하는 비교 함수는 정렬 결과 전체를 뒤섞으므로 항상 유효한 순서를 돌려준다.
+function createdAtMs(item: Record<string, unknown>): number {
+  const raw = item.createdAt
+  if (typeof raw !== 'string') return -Infinity
+  const ms = Date.parse(raw)
+  return Number.isNaN(ms) ? -Infinity : ms
+}
+
+// 최신순. createdAt 없는 항목은 맨 뒤로 밀되 meetingId 로 순서를 고정한다.
+function byCreatedAtDesc(
+  a: Record<string, unknown>,
+  b: Record<string, unknown>
+): number {
+  const am = createdAtMs(a)
+  const bm = createdAtMs(b)
+  if (am !== bm) return bm > am ? 1 : -1
+  return String(a.meetingId ?? '').localeCompare(String(b.meetingId ?? ''))
+}
+
 export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
   const method = event.httpMethod
   const meetingId = event.pathParameters?.id
@@ -70,10 +90,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           if (page.Items) items.push(...page.Items)
           lastKey = page.LastEvaluatedKey
         } while (lastKey)
-        items.sort(
-          (a, b) =>
-            new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime()
-        )
+        items.sort(byCreatedAtDesc)
         return respond(200, items)
       }
 
