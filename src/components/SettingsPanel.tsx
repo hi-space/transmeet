@@ -1,6 +1,8 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import type { Settings } from '@/hooks/useSettings'
+import { supportsSystemAudio } from '@/lib/platform'
 
 interface Props {
   settings: Settings
@@ -36,6 +38,19 @@ const pill = (active: boolean) =>
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
+  // 시스템 오디오 지원 여부 — navigator 접근이므로 마운트 후에 판별 (정적 export = SSR)
+  const [canUseSystemAudio, setCanUseSystemAudio] = useState(true)
+  useEffect(() => {
+    setCanUseSystemAudio(supportsSystemAudio())
+  }, [])
+
+  // 미지원 기기에서 저장된 system/both 설정이 남아있으면 마이크로 되돌린다
+  useEffect(() => {
+    if (!canUseSystemAudio && settings.audioSource !== 'mic') {
+      onUpdate({ audioSource: 'mic' })
+    }
+  }, [canUseSystemAudio, settings.audioSource, onUpdate])
+
   // Wrap onUpdate so language/engine changes auto-correct dependent fields
   const handleUpdate = (patch: Partial<Settings>) => {
     const next = { ...settings, ...patch }
@@ -125,21 +140,35 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
                   ['system', '시스템'],
                   ['both', '믹스'],
                 ] as const
-              ).map(([val, label]) => (
-                <button
-                  key={val}
-                  onClick={() => handleUpdate({ audioSource: val })}
-                  className={pill(settings.audioSource === val)}
-                >
-                  {label}
-                </button>
-              ))}
+              ).map(([val, label]) => {
+                const disabled = val !== 'mic' && !canUseSystemAudio
+                return (
+                  <button
+                    key={val}
+                    onClick={() => !disabled && handleUpdate({ audioSource: val })}
+                    disabled={disabled}
+                    title={
+                      disabled
+                        ? 'iOS/모바일 Safari는 시스템 오디오 캡처를 지원하지 않습니다'
+                        : undefined
+                    }
+                    className={`${pill(settings.audioSource === val)} ${
+                      disabled ? 'opacity-40 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
             </div>
             <p className="text-[10px] text-slate-400 dark:text-slate-500">
-              {settings.audioSource === 'mic' && '마이크 입력만 캡처'}
-              {settings.audioSource === 'system' &&
-                '시스템 오디오 캡처 · 화면 공유 시 "오디오 공유" 체크 필요'}
-              {settings.audioSource === 'both' && '마이크 + 시스템 오디오 믹싱'}
+              {!canUseSystemAudio
+                ? '이 기기(iOS/모바일 Safari)는 시스템 오디오 캡처를 지원하지 않아 마이크만 사용합니다'
+                : settings.audioSource === 'mic'
+                  ? '마이크 입력만 캡처'
+                  : settings.audioSource === 'system'
+                    ? '시스템 오디오 캡처 · 화면 공유 시 "오디오 공유" 체크 필요'
+                    : '마이크 + 시스템 오디오 믹싱'}
             </p>
           </div>
 
