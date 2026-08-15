@@ -38,10 +38,50 @@ async def dynamodb_client():
 
 
 def normalize_language(lang: str) -> str:
-    l = lang.lower()
+    # "ko-KR" 같은 로케일 코드도 받는다 — 앞 2자만 잘라 넘기는 호출부에 의존하면
+    # 새 호출부가 로케일을 그대로 넘겼을 때 조용히 "en" 으로 떨어진다.
+    l = (lang or "").lower().split("-")[0]
     if l in ("ko", "korean", "kor"):
         return "ko"
     return "en"
+
+
+# 한글 음절 + 자모. 완성형만 보면 "ㅋㅋ" 같은 자모 단독 표기를 놓친다.
+_HANGUL_RE = re.compile(r"[가-힣ᄀ-ᇿ㄰-㆏]")
+
+# 리포트된 언어 코드를 뒤집기에 충분한 한글 비율.
+SCRIPT_OVERRIDE_HANGUL_RATIO = 0.3
+
+
+def hangul_ratio(text: str) -> float:
+    """Fraction of the letters in text that are Hangul (0.0 when there are none).
+
+    숫자·공백·문장부호는 분모에서 빼야 "2024년" 같은 짧은 발화가 영어로
+    판정되지 않는다.
+    """
+    letters = [c for c in text if c.isalpha()]
+    if not letters:
+        return 0.0
+    return sum(1 for c in letters if _HANGUL_RE.match(c)) / len(letters)
+
+
+def resolve_detected_language(reported: str, text: str) -> str:
+    """Decide the spoken language for auto-detect mode, preferring the script.
+
+    Transcribe 의 identify_language 는 짧은 발화에서 언어를 뒤집는다. 한국어
+    발화를 en-US 로 잘못 잡으면 영어 헛소리가 나오고, 그 상태로 번역 방향까지
+    뒤집히면 결과가 완전히 망가진다. 트랜스크립트 자체가 한글이면 리포트된
+    코드보다 글자를 믿는다 (반대 방향도 동일하게 적용).
+
+    글자가 하나도 없으면(숫자만 있는 발화 등) 판단 근거가 없으므로 리포트된
+    코드를 그대로 쓴다.
+    """
+    ratio = hangul_ratio(text)
+    if ratio > SCRIPT_OVERRIDE_HANGUL_RATIO:
+        return "ko"
+    if ratio == 0.0 and any(c.isalpha() for c in text):
+        return "en"
+    return normalize_language(reported)
 
 
 SILENCE_RMS_THRESHOLD = 0.01

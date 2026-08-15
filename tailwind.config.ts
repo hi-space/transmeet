@@ -10,6 +10,10 @@ const config: Config = {
   darkMode: 'class',
   theme: {
     extend: {
+      screens: {
+        // 좁은 폰(360~400px)에서 헤더 요소를 접기 위한 브레이크포인트
+        xs: '400px',
+      },
       fontFamily: {
         sans: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
         mono: ['var(--font-geist-mono)', 'monospace'],

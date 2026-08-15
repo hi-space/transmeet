@@ -11,9 +11,11 @@ interface Props {
   quickTranslateOpen: boolean
   onToggleSettings: () => void
   onLogout?: () => void
-  /** 'en' = English → 한국어, 'ko' = 한국어 → English */
+  /** 'en' = English → 한국어, 'ko' = 한국어 → English, 'auto' = 감지 언어의 반대편으로 */
   sourceLang: 'en' | 'ko' | 'auto'
-  onChangeLangDirection: (source: 'en' | 'ko') => void
+  onChangeLangDirection: (source: 'en' | 'ko' | 'auto') => void
+  /** AUTO 모드에서 마지막으로 감지된 언어 — 오탐을 눈치챌 수 있게 표시한다 */
+  detectedLang?: 'en' | 'ko' | null
 }
 
 export default function Header({
@@ -26,6 +28,7 @@ export default function Header({
   onLogout,
   sourceLang,
   onChangeLangDirection,
+  detectedLang,
 }: Props) {
   const [isDark, setIsDark] = useState(false)
 
@@ -80,7 +83,10 @@ export default function Header({
                 <line x1="12" x2="12" y1="19" y2="22" />
               </svg>
             </div>
-            <span className="text-sm font-bold text-slate-900 dark:text-slate-100">TransMeet</span>
+            {/* 언어 토글이 3개로 늘어나 좁은 화면에서는 워드마크를 접는다 (아이콘은 유지) */}
+            <span className="hidden xs:inline text-sm font-bold text-slate-900 dark:text-slate-100">
+              TransMeet
+            </span>
           </div>
 
           {/* 언어 방향 — 자주 바꾸는 설정이라 설정 다이얼로그 대신 헤더에 노출 */}
@@ -121,6 +127,30 @@ export default function Header({
                 </button>
               )
             })}
+
+            {/* AUTO — 발화마다 감지된 언어의 반대편으로 번역한다.
+                화자 구분은 이 모드에서 동작하지 않는다 (ko-KR 스트리밍 미지원). */}
+            <button
+              onClick={() => onChangeLangDirection('auto')}
+              title="자동 감지 — 들어오는 언어의 반대편으로 번역 (화자 구분 미지원)"
+              aria-label="자동 감지 번역"
+              aria-pressed={sourceLang === 'auto'}
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold tracking-tight transition-all ${
+                sourceLang === 'auto'
+                  ? 'bg-white dark:bg-slate-700 text-cyan-700 dark:text-cyan-300 shadow-sm'
+                  : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+              }`}
+            >
+              <span>AUTO</span>
+              {sourceLang === 'auto' && detectedLang && (
+                <span
+                  className="px-1 rounded bg-cyan-100 dark:bg-cyan-900/60 text-cyan-700 dark:text-cyan-300 text-[10px] leading-[14px] tabular-nums"
+                  title={`마지막 감지: ${detectedLang === 'ko' ? '한국어' : 'English'}`}
+                >
+                  {detectedLang === 'ko' ? '한' : 'EN'}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 

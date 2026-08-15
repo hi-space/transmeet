@@ -16,7 +16,7 @@ import EditableTitle from '@/components/EditableTitle'
 import { Meeting, Message } from '@/types/meeting'
 import { useAudioCapture } from '@/hooks/useAudioCapture'
 import { useWebSocket } from '@/hooks/useWebSocket'
-import { useSettings } from '@/hooks/useSettings'
+import { useSettings, type Settings } from '@/hooks/useSettings'
 import { useSummaryResize } from '@/hooks/useSummaryResize'
 import { useAuth } from '@/context/AuthContext'
 import type { WsServerMessage } from '@/lib/websocket'
@@ -124,6 +124,30 @@ function extractCompleteSentences(text: string): string {
   return match ? match[1].trim() : ''
 }
 
+// ─── 번역 방향 ────────────────────────────────────────────────────────────────
+
+/**
+ * 번역 방향을 결정한다.
+ *
+ * sourceLang 이 'auto' 면 방향이 고정 설정이 아니라 발화마다 감지된 언어에서
+ * 나온다 — 감지 언어의 반대편이 타겟이다. 감지값이 아직 없으면(첫 partial 등)
+ * 'en' 으로 가정한다.
+ *
+ * 백엔드도 같은 규칙을 독립적으로 적용한다 (ws_handler._auto_target_lang).
+ * 프론트가 계산하는 이유는 partial 번역 요청에 방향을 실어 보내야 하기 때문.
+ */
+function resolveDirection(
+  sourceLang: Settings['sourceLang'],
+  targetLang: Settings['targetLang'],
+  detected?: 'ko' | 'en' | null
+): { source: 'ko' | 'en'; target: 'ko' | 'en' } {
+  if (sourceLang === 'auto') {
+    const source = detected ?? 'en'
+    return { source, target: source === 'ko' ? 'en' : 'ko' }
+  }
+  return { source: sourceLang, target: targetLang }
+}
+
 // ─── 빈 회의 정리 ─────────────────────────────────────────────────────────────
 
 /**
@@ -187,6 +211,12 @@ export default function Home() {
   // realtime 모드 스로틀: 1.5초 간격으로 최신 partial 번역
   const partialThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingPartialRef = useRef<string>('')
+  // AUTO 모드: 마지막으로 감지된 언어. ref 는 handleWsMessage 안에서 즉시 비교하려고,
+  // state 는 헤더 배지 렌더링용 — 둘을 함께 갱신한다.
+  const detectedLangRef = useRef<'ko' | 'en' | null>(null)
+  const [detectedLang, setDetectedLang] = useState<'ko' | 'en' | null>(null)
+  // 같은 서버 에러가 반복될 때 alert 이 도배되지 않도록 마지막 메시지를 기억한다
+  const lastWsErrorRef = useRef<string | null>(null)
   // sendTranslate ref: handleWsMessage보다 먼저 선언되어야 하므로 ref 패턴 사용
   const sendTranslateRef = useRef<
     (
@@ -400,6 +430,16 @@ export default function Home() {
 
   const handleWsMessage = useCallback(
     (msg: WsServerMessage) => {
+      if (msg.type === 'error') {
+        // 이 분기가 없어서 백엔드 에러가 조용히 삼켜졌다 — STT 세션이 죽어도
+        // 화면에는 아무 변화가 없어 마이크 문제로 오해하게 된다.
+        console.error('[WS] server error:', msg.message)
+        if (lastWsErrorRef.current !== msg.message) {
+          lastWsErrorRef.current = msg.message
+          alert(msg.message)
+        }
+        return
+      }
       if (msg.type === 'subtitle') {
         // Legacy non-streaming path
         const newMsg: Message = {
@@ -419,18 +459,56 @@ export default function Home() {
         lastSttActivityTimeRef.current = Date.now()
         const SILENCE_TIMEOUT_MS = settings.silenceTimeout
         const MAX_SENTENCES = settings.maxSentencesPerBubble
+
+        // 확정된 발화의 감지 언어를 헤더 배지에 반영한다. Whisper 모드는 partial 이
+        // 없어서 이 경로가 유일한 갱신 지점이다. __pending__/__manual__/__quick__ 는
+        // 우리가 보낸 방향을 되돌려주는 것이므로 근거가 아니다.
+        if (msg.phase === 'done' && msg.detectedLanguage && !msg.messageId.startsWith('__')) {
+          if (detectedLangRef.current !== msg.detectedLanguage) {
+            detectedLangRef.current = msg.detectedLanguage
+            setDetectedLang(msg.detectedLanguage)
+          }
+        }
         if (msg.phase === 'stt_partial') {
           // Word-by-word Transcribe partial — show in pending bubble, not committed messages
           const partialText = msg.originalText ?? ''
           const partialSpeaker = msg.speaker ?? 'speaker1'
+
+          // AUTO 모드: 백엔드가 partial 에 실어 보낸 감지 언어로 방향을 잡는다.
+          // 감지 언어가 바뀌면 이전 언어로 쌓인 partial 번역을 버려야 한다 —
+          // 영어 번역 위에 한국어 번역이 이어붙으면 두 언어가 한 말풍선에 섞인다.
+          const partialDetected = msg.detectedLanguage ?? detectedLangRef.current
+          const langFlipped =
+            settings.sourceLang === 'auto' &&
+            partialDetected != null &&
+            detectedLangRef.current != null &&
+            partialDetected !== detectedLangRef.current
+          if (partialDetected && partialDetected !== detectedLangRef.current) {
+            detectedLangRef.current = partialDetected
+            setDetectedLang(partialDetected)
+          }
+          if (langFlipped) {
+            lastTranslatedPartialRef.current = ''
+            pendingPartialRef.current = ''
+            if (partialThrottleRef.current) {
+              clearTimeout(partialThrottleRef.current)
+              partialThrottleRef.current = null
+            }
+          }
+
           setPendingTranscript((prev) => ({
             messageId: msg.messageId,
             text: partialText,
             speaker: partialSpeaker,
-            translation: prev?.translation, // 기존 번역 유지
+            // 언어가 뒤집혔으면 이전 언어 번역은 버린다
+            translation: langFlipped ? undefined : prev?.translation,
           }))
 
-          const srcLang = settings.sourceLang !== 'auto' ? settings.sourceLang : 'en'
+          const { source: srcLang, target: tgtLang } = resolveDirection(
+            settings.sourceLang,
+            settings.targetLang,
+            partialDetected
+          )
 
           if (settings.partialTranslationMode === 'realtime') {
             // 스로틀: 타이머가 없을 때만 새 타이머 등록 (1.5초 간격)
@@ -449,7 +527,7 @@ export default function Home() {
                       text,
                       partialSpeaker,
                       srcLang,
-                      settings.targetLang,
+                      tgtLang,
                       settings.translationModel
                     )
                   }
@@ -471,7 +549,7 @@ export default function Home() {
                     newPart,
                     partialSpeaker,
                     srcLang,
-                    settings.targetLang,
+                    tgtLang,
                     settings.translationModel
                   )
                 }
@@ -484,7 +562,7 @@ export default function Home() {
                   allComplete,
                   partialSpeaker,
                   srcLang,
-                  settings.targetLang,
+                  tgtLang,
                   settings.translationModel
                 )
               }
@@ -991,6 +1069,9 @@ export default function Home() {
     setPendingTranscript(null)
     lastTranslatedPartialRef.current = ''
     pendingPartialRef.current = ''
+    // 감지 배지도 리셋 — 이전 모드의 감지값이 남으면 AUTO 진입 직후 오해를 준다
+    detectedLangRef.current = null
+    setDetectedLang(null)
     if (partialThrottleRef.current) {
       clearTimeout(partialThrottleRef.current)
       partialThrottleRef.current = null
@@ -1217,12 +1298,16 @@ export default function Home() {
   const handleTranslateMessage = useCallback(
     (id: string, text: string, speaker: string, detectedLanguage?: 'ko' | 'en') => {
       if (!text || wsStatus !== 'connected') return
-      // 'me' speaker: KO → EN / others: detected/sourceLang → targetLang(KO)
+      // 'me' speaker: 항상 KO → EN (내가 입력한 한국어를 영어 음성으로 내보내는 경로)
+      // 그 외: AUTO 면 저장된 감지 언어의 반대편으로, 수동이면 설정된 방향으로.
       const isMe = speaker === 'me'
-      const sourceLang = isMe
-        ? 'ko'
-        : (detectedLanguage ?? (settings.sourceLang !== 'auto' ? settings.sourceLang : 'en'))
-      const targetLang = isMe ? 'en' : settings.targetLang
+      const dir = resolveDirection(
+        settings.sourceLang,
+        settings.targetLang,
+        detectedLanguage ?? detectedLangRef.current
+      )
+      const sourceLang = isMe ? 'ko' : (detectedLanguage ?? dir.source)
+      const targetLang = isMe ? 'en' : dir.target
       // __manual__ 프리픽스: translating phase에서 complete 모드여도 항상 스트리밍
       sendTranslate(
         `__manual__${id}`,
@@ -1470,8 +1555,14 @@ export default function Home() {
         onToggleSettings={() => setSettingsOpen((v) => !v)}
         onLogout={HAS_COGNITO ? logout : undefined}
         sourceLang={settings.sourceLang}
+        detectedLang={detectedLang}
         onChangeLangDirection={(source) =>
-          updateSettings({ sourceLang: source, targetLang: source === 'en' ? 'ko' : 'en' })
+          // auto 는 방향을 발화마다 정하므로 targetLang 을 고정하지 않는다.
+          updateSettings(
+            source === 'auto'
+              ? { sourceLang: 'auto' }
+              : { sourceLang: source, targetLang: source === 'en' ? 'ko' : 'en' }
+          )
         }
       />
 

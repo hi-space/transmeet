@@ -3,7 +3,13 @@
 import { useState, useEffect } from 'react'
 
 export interface Settings {
+  /**
+   * 음성 입력 언어. 'auto' 면 발화마다 감지된 언어의 반대편으로 번역하며
+   * targetLang 은 무시된다 (백엔드도 동일하게 동작 — ws_handler._auto_target_lang).
+   * AUTO 모드에서는 Transcribe 화자 구분을 쓸 수 없다.
+   */
   sourceLang: 'ko' | 'en' | 'auto'
+  /** sourceLang 이 'ko' | 'en' 일 때만 유효 */
   targetLang: 'ko' | 'en'
   audioSource: 'mic' | 'system' | 'both'
   sttProvider: 'whisper' | 'transcribe'

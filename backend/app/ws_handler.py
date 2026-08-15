@@ -18,7 +18,16 @@ Message sequence per final utterance (both modes):
   3. { type: "subtitle_stream", phase: "done",        originalText, translatedText, detectedLanguage }
 
 Transcribe-only partial:
-  0. { type: "subtitle_stream", phase: "stt_partial", originalText }  (live, not committed)
+  0. { type: "subtitle_stream", phase: "stt_partial", originalText, detectedLanguage }
+     (live, not committed)
+
+Translation direction:
+  - sourceLang "ko"/"en" → targetLang is fixed for the whole recording.
+  - sourceLang "auto"    → targetLang is derived per utterance from the detected
+                           language (ko→en, en→ko); the client's targetLang is ignored.
+                           Speaker diarization is unavailable in this mode
+                           (identify_language cannot be combined with speaker labels,
+                           and ko-KR does not support streaming diarization at all).
 
 Inbound message format:
 {
@@ -56,6 +65,7 @@ from .aws_clients import (
     is_hallucination,
     normalize_language,
     polly_client,
+    resolve_detected_language,
     sagemaker_client,
 )
 from .config import config
@@ -66,6 +76,12 @@ router = APIRouter()
 MAX_BUFFER_BYTES = 512_000   # ~8 seconds at 16 kHz 16-bit mono
 FLUSH_DELAY_SECS = 0.6       # 600 ms silence → flush (Whisper mode only)
 SEGMENT_MERGE_DELAY_SECS = 2.0  # Transcribe: wait this long before translating (accumulates consecutive finals)
+
+# Transcribe 세션 시작이 계속 실패할 때 재시작 폭주를 막는다.
+# sendAudio 는 700ms 마다 오므로 가드가 없으면 초당 1회 세션 생성 + 트레이스백 로깅이
+# 무한 반복되어 0.5 vCPU 태스크를 태우고, 같은 태스크를 쓰는 다른 연결까지 느려진다.
+TRANSCRIBE_MAX_START_FAILURES = 3
+TRANSCRIBE_RETRY_COOLDOWN_SECS = 2.0
 
 # Transcribe language code mapping
 LANG_CODE_MAP: dict = {
@@ -85,6 +101,16 @@ def _speaker_key(label: str) -> str:
     return SPEAKER_LABEL_MAP.get(label, "speaker2")
 
 
+def _is_auto(source_lang: Optional[str]) -> bool:
+    """sourceLang 이 자동 감지 모드인지."""
+    return source_lang in ("auto", "", None)
+
+
+def _auto_target_lang(detected_language: str) -> str:
+    """AUTO 방향: 감지된 언어의 반대편으로 번역한다."""
+    return "en" if detected_language == "ko" else "ko"
+
+
 @dataclass
 class ConnectionState:
     ws: WebSocket
@@ -102,6 +128,9 @@ class ConnectionState:
     # Transcribe mode: persistent streaming session
     audio_queue: asyncio.Queue = field(default_factory=asyncio.Queue)
     transcribe_task: Optional[asyncio.Task] = None
+    # 세션 시작 연속 실패 횟수 / 다음 재시도 허용 시각 (event-loop time)
+    transcribe_fail_count: int = 0
+    transcribe_retry_at: float = 0.0
     # Transcribe mode: deferred segment accumulation (merges consecutive finals before translating)
     seg_buffer: List[tuple] = field(default_factory=list)  # [(text, speaker, detected_lang)]
     seg_flush_task: Optional[asyncio.Task] = None
@@ -251,10 +280,16 @@ async def _process_segment(
     meeting_id = state.meeting_id
     bedrock_model_id = state.model_id
 
-    translation_target = state.target_lang or "ko"
+    # AUTO 모드에서는 방향이 녹음 시작 시점 설정이 아니라 발화 단위 감지 결과로
+    # 결정된다 — 고정 target 을 쓰면 한국어가 들어왔을 때 ko→ko 가 된다.
+    if _is_auto(state.source_lang):
+        translation_target = _auto_target_lang(detected_language)
+    else:
+        translation_target = state.target_lang or "ko"
     logger.info(
-        "[process_segment] speaker=%s detectedLang=%s -> translation_target=%s text=%r",
-        speaker, detected_language, translation_target, original_text,
+        "[process_segment] speaker=%s detectedLang=%s auto=%s -> translation_target=%s text=%r",
+        speaker, detected_language, _is_auto(state.source_lang),
+        translation_target, original_text,
     )
     source_lang_label = "Korean" if detected_language == "ko" else "English"
     target_lang_label = "Korean" if translation_target == "ko" else "English"
@@ -509,9 +544,15 @@ async def _run_transcribe_streaming(
     use_speaker_labels = mapped_lang in DIARIZATION_SUPPORTED_LANGS if mapped_lang else False
 
     kwargs: dict = {"media_sample_rate_hz": 16000, "media_encoding": "pcm"}
-    if lang_code in ("auto", "", None):
+    if _is_auto(lang_code):
+        # language_code 는 amazon-transcribe 0.6.4 에서 default 가 없는 필수 인자다.
+        # 자동 식별 모드에서도 반드시 넘겨야 하며, None 이면 직렬화 단계에서
+        # x-amzn-transcribe-language-code 헤더가 빠진다 (serialize._serialize_header).
+        kwargs["language_code"] = None
         kwargs["identify_language"] = True
-        kwargs["language_options"] = "en-US,ko-KR"
+        # 반드시 list — SDK 가 ",".join(value) 를 하므로 문자열을 넘기면
+        # "e,n,-,U,S,,,k,o,-,K,R" 로 망가지고 AWS 가 BadRequestException 을 준다.
+        kwargs["language_options"] = ["en-US", "ko-KR"]
     else:
         kwargs["language_code"] = mapped_lang
         if use_speaker_labels:
@@ -526,8 +567,26 @@ async def _run_transcribe_streaming(
             connection_id, lang_code, mapped_lang or "auto",
             use_speaker_labels, list(kwargs.keys()),
         )
+        state.transcribe_fail_count = 0
     except Exception:
-        logger.exception("[Transcribe] Failed to start session for connection_id=%s", connection_id)
+        state.transcribe_fail_count += 1
+        state.transcribe_retry_at = (
+            asyncio.get_running_loop().time() + TRANSCRIBE_RETRY_COOLDOWN_SECS
+        )
+        logger.exception(
+            "[Transcribe] Failed to start session for connection_id=%s (consecutive failures=%d)",
+            connection_id, state.transcribe_fail_count,
+        )
+        # 조용히 죽으면 사용자는 마이크가 고장난 줄 안다 — 포기 시점에 명시적으로 알린다.
+        if state.transcribe_fail_count >= TRANSCRIBE_MAX_START_FAILURES:
+            try:
+                await _safe_send(ws, {
+                    "type": "error",
+                    "message": "음성 인식 세션을 시작할 수 없습니다. 녹음을 멈추고 다시 시도해 주세요.",
+                    "timestamp": _iso_now(),
+                })
+            except Exception:
+                pass
         return
 
     detected_lang: str = mapped_lang[:2].lower() if mapped_lang else "en"
@@ -581,10 +640,18 @@ async def _run_transcribe_streaming(
                     if not transcript_text:
                         continue
 
+                    # partial 번역도 방향을 알아야 하므로 partial/final 모두 언어를 해석한다.
+                    if _is_auto(state.source_lang):
+                        language = resolve_detected_language(detected_lang, transcript_text)
+                    else:
+                        language = normalize_language(state.source_lang)
+
                     if result.is_partial:
                         # Live partial → pending bubble on frontend (not committed)
                         # last_confirmed_speaker: 마지막 final에서 확인된 화자 사용
                         # (첫 발화 전엔 default "speaker1", 이후엔 실제 화자 반영)
+                        # detectedLanguage: AUTO 모드에서 프론트가 partial 번역 방향을
+                        # 추측하지 않도록 함께 보낸다.
                         try:
                             await _safe_send(ws, {
                                 "type": "subtitle_stream",
@@ -592,6 +659,7 @@ async def _run_transcribe_streaming(
                                 "messageId": "partial",
                                 "speaker": state.last_confirmed_speaker,
                                 "originalText": transcript_text,
+                                "detectedLanguage": language,
                                 "timestamp": _iso_now(),
                             })
                         except Exception:
@@ -608,12 +676,7 @@ async def _run_transcribe_streaming(
                         if segments:
                             state.last_confirmed_speaker = segments[-1][1]
 
-                        # Language for translation
-                        if state.source_lang not in ("auto", "", None):
-                            language = normalize_language(state.source_lang)
-                        else:
-                            language = normalize_language(detected_lang)
-
+                        # language 는 위에서 partial/final 공용으로 해석해 둔 값이다.
                         for text, speaker in segments:
                             if not _apply_segment_filters(text, state.source_lang):
                                 continue
@@ -713,7 +776,7 @@ async def _process_whisper_audio(
     if req_source_lang:
         detected_language = normalize_language(req_source_lang)
     else:
-        detected_language = normalize_language(detected_lang_raw)
+        detected_language = resolve_detected_language(detected_lang_raw, original_text)
 
     if not _apply_segment_filters(original_text, req_source_lang):
         return
@@ -1129,6 +1192,10 @@ async def ws_endpoint(
                 state.audio_buffer.clear()
                 # Fresh queue for this session
                 state.audio_queue = asyncio.Queue()
+                # 명시적 재시작(녹음 버튼/언어 전환)은 실패 카운터를 리셋한다 —
+                # 이전 세션에서 포기했더라도 사용자가 다시 시도하면 기회를 준다.
+                state.transcribe_fail_count = 0
+                state.transcribe_retry_at = 0.0
 
                 state.stt_provider = data.get("sttProvider", "whisper")
                 state.target_lang = data.get("targetLang", "ko") or "ko"
@@ -1211,10 +1278,17 @@ async def ws_endpoint(
                 msg_id = data.get("messageId")
                 orig_text = (data.get("originalText") or "").strip()
                 speaker = data.get("speaker") or state.speaker
-                source_lang = normalize_language(
-                    data.get("sourceLang") or state.source_lang or "en"
-                )
-                target_lang = data.get("targetLang") or state.target_lang or "ko"
+                # AUTO 모드에서는 state.target_lang 이 의미가 없으므로 감지 결과에서
+                # 방향을 유도한다 (normalize_language("auto") 는 "en" 이라 그대로 쓰면
+                # 한국어 발화가 en→ko 로 잘못 번역된다).
+                raw_source = data.get("sourceLang") or state.source_lang
+                if _is_auto(raw_source):
+                    source_lang = resolve_detected_language("", orig_text)
+                    fallback_target = _auto_target_lang(source_lang)
+                else:
+                    source_lang = normalize_language(raw_source)
+                    fallback_target = state.target_lang or "ko"
+                target_lang = data.get("targetLang") or fallback_target
                 model_id = data.get("modelId") or state.model_id
                 if msg_id and orig_text:
                     asyncio.create_task(
@@ -1243,11 +1317,20 @@ async def ws_endpoint(
                         # Streaming: feed PCM directly into Transcribe session
                         pcm = audio_bytes[44:]          # strip 44-byte WAV header
                         if len(pcm) >= 3200:            # skip chunks < ~100ms
-                            # transcribe_task가 예기치 않게 종료됐으면 자동 재시작
+                            # transcribe_task가 예기치 않게 종료됐으면 자동 재시작.
+                            # 단, 세션 시작 자체가 계속 실패하는 상황에서는 재시작을
+                            # 멈춘다 — 그대로 두면 초당 1회 폭주하며 태스크를 태운다.
                             if state.transcribe_task and state.transcribe_task.done():
+                                now = asyncio.get_running_loop().time()
+                                if state.transcribe_fail_count >= TRANSCRIBE_MAX_START_FAILURES:
+                                    # 포기 — 사용자에겐 이미 error 를 보냈다. 오디오는 버린다.
+                                    continue
+                                if now < state.transcribe_retry_at:
+                                    continue  # 쿨다운 중 — 오디오를 버린다
                                 logger.warning(
-                                    "[ws] transcribe_task died unexpectedly, restarting: connection_id=%s",
-                                    connection_id,
+                                    "[ws] transcribe_task died unexpectedly, restarting: "
+                                    "connection_id=%s (failures=%d)",
+                                    connection_id, state.transcribe_fail_count,
                                 )
                                 state.audio_queue = asyncio.Queue()
                                 state.seg_buffer.clear()
