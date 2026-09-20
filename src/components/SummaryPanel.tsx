@@ -3,12 +3,42 @@
 import { useState } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { Message, SpeakerRole } from '@/types/meeting'
 
 interface Props {
   summary?: string // raw markdown
+  messages?: Message[]
+  meetingTitle?: string
   onClose?: () => void
   onSummarize?: () => void
   isSummarizing?: boolean
+}
+
+const SPEAKER_LABELS: Record<SpeakerRole, string> = {
+  speaker1: 'Speaker 1',
+  speaker2: 'Speaker 2',
+  me: 'Me',
+}
+
+// ─── Conversation serialization ──────────────────────────────────────────────
+//
+// Turns the structured Message[] into a plain-text transcript for the clipboard.
+// Emits a timestamped, original-language transcript: one line per turn, with a
+// [HH:MM] timestamp and the speaker label.
+function formatConversation(messages: Message[], meetingTitle?: string): string {
+  const header = meetingTitle ? `# ${meetingTitle}\n\n` : ''
+  const body = messages
+    .map((msg) => {
+      const time = new Date(msg.timestamp).toLocaleTimeString('ko-KR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      })
+      const label = SPEAKER_LABELS[msg.speaker] ?? msg.speaker
+      return `[${time}] ${label}: ${msg.original?.trim() ?? ''}`
+    })
+    .join('\n')
+  return header + body
 }
 
 // ─── Markdown renderer ───────────────────────────────────────────────────────
@@ -23,8 +53,18 @@ function MarkdownSummary({ text }: { text: string }) {
 
 // ─── Panel ───────────────────────────────────────────────────────────────────
 
-export default function SummaryPanel({ summary, onClose, onSummarize, isSummarizing }: Props) {
+export default function SummaryPanel({
+  summary,
+  messages,
+  meetingTitle,
+  onClose,
+  onSummarize,
+  isSummarizing,
+}: Props) {
   const [copied, setCopied] = useState(false)
+  const [copiedAll, setCopiedAll] = useState(false)
+
+  const hasMessages = !!messages && messages.length > 0
 
   const handleCopy = async () => {
     if (!summary) return
@@ -34,6 +74,17 @@ export default function SummaryPanel({ summary, onClose, onSummarize, isSummariz
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
       console.error('Failed to copy:', err)
+    }
+  }
+
+  const handleCopyAll = async () => {
+    if (!hasMessages) return
+    try {
+      await navigator.clipboard.writeText(formatConversation(messages!, meetingTitle))
+      setCopiedAll(true)
+      setTimeout(() => setCopiedAll(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy conversation:', err)
     }
   }
 
@@ -61,10 +112,48 @@ export default function SummaryPanel({ summary, onClose, onSummarize, isSummariz
         </div>
 
         <div className="flex items-center gap-1">
+          {hasMessages && (
+            <button
+              onClick={handleCopyAll}
+              title="전체 대화 복사"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600/50 transition-colors"
+            >
+              {copiedAll ? (
+                <>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    className="w-3 h-3 text-green-500"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  <span>복사됨</span>
+                </>
+              ) : (
+                <>
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    className="w-3 h-3"
+                  >
+                    <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+                  </svg>
+                  <span>대화 복사</span>
+                </>
+              )}
+            </button>
+          )}
+
           {summary && (
             <button
               onClick={handleCopy}
-              title="Markdown 복사"
+              title="요약 Markdown 복사"
               className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600/50 transition-colors"
             >
               {copied ? (

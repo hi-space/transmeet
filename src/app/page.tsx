@@ -1778,6 +1778,8 @@ export default function Home() {
             ) : (
               <SummaryPanel
                 summary={activeMeeting?.summary}
+                messages={activeMeeting?.messages}
+                meetingTitle={activeMeeting?.title}
                 onSummarize={() => handleSummarize(true)}
                 isSummarizing={isSummarizing}
               />
@@ -1798,6 +1800,8 @@ export default function Home() {
             />
             <SummaryPanel
               summary={activeMeeting?.summary}
+              messages={activeMeeting?.messages}
+              meetingTitle={activeMeeting?.title}
               onClose={() => setSummaryOpen(false)}
               onSummarize={() => handleSummarize(true)}
               isSummarizing={isSummarizing}
