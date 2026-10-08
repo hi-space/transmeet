@@ -658,6 +658,11 @@ _TRANSIENT_ERROR_MARKERS = (
     "internalserverexception",
     "modelstreamerrorexception",
     "bedrock is unable to process",
+    # 하네스 내부 Bedrock 클라이언트가 모델 스트림 중간에 멎은 경우 (strands EventLoopException 메시지)
+    "read timed out",
+    "readtimeouterror",
+    "connection reset",
+    "connection aborted",
 )
 
 

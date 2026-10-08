@@ -350,6 +350,7 @@ async def test_transient_error_after_publish_is_not_retried():
     (RuntimeError("throttlingException: slow down"), True),
     (EventStreamError({"Error": {"Code": "runtimeClientError", "Message": "An error occurred (ServiceUnavailableException) when calling the ConverseStream operation (reached max retries: 2): Bedrock is unable to process your request."}}, "InvokeHarness"), True),
     (RuntimeError("modelStreamErrorException: stream broke"), True),
+    (EventStreamError({"Error": {"Code": "runtimeClientError", "Message": "AWSHTTPSConnectionPool(host='bedrock-runtime.us-east-1.amazonaws.com', port=443): Read timed out."}}, "InvokeHarness"), True),
     (RuntimeError("validationException: bad input"), False),
     (ValueError("edge references unknown node"), False),
 ])
