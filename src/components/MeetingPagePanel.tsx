@@ -10,13 +10,18 @@ export interface PageGenState {
   log: string[]
   error?: string
   startedAt?: number
+  prevPageId?: string // 생성 시작 시점의 pageId — 재연결 후 새 페이지가 생겼는지 판단한다
 }
+
+export const PAGE_GEN_IDLE: PageGenState = { status: 'idle', log: [] }
 
 interface Props {
   page?: MeetingPage
   gen: PageGenState
   hasMessages: boolean
   wsConnected: boolean
+  unpublishing?: boolean
+  unpublishError?: string
   onGenerate: () => void
   onUnpublish: () => void
   onClose?: () => void
@@ -44,6 +49,8 @@ export default function MeetingPagePanel({
   gen,
   hasMessages,
   wsConnected,
+  unpublishing = false,
+  unpublishError,
   onGenerate,
   onUnpublish,
   onClose,
@@ -65,9 +72,9 @@ export default function MeetingPagePanel({
       try {
         await navigator.share(data)
         return
-      } catch {
-        // 사용자가 공유 시트를 닫은 경우 — 클립보드로 폴백하지 않는다
-        return
+      } catch (err) {
+        // 사용자가 공유 시트를 닫은 경우(AbortError)만 그대로 끝낸다 — 그 밖의 실패는 링크 복사로 대신한다
+        if ((err as { name?: string } | null)?.name === 'AbortError') return
       }
     }
     try {
@@ -199,6 +206,11 @@ export default function MeetingPagePanel({
               sandbox=""
               className="flex-1 w-full bg-white dark:bg-slate-950 border-0"
             />
+            {unpublishError && (
+              <p className="px-4 pt-2 text-[11px] text-red-600 dark:text-red-400 border-t border-slate-200 dark:border-slate-800">
+                {unpublishError}
+              </p>
+            )}
             <div className="px-4 py-2 flex items-center justify-between gap-2 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-400">
               <span className="truncate">
                 {new Date(page.generatedAt).toLocaleString('ko-KR')} 생성
@@ -231,6 +243,7 @@ export default function MeetingPagePanel({
                         setConfirmUnpublish(false)
                         onUnpublish()
                       }}
+                      disabled={unpublishing}
                       className={`${btn} bg-red-600 text-white hover:bg-red-500`}
                     >
                       공유 해제
@@ -248,8 +261,12 @@ export default function MeetingPagePanel({
                     >
                       재생성
                     </button>
-                    <button onClick={() => setConfirmUnpublish(true)} className={btnNeutral}>
-                      공유 해제
+                    <button
+                      onClick={() => setConfirmUnpublish(true)}
+                      disabled={unpublishing}
+                      className={btnNeutral}
+                    >
+                      {unpublishing ? '해제 중…' : '공유 해제'}
                     </button>
                   </>
                 )}

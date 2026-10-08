@@ -255,7 +255,13 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
   const sendGeneratePage = useCallback(
     (
       meetingId: string,
-      messages?: { speaker: string; original: string; translation?: string; timestamp?: string }[]
+      messages?: {
+        speaker: string
+        original: string
+        translation?: string
+        timestamp?: string
+        detectedLanguage?: string
+      }[]
     ): boolean => {
       const ws = wsRef.current
       if (!ws || ws.readyState !== WebSocket.OPEN) return false

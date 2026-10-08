@@ -10,7 +10,7 @@ import SettingsPanel from '@/components/SettingsPanel'
 import QuickTranslatePopup from '@/components/QuickTranslatePopup'
 import AuthScreen from '@/components/AuthScreen'
 import MobileTabBar from '@/components/MobileTabBar'
-import MeetingPagePanel, { type PageGenState } from '@/components/MeetingPagePanel'
+import MeetingPagePanel, { PAGE_GEN_IDLE, type PageGenState } from '@/components/MeetingPagePanel'
 import NotesArea from '@/components/NotesArea'
 import VoiceArea, { VoiceFontSizeControl } from '@/components/VoiceArea'
 import EditableTitle from '@/components/EditableTitle'
@@ -28,6 +28,12 @@ const HAS_COGNITO = !!process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID
 // ─── Dev fallback when API is not configured ────────────────────────────────
 
 const HAS_API = !!process.env.NEXT_PUBLIC_API_ENDPOINT
+
+// 미팅 페이지 생성: 하네스 제한(15분) + 여유 1분 뒤에도 소식이 없으면 오류로 본다
+const PAGE_GEN_TIMEOUT_MS = 16 * 60 * 1000
+const PAGE_GEN_TIMEOUT_MESSAGE = '응답이 없습니다. 미팅을 다시 열어 확인하세요'
+const PAGE_GEN_POLL_MS = 20 * 1000
+const PAGE_GEN_CLOCK_SKEW_MS = 5 * 60 * 1000
 
 const MOCK_MEETINGS: Meeting[] = [
   {
@@ -176,10 +182,20 @@ export default function Home() {
   const [quickTranslateOpen, setQuickTranslateOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'voice' | 'notes' | 'summary' | 'page'>('voice')
   const [rightPanel, setRightPanel] = useState<'summary' | 'page'>('summary')
-  const [pageGen, setPageGen] = useState<PageGenState>({ status: 'idle', log: [] })
+  // pageGen 은 현재 미팅의 생성 상태, 원본은 미팅별 Map — 다른 미팅을 보다 돌아와도 "생성 중"이 이어진다
+  const [pageGen, setPageGen] = useState<PageGenState>(PAGE_GEN_IDLE)
+  const pageGenByMeetingRef = useRef<Map<string, PageGenState>>(new Map())
+  const pageGenTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const [hasNewPage, setHasNewPage] = useState(false)
-  // page_stream 이벤트는 생성을 시작한 미팅에 귀속된다 (생성 중 다른 미팅으로 이동해도 안전)
+  // meetingId 가 없는 (구버전 백엔드) page_stream 이벤트는 마지막으로 요청한 미팅에 귀속한다
   const pageGenMeetingIdRef = useRef<string | null>(null)
+  // 공유 해제는 생성과 별도 상태 — 실패해도 생성 오류 화면을 덮지 않는다
+  const [unpublishState, setUnpublishState] = useState<{
+    meetingId: string
+    status: 'pending' | 'error'
+    error?: string
+  } | null>(null)
+  const unpublishingRef = useRef<Set<string>>(new Set())
   const [hasNewVoice, setHasNewVoice] = useState(false)
   const [hasNewNotes, setHasNewNotes] = useState(false)
   const [notesCollapsed, setNotesCollapsed] = useState(true)
@@ -205,6 +221,25 @@ export default function Home() {
   const msgAudioRef = useRef<HTMLAudioElement | null>(null)
   const meetingsRef = useRef(meetings)
   meetingsRef.current = meetings
+  const activeMeetingIdRef = useRef(activeMeetingId)
+  activeMeetingIdRef.current = activeMeetingId
+
+  const setPageGenFor = useCallback(
+    (meetingId: string, next: PageGenState | ((prev: PageGenState) => PageGenState)) => {
+      const map = pageGenByMeetingRef.current
+      const prev = map.get(meetingId) ?? PAGE_GEN_IDLE
+      const value = typeof next === 'function' ? next(prev) : next
+      if (value.status === 'idle') map.delete(meetingId)
+      else map.set(meetingId, value)
+      if (value.status !== 'generating') {
+        const timer = pageGenTimersRef.current.get(meetingId)
+        if (timer) clearTimeout(timer)
+        pageGenTimersRef.current.delete(meetingId)
+      }
+      if (meetingId === activeMeetingIdRef.current) setPageGen(value)
+    },
+    []
+  )
   // partial 번역 carry over: handleWsMessage가 memoize되어 pendingTranscript가 deps에 없으므로 ref로 동기화
   const pendingTranscriptRef = useRef<typeof pendingTranscript>(null)
 
@@ -897,35 +932,49 @@ export default function Home() {
           )
         }
       } else if (msg.type === 'page_stream') {
-        const targetId = pageGenMeetingIdRef.current
-        if (msg.phase === 'status' || msg.phase === 'delta') {
+        const targetId = msg.meetingId ?? pageGenMeetingIdRef.current
+        if (!targetId) return
+        if (msg.phase === 'unpublished') {
+          unpublishingRef.current.delete(targetId)
+          setUnpublishState((s) => (s?.meetingId === targetId ? null : s))
+          setMeetings((prev) =>
+            prev.map((m) => (m.id === targetId ? { ...m, page: undefined } : m))
+          )
+        } else if (msg.op === 'unpublish') {
+          unpublishingRef.current.delete(targetId)
+          setUnpublishState({
+            meetingId: targetId,
+            status: 'error',
+            error: msg.error ?? '공유 해제에 실패했습니다',
+          })
+        } else if (msg.phase === 'status' || msg.phase === 'delta') {
           const line = (msg.text ?? '').trim()
           if (line) {
-            setPageGen((g) => ({
-              ...g,
-              status: 'generating',
-              log: msg.phase === 'status' ? [...g.log, line] : g.log,
-            }))
+            // 이미 끝난(idle) 생성의 늦은 이벤트는 무시한다
+            setPageGenFor(targetId, (g) =>
+              g.status === 'idle'
+                ? g
+                : {
+                    ...g,
+                    status: 'generating',
+                    log: msg.phase === 'status' ? [...g.log, line] : g.log,
+                  }
+            )
           }
         } else if (msg.phase === 'done') {
-          setPageGen({ status: 'idle', log: [] })
-          if (targetId && msg.page) {
+          setPageGenFor(targetId, PAGE_GEN_IDLE)
+          if (msg.page) {
             setMeetings((prev) =>
               prev.map((m) => (m.id === targetId ? { ...m, page: msg.page } : m))
             )
             if (activeTab !== 'page') setHasNewPage(true)
           }
-          pageGenMeetingIdRef.current = null
         } else if (msg.phase === 'error') {
-          setPageGen((g) => ({ ...g, status: 'error', error: msg.error ?? '알 수 없는 오류' }))
-          pageGenMeetingIdRef.current = null
-        } else if (msg.phase === 'unpublished') {
-          if (targetId) {
-            setMeetings((prev) =>
-              prev.map((m) => (m.id === targetId ? { ...m, page: undefined } : m))
-            )
-          }
-          pageGenMeetingIdRef.current = null
+          setPageGenFor(targetId, (g) => ({
+            ...g,
+            status: 'error',
+            error: msg.error ?? '알 수 없는 오류',
+          }))
         }
       } else if (msg.type === 'qa_stream') {
         const qaMsgId = msg.messageId
@@ -1001,6 +1050,7 @@ export default function Home() {
       settings.sourceLang,
       settings.targetLang,
       settings.translationModel,
+      setPageGenFor,
     ]
   )
 
@@ -1172,10 +1222,8 @@ export default function Home() {
   }, [activeMeetingId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    // 생성 중인 미팅과 다른 미팅을 보면 패널은 idle 로 보인다 (완료 이벤트는 ref 로 원래 미팅에 반영된다)
-    if (pageGenMeetingIdRef.current && pageGenMeetingIdRef.current !== activeMeetingId) {
-      setPageGen({ status: 'idle', log: [] })
-    }
+    // 미팅을 바꾸면 그 미팅의 생성 상태를 복원한다 (생성 중이던 미팅으로 돌아오면 "생성 중")
+    setPageGen(pageGenByMeetingRef.current.get(activeMeetingId) ?? PAGE_GEN_IDLE)
   }, [activeMeetingId])
 
   const handleToggleRecording = useCallback(async () => {
@@ -1318,8 +1366,10 @@ export default function Home() {
 
   const handleGeneratePage = useCallback(() => {
     if (!activeMeetingId || !HAS_API) return
-    const currentMessages =
-      meetingsRef.current.find((m) => m.id === activeMeetingId)?.messages ?? []
+    const meetingId = activeMeetingId
+    if (pageGenByMeetingRef.current.get(meetingId)?.status === 'generating') return
+    const meeting = meetingsRef.current.find((m) => m.id === meetingId)
+    const currentMessages = meeting?.messages ?? []
     if (currentMessages.length === 0) return
     // 녹음 중에는 DynamoDB 에 아직 없는 메시지가 있을 수 있어 인라인으로 함께 보낸다
     const inline = isRecording
@@ -1330,23 +1380,100 @@ export default function Home() {
             original: m.original,
             translation: m.translation,
             timestamp: m.timestamp,
+            detectedLanguage: m.detectedLanguage,
           }))
       : undefined
-    const sent = sendGeneratePage(activeMeetingId, inline)
+    const sent = sendGeneratePage(meetingId, inline)
     if (!sent) {
-      setPageGen({ status: 'error', log: [], error: '서버와 연결되어 있지 않습니다.' })
+      setPageGenFor(meetingId, {
+        status: 'error',
+        log: [],
+        error: '서버와 연결되어 있지 않습니다.',
+      })
       return
     }
-    pageGenMeetingIdRef.current = activeMeetingId
-    setPageGen({ status: 'generating', log: [], startedAt: Date.now() })
+    pageGenMeetingIdRef.current = meetingId
+    setUnpublishState((s) => (s?.meetingId === meetingId ? null : s))
+    const startedAt = Date.now()
+    setPageGenFor(meetingId, {
+      status: 'generating',
+      log: [],
+      startedAt,
+      prevPageId: meeting?.page?.pageId,
+    })
+    // 안전장치: 하네스 제한(15분)을 넘겨도 아무 이벤트가 없으면 오류로 바꾼다
+    const prevTimer = pageGenTimersRef.current.get(meetingId)
+    if (prevTimer) clearTimeout(prevTimer)
+    pageGenTimersRef.current.set(
+      meetingId,
+      setTimeout(() => {
+        setPageGenFor(meetingId, (g) =>
+          g.status === 'generating' && g.startedAt === startedAt
+            ? { ...g, status: 'error', error: PAGE_GEN_TIMEOUT_MESSAGE }
+            : g
+        )
+      }, PAGE_GEN_TIMEOUT_MS)
+    )
     setRightPanel('page')
     setSummaryOpen(true)
-  }, [activeMeetingId, isRecording, sendGeneratePage])
+  }, [activeMeetingId, isRecording, sendGeneratePage, setPageGenFor])
 
   const handleUnpublishPage = useCallback(() => {
-    if (!activeMeetingId) return
-    if (sendUnpublishPage(activeMeetingId)) pageGenMeetingIdRef.current = activeMeetingId
+    const meetingId = activeMeetingId
+    // 중복 클릭 방지: 응답이 올 때까지 같은 미팅의 해제 요청은 한 번만 보낸다
+    if (!meetingId || unpublishingRef.current.has(meetingId)) return
+    if (!sendUnpublishPage(meetingId)) {
+      setUnpublishState({ meetingId, status: 'error', error: '서버와 연결되어 있지 않습니다.' })
+      return
+    }
+    unpublishingRef.current.add(meetingId)
+    pageGenMeetingIdRef.current = meetingId
+    setUnpublishState({ meetingId, status: 'pending' })
   }, [activeMeetingId, sendUnpublishPage])
+
+  // 생성 중인 미팅의 실제 결과를 API 로 확인한다 — 소켓이 끊기면 done 이벤트를 못 받을 수 있다
+  const reconcilePageGen = useCallback(async () => {
+    const pending = Array.from(pageGenByMeetingRef.current.entries()).filter(
+      ([, g]) => g.status === 'generating'
+    )
+    for (const [meetingId, g] of pending) {
+      try {
+        const page = (await api.meetings.get(meetingId)).page
+        const isNew =
+          !!page &&
+          page.pageId !== g.prevPageId &&
+          Date.parse(page.generatedAt) >= (g.startedAt ?? 0) - PAGE_GEN_CLOCK_SKEW_MS
+        if (!isNew) continue
+        setMeetings((prev) => prev.map((m) => (m.id === meetingId ? { ...m, page } : m)))
+        setPageGenFor(meetingId, PAGE_GEN_IDLE)
+      } catch {
+        // 다음 주기에 다시 확인한다
+      }
+    }
+  }, [setPageGenFor])
+
+  useEffect(() => {
+    if (!HAS_API) return
+    const id = setInterval(() => void reconcilePageGen(), PAGE_GEN_POLL_MS)
+    return () => clearInterval(id)
+  }, [reconcilePageGen])
+
+  const prevPageWsStatusRef = useRef<typeof wsStatus>(wsStatus)
+  useEffect(() => {
+    const prev = prevPageWsStatusRef.current
+    prevPageWsStatusRef.current = wsStatus
+    if (wsStatus === 'connected' && prev !== 'connected') {
+      void reconcilePageGen()
+    } else if (wsStatus !== 'connected' && unpublishingRef.current.size > 0) {
+      // 연결이 끊기면 해제 응답을 받을 수 없다 — 다시 시도할 수 있게 풀어 준다
+      unpublishingRef.current.clear()
+      setUnpublishState((s) =>
+        s?.status === 'pending'
+          ? { ...s, status: 'error', error: '연결이 끊겼습니다. 다시 시도하세요.' }
+          : s
+      )
+    }
+  }, [wsStatus, reconcilePageGen])
 
   // Auto-summary: every N new messages (disabled when 0)
   useEffect(() => {
@@ -1912,6 +2039,15 @@ export default function Home() {
                 gen={pageGen}
                 hasMessages={(activeMeeting?.messages?.length ?? 0) > 0}
                 wsConnected={wsStatus === 'connected'}
+                unpublishing={
+                  unpublishState?.meetingId === activeMeetingId &&
+                  unpublishState.status === 'pending'
+                }
+                unpublishError={
+                  unpublishState?.meetingId === activeMeetingId && unpublishState.status === 'error'
+                    ? unpublishState.error
+                    : undefined
+                }
                 onGenerate={handleGeneratePage}
                 onUnpublish={handleUnpublishPage}
               />
@@ -1945,6 +2081,15 @@ export default function Home() {
                 gen={pageGen}
                 hasMessages={(activeMeeting?.messages?.length ?? 0) > 0}
                 wsConnected={wsStatus === 'connected'}
+                unpublishing={
+                  unpublishState?.meetingId === activeMeetingId &&
+                  unpublishState.status === 'pending'
+                }
+                unpublishError={
+                  unpublishState?.meetingId === activeMeetingId && unpublishState.status === 'error'
+                    ? unpublishState.error
+                    : undefined
+                }
                 onGenerate={handleGeneratePage}
                 onUnpublish={handleUnpublishPage}
                 onClose={() => setSummaryOpen(false)}

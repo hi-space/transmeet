@@ -53,6 +53,8 @@ export interface QaStreamServerMessage {
 
 export interface PageStreamServerMessage {
   type: 'page_stream'
+  meetingId?: string
+  op?: 'unpublish' // 공유 해제 요청에 대한 이벤트
   phase: 'status' | 'delta' | 'done' | 'error' | 'unpublished'
   text?: string
   page?: MeetingPage
