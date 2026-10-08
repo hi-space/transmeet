@@ -1,0 +1,3 @@
+/* meeting-minutes-page/assets/template.html 의 :root 와 동일. SVG 는 아래 변수만 사용한다. */
+--tm-fg, --tm-muted, --tm-line, --tm-card, --tm-accent, --tm-accent-soft,
+--tm-warn, --tm-warn-soft, --tm-ok, --tm-ok-soft, --tm-bad, --tm-bad-soft, --tm-font
