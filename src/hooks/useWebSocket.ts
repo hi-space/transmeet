@@ -251,6 +251,33 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     []
   )
 
+  // 미팅 페이지 생성 — 녹음 중이면 아직 저장되지 않은 메시지를 함께 보낸다
+  const sendGeneratePage = useCallback(
+    (
+      meetingId: string,
+      messages?: { speaker: string; original: string; translation?: string; timestamp?: string }[]
+    ): boolean => {
+      const ws = wsRef.current
+      if (!ws || ws.readyState !== WebSocket.OPEN) return false
+      ws.send(
+        JSON.stringify({
+          action: 'generate_page',
+          meetingId,
+          ...(messages && { messages }),
+        })
+      )
+      return true
+    },
+    []
+  )
+
+  const sendUnpublishPage = useCallback((meetingId: string): boolean => {
+    const ws = wsRef.current
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false
+    ws.send(JSON.stringify({ action: 'unpublish_page', meetingId }))
+    return true
+  }, [])
+
   const sendTtsRequest = useCallback(
     (
       messageId: string,
@@ -346,5 +373,7 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     sendTranslate,
     sendTtsRequest,
     sendQaRequest,
+    sendGeneratePage,
+    sendUnpublishPage,
   }
 }

@@ -1,4 +1,4 @@
-import type { Meeting, Message, SpeakerRole } from '@/types/meeting'
+import type { Meeting, MeetingPage, Message, SpeakerRole } from '@/types/meeting'
 
 // ─── Server-side types ──────────────────────────────────────────────────────
 
@@ -21,6 +21,7 @@ export interface ApiMeeting {
   messageCount?: number
   summary?: string
   summarizedAt?: string
+  page?: MeetingPage
 }
 
 export interface TtsResponse {
@@ -80,6 +81,7 @@ export function toMeeting(m: ApiMeeting): Meeting {
     messages: mergeLoadedMessages(rawMessages),
     messageCount: m.messageCount,
     summary: m.summary ? parseSummary(m.summary) : undefined,
+    page: m.page,
   }
 }
 

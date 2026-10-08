@@ -1,3 +1,5 @@
+import type { MeetingPage } from '@/types/meeting'
+
 export type WsStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
 
 export interface SubtitleServerMessage {
@@ -49,6 +51,14 @@ export interface QaStreamServerMessage {
   error?: string
 }
 
+export interface PageStreamServerMessage {
+  type: 'page_stream'
+  phase: 'status' | 'delta' | 'done' | 'error' | 'unpublished'
+  text?: string
+  page?: MeetingPage
+  error?: string
+}
+
 export interface ErrorServerMessage {
   type: 'error'
   message: string
@@ -66,5 +76,6 @@ export type WsServerMessage =
   | TtsStreamServerMessage
   | SummaryStreamServerMessage
   | QaStreamServerMessage
+  | PageStreamServerMessage
   | ErrorServerMessage
   | PongServerMessage

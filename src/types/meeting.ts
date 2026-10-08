@@ -19,4 +19,13 @@ export interface Meeting {
   messages: Message[]
   messageCount?: number // 목록 API에서 messages 없이 반환되는 경우 사용
   summary?: string // raw markdown
+  page?: MeetingPage // 발행된 미팅 페이지 (없으면 미생성)
+}
+
+export interface MeetingPage {
+  pageId: string
+  url: string
+  generatedAt: string
+  title?: string
+  shareSummary?: string
 }
