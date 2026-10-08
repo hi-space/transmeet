@@ -12,6 +12,7 @@ def test_page_agent_settings_defaults(monkeypatch):
     assert cfg.config.PAGE_MAX_BYTES == 1_500_000
     assert cfg.config.PAGE_AGENT_PUBLISH_RETRIES == 2
     assert cfg.config.PAGE_AGENT_INVOKE_RETRIES == 2
+    assert cfg.config.HARNESS_FALLBACK_ARN == ""
 
 
 def test_page_agent_settings_from_env(monkeypatch):

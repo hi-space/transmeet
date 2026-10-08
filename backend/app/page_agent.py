@@ -565,6 +565,8 @@ async def unpublish_page(meeting_id: str, *, s3, ddb, bucket: str, table: str, p
 # ─── Orchestration ───────────────────────────────────────────────────────────
 
 PAGE_AGENT_MODEL_ID = "us.anthropic.claude-opus-5-5"
+# 대체 하네스의 모델 — infra/lib/transmeet-stack.ts 의 PAGE_AGENT_FALLBACK_MODEL_ID 와 같아야 한다 (페이지 meta 에 기록)
+PAGE_AGENT_FALLBACK_MODEL_ID = "us.anthropic.claude-opus-5"
 
 PUBLISH_TOOL_DEF = {
     "type": "inline_function",
@@ -626,6 +628,8 @@ class PageAgentDeps:
     invoke_retries: int = 2
     # 재시도 전 대기(초). 횟수가 남았는데 항목이 모자라면 마지막 값을 반복한다.
     retry_backoff: tuple = (5.0, 15.0)
+    # 기본 하네스의 재시도가 모두 일시 오류로 끝나면 넘어가는 대체 하네스(다른 모델). 빈 문자열이면 없음.
+    fallback_harness_arn: str = ""
 
     @classmethod
     def from_config(cls) -> "PageAgentDeps":
@@ -640,6 +644,7 @@ class PageAgentDeps:
             max_bytes=config.PAGE_MAX_BYTES,
             publish_retries=config.PAGE_AGENT_PUBLISH_RETRIES,
             invoke_retries=config.PAGE_AGENT_INVOKE_RETRIES,
+            fallback_harness_arn=config.HARNESS_FALLBACK_ARN,
         )
 
 
@@ -740,6 +745,7 @@ async def run_page_generation(
         if not payload["messages"]:
             await emit("error", error="기록이 없습니다")
             return None
+        harness_arn = deps.harness_arn
 
         async def on_text(t: str) -> None:
             await emit("delta", text=t)
@@ -753,7 +759,7 @@ async def run_page_generation(
             publish_attempts = 0
             while True:
                 resp = await ac.invoke_harness(
-                    harnessArn=deps.harness_arn,
+                    harnessArn=harness_arn,
                     runtimeSessionId=session_id,
                     tools=[PUBLISH_TOOL_DEF],
                     messages=messages,
@@ -795,9 +801,18 @@ async def run_page_generation(
                     return await converse(ac, str(uuid4()))
                 except Exception as e:
                     # 발행 전에 Bedrock 이 일시적으로 거절한 경우만 새 세션으로 처음부터 다시 돈다.
-                    if published is not None or not is_transient_harness_error(e) \
-                            or transient_failures >= deps.invoke_retries:
+                    if published is not None or not is_transient_harness_error(e):
                         raise
+                    if transient_failures >= deps.invoke_retries:
+                        # 기본 모델이 계속 거절한다 (모델 단위 장애). 대체 하네스가 있으면 그쪽에서 다시 시작한다.
+                        if not deps.fallback_harness_arn or harness_arn == deps.fallback_harness_arn:
+                            raise
+                        logger.warning("[page] primary harness exhausted meeting=%s, switching to fallback: %s", meeting_id, e)
+                        harness_arn = deps.fallback_harness_arn
+                        payload["meeting"]["modelId"] = PAGE_AGENT_FALLBACK_MODEL_ID
+                        transient_failures = 0
+                        await emit("status", text="기본 모델이 응답하지 않아 대체 모델로 생성합니다")
+                        continue
                     transient_failures += 1
                     backoff = deps.retry_backoff
                     delay = backoff[min(transient_failures - 1, len(backoff) - 1)] if backoff else 0

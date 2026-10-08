@@ -91,7 +91,7 @@ class FakeDDB:
         return {"Attributes": old} if kw.get("ReturnValues") == "ALL_OLD" else {}
 
 
-def deps_for(agentcore, s3, ddb, invoke_retries=2):
+def deps_for(agentcore, s3, ddb, invoke_retries=2, fallback_harness_arn=""):
     def cm(obj):
         @asynccontextmanager
         async def _cm():
@@ -100,7 +100,7 @@ def deps_for(agentcore, s3, ddb, invoke_retries=2):
     return PageAgentDeps(agentcore_client=cm(agentcore), s3_client=cm(s3), ddb_client=cm(ddb),
                          harness_arn="arn:aws:bedrock-agentcore:us-east-1:1:harness/h-abc", bucket="pages",
                          base_url="https://x/p", table="t", max_bytes=1_500_000, publish_retries=2,
-                         invoke_retries=invoke_retries, retry_backoff=(0, 0))
+                         invoke_retries=invoke_retries, retry_backoff=(0, 0), fallback_harness_arn=fallback_harness_arn)
 
 
 ITEM = {"meetingId": {"S": "m1"}, "title": {"S": "t"}, "createdAt": {"S": "2026-10-06T10:00:00+09:00"},
@@ -413,3 +413,42 @@ async def test_unpublish_results_are_not_remembered_as_page_status():
     item = {**ITEM, "page": {"M": {"pageId": {"S": "old"}}}}
     await run_unpublish(Collector(), "m-unpub", deps=deps_for(FakeAgentCore([]), FakeS3(), FakeDDB(item)))
     assert page_status_event("m-unpub")["phase"] == "error"
+
+
+# ─── 기본 모델이 계속 거절하면 대체 하네스(다른 모델)로 넘어간다 ──
+
+FALLBACK = "arn:aws:bedrock-agentcore:us-east-1:1:harness/h-fallback"
+
+
+async def test_fallback_harness_used_after_primary_retries_exhausted():
+    ac = FakeAgentCore([RuntimeError(TRANSIENT_MSG)] * 3 + [handoff_events("tu-1", {"title": "t", "html": GOOD}), final_events()])
+    send = Collector()
+    page = await run_page_generation(send, "m1", deps=deps_for(ac, FakeS3(), FakeDDB(ITEM), fallback_harness_arn=FALLBACK))
+    assert page is not None and send.events[-1]["phase"] == "done"
+    arns = [c["harnessArn"] for c in ac.calls]
+    assert arns[:3] == ["arn:aws:bedrock-agentcore:us-east-1:1:harness/h-abc"] * 3 and arns[3:] == [FALLBACK] * 2
+    assert any(e["phase"] == "status" and "대체 모델" in e["text"] for e in send.events)
+    # 대체 모델로 만든 페이지라는 사실이 에이전트에게 전달된다 (페이지 meta 에 기록됨)
+    assert f'"{page_agent.PAGE_AGENT_FALLBACK_MODEL_ID}"' in ac.calls[3]["messages"][0]["content"][0]["text"]
+    assert f'"{page_agent.PAGE_AGENT_MODEL_ID}"' in ac.calls[0]["messages"][0]["content"][0]["text"]
+
+
+async def test_fallback_harness_gets_its_own_retry_budget_then_error():
+    ac = FakeAgentCore([RuntimeError(TRANSIENT_MSG)] * 6)
+    send = Collector()
+    assert await run_page_generation(send, "m1", deps=deps_for(ac, FakeS3(), FakeDDB(ITEM), fallback_harness_arn=FALLBACK)) is None
+    assert len(ac.calls) == 6 and send.events[-1]["phase"] == "error"
+
+
+async def test_no_fallback_configured_fails_after_primary_retries():
+    ac = FakeAgentCore([RuntimeError(TRANSIENT_MSG)] * 6)
+    send = Collector()
+    assert await run_page_generation(send, "m1", deps=deps_for(ac, FakeS3(), FakeDDB(ITEM))) is None
+    assert len(ac.calls) == 3
+
+
+async def test_non_transient_error_does_not_trigger_fallback():
+    ac = FakeAgentCore([RuntimeError("validationException: bad")] * 2)
+    send = Collector()
+    assert await run_page_generation(send, "m1", deps=deps_for(ac, FakeS3(), FakeDDB(ITEM), fallback_harness_arn=FALLBACK)) is None
+    assert len(ac.calls) == 1

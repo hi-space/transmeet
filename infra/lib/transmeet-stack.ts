@@ -27,6 +27,10 @@ const ROOT_DOMAIN = 'hi-yoo.com';
 const APP_DOMAIN = 'transmeet.hi-yoo.com';
 const PAGE_AGENT_MODEL_ID = 'us.anthropic.claude-opus-5-5';
 const HARNESS_NAME = 'transmeet_meeting_page';
+// Opus 5.5 가 Bedrock 에서 ServiceUnavailable 을 반복하는 동안(2026-10-08 수 시간 관측) 쓰는 대체 하네스.
+// 백엔드 page_agent.PAGE_AGENT_FALLBACK_MODEL_ID 와 같은 값이어야 한다.
+const PAGE_AGENT_FALLBACK_MODEL_ID = 'us.anthropic.claude-opus-5';
+const FALLBACK_HARNESS_NAME = 'transmeet_meeting_page_fallback';
 const SKILL_NAMES = [
   'meeting-minutes-page',
   'meeting-research',
@@ -386,10 +390,10 @@ export class TransmeetStack extends cdk.Stack {
         sid: 'BedrockModelInvocation',
         actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
         // 하네스 모델만 허용: 교차 리전 추론 프로필 + 프로필이 라우팅하는 리전별 기반 모델
-        resources: [
-          `arn:aws:bedrock:*:${this.account}:inference-profile/${PAGE_AGENT_MODEL_ID}`,
-          `arn:aws:bedrock:*::foundation-model/${PAGE_AGENT_MODEL_ID.replace(/^us\./, '')}*`,
-        ],
+        resources: [PAGE_AGENT_MODEL_ID, PAGE_AGENT_FALLBACK_MODEL_ID].flatMap((modelId) => [
+          `arn:aws:bedrock:*:${this.account}:inference-profile/${modelId}`,
+          `arn:aws:bedrock:*::foundation-model/${modelId.replace(/^us\./, '')}*`,
+        ]),
       })
     );
     harnessRole.addToPolicy(
@@ -435,6 +439,7 @@ export class TransmeetStack extends cdk.Stack {
         resources: [
           `arn:aws:bedrock-agentcore:${REGION}:${this.account}:workload-identity-directory/default`,
           `arn:aws:bedrock-agentcore:${REGION}:${this.account}:workload-identity-directory/default/workload-identity/harness_${HARNESS_NAME}-*`,
+          `arn:aws:bedrock-agentcore:${REGION}:${this.account}:workload-identity-directory/default/workload-identity/harness_${FALLBACK_HARNESS_NAME}-*`,
         ],
       })
     );
@@ -467,13 +472,14 @@ export class TransmeetStack extends cdk.Stack {
       'utf-8'
     );
 
-    const harness = new cdk.CfnResource(this, 'MeetingPageHarness', {
+    // 기본·대체 하네스는 모델만 다르고 프롬프트·도구·스킬은 같다.
+    const makeHarness = (id: string, harnessName: string, modelId: string) => new cdk.CfnResource(this, id, {
       type: 'AWS::BedrockAgentCore::Harness',
       properties: {
-        HarnessName: HARNESS_NAME,
+        HarnessName: harnessName,
         ExecutionRoleArn: harnessRole.roleArn,
         Model: {
-          BedrockModelConfig: { ModelId: PAGE_AGENT_MODEL_ID, MaxTokens: 64000 },
+          BedrockModelConfig: { ModelId: modelId, MaxTokens: 64000 },
         },
         SystemPrompt: [{ Text: systemPrompt }],
         Tools: [
@@ -516,16 +522,21 @@ export class TransmeetStack extends cdk.Stack {
         },
       },
     });
-    harness.addDependency(webSearchTarget);
-    harness.node.addDependency(harnessRole);
+    const harness = makeHarness('MeetingPageHarness', HARNESS_NAME, PAGE_AGENT_MODEL_ID);
+    const fallbackHarness = makeHarness('MeetingPageHarnessFallback', FALLBACK_HARNESS_NAME, PAGE_AGENT_FALLBACK_MODEL_ID);
+    for (const h of [harness, fallbackHarness]) {
+      h.addDependency(webSearchTarget);
+      h.node.addDependency(harnessRole);
+    }
     const harnessArn = harness.getAtt('Arn').toString();
+    const fallbackHarnessArn = fallbackHarness.getAtt('Arn').toString();
 
     // ─── Task role: invoke harness + publish pages ─────────────────────────────
 
     wsTaskRole.addToPolicy(
       new iam.PolicyStatement({
         actions: ['bedrock-agentcore:InvokeHarness', 'bedrock-agentcore:InvokeAgentRuntime'],
-        resources: [harnessArn, `${harnessArn}/*`],
+        resources: [harnessArn, `${harnessArn}/*`, fallbackHarnessArn, `${fallbackHarnessArn}/*`],
       })
     );
     pagesBucket.grantPut(wsTaskRole);
@@ -548,6 +559,7 @@ export class TransmeetStack extends cdk.Stack {
         WHISPER_ENDPOINT,
         BEDROCK_MODEL_ID,
         HARNESS_ARN: harnessArn,
+        HARNESS_FALLBACK_ARN: fallbackHarnessArn,
         PAGES_BUCKET: pagesBucket.bucketName,
         PAGES_PUBLIC_BASE_URL: `https://${APP_DOMAIN}/p`,
       },
@@ -729,6 +741,11 @@ export class TransmeetStack extends cdk.Stack {
       value: harnessArn,
       exportName: 'TransmeetHarnessArn',
       description: 'AgentCore Harness ARN for meeting page generation',
+    });
+
+    new cdk.CfnOutput(this, 'HarnessFallbackArn', {
+      value: fallbackHarnessArn,
+      description: 'Fallback AgentCore Harness ARN (used when the primary model keeps returning ServiceUnavailable)',
     });
 
     new cdk.CfnOutput(this, 'SkillsBucketName', {

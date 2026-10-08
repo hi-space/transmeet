@@ -10,6 +10,8 @@ class Config(BaseSettings):
 
     # ─── Meeting page agent (AgentCore Harness) ───────────────────────────────
     HARNESS_ARN: str = ""
+    # 기본 모델(Opus 5.5)이 ServiceUnavailable 을 반복하면 넘어가는 대체 하네스(다른 모델). 비어 있으면 사용 안 함.
+    HARNESS_FALLBACK_ARN: str = ""
     PAGES_BUCKET: str = ""
     PAGES_PUBLIC_BASE_URL: str = "https://transmeet.hi-yoo.com/p"
     PAGE_MAX_BYTES: int = 1_500_000
