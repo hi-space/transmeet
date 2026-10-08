@@ -15,6 +15,8 @@ class Config(BaseSettings):
     PAGE_MAX_BYTES: int = 1_500_000
     # publish_page 검증 실패 시 에이전트에게 돌려주는 재시도 횟수
     PAGE_AGENT_PUBLISH_RETRIES: int = 2
+    # 하네스 안에서 Bedrock 이 일시적으로 거절(ServiceUnavailable/Throttling)하면 새 세션으로 다시 시도하는 횟수
+    PAGE_AGENT_INVOKE_RETRIES: int = 2
 
     class Config:
         env_file = ".env"

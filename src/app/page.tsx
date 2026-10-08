@@ -1066,6 +1066,7 @@ export default function Home() {
     sendTtsRequest,
     sendQaRequest,
     sendGeneratePage,
+    sendPageStatus,
     sendUnpublishPage,
   } = useWebSocket({
     meetingId: activeMeetingId,
@@ -1443,14 +1444,18 @@ export default function Home() {
           !!page &&
           page.pageId !== g.prevPageId &&
           Date.parse(page.generatedAt) >= (g.startedAt ?? 0) - PAGE_GEN_CLOCK_SKEW_MS
-        if (!isNew) continue
-        setMeetings((prev) => prev.map((m) => (m.id === meetingId ? { ...m, page } : m)))
-        setPageGenFor(meetingId, PAGE_GEN_IDLE)
+        if (isNew) {
+          setMeetings((prev) => prev.map((m) => (m.id === meetingId ? { ...m, page } : m)))
+          setPageGenFor(meetingId, PAGE_GEN_IDLE)
+          continue
+        }
       } catch {
         // 다음 주기에 다시 확인한다
       }
+      // 새 페이지가 없으면 서버에 묻는다 — 실패(error)는 DynamoDB 에 남지 않아 API 로는 알 수 없다
+      sendPageStatus(meetingId)
     }
-  }, [setPageGenFor])
+  }, [setPageGenFor, sendPageStatus])
 
   useEffect(() => {
     if (!HAS_API) return

@@ -163,7 +163,7 @@
 - `handle_publish(meeting_id, args) -> dict`: `html` 검증(문자열, `<!doctype html` 또는 `<html` 포함, 1.5 MB 이하, `<script` 미포함, `on*=` 이벤트 속성 미포함, `http://`·`https://`가 `href`와 `xmlns`(SVG 네임스페이스) 외 위치(`src`, `@import`, `url(`)에 없음). 실패 시 `status: "error"` toolResult로 사유 반환(에이전트가 수정 후 재호출). 성공 시 `pageId = secrets.token_urlsafe(16)`, S3 `put_object(ContentType="text/html; charset=utf-8", CacheControl="no-cache")`, DynamoDB `SET page = {pageId, url, generatedAt, title, shareSummary}`. 이전 `page.pageId`가 있으면 그 객체 삭제. `{url}` 반환.
 - `unpublish_page(meeting_id)`: S3 객체 삭제 + `REMOVE page`.
 
-**`ws_handler.py`**: `action == "generate_page"` → `asyncio.create_task(run_page_generation(...))`, `action == "unpublish_page"` → 삭제 후 `page_stream {phase: "unpublished"}`. 동시 생성 방지: 연결 상태에 `page_task` 보관, 진행 중이면 `error "이미 생성 중"`.
+**`ws_handler.py`**: `action == "generate_page"` → `asyncio.create_task(run_page_generation(...))`, `action == "unpublish_page"` → 삭제 후 `page_stream {phase: "unpublished"}`. 동시 생성 방지: 연결 상태에 `page_task` 보관, 진행 중이면 `error "이미 생성 중"`. 생성 이벤트는 요청한 소켓이 아니라 **그 미팅을 보고 있는 현재 연결 전부**에 보낸다(생성 중 소켓이 바뀌어도 결과를 받는다). `action == "page_status"` → 돌고 있으면 text 없는 `status`, 끝났으면 기억해 둔 마지막 `done`/`error`(30분) 재전송, 기록이 없으면 `error "생성이 중단되었습니다"`. 프런트는 재접속 시와 20초 폴링에서 새 페이지가 없을 때 이를 보낸다.
 
 **`config.py`**: `HARNESS_ARN`, `PAGES_BUCKET`, `PAGES_PUBLIC_BASE_URL`, `PAGE_MAX_BYTES=1_500_000`.
 
@@ -238,3 +238,5 @@ Opus 5.5 기준 미팅 1건(발언 100~200개)에 입력 150~400K 토큰(반복 
 
 - `global.anthropic.claude-opus-5-5` 프로필은 하네스 내부 `ConverseStream`에서 `ServiceUnavailableException`을 반복 반환했다(4회 중 3회, maxTokens 8000에서도 재현). 직접 `bedrock-runtime` 호출은 정상. `us.anthropic.claude-opus-5-5`는 하네스에서 안정적으로 동작해 모델 ID를 `us.` 프로필로 확정했다.
 - `InvokeHarness` 응답 스트림은 긴 도구 실행 구간에 수십 초 이상 이벤트가 없을 수 있어 백엔드 agentcore 클라이언트의 읽기 타임아웃을 900초로 두고 재시도를 끈다.
+- 하네스 안에서 Bedrock 이 `us.` 프로필에도 간헐적으로 `ServiceUnavailableException`을 반환한다(2026-10-08 05:44Z, 첫 모델 호출에서 하네스 내부 재시도 2회 소진 후 27초 만에 실패). 백엔드는 발행 전 일시적 오류(ServiceUnavailable/Throttling/ModelNotReady/InternalServer/modelStreamError)에 한해 새 `runtimeSessionId`로 처음부터 최대 `PAGE_AGENT_INVOKE_RETRIES`(2)회 다시 시도한다(대기 5초, 15초). 발행 뒤의 실패는 기존처럼 `done`.
+- 같은 사고에서 브라우저 소켓이 실패 3초 전에 바뀌어 `error` 이벤트가 닫힌 소켓으로 나갔고, 프런트는 API 폴링으로 "새 페이지" 만 확인해 16분 타임아웃까지 "생성 중" 에 머물렀다. 위 브로드캐스트 + `page_status` 가 이를 막는다.

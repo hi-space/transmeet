@@ -277,6 +277,14 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     []
   )
 
+  // 생성 중으로 알고 있는 미팅의 실제 상태를 서버에 묻는다 — 소켓이 바뀌어 done/error 를 놓쳤을 수 있다
+  const sendPageStatus = useCallback((meetingId: string): boolean => {
+    const ws = wsRef.current
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false
+    ws.send(JSON.stringify({ action: 'page_status', meetingId }))
+    return true
+  }, [])
+
   const sendUnpublishPage = useCallback((meetingId: string): boolean => {
     const ws = wsRef.current
     if (!ws || ws.readyState !== WebSocket.OPEN) return false
@@ -380,6 +388,7 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     sendTtsRequest,
     sendQaRequest,
     sendGeneratePage,
+    sendPageStatus,
     sendUnpublishPage,
   }
 }

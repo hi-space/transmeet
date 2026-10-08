@@ -69,7 +69,7 @@ from .aws_clients import (
     sagemaker_client,
 )
 from .config import config
-from .page_agent import PageRequestError, check_meeting_id, run_unpublish, start_page_generation
+from .page_agent import PageRequestError, check_meeting_id, page_status_event, run_unpublish, start_page_generation
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -147,6 +147,23 @@ active_connections: Dict[str, ConnectionState] = {}
 
 
 _ws_send_locks: Dict[int, asyncio.Lock] = {}
+
+
+def _meeting_broadcaster(meeting_id: str):
+    """페이지 생성 이벤트를 그 미팅을 보고 있는 *현재* 연결 전부에 보낸다.
+
+    생성은 수 분 걸리고 그동안 브라우저 소켓은 바뀔 수 있다. 요청한 소켓 하나에 묶으면
+    재접속한 클라이언트는 결과를 받지 못한다. 연결이 하나도 없으면 조용히 버린다 —
+    종료 이벤트는 page_agent 가 기억하고 있어 page_status 로 되찾을 수 있다.
+    """
+    async def _send(payload: dict) -> None:
+        targets = [s.ws for s in list(active_connections.values()) if s.meeting_id == meeting_id]
+        for target in targets:
+            try:
+                await _safe_send(target, payload)
+            except Exception:
+                logger.debug("[page] broadcast to a closed socket skipped meeting=%s", meeting_id, exc_info=True)
+    return _send
 
 
 async def _safe_send(ws: WebSocket, data: dict) -> None:
@@ -1269,14 +1286,19 @@ async def ws_endpoint(
                 elif state.page_task and not state.page_task.done():
                     await _safe_send(ws, {"type": "page_stream", "meetingId": mid, "phase": "error", "error": "이미 생성 중입니다"})
                 else:
-                    async def _send(payload: dict, _ws=ws) -> None:
-                        await _safe_send(_ws, payload)
-
                     # 미팅 ID·메시지 상한 검증, 같은 미팅 중복 생성 거절 (다른 연결이어도)
                     try:
-                        state.page_task = start_page_generation(_send, mid, inline_messages=data.get("messages"))
+                        state.page_task = start_page_generation(
+                            _meeting_broadcaster(mid), mid, inline_messages=data.get("messages")
+                        )
                     except PageRequestError as e:
                         await _safe_send(ws, {"type": "page_stream", "meetingId": mid, "phase": "error", "error": str(e)})
+
+            elif action == "page_status":
+                # 재접속한 클라이언트가 '아직 생성 중인가?' 를 묻는다 — 놓친 done/error 를 되돌려 준다
+                mid = data.get("meetingId") or state.meeting_id
+                if mid:
+                    await _safe_send(ws, page_status_event(mid))
 
             elif action == "unpublish_page":
                 mid = data.get("meetingId") or state.meeting_id

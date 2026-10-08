@@ -13,6 +13,7 @@ import json
 import logging
 import re
 import secrets
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -622,6 +623,9 @@ class PageAgentDeps:
     table: str
     max_bytes: int
     publish_retries: int
+    invoke_retries: int = 2
+    # 재시도 전 대기(초). 횟수가 남았는데 항목이 모자라면 마지막 값을 반복한다.
+    retry_backoff: tuple = (5.0, 15.0)
 
     @classmethod
     def from_config(cls) -> "PageAgentDeps":
@@ -635,7 +639,54 @@ class PageAgentDeps:
             table=config.MEETINGS_TABLE,
             max_bytes=config.PAGE_MAX_BYTES,
             publish_retries=config.PAGE_AGENT_PUBLISH_RETRIES,
+            invoke_retries=config.PAGE_AGENT_INVOKE_RETRIES,
         )
+
+
+# 하네스 내부 모델 호출이 일시적으로 거절된 경우. 스트림 예외 이벤트(consume_stream 의 RuntimeError)와
+# InvokeHarness 자체의 EventStreamError 모두 메시지에 Bedrock 예외 이름이 들어 있다.
+_TRANSIENT_ERROR_MARKERS = (
+    "serviceunavailableexception",
+    "throttlingexception",
+    "modelnotreadyexception",
+    "internalserverexception",
+    "modelstreamerrorexception",
+    "bedrock is unable to process",
+)
+
+
+def is_transient_harness_error(exc: BaseException) -> bool:
+    text = str(exc).lower()
+    return any(m in text for m in _TRANSIENT_ERROR_MARKERS)
+
+
+# 마지막 종료 이벤트(done/error)를 미팅별로 잠시 기억한다 — 소켓이 바뀐 클라이언트가 page_status 로 되묻는다.
+PAGE_RESULT_TTL_S = 30 * 60
+_LAST_PAGE_RESULTS: Dict[str, tuple] = {}  # meeting_id -> (monotonic_ts, payload)
+
+
+def _remember_result(meeting_id: str, payload: Dict[str, Any]) -> None:
+    now = time.monotonic()
+    for mid, (ts, _) in list(_LAST_PAGE_RESULTS.items()):
+        if now - ts > PAGE_RESULT_TTL_S:
+            del _LAST_PAGE_RESULTS[mid]
+    _LAST_PAGE_RESULTS[meeting_id] = (now, payload)
+
+
+def page_status_event(meeting_id: str) -> Dict[str, Any]:
+    """클라이언트가 '아직 생성 중인가?' 라고 물을 때의 응답.
+
+    돌고 있으면 text 없는 status(클라이언트는 무시), 끝났으면 놓쳤을 done/error 를 그대로 재전송,
+    기록이 없으면(프로세스 재시작 등) 오류로 알려 16분 타임아웃을 기다리지 않게 한다.
+    """
+    running = _ACTIVE_PAGE_TASKS.get(meeting_id)
+    if running is not None and not running.done():
+        return {"type": "page_stream", "meetingId": meeting_id, "phase": "status"}
+    remembered = _LAST_PAGE_RESULTS.get(meeting_id)
+    if remembered and time.monotonic() - remembered[0] <= PAGE_RESULT_TTL_S:
+        return dict(remembered[1])
+    return {"type": "page_stream", "meetingId": meeting_id, "phase": "error",
+            "error": "생성이 중단되었습니다. 다시 시도하세요"}
 
 
 Sender = Callable[[Dict[str, Any]], Awaitable[None]]
@@ -643,8 +694,11 @@ Sender = Callable[[Dict[str, Any]], Awaitable[None]]
 
 def _emitter(send: Sender, meeting_id: str, **tags: Any):
     async def emit(phase: str, **fields: Any) -> None:
+        payload = {"type": "page_stream", "meetingId": meeting_id, "phase": phase, **tags, **fields}
+        if phase in ("done", "error") and not tags:
+            _remember_result(meeting_id, payload)
         try:
-            await send({"type": "page_stream", "meetingId": meeting_id, "phase": phase, **tags, **fields})
+            await send(payload)
         except Exception:
             # 소켓이 끊겨도 생성은 끝까지 진행한다 — 결과는 DynamoDB 에 남는다.
             logger.debug("[page] send failed (phase=%s)", phase, exc_info=True)
@@ -687,18 +741,16 @@ async def run_page_generation(
             await emit("error", error="기록이 없습니다")
             return None
 
-        session_id = str(uuid4())
-        messages: List[Dict[str, Any]] = [{"role": "user", "content": [{"text": build_user_message(payload)}]}]
-        publish_attempts = 0
-
         async def on_text(t: str) -> None:
             await emit("delta", text=t)
 
         async def on_status(s: str) -> None:
             await emit("status", text=s)
 
-        await emit("status", text="에이전트를 시작합니다")
-        async with deps.agentcore_client() as ac:
+        async def converse(ac: Any, session_id: str) -> Optional[PublishedPage]:
+            nonlocal published
+            messages: List[Dict[str, Any]] = [{"role": "user", "content": [{"text": build_user_message(payload)}]}]
+            publish_attempts = 0
             while True:
                 resp = await ac.invoke_harness(
                     harnessArn=deps.harness_arn,
@@ -734,6 +786,25 @@ async def run_page_generation(
                     await emit("status", text="검증 실패, 에이전트가 수정합니다")
                     result = {"status": "error", "content": [{"text": "validation failed: " + "; ".join(e.errors)}]}
                 messages = [{"role": "user", "content": [{"toolResult": {"toolUseId": outcome.handoff.tool_use_id, **result}}]}]
+
+        await emit("status", text="에이전트를 시작합니다")
+        transient_failures = 0
+        async with deps.agentcore_client() as ac:
+            while True:
+                try:
+                    return await converse(ac, str(uuid4()))
+                except Exception as e:
+                    # 발행 전에 Bedrock 이 일시적으로 거절한 경우만 새 세션으로 처음부터 다시 돈다.
+                    if published is not None or not is_transient_harness_error(e) \
+                            or transient_failures >= deps.invoke_retries:
+                        raise
+                    transient_failures += 1
+                    backoff = deps.retry_backoff
+                    delay = backoff[min(transient_failures - 1, len(backoff) - 1)] if backoff else 0
+                    logger.warning("[page] transient model error meeting=%s attempt=%d/%d: %s",
+                                   meeting_id, transient_failures, deps.invoke_retries, e)
+                    await emit("status", text=f"모델이 일시적으로 응답하지 않아 다시 시도합니다 ({transient_failures}/{deps.invoke_retries})")
+                    await asyncio.sleep(delay)
     except Exception:
         logger.exception("[page] generation failed meeting=%s", meeting_id)
         return await finish_failed("페이지 생성 중 오류가 발생했습니다")

@@ -14,10 +14,13 @@ from app.page_agent import (
     PageRequestError,
     check_inline_messages,
     check_meeting_id,
+    is_transient_harness_error,
+    page_status_event,
     run_page_generation,
     run_unpublish,
     start_page_generation,
 )
+from botocore.exceptions import EventStreamError
 
 SECTIONS = ["header", "tldr", "decisions", "action-items", "discussion", "open-questions", "references", "insights", "glossary", "footer"]
 GOOD = ('<!doctype html><html lang="ko"><head><meta name="transmeet:meeting-id" content="m1">'
@@ -88,7 +91,7 @@ class FakeDDB:
         return {"Attributes": old} if kw.get("ReturnValues") == "ALL_OLD" else {}
 
 
-def deps_for(agentcore, s3, ddb):
+def deps_for(agentcore, s3, ddb, invoke_retries=2):
     def cm(obj):
         @asynccontextmanager
         async def _cm():
@@ -96,7 +99,8 @@ def deps_for(agentcore, s3, ddb):
         return _cm
     return PageAgentDeps(agentcore_client=cm(agentcore), s3_client=cm(s3), ddb_client=cm(ddb),
                          harness_arn="arn:aws:bedrock-agentcore:us-east-1:1:harness/h-abc", bucket="pages",
-                         base_url="https://x/p", table="t", max_bytes=1_500_000, publish_retries=2)
+                         base_url="https://x/p", table="t", max_bytes=1_500_000, publish_retries=2,
+                         invoke_retries=invoke_retries, retry_backoff=(0, 0))
 
 
 ITEM = {"meetingId": {"S": "m1"}, "title": {"S": "t"}, "createdAt": {"S": "2026-10-06T10:00:00+09:00"},
@@ -301,3 +305,111 @@ async def test_unpublish_events_are_tagged():
     send = Collector()
     await run_unpublish(send, "m1", deps=deps_for(FakeAgentCore([]), FakeS3(), FakeDDB(item)))
     assert send.events[-1]["op"] == "unpublish" and send.events[-1]["meetingId"] == "m1"
+
+
+# ─── 일시적 Bedrock 오류는 새 세션으로 다시 시도 ──
+
+TRANSIENT_MSG = "serviceUnavailableException: Bedrock is unable to process your request"
+
+
+async def test_transient_invoke_error_restarts_with_new_session():
+    ac = FakeAgentCore([RuntimeError(TRANSIENT_MSG), handoff_events("tu-1", {"title": "t", "html": GOOD}), final_events()])
+    s3, ddb, send = FakeS3(), FakeDDB(ITEM), Collector()
+    page = await run_page_generation(send, "m1", deps=deps_for(ac, s3, ddb))
+    assert page is not None and send.events[-1]["phase"] == "done"
+    assert len(ac.calls) == 3
+    assert ac.calls[0]["runtimeSessionId"] != ac.calls[1]["runtimeSessionId"]
+    assert "text" in ac.calls[1]["messages"][0]["content"][0]  # 처음부터 다시 — toolResult 가 아니다
+    assert any(e["phase"] == "status" and "다시 시도" in e["text"] for e in send.events)
+    assert not any(e["phase"] == "error" for e in send.events)
+
+
+async def test_transient_retries_exhausted_emits_error():
+    ac = FakeAgentCore([RuntimeError(TRANSIENT_MSG)] * 3)
+    send = Collector()
+    assert await run_page_generation(send, "m1", deps=deps_for(ac, FakeS3(), FakeDDB(ITEM))) is None
+    assert len(ac.calls) == 3 and send.events[-1]["phase"] == "error"
+
+
+async def test_non_transient_error_is_not_retried():
+    ac = FakeAgentCore([RuntimeError("AccessDeniedException: not allowed")])
+    send = Collector()
+    assert await run_page_generation(send, "m1", deps=deps_for(ac, FakeS3(), FakeDDB(ITEM))) is None
+    assert len(ac.calls) == 1 and send.events[-1]["phase"] == "error"
+
+
+async def test_transient_error_after_publish_is_not_retried():
+    ac = FakeAgentCore([handoff_events("tu-1", {"title": "t", "html": GOOD}), RuntimeError(TRANSIENT_MSG)])
+    send = Collector()
+    page = await run_page_generation(send, "m1", deps=deps_for(ac, FakeS3(), FakeDDB(ITEM)))
+    assert page is not None and len(ac.calls) == 2 and send.events[-1]["phase"] == "done"
+
+
+@pytest.mark.parametrize("exc,expected", [
+    (RuntimeError(TRANSIENT_MSG), True),
+    (RuntimeError("throttlingException: slow down"), True),
+    (EventStreamError({"Error": {"Code": "runtimeClientError", "Message": "An error occurred (ServiceUnavailableException) when calling the ConverseStream operation (reached max retries: 2): Bedrock is unable to process your request."}}, "InvokeHarness"), True),
+    (RuntimeError("modelStreamErrorException: stream broke"), True),
+    (RuntimeError("validationException: bad input"), False),
+    (ValueError("edge references unknown node"), False),
+])
+def test_is_transient_harness_error(exc, expected):
+    assert is_transient_harness_error(exc) is expected
+
+
+# ─── 재접속한 클라이언트가 놓친 결과를 되묻는다 ──
+
+async def test_page_status_reports_active_generation(monkeypatch):
+    page_agent._LAST_PAGE_RESULTS.clear()
+    gate = asyncio.Event()
+
+    class SlowAC:
+        turns = [handoff_events("tu-1", {"title": "t", "html": GOOD}), final_events()]
+
+        async def invoke_harness(self, **kw):
+            await gate.wait()
+            return {"stream": agen(self.turns.pop(0))}
+
+    monkeypatch.setattr(PageAgentDeps, "from_config", classmethod(lambda cls: deps_for(SlowAC(), FakeS3(), FakeDDB(ITEM))))
+    task = start_page_generation(Collector(), "m-active")
+    await asyncio.sleep(0)
+    ev = page_status_event("m-active")
+    assert ev == {"type": "page_stream", "meetingId": "m-active", "phase": "status"}
+    gate.set()
+    page = await task
+    assert page is not None and page_status_event("m-active")["phase"] == "done"
+
+
+async def test_page_status_replays_done_and_error():
+    page_agent._LAST_PAGE_RESULTS.clear()
+    ac = FakeAgentCore([handoff_events("tu-1", {"title": "t", "html": GOOD}), final_events()])
+    page = await run_page_generation(Collector(fail=True), "m-done", deps=deps_for(ac, FakeS3(), FakeDDB(ITEM)))
+    ev = page_status_event("m-done")
+    assert ev["phase"] == "done" and ev["page"]["url"] == page.url and ev["meetingId"] == "m-done"
+
+    await run_page_generation(Collector(fail=True), "m-err", deps=deps_for(FakeAgentCore([RuntimeError("x")]), FakeS3(), FakeDDB(ITEM)))
+    ev = page_status_event("m-err")
+    assert ev["phase"] == "error" and ev["error"]
+
+
+def test_page_status_unknown_meeting_is_error():
+    page_agent._LAST_PAGE_RESULTS.clear()
+    ev = page_status_event("m-unknown")
+    assert ev["phase"] == "error" and "중단" in ev["error"]
+
+
+async def test_page_status_forgets_old_results(monkeypatch):
+    page_agent._LAST_PAGE_RESULTS.clear()
+    now = [1000.0]
+    monkeypatch.setattr(page_agent.time, "monotonic", lambda: now[0])
+    await run_page_generation(Collector(), "m-old", deps=deps_for(FakeAgentCore([RuntimeError("x")]), FakeS3(), FakeDDB(ITEM)))
+    assert page_status_event("m-old")["error"] != page_status_event("m-unknown")["error"]
+    now[0] += page_agent.PAGE_RESULT_TTL_S + 1
+    assert page_status_event("m-old")["error"] == page_status_event("m-unknown")["error"]
+
+
+async def test_unpublish_results_are_not_remembered_as_page_status():
+    page_agent._LAST_PAGE_RESULTS.clear()
+    item = {**ITEM, "page": {"M": {"pageId": {"S": "old"}}}}
+    await run_unpublish(Collector(), "m-unpub", deps=deps_for(FakeAgentCore([]), FakeS3(), FakeDDB(item)))
+    assert page_status_event("m-unpub")["phase"] == "error"
