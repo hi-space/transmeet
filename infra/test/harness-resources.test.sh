@@ -8,7 +8,7 @@ check() { node -e "
 const t=require('./$T'); const r=Object.values(t.Resources);
 const found=r.some(x=>x.Type==='$1' && ($2));
 if(!found){console.error('MISSING: $1'); process.exit(1)} console.log('ok  $1')"; }
-check 'AWS::BedrockAgentCore::Harness' "x.Properties.HarnessName==='transmeet_meeting_page' && x.Properties.Model.BedrockModelConfig.ModelId==='us.anthropic.claude-opus-5-5' && x.Properties.Memory.Disabled!==undefined && x.Properties.Tools.length===3 && x.Properties.Skills.length===4 && x.Properties.MaxIterations===80 && x.Properties.TimeoutSeconds===900"
+check 'AWS::BedrockAgentCore::Harness' "x.Properties.HarnessName==='transmeet_meeting_page' && x.Properties.Model.BedrockModelConfig.ModelId==='us.anthropic.claude-opus-5-5' && x.Properties.Model.BedrockModelConfig.MaxTokens===64000 && x.Properties.Memory.Disabled!==undefined && x.Properties.Tools.length===3 && x.Properties.Skills.length===4 && x.Properties.MaxIterations===80 && x.Properties.TimeoutSeconds===900"
 check 'AWS::BedrockAgentCore::Harness' "x.Properties.Tools.some(t=>t.Type==='inline_function' && t.Name==='publish_page' && t.Config.InlineFunction.InputSchema.required.includes('html'))"
 check 'AWS::BedrockAgentCore::Harness' "x.Properties.SystemPrompt[0].Text.includes('publish_page')"
 check 'AWS::BedrockAgentCore::Gateway' "x.Properties.AuthorizerType==='AWS_IAM' && x.Properties.ProtocolType==='MCP'"
@@ -19,4 +19,6 @@ check 'AWS::CloudFront::Distribution' "x.Properties.DistributionConfig.CacheBeha
 check 'AWS::IAM::Policy' "JSON.stringify(x.Properties.PolicyDocument).includes('bedrock-agentcore:InvokeHarness')"
 check 'AWS::IAM::Policy' "JSON.stringify(x.Properties.PolicyDocument).includes('bedrock-agentcore:InvokeWebSearch')"
 check 'AWS::ECS::TaskDefinition' "JSON.stringify(x.Properties.ContainerDefinitions[0].Environment).includes('HARNESS_ARN')"
+# 하네스 역할은 지정 모델만 호출할 수 있어야 한다 (foundation-model/* 와일드카드 금지)
+check 'AWS::IAM::Policy' "(()=>{const st=x.Properties.PolicyDocument.Statement.find(s=>s.Sid==='BedrockModelInvocation' && JSON.stringify(x.Properties.Roles).includes('HarnessExecutionRole')); if(!st) return false; const r=JSON.stringify(st.Resource); return !r.includes('foundation-model/*') && !r.includes('inference-profile/*') && r.includes('inference-profile/us.anthropic.claude-opus-5-5') && r.includes('foundation-model/anthropic.claude-opus-5-5*')})()"
 echo "all harness resource checks passed"

@@ -385,9 +385,10 @@ export class TransmeetStack extends cdk.Stack {
       new iam.PolicyStatement({
         sid: 'BedrockModelInvocation',
         actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
+        // 하네스 모델만 허용: 교차 리전 추론 프로필 + 프로필이 라우팅하는 리전별 기반 모델
         resources: [
-          'arn:aws:bedrock:*::foundation-model/*',
-          `arn:aws:bedrock:*:${this.account}:inference-profile/*`,
+          `arn:aws:bedrock:*:${this.account}:inference-profile/${PAGE_AGENT_MODEL_ID}`,
+          `arn:aws:bedrock:*::foundation-model/${PAGE_AGENT_MODEL_ID.replace(/^us\./, '')}*`,
         ],
       })
     );
@@ -472,7 +473,7 @@ export class TransmeetStack extends cdk.Stack {
         HarnessName: HARNESS_NAME,
         ExecutionRoleArn: harnessRole.roleArn,
         Model: {
-          BedrockModelConfig: { ModelId: PAGE_AGENT_MODEL_ID, MaxTokens: 32000 },
+          BedrockModelConfig: { ModelId: PAGE_AGENT_MODEL_ID, MaxTokens: 64000 },
         },
         SystemPrompt: [{ Text: systemPrompt }],
         Tools: [
