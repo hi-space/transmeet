@@ -17,6 +17,7 @@ import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import { Construct } from 'constructs';
 import * as path from 'path';
+import * as fs from 'fs';
 
 const WHISPER_ENDPOINT = 'whisper-large';
 const BEDROCK_MODEL_ID = 'global.anthropic.claude-haiku-4-5-20251001-v1:0';
@@ -24,6 +25,26 @@ const REGION = 'us-east-1';
 const MEETINGS_TABLE = 'transmeet-meetings';
 const ROOT_DOMAIN = 'hi-yoo.com';
 const APP_DOMAIN = 'transmeet.hi-yoo.com';
+const PAGE_AGENT_MODEL_ID = 'global.anthropic.claude-opus-5-5';
+const HARNESS_NAME = 'transmeet_meeting_page';
+const SKILL_NAMES = [
+  'meeting-minutes-page',
+  'meeting-research',
+  'meeting-insights',
+  'meeting-diagrams',
+];
+const PUBLISH_PAGE_SCHEMA = {
+  type: 'object',
+  properties: {
+    title: { type: 'string', description: '페이지 제목(미팅 제목)' },
+    html: { type: 'string', description: '완성된 단일 HTML 문서 전체' },
+    share_summary: {
+      type: 'string',
+      description: '공유 시 함께 보낼 2문장 요약',
+    },
+  },
+  required: ['title', 'html'],
+};
 
 export class TransmeetStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -188,6 +209,23 @@ export class TransmeetStack extends cdk.Stack {
     });
     frontendBucket.grantRead(oai);
 
+    // ─── Meeting pages + agent skills buckets ───────────────────────────────────
+
+    const pagesBucket = new s3.Bucket(this, 'MeetingPagesBucket', {
+      bucketName: `transmeet-meeting-pages-${this.account}`,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+    pagesBucket.grantRead(oai);
+
+    const skillsBucket = new s3.Bucket(this, 'AgentSkillsBucket', {
+      bucketName: `transmeet-agent-skills-${this.account}`,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
     // ─── Route53 + ACM (custom domain) ─────────────────────────────────────────
 
     const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
@@ -288,6 +326,210 @@ export class TransmeetStack extends cdk.Stack {
 
     meetingsTable.grantReadWriteData(wsTaskRole);
 
+    // ─── AgentCore Gateway: Web Search connector ───────────────────────────────
+
+    const gatewayRole = new iam.Role(this, 'WebSearchGatewayRole', {
+      assumedBy: new iam.ServicePrincipal('bedrock-agentcore.amazonaws.com'),
+    });
+    gatewayRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['bedrock-agentcore:InvokeGateway'],
+        resources: [`arn:aws:bedrock-agentcore:${REGION}:${this.account}:gateway/*`],
+      })
+    );
+    gatewayRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['bedrock-agentcore:InvokeWebSearch'],
+        resources: [`arn:aws:bedrock-agentcore:${REGION}:aws:tool/web-search.v1`],
+      })
+    );
+
+    const webSearchGateway = new cdk.CfnResource(this, 'WebSearchGateway', {
+      type: 'AWS::BedrockAgentCore::Gateway',
+      properties: {
+        Name: 'transmeet-web-search',
+        Description: 'Web Search Tool connector for the meeting page harness',
+        AuthorizerType: 'AWS_IAM',
+        ProtocolType: 'MCP',
+        RoleArn: gatewayRole.roleArn,
+      },
+    });
+    const webSearchGatewayArn = webSearchGateway.getAtt('GatewayArn').toString();
+
+    const webSearchTarget = new cdk.CfnResource(this, 'WebSearchTarget', {
+      type: 'AWS::BedrockAgentCore::GatewayTarget',
+      properties: {
+        GatewayIdentifier: webSearchGateway.getAtt('GatewayIdentifier').toString(),
+        Name: 'web-search-tool',
+        TargetConfiguration: {
+          Mcp: {
+            Connector: {
+              Source: { ConnectorId: 'web-search' },
+              Configurations: [{ Name: 'WebSearch', ParameterValues: {} }],
+            },
+          },
+        },
+        CredentialProviderConfigurations: [
+          { CredentialProviderType: 'GATEWAY_IAM_ROLE' },
+        ],
+      },
+    });
+    webSearchTarget.addDependency(webSearchGateway);
+
+    // ─── Harness execution role ────────────────────────────────────────────────
+
+    const harnessRole = new iam.Role(this, 'HarnessExecutionRole', {
+      assumedBy: new iam.ServicePrincipal('bedrock-agentcore.amazonaws.com'),
+    });
+    harnessRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'BedrockModelInvocation',
+        actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
+        resources: [
+          'arn:aws:bedrock:*::foundation-model/*',
+          `arn:aws:bedrock:*:${this.account}:inference-profile/*`,
+        ],
+      })
+    );
+    harnessRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'EcrPublicAndSts',
+        actions: ['ecr-public:GetAuthorizationToken', 'sts:GetServiceBearerToken'],
+        resources: ['*'],
+      })
+    );
+    harnessRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'Observability',
+        actions: [
+          'xray:PutTraceSegments',
+          'xray:PutTelemetryRecords',
+          'xray:GetSamplingRules',
+          'xray:GetSamplingTargets',
+          'logs:CreateLogGroup',
+          'logs:CreateLogStream',
+          'logs:PutLogEvents',
+          'logs:DescribeLogStreams',
+          'logs:DescribeLogGroups',
+          'logs:PutResourcePolicy',
+        ],
+        resources: ['*'],
+      })
+    );
+    harnessRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'CloudWatchMetrics',
+        actions: ['cloudwatch:PutMetricData'],
+        resources: ['*'],
+        conditions: { StringEquals: { 'cloudwatch:namespace': 'bedrock-agentcore' } },
+      })
+    );
+    harnessRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'WorkloadIdentity',
+        actions: [
+          'bedrock-agentcore:GetWorkloadAccessToken',
+          'bedrock-agentcore:GetWorkloadAccessTokenForJWT',
+        ],
+        resources: [
+          `arn:aws:bedrock-agentcore:${REGION}:${this.account}:workload-identity-directory/default`,
+          `arn:aws:bedrock-agentcore:${REGION}:${this.account}:workload-identity-directory/default/workload-identity/harness_${HARNESS_NAME}-*`,
+        ],
+      })
+    );
+    harnessRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'CodeInterpreter',
+        actions: [
+          'bedrock-agentcore:StartCodeInterpreterSession',
+          'bedrock-agentcore:StopCodeInterpreterSession',
+          'bedrock-agentcore:GetCodeInterpreterSession',
+          'bedrock-agentcore:ListCodeInterpreterSessions',
+          'bedrock-agentcore:InvokeCodeInterpreter',
+        ],
+        resources: [`arn:aws:bedrock-agentcore:${REGION}:aws:code-interpreter/*`],
+      })
+    );
+    harnessRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'WebSearchGateway',
+        actions: ['bedrock-agentcore:InvokeGateway'],
+        resources: [webSearchGatewayArn],
+      })
+    );
+    skillsBucket.grantRead(harnessRole);
+
+    // ─── Harness (AWS::BedrockAgentCore::Harness, CDK L1 미제공 → CfnResource) ──
+
+    const systemPrompt = fs.readFileSync(
+      path.join(__dirname, '../../agent/harness/system_prompt.md'),
+      'utf-8'
+    );
+
+    const harness = new cdk.CfnResource(this, 'MeetingPageHarness', {
+      type: 'AWS::BedrockAgentCore::Harness',
+      properties: {
+        HarnessName: HARNESS_NAME,
+        ExecutionRoleArn: harnessRole.roleArn,
+        Model: {
+          BedrockModelConfig: { ModelId: PAGE_AGENT_MODEL_ID, MaxTokens: 32000 },
+        },
+        SystemPrompt: [{ Text: systemPrompt }],
+        Tools: [
+          { Type: 'agentcore_code_interpreter', Name: 'code_interpreter' },
+          {
+            Type: 'agentcore_gateway',
+            Name: 'web_search',
+            Config: {
+              AgentCoreGateway: {
+                GatewayArn: webSearchGatewayArn,
+                OutboundAuth: { AwsIam: {} },
+              },
+            },
+          },
+          {
+            Type: 'inline_function',
+            Name: 'publish_page',
+            Config: {
+              InlineFunction: {
+                Description:
+                  '검증을 통과한 완성 HTML을 공개 URL로 발행한다. 성공 시 url을 돌려주고, 실패 시 error 상태와 사유를 돌려준다.',
+                InputSchema: PUBLISH_PAGE_SCHEMA,
+              },
+            },
+          },
+        ],
+        Skills: SKILL_NAMES.map((name) => ({
+          S3: { Uri: `s3://${skillsBucket.bucketName}/skills/${name}/` },
+        })),
+        Memory: { Disabled: {} },
+        MaxIterations: 80,
+        TimeoutSeconds: 900,
+        Environment: {
+          AgentCoreRuntimeEnvironment: {
+            LifecycleConfiguration: {
+              IdleRuntimeSessionTimeout: 600,
+              MaxLifetime: 1800,
+            },
+          },
+        },
+      },
+    });
+    harness.addDependency(webSearchTarget);
+    harness.node.addDependency(harnessRole);
+    const harnessArn = harness.getAtt('Arn').toString();
+
+    // ─── Task role: invoke harness + publish pages ─────────────────────────────
+
+    wsTaskRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['bedrock-agentcore:InvokeHarness', 'bedrock-agentcore:InvokeAgentRuntime'],
+        resources: [harnessArn, `${harnessArn}/*`],
+      })
+    );
+    pagesBucket.grantPut(wsTaskRole);
+    pagesBucket.grantDelete(wsTaskRole);
+
     // ─── ECS Task Definition ────────────────────────────────────────────────────
 
     const taskDef = new ecs.FargateTaskDefinition(this, 'WsTaskDef', {
@@ -304,6 +546,9 @@ export class TransmeetStack extends cdk.Stack {
         MEETINGS_TABLE,
         WHISPER_ENDPOINT,
         BEDROCK_MODEL_ID,
+        HARNESS_ARN: harnessArn,
+        PAGES_BUCKET: pagesBucket.bucketName,
+        PAGES_PUBLIC_BASE_URL: `https://${APP_DOMAIN}/p`,
       },
       logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'transmeet-ws' }),
     });
@@ -365,6 +610,18 @@ export class TransmeetStack extends cdk.Stack {
         cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
       viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
     });
+
+    // ─── CloudFront /p/* behavior → meeting pages bucket ───────────────────────
+    // 공유 해제가 즉시 반영되도록 엣지 캐시를 끈다 (페이지는 작고 조회는 드물다).
+    distribution.addBehavior(
+      '/p/*',
+      new origins.S3Origin(pagesBucket, { originAccessIdentity: oai }),
+      {
+        cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+      }
+    );
 
     // ─── Cognito ────────────────────────────────────────────────────────────────
 
@@ -451,6 +708,29 @@ export class TransmeetStack extends cdk.Stack {
       value: userPoolClient.userPoolClientId,
       exportName: 'TransmeetUserPoolClientId',
       description: 'Cognito User Pool Client ID',
+    });
+
+    new cdk.CfnOutput(this, 'HarnessArn', {
+      value: harnessArn,
+      exportName: 'TransmeetHarnessArn',
+      description: 'AgentCore Harness ARN for meeting page generation',
+    });
+
+    new cdk.CfnOutput(this, 'SkillsBucketName', {
+      value: skillsBucket.bucketName,
+      exportName: 'TransmeetSkillsBucket',
+      description: 'S3 bucket holding agent skills (deploy.sh skills)',
+    });
+
+    new cdk.CfnOutput(this, 'PagesBucketName', {
+      value: pagesBucket.bucketName,
+      exportName: 'TransmeetPagesBucket',
+      description: 'S3 bucket holding published meeting pages',
+    });
+
+    new cdk.CfnOutput(this, 'WebSearchGatewayArn', {
+      value: webSearchGatewayArn,
+      description: 'AgentCore Gateway ARN (Web Search connector)',
     });
   }
 }
