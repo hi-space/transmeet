@@ -30,7 +30,7 @@ const HAS_COGNITO = !!process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID
 const HAS_API = !!process.env.NEXT_PUBLIC_API_ENDPOINT
 
 // 미팅 페이지 생성: 하네스 제한(15분) + 여유 1분 뒤에도 소식이 없으면 오류로 본다
-const PAGE_GEN_TIMEOUT_MS = 16 * 60 * 1000
+const PAGE_GEN_TIMEOUT_MS = 31 * 60 * 1000 // 하네스 TimeoutSeconds(1800) + 여유
 const PAGE_GEN_TIMEOUT_MESSAGE = '응답이 없습니다. 미팅을 다시 열어 확인하세요'
 const PAGE_GEN_POLL_MS = 20 * 1000
 const PAGE_GEN_CLOCK_SKEW_MS = 5 * 60 * 1000
@@ -1402,7 +1402,7 @@ export default function Home() {
       startedAt,
       prevPageId: meeting?.page?.pageId,
     })
-    // 안전장치: 하네스 제한(15분)을 넘겨도 아무 이벤트가 없으면 오류로 바꾼다
+    // 안전장치: 하네스 제한(30분)을 넘겨도 아무 이벤트가 없으면 오류로 바꾼다
     const prevTimer = pageGenTimersRef.current.get(meetingId)
     if (prevTimer) clearTimeout(prevTimer)
     pageGenTimersRef.current.set(

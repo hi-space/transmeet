@@ -511,12 +511,13 @@ export class TransmeetStack extends cdk.Stack {
         })),
         Memory: { Disabled: {} },
         MaxIterations: 80,
-        TimeoutSeconds: 900,
+        // 329개 발언 미팅이 15분을 넘겼다(준비 8분 + publish_page 인자로 HTML 재출력 7분+). 30분으로 둔다.
+        TimeoutSeconds: 1800,
         Environment: {
           AgentCoreRuntimeEnvironment: {
             LifecycleConfiguration: {
               IdleRuntimeSessionTimeout: 600,
-              MaxLifetime: 1800,
+              MaxLifetime: 3600,
             },
           },
         },

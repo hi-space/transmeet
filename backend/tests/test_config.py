@@ -39,5 +39,5 @@ def test_installed_botocore_supports_invoke_harness():
 def test_agentcore_client_uses_long_read_timeout_without_retries():
     from app import aws_clients
     cfg = aws_clients.AGENTCORE_CLIENT_CONFIG
-    assert cfg.read_timeout == 900
+    assert cfg.read_timeout == 1800
     assert cfg.retries == {"max_attempts": 0}
