@@ -141,6 +141,8 @@ aws ecs update-service --cluster transmeet-ws-cluster --service <서비스명> -
 ./deploy.sh frontend
 ```
 
+통합 확인: `cd backend && python3 ../agent/scripts/invoke_local.py --sample ../agent/samples/short-1on1.json` — 로컬 자격증명으로 하네스를 직접 호출해 페이지 URL을 받는다. 스킬만 바꿨으면 `./deploy.sh skills` 후 다시 실행한다.
+
 ## Architecture
 
 > draw.io 상세 다이어그램: [`docs/transmeet-architecture.drawio`](docs/transmeet-architecture.drawio)
