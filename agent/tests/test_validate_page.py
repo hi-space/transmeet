@@ -82,3 +82,45 @@ def test_cli_exit_code(tmp_path):
     res = subprocess.run([sys.executable, str(SCRIPT), str(bad)], capture_output=True, text=True)
     assert res.returncode == 1
     assert json.loads(res.stdout)["ok"] is False
+
+
+# ─── Shared corpus: agent script and backend publish_page must agree ──
+
+import pytest  # noqa: E402
+from app.page_agent import validate_html as backend_validate_html  # noqa: E402
+from validator_corpus import BAD_PAGES, GOOD_PAGES, e2e_sample_page  # noqa: E402
+
+
+@pytest.mark.parametrize("name", sorted(BAD_PAGES))
+def test_corpus_bad_pages_rejected_identically(name):
+    errs = validate_html(BAD_PAGES[name])
+    assert errs, f"{name} passed the skill validator"
+    assert backend_validate_html(BAD_PAGES[name], 1_500_000) == errs
+
+
+@pytest.mark.parametrize("name", sorted(GOOD_PAGES))
+def test_corpus_good_pages_accepted_identically(name):
+    assert validate_html(GOOD_PAGES[name]) == []
+    assert backend_validate_html(GOOD_PAGES[name], 1_500_000) == []
+
+
+def test_real_e2e_page_passes_both():
+    html = e2e_sample_page()
+    assert validate_html(html) == [] and backend_validate_html(html, 1_500_000) == []
+
+
+def test_cli_rejects_bypass_with_json_errors(tmp_path):
+    bad = tmp_path / "bad.html"
+    bad.write_text(BAD_PAGES["entity_tab_javascript_href"], encoding="utf-8")
+    res = subprocess.run([sys.executable, str(SCRIPT), str(bad)], capture_output=True, text=True)
+    out = json.loads(res.stdout)
+    assert res.returncode == 1 and out["ok"] is False and any("javascript" in e for e in out["errors"])
+
+
+def test_validator_core_is_identical_in_backend():
+    def core(path):
+        text = path.read_text(encoding="utf-8")
+        return text[text.index("# ── validator core:"):text.index("# ── end validator core ──")]
+
+    backend = Path(__file__).resolve().parents[2] / "backend/app/page_agent.py"
+    assert core(SCRIPT) == core(backend)

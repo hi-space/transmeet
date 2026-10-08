@@ -42,4 +42,6 @@ meeting-insights 스킬의 출력 포맷을 그대로 붙인다.
 ## 금지
 - `<script>`, `on*=` 속성, `javascript:` 링크, 외부 `src`/`@import`/`url(http...)`
 - 외부 이미지. 모든 시각 요소는 인라인 SVG(`<title>` 필수)
+- 허용 목록 밖의 태그. 쓸 수 있는 태그: html head body meta title style main header footer section article nav aside h1–h6 p div span ul ol li dl dt dd table thead tbody tfoot tr th td caption blockquote a b strong i em code pre br hr small sup sub details summary figure figcaption time abbr mark, SVG는 svg g path rect circle ellipse line polyline polygon text tspan title desc defs marker linearGradient stop clipPath (img·iframe·form·link·base·use·image·animate 등은 거절)
+- 링크는 `https:`·`mailto:`·`#id`만. `http:`·`data:` 링크, `<meta http-equiv>`, SVG 안의 `<style>`, 인라인 `style="...url(...)"`, CSS 백슬래시 이스케이프, `url(#id)`가 아닌 `url()`, `<`·`>`가 들어간 주석
 - 템플릿의 `{{...}}` 자리표시자를 남기는 것

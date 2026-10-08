@@ -614,6 +614,19 @@ export class TransmeetStack extends cdk.Stack {
 
     // ─── CloudFront /p/* behavior → meeting pages bucket ───────────────────────
     // 공유 해제가 즉시 반영되도록 엣지 캐시를 끈다 (페이지는 작고 조회는 드물다).
+    // 페이지는 앱과 같은 오리진에서 서빙되므로 CSP sandbox 로 고유 오리진에 격리하고
+    // 스크립트·외부 리소스 로드를 모두 막는다 (검증기를 우회한 HTML 에 대한 2차 방어선).
+    const pagesHeadersPolicy = new cloudfront.ResponseHeadersPolicy(this, 'MeetingPagesHeadersPolicy', {
+      comment: 'TransMeet meeting pages: sandboxed, no scripts or external loads',
+      securityHeadersBehavior: {
+        contentSecurityPolicy: {
+          contentSecurityPolicy:
+            "sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:; base-uri 'none'; form-action 'none'",
+          override: true,
+        },
+        contentTypeOptions: { override: true },
+      },
+    });
     distribution.addBehavior(
       '/p/*',
       new origins.S3Origin(pagesBucket, { originAccessIdentity: oai }),
@@ -621,6 +634,7 @@ export class TransmeetStack extends cdk.Stack {
         cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
         allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+        responseHeadersPolicy: pagesHeadersPolicy,
       }
     );
 

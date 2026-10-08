@@ -128,3 +128,39 @@ def test_ddb_item_to_dict():
     d = ddb_item_to_dict(item)
     assert d["meetingId"] == "m1" and d["messages"][0]["speaker"] == "me" and d["messages"][0]["n"] == 2
     assert d["page"]["pageId"] == "abc"
+
+
+# ─── Shared validator corpus (same cases run in agent/tests/test_validate_page.py) ──
+
+import importlib.util  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+from .validator_corpus import BAD_PAGES, GOOD_PAGES, e2e_sample_page  # noqa: E402
+
+_SKILL_SCRIPT = Path(__file__).resolve().parents[2] / "agent/skills/meeting-minutes-page/scripts/validate_page.py"
+
+
+def _skill_validate():
+    spec = importlib.util.spec_from_file_location("skill_validate_page", _SKILL_SCRIPT)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.validate_html
+
+
+@pytest.mark.parametrize("name", sorted(BAD_PAGES))
+def test_corpus_bad_pages_rejected_by_both_validators(name):
+    errs = validate_html(BAD_PAGES[name], 1_500_000)
+    assert errs, f"{name} passed the backend validator"
+    assert _skill_validate()(BAD_PAGES[name], 1_500_000) == errs
+
+
+@pytest.mark.parametrize("name", sorted(GOOD_PAGES))
+def test_corpus_good_pages_accepted_by_both_validators(name):
+    assert validate_html(GOOD_PAGES[name], 1_500_000) == []
+    assert _skill_validate()(GOOD_PAGES[name], 1_500_000) == []
+
+
+def test_real_e2e_page_still_validates():
+    html = e2e_sample_page()
+    assert validate_html(html, 1_500_000) == []
+    assert _skill_validate()(html, 1_500_000) == []

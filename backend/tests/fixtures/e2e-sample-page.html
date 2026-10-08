@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>주간 1:1 — 배포 파이프라인 · 미팅록</title>
+<meta name="transmeet:meeting-id" content="sample-short">
+<meta name="transmeet:generated-at" content="2026-10-08T14:37:09.825489+00:00">
+<meta name="transmeet:model" content="us.anthropic.claude-opus-5-5">
+<style>
+:root{--tm-bg:#ffffff;--tm-fg:#0f172a;--tm-muted:#64748b;--tm-line:#e2e8f0;--tm-card:#f8fafc;
+  --tm-accent:#0891b2;--tm-accent-soft:#cffafe;--tm-warn:#b45309;--tm-warn-soft:#fef3c7;
+  --tm-ok:#15803d;--tm-ok-soft:#dcfce7;--tm-bad:#b91c1c;--tm-bad-soft:#fee2e2;
+  --tm-font:system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+  --tm-mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+@media (prefers-color-scheme:dark){:root{--tm-bg:#0b1220;--tm-fg:#e2e8f0;--tm-muted:#94a3b8;--tm-line:#1e293b;
+  --tm-card:#111a2e;--tm-accent:#22d3ee;--tm-accent-soft:#164e63;--tm-warn:#fbbf24;--tm-warn-soft:#3f2a05;
+  --tm-ok:#4ade80;--tm-ok-soft:#052e16;--tm-bad:#f87171;--tm-bad-soft:#450a0a}}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:var(--tm-bg);color:var(--tm-fg);font-family:var(--tm-font);line-height:1.6;font-size:16px}
+main{max-width:860px;margin:0 auto;padding:24px 20px 64px}
+header[data-section=header]{border-bottom:1px solid var(--tm-line);padding-bottom:20px;margin-bottom:28px}
+header h1{font-size:1.75rem;line-height:1.25;margin:0 0 12px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 16px;color:var(--tm-muted);font-size:.9rem}
+.meta b{color:var(--tm-fg);font-weight:600}
+section{margin:0 0 36px}
+section h2{font-size:1.2rem;margin:0 0 12px;padding-left:10px;border-left:4px solid var(--tm-accent)}
+.card{background:var(--tm-card);border:1px solid var(--tm-line);border-radius:12px;padding:16px 18px}
+.tldr li{margin:4px 0}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--tm-line);vertical-align:top}
+th{color:var(--tm-muted);font-weight:600;font-size:.85rem}
+.topic{border:1px solid var(--tm-line);border-radius:12px;padding:16px 18px;margin:0 0 14px;background:var(--tm-card)}
+.topic h3{margin:0 0 6px;font-size:1.05rem}
+.time{font-family:var(--tm-mono);font-size:.8rem;color:var(--tm-muted)}
+blockquote{margin:10px 0;padding:8px 14px;border-left:3px solid var(--tm-accent);background:var(--tm-bg);border-radius:0 8px 8px 0}
+blockquote .orig{display:block;color:var(--tm-muted);font-size:.9rem}
+blockquote .spk{font-weight:600;font-size:.85rem;color:var(--tm-accent)}
+.badge{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.75rem;font-weight:600;vertical-align:middle}
+.badge.ok{background:var(--tm-ok-soft);color:var(--tm-ok)}
+.badge.diff{background:var(--tm-warn-soft);color:var(--tm-warn)}
+.badge.na{background:var(--tm-line);color:var(--tm-muted)}
+.badge.infer{background:var(--tm-accent-soft);color:var(--tm-accent)}
+.ref{margin:0 0 12px}.ref a{color:var(--tm-accent);word-break:break-all}
+.ref .why{color:var(--tm-muted);font-size:.9rem}
+figure{margin:12px 0}figure svg{width:100%;height:auto;display:block}
+figcaption{color:var(--tm-muted);font-size:.85rem;margin-top:4px}
+details summary{cursor:pointer;color:var(--tm-accent);font-weight:600}
+footer[data-section=footer]{border-top:1px solid var(--tm-line);padding-top:16px;color:var(--tm-muted);font-size:.85rem}
+@media (max-width:480px){body{font-size:15px}main{padding:16px 14px 48px}header h1{font-size:1.4rem}th,td{padding:6px}}
+@media print{main{max-width:none;padding:0}.topic,.card{break-inside:avoid}details{display:block}details>summary{display:none}}
+</style>
+</head>
+<body>
+<main>
+<header data-section="header">
+  <h1>주간 1:1 — 배포 파이프라인</h1>
+  <div class="meta">
+    <span>일시 <b>2026-10-06 10:00–10:13</b></span>
+    <span>소요 <b>13분</b></span>
+    <span>참석자 <b>Speaker 1, Me</b></span>
+    <span>언어 <b>미지정</b></span>
+    <span>생성 <b>2026-10-08 23:37 (KST)</b></span>
+  </div>
+</header>
+
+<section data-section="tldr"><h2>한눈에 보기</h2><div class="card"><ul class="tldr"><li>백엔드 배포는 현재 수동(ECR 푸시 + force-new-deployment)이며, 금요일(10/9)까지 GitHub Actions 파이프라인으로 옮깁니다.</li><li>AWS 자격증명은 장기 키 대신 OIDC를 쓰고, aws-actions/configure-aws-credentials로 IAM 역할을 assume합니다.</li><li>배포 완료 슬랙 알림은 웹훅으로 다음 주에 붙이고, Speaker 1이 오늘 #deploys 채널을 만듭니다.</li><li>'GitHub OIDC 토큰은 약 15분 유효'라는 발언은 공식 문서에서 확인하지 못했습니다.</li></ul></div></section>
+
+<section data-section="decisions"><h2>결정 사항</h2><ul><li>AWS 자격증명은 장기 키 대신 OIDC를 쓰고, aws-actions/configure-aws-credentials로 역할을 assume한다 <span class="time">[10:01]</span> <span class="time">[10:02]</span></li><li>배포 완료 알림은 슬랙 웹훅으로 간단히 구현하고 채널은 #deploys로 한다 <span class="time">[10:05]</span> <span class="time">[10:06]</span></li><li>우선순위: 파이프라인은 금요일까지, 알림은 다음 주 <span class="time">[10:06]</span> <span class="time">[10:13]</span></li></ul></section>
+
+<section data-section="action-items"><h2>액션 아이템</h2>
+<table><thead><tr><th>담당</th><th>할 일</th><th>기한</th><th>상태</th></tr></thead><tbody><tr><td>Speaker 1</td><td>슬랙 #deploys 채널 생성 <span class="time">[10:06]</span></td><td>2026-10-06(미팅 당일)</td><td>진행 예정</td></tr><tr><td>Me</td><td>백엔드 배포를 GitHub Actions 파이프라인으로 이전 (OIDC + configure-aws-credentials로 역할 assume) <span class="time">[10:02]</span> <span class="time">[10:13]</span></td><td>금요일(2026-10-09)</td><td>진행 예정</td></tr><tr><td>Me</td><td>배포 완료 시 슬랙 웹훅 알림 추가 <span class="time">[10:05]</span> <span class="time">[10:13]</span></td><td>다음 주(구체 날짜 미정)</td><td>진행 예정</td></tr></tbody></table></section>
+
+<section data-section="discussion"><h2>논의 흐름</h2>
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 142" role="img" font-family="var(--tm-font, sans-serif)" font-size="13">
+<title>주제 타임라인</title>
+<desc>10:00부터 10:14까지 3개 주제의 논의 구간</desc>
+<line x1="170" y1="20" x2="776" y2="20" stroke="var(--tm-line)" />
+<text x="170.0" y="14" text-anchor="middle" fill="var(--tm-muted)" font-size="11">10:00</text>
+<text x="321.5" y="14" text-anchor="middle" fill="var(--tm-muted)" font-size="11">10:03</text>
+<text x="473.0" y="14" text-anchor="middle" fill="var(--tm-muted)" font-size="11">10:07</text>
+<text x="624.5" y="14" text-anchor="middle" fill="var(--tm-muted)" font-size="11">10:10</text>
+<text x="776.0" y="14" text-anchor="middle" fill="var(--tm-muted)" font-size="11">10:14</text>
+<text x="160" y="46" text-anchor="end" fill="currentColor">배포 현황</text>
+<rect class="bar" x="170.0" y="34" width="43.3" height="16" rx="4" fill="var(--tm-accent)" opacity="0.85"><title>배포 현황 10:00–10:01</title></rect>
+<text x="160" y="76" text-anchor="end" fill="currentColor">OIDC 자격증명</text>
+<rect class="bar" x="213.3" y="64" width="173.1" height="16" rx="4" fill="var(--tm-accent)" opacity="0.85"><title>OIDC 자격증명 10:01–10:05</title></rect>
+<text x="160" y="106" text-anchor="end" fill="currentColor">슬랙 알림·일정</text>
+<rect class="bar" x="386.4" y="94" width="389.6" height="16" rx="4" fill="var(--tm-accent)" opacity="0.85"><title>슬랙 알림·일정 10:05–10:14</title></rect>
+</svg>
+<figcaption>13분 동안 배포 현황 → OIDC 자격증명 → 슬랙 알림·일정 순으로 논의했습니다 [10:00–10:13]</figcaption>
+</figure>
+
+<div class="topic" id="topic-1"><h3>배포 현황 <span class="time">10:00–10:01</span></h3>
+<p>Speaker 1이 백엔드 배포를 파이프라인으로 옮기는 작업이 어디까지 됐는지 물었습니다. Me는 아직 ECR에 이미지를 수동으로 푸시하고 force-new-deployment를 직접 실행하고 있으며, 이번 주에 GitHub Actions로 옮길 계획이라고 답했습니다.</p>
+<blockquote><span class="spk">Speaker 1 [10:00]</span> 오늘은 짧게요. 백엔드 배포를 파이프라인으로 옮기는 건 어디까지 됐나요?<span class="orig">Quick one today. Where are we on moving the backend deploy into the pipeline?</span></blockquote>
+<blockquote><span class="spk">Me [10:00]</span> 아직 수동으로 ECR에 푸시하고 force-new-deployment를 돌리고 있어요. 이번 주에 GitHub Actions로 옮길 계획입니다.<span class="orig">Still pushing to ECR manually and running force-new-deployment. Planning to move it to GitHub Actions this week.</span></blockquote>
+<p><b>질문</b> 파이프라인 이전 진행 상황은? → <b>답</b> 아직 수동 배포 중이고 이번 주에 GitHub Actions로 이전할 예정.</p>
+</div>
+<div class="topic" id="topic-2"><h3>OIDC 자격증명 <span class="time">10:01–10:05</span></h3>
+<p>Speaker 1은 AWS 자격증명에 장기 키 대신 OIDC를 쓰라고 했고, GitHub OIDC 토큰이 15분쯤 유효한 것으로 안다고 덧붙였습니다. 다만 본인도 확신하지 않는 투("I think")였습니다. Me는 aws-actions/configure-aws-credentials로 IAM 역할을 assume하는 방식으로 하겠다며 동의했습니다.</p>
+<blockquote><span class="spk">Speaker 1 [10:01]</span> AWS 자격증명은 장기 키 대신 OIDC를 쓰세요. GitHub OIDC 토큰은 15분쯤 유효한 것으로 알아요.<span class="orig">Use OIDC for the AWS credentials, not long-lived keys. I think GitHub's OIDC tokens are valid for about 15 minutes.</span></blockquote>
+<blockquote><span class="spk">Me [10:02]</span> 네, aws-actions/configure-aws-credentials로 역할을 assume하는 방식으로 하겠습니다.<span class="orig">Yes, I'll assume the role with aws-actions/configure-aws-credentials.</span></blockquote>
+<figure>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1258 104" role="img" font-family="var(--tm-font, sans-serif)" font-size="13">
+<title>목표 배포 파이프라인 구성</title>
+<desc>5개 단계와 4개 연결로 이루어진 흐름</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--tm-muted)"/></marker></defs>
+<path d="M194.0 52.0 C239.0 52.0 239.0 52.0 284.0 52.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="239.0" y="46.0" text-anchor="middle" fill="var(--tm-muted)" font-size="11">OIDC</text>
+<path d="M454.0 52.0 C499.0 52.0 499.0 52.0 544.0 52.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="499.0" y="46.0" text-anchor="middle" fill="var(--tm-muted)" font-size="11">임시 자격증명</text>
+<path d="M714.0 52.0 C759.0 52.0 759.0 52.0 804.0 52.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="759.0" y="46.0" text-anchor="middle" fill="var(--tm-muted)" font-size="11">force-new-deployment</text>
+<path d="M974.0 52.0 C1019.0 52.0 1019.0 52.0 1064.0 52.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="1019.0" y="46.0" text-anchor="middle" fill="var(--tm-muted)" font-size="11">웹훅(다음 주)</text>
+<rect x="24" y="24.0" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="109.0" y="56.5" text-anchor="middle" fill="currentColor" font-weight="600">GitHub Actions</text>
+<rect x="284" y="24.0" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="369.0" y="56.5" text-anchor="middle" fill="currentColor" font-weight="600">IAM 역할 assume</text>
+<rect x="544" y="24.0" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="629.0" y="56.5" text-anchor="middle" fill="currentColor" font-weight="600">ECR 이미지 푸시</text>
+<rect x="804" y="24.0" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="889.0" y="56.5" text-anchor="middle" fill="currentColor" font-weight="600">ECS 강제 재배포</text>
+<rect x="1064" y="24.0" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="1149.0" y="56.5" text-anchor="middle" fill="currentColor" font-weight="600">Slack #deploys</text>
+</svg>
+<figcaption>미팅에서 언급된 구성요소를 이은 목표 배포 흐름: OIDC로 역할을 assume하고 ECR에 푸시한 뒤 ECS를 재배포하며, 슬랙 알림은 다음 주에 붙입니다 [10:00–10:13]</figcaption>
+</figure>
+</div>
+<div class="topic" id="topic-3"><h3>슬랙 알림·일정 <span class="time">10:05–10:13</span></h3>
+<p>Speaker 1이 배포가 끝나면 슬랙 메시지를 받을 수 있는지 물으며 화려할 필요는 없다고 했습니다. Me는 웹훅으로 간단히 넣겠다고 답하고 채널을 누가 만들 수 있는지 물었습니다. Speaker 1이 오늘 #deploys 채널을 만들겠다고 했고, 파이프라인은 금요일까지 하고 알림은 나중에 해도 된다고 우선순위를 정했습니다. Me는 금요일까지 파이프라인을 올리고 알림은 다음 주에 붙이겠다고 확인했습니다.</p>
+<blockquote><span class="spk">Speaker 1 [10:05]</span> 그리고 배포가 끝나면 슬랙 메시지를 받을 수 있을까요? 화려할 필요는 없어요.<span class="orig">Also, can we get a Slack message when the deploy finishes? Doesn't have to be fancy.</span></blockquote>
+<blockquote><span class="spk">Speaker 1 [10:06]</span> 오늘 #deploys 채널을 만들게요. 파이프라인은 금요일까지, 알림은 나중에 해도 돼요.<span class="orig">I'll create #deploys today. Let's say pipeline in place by Friday, notification can come later.</span></blockquote>
+<blockquote><span class="spk">Me [10:13]</span> 알겠습니다. 금요일까지 파이프라인 올리고, 알림은 다음 주에 붙이겠습니다.<span class="orig">Got it. Pipeline by Friday, notification next week.</span></blockquote>
+<p><b>질문</b> 배포 완료 슬랙 알림이 가능한가? → <b>답</b> 가능하며 웹훅으로 간단히 구현 (Me, 10:05).<br><b>질문</b> 채널은 누가 만드나? → <b>답</b> Speaker 1이 오늘 #deploys 생성 (10:06).</p>
+</div>
+</section>
+
+<section data-section="open-questions"><h2>미결 사항</h2><ul><li>GitHub OIDC 토큰 유효 시간이 "약 15분"인지 — Speaker 1이 "~로 알아요"라고 말했고 미팅에서 확인되지 않았습니다. 공식 문서에서도 구체 수치를 찾지 못했습니다(관련 자료 1). 확인 담당: 미정 <span class="time">[10:01]</span></li></ul></section>
+
+<section data-section="references"><h2>관련 공식 자료 · 더블 체크</h2><div class="ref card">
+  <div><a href="https://docs.github.com/en/actions/concepts/security/openid-connect">OpenID Connect (GitHub Actions 문서)</a> <span class="badge na">확인 불가</span></div>
+  <div class="why">GitHub Actions가 OIDC로 클라우드 제공자에서 단기 토큰을 받는 방식을 설명합니다.</div>
+  <div class="why">미팅 [10:01] Speaker 1: "GitHub OIDC 토큰은 15분쯤 유효" — 문서는 "short-lived access token that is only valid for a single job, and then automatically expires"라고만 하고 구체 시간은 적지 않았습니다. 토큰 클레임 문서(<a href="https://docs.github.com/en/actions/reference/security/oidc">OIDC reference</a>)에도 <code>exp</code> 클레임 설명만 있습니다.</div>
+  <div class="why">공식 문서 · docs.github.com</div>
+</div>
+<div class="ref card">
+  <div><a href="https://github.com/aws-actions/configure-aws-credentials">aws-actions/configure-aws-credentials (GitHub 저장소 README)</a> <span class="badge ok">확인됨</span></div>
+  <div class="why">GitHub Actions에서 AWS 자격증명을 설정하는 공식 액션입니다. OIDC를 권장 방식으로 안내합니다.</div>
+  <div class="why">미팅 [10:02] Me: "configure-aws-credentials로 역할을 assume" — README의 "Quick Start (OIDC, recommended)"와 일치합니다. 사전 준비로 AWS 계정에 GitHub OIDC용 IAM Identity Provider와 IAM 역할을 만들고, 워크플로에 <code>permissions: id-token: write</code>를 넣어야 합니다. 참고: <code>role-duration-seconds</code>는 기본 1시간(3600초)이고, 허용 최솟값은 15분(900초)입니다.</div>
+  <div class="why">공식 저장소 · github.com/aws-actions</div>
+</div>
+<div class="ref card">
+  <div><a href="https://docs.aws.amazon.com/cli/latest/reference/ecs/update-service.html">aws ecs update-service (AWS CLI 레퍼런스)</a> <span class="badge ok">확인됨</span></div>
+  <div class="why">ECS 서비스 업데이트 명령입니다. <code>--force-new-deployment</code> 옵션을 설명합니다.</div>
+  <div class="why">미팅 [10:00] Me: "force-new-deployment를 돌리고 있어요" — 문서: "You can use this option to start a new deployment with no service definition changes", 예: 같은 이미지/태그 조합의 새 이미지를 쓰도록 태스크를 갱신. 현재 수동 절차와 일치합니다.</div>
+  <div class="why">공식 문서 · docs.aws.amazon.com</div>
+</div>
+<div class="ref card">
+  <div>Slack 수신 웹훅(Incoming Webhooks) <span class="badge na">확인 불가</span></div>
+  <div class="why">미팅 [10:05] Me: "웹훅으로 간단히 넣겠습니다" — 이번 조회에서는 검색 결과로 공식 문서 URL을 얻지 못해 링크를 싣지 않았습니다.</div>
+</div>
+<p class="time">조회일 2026-10-08 · Web Search 9회</p></section>
+
+<section data-section="insights"><h2>인사이트 보고서</h2><h3>리스크</h3>
+<div class="card">
+  <p><b>'토큰 15분' 수치를 설정값으로 옮기면 안 됩니다.</b> 미팅에서 나온 "OIDC 토큰 약 15분 유효"는 공식 문서로 확인되지 않았습니다. 실제 AWS 세션 길이는 configure-aws-credentials의 <code>role-duration-seconds</code>가 정하며 기본값은 1시간, 최솟값은 15분입니다.</p>
+  <p><span class="badge infer">추정</span> 15분이라는 기억에 맞춰 이 값을 900초로 줄이면 빌드·푸시·배포가 길어질 때 작업 도중 자격증명이 만료될 수 있습니다. 조기 신호: 파이프라인 후반 단계(ECS 업데이트)에서 <code>ExpiredToken</code> 오류가 나는 경우.</p>
+  <p class="time">근거: <a href="#topic-2">주제 2 [10:01]</a>, 관련 자료 1(확인 불가)·2(확인됨)</p>
+</div>
+<div class="card">
+  <p><span class="badge infer">추정</span> <b>AWS 쪽 사전 준비가 금요일 일정 안에 들어가 있지 않을 수 있습니다.</b> OIDC 방식을 쓰려면 AWS 계정에 GitHub OIDC Identity Provider와 신뢰 정책을 가진 IAM 역할을 먼저 만들어야 합니다(관련 자료 2). 미팅에서는 이 작업의 담당과 권한이 논의되지 않았습니다. IAM 권한이 Me에게 없다면 금요일 마감의 병목이 됩니다.</p>
+  <p class="time">근거: <a href="#topic-2">주제 2 [10:02]</a>, <a href="#topic-3">주제 3 [10:06]</a>, 관련 자료 2</p>
+</div>
+<h3>권장 후속 조치</h3>
+<div class="card">
+  <p><span class="badge infer">추정</span> IAM OIDC Provider·역할 생성 담당과 권한을 금요일 전에 확정하고, <code>role-duration-seconds</code>는 기본값(1시간)으로 두거나 실제 작업 시간에 맞춰 명시하세요.</p>
+  <p class="time">근거: <a href="#topic-2">주제 2 [10:01]–[10:02]</a>, 관련 자료 2</p>
+</div>
+<div class="card">
+  <p><span class="badge infer">추정</span> 슬랙 웹훅 URL은 비밀값이므로 GitHub 저장소 시크릿으로 넣어야 합니다. 채널(#deploys)은 Speaker 1이 만들지만, 웹훅을 발급하고 시크릿으로 등록할 담당은 정해지지 않았습니다.</p>
+  <p class="time">근거: <a href="#topic-3">주제 3 [10:05]–[10:06]</a></p>
+</div>
+<h3>다음 미팅 안건</h3>
+<div class="card">
+  <p>금요일(10/9) 파이프라인 전환 결과: 수동 ECR 푸시·force-new-deployment 절차가 완전히 대체됐는지, 그리고 다음 주 슬랙 알림 진행 상황.</p>
+  <p class="time">근거: <a href="#topic-1">주제 1 [10:00]</a>, <a href="#topic-3">주제 3 [10:13]</a></p>
+</div></section>
+
+<section data-section="glossary"><h2>용어 사전</h2>
+<table><thead><tr><th>영어</th><th>한국어</th><th>설명</th></tr></thead><tbody><tr><td>ECR</td><td>Amazon ECR</td><td>AWS의 컨테이너 이미지 레지스트리.</td></tr><tr><td>force-new-deployment</td><td>강제 재배포</td><td>서비스 정의를 바꾸지 않고 ECS 서비스의 새 배포를 시작하는 update-service 옵션.</td></tr><tr><td>GitHub Actions</td><td>GitHub Actions</td><td>GitHub 저장소에서 빌드·배포를 자동화하는 CI/CD 서비스.</td></tr><tr><td>Pipeline</td><td>파이프라인</td><td>빌드부터 배포까지 자동으로 이어지는 작업 흐름.</td></tr><tr><td>OIDC</td><td>OpenID Connect</td><td>장기 키 없이 단기 토큰으로 신원을 증명하는 인증 표준.</td></tr><tr><td>Long-lived keys</td><td>장기 키</td><td>만료 없이 저장해 쓰는 AWS 액세스 키.</td></tr><tr><td>Assume role</td><td>역할 위임(assume)</td><td>IAM 역할의 임시 자격증명을 받아 그 권한으로 동작하는 것.</td></tr><tr><td>configure-aws-credentials</td><td>—</td><td>GitHub Actions에서 AWS 자격증명을 설정하는 aws-actions의 공식 액션.</td></tr><tr><td>Webhook</td><td>웹훅</td><td>특정 URL로 HTTP 요청을 보내 메시지를 전달하는 방식.</td></tr><tr><td>Slack</td><td>슬랙</td><td>팀 메신저. 배포 알림을 받을 #deploys 채널이 생성될 예정.</td></tr></tbody></table></section>
+
+<footer data-section="footer">
+  TransMeet로 생성 · 모델 us.anthropic.claude-opus-5-5 · 미팅 ID sample-short · 생성 2026-10-08T14:37:09.825489+00:00 · 참고 자료 조회일 2026-10-08
+</footer>
+</main>
+</body>
+</html>

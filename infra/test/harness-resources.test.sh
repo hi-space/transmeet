@@ -19,6 +19,9 @@ check 'AWS::CloudFront::Distribution' "x.Properties.DistributionConfig.CacheBeha
 check 'AWS::IAM::Policy' "JSON.stringify(x.Properties.PolicyDocument).includes('bedrock-agentcore:InvokeHarness')"
 check 'AWS::IAM::Policy' "JSON.stringify(x.Properties.PolicyDocument).includes('bedrock-agentcore:InvokeWebSearch')"
 check 'AWS::ECS::TaskDefinition' "JSON.stringify(x.Properties.ContainerDefinitions[0].Environment).includes('HARNESS_ARN')"
+# 발행 페이지는 앱과 같은 오리진에서 서빙되므로 CSP sandbox 로 스크립트·외부 로드를 막는다
+check 'AWS::CloudFront::Distribution' "x.Properties.DistributionConfig.CacheBehaviors.some(b=>b.PathPattern==='/p/*' && b.ResponseHeadersPolicyId)"
+check 'AWS::CloudFront::ResponseHeadersPolicy' "(()=>{const c=x.Properties.ResponseHeadersPolicyConfig.SecurityHeadersConfig; const p=c.ContentSecurityPolicy.ContentSecurityPolicy; return /(^|;)\\s*sandbox\\s*(;|$)/.test(p) && p.includes(\"default-src 'none'\") && p.includes(\"form-action 'none'\") && c.ContentTypeOptions.Override===true})()"
 # 하네스 역할은 지정 모델만 호출할 수 있어야 한다 (foundation-model/* 와일드카드 금지)
 check 'AWS::IAM::Policy' "(()=>{const st=x.Properties.PolicyDocument.Statement.find(s=>s.Sid==='BedrockModelInvocation' && JSON.stringify(x.Properties.Roles).includes('HarnessExecutionRole')); if(!st) return false; const r=JSON.stringify(st.Resource); return !r.includes('foundation-model/*') && !r.includes('inference-profile/*') && r.includes('inference-profile/us.anthropic.claude-opus-5-5') && r.includes('foundation-model/anthropic.claude-opus-5-5*')})()"
 echo "all harness resource checks passed"
