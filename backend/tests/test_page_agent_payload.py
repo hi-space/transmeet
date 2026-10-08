@@ -1,0 +1,90 @@
+import json
+from datetime import datetime, timezone
+
+from app.page_agent import build_meeting_payload, build_user_message, merge_messages
+
+MODEL = "global.anthropic.claude-opus-5-5"
+
+
+def msg(ts, speaker, orig, tr="", lang="en", mid=None):
+    return {
+        "id": mid or ts,
+        "timestamp": ts,
+        "speaker": speaker,
+        "originalText": orig,
+        "translatedText": tr,
+        "detectedLanguage": lang,
+    }
+
+
+def test_merge_joins_same_speaker_within_10s_and_keeps_last_timestamp():
+    out = merge_messages([
+        msg("2026-10-06T10:00:00+09:00", "speaker1", "Hello", "안녕"),
+        msg("2026-10-06T10:00:05+09:00", "speaker1", "again", "다시"),
+        msg("2026-10-06T10:00:30+09:00", "speaker1", "later", "나중"),
+        msg("2026-10-06T10:00:31+09:00", "me", "me", "나"),
+    ])
+    assert [m["original"] for m in out] == ["Hello again", "later", "me"]
+    assert out[0]["translation"] == "안녕 다시"
+    assert out[0]["timestamp"] == "2026-10-06T10:00:05+09:00"
+
+
+def test_payload_sorts_messages_by_timestamp():
+    item = {
+        "meetingId": "m1",
+        "title": "Meeting 2026-10-06",
+        "createdAt": "2026-10-06T09:59:00+09:00",
+        "messages": [
+            msg("2026-10-06T10:05:00+09:00", "me", "second"),
+            msg("2026-10-06T10:00:00+09:00", "speaker1", "first"),
+        ],
+    }
+    p = build_meeting_payload(item, model_id=MODEL)
+    assert [m["original"] for m in p["messages"]] == ["first", "second"]
+    assert p["meeting"]["startedAt"] == "2026-10-06T09:59:00+09:00"
+    assert p["meeting"]["endedAt"] == "2026-10-06T10:05:00+09:00"
+
+
+def test_payload_metadata_fields():
+    item = {
+        "meetingId": "m1",
+        "title": "배포 파이프라인",
+        "createdAt": "2026-10-06T10:00:00+09:00",
+        "messages": [
+            msg("2026-10-06T10:00:10+09:00", "speaker1", "Hi", "안녕", "en"),
+            msg("2026-10-06T10:00:40+09:00", "me", "네", "Yes", "ko"),
+        ],
+    }
+    now = datetime(2026, 10, 8, 0, 0, tzinfo=timezone.utc)
+    p = build_meeting_payload(item, model_id=MODEL, now=now)
+    m = p["meeting"]
+    assert m["meetingId"] == "m1" and m["title"] == "배포 파이프라인"
+    assert m["speakers"] == ["Speaker 1", "Me"]
+    assert m["languages"] == ["en", "ko"]
+    assert m["generatedAt"] == "2026-10-08T00:00:00+00:00"
+    assert m["modelId"] == MODEL
+    assert p["messages"][0]["speaker"] == "speaker1"
+    assert set(p["messages"][0]) == {"timestamp", "speaker", "original", "translation", "detectedLanguage"}
+
+
+def test_inline_messages_override_stored_messages():
+    item = {"meetingId": "m1", "title": "t", "createdAt": "2026-10-06T10:00:00+09:00", "messages": []}
+    inline = [
+        {"speaker": "speaker1", "original": "live one", "translation": "라이브", "timestamp": "2026-10-06T10:01:00+09:00"},
+        {"speaker": "speaker1", "original": "no ts"},
+    ]
+    p = build_meeting_payload(item, inline_messages=inline, model_id=MODEL)
+    # 시각이 없는 메시지는 직전 시각을 이어 쓰므로 같은 화자 연속 발언으로 병합된다
+    assert [m["original"] for m in p["messages"]] == ["live one no ts"]
+    assert p["messages"][0]["timestamp"] == "2026-10-06T10:01:00+09:00"
+
+
+def test_user_message_contains_json_and_instructions():
+    item = {"meetingId": "m1", "title": "t", "createdAt": "2026-10-06T10:00:00+09:00",
+            "messages": [msg("2026-10-06T10:00:10+09:00", "speaker1", "Hi")]}
+    text = build_user_message(build_meeting_payload(item, model_id=MODEL))
+    assert "meeting-minutes-page" in text and "publish_page" in text
+    start = text.index("```json") + len("```json")
+    end = text.index("```", start)
+    parsed = json.loads(text[start:end])
+    assert parsed["meeting"]["meetingId"] == "m1"
