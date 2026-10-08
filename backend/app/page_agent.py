@@ -432,7 +432,7 @@ async def unpublish_page(meeting_id: str, *, s3, ddb, bucket: str, table: str, p
 
 # ─── Orchestration ───────────────────────────────────────────────────────────
 
-PAGE_AGENT_MODEL_ID = "global.anthropic.claude-opus-5-5"
+PAGE_AGENT_MODEL_ID = "us.anthropic.claude-opus-5-5"
 
 PUBLISH_TOOL_DEF = {
     "type": "inline_function",

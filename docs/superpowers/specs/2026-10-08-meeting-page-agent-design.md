@@ -63,7 +63,7 @@
                                    │ InvokeHarness (stream)
                                    ▼
                         AgentCore Harness "transmeet_meeting_page"
-                        ├─ model: global.anthropic.claude-opus-5-5
+                        ├─ model: us.anthropic.claude-opus-5-5
                         ├─ skills (S3): meeting-minutes-page / meeting-research / meeting-insights / meeting-diagrams
                         ├─ tool: agentcore_code_interpreter  (HTML 검증, 다이어그램 스크립트 실행)
                         ├─ tool: agentcore_gateway → Web Search 커넥터 (공식 자료 리서치)
@@ -103,7 +103,7 @@
 | 속성 | 값 |
 |---|---|
 | HarnessName | `transmeet_meeting_page` |
-| Model | `BedrockModelConfig { ModelId: global.anthropic.claude-opus-5-5, MaxTokens: 32000 }` |
+| Model | `BedrockModelConfig { ModelId: us.anthropic.claude-opus-5-5, MaxTokens: 32000 }` |
 | SystemPrompt | `agent/harness/system_prompt.md` 내용 (synth 시 파일 읽기) |
 | Tools | `agentcore_code_interpreter` (name `code_interpreter`), `agentcore_gateway` (name `web_search`, 아래 Gateway ARN, `outboundAuth.awsIam`), `inline_function` `publish_page` |
 | Skills | `s3://<skills-bucket>/skills/meeting-minutes-page/`, `.../meeting-research/`, `.../meeting-insights/`, `.../meeting-diagrams/` |
@@ -233,3 +233,8 @@ Opus 5.5 기준 미팅 1건(발언 100~200개)에 입력 150~400K 토큰(반복 
 3. 백엔드: 의존성 업그레이드, `page_agent.py` + 테스트, `ws_handler` 액션
 4. 프런트: 타입·WS 메시지·`MeetingPagePanel`·탭
 5. 배포(infra → skills → 백엔드 이미지 → frontend) 및 통합 확인
+
+## 11. 배포 중 확인된 사실 (2026-10-08)
+
+- `global.anthropic.claude-opus-5-5` 프로필은 하네스 내부 `ConverseStream`에서 `ServiceUnavailableException`을 반복 반환했다(4회 중 3회, maxTokens 8000에서도 재현). 직접 `bedrock-runtime` 호출은 정상. `us.anthropic.claude-opus-5-5`는 하네스에서 안정적으로 동작해 모델 ID를 `us.` 프로필로 확정했다.
+- `InvokeHarness` 응답 스트림은 긴 도구 실행 구간에 수십 초 이상 이벤트가 없을 수 있어 백엔드 agentcore 클라이언트의 읽기 타임아웃을 900초로 두고 재시도를 끈다.

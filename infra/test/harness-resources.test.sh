@@ -8,7 +8,7 @@ check() { node -e "
 const t=require('./$T'); const r=Object.values(t.Resources);
 const found=r.some(x=>x.Type==='$1' && ($2));
 if(!found){console.error('MISSING: $1'); process.exit(1)} console.log('ok  $1')"; }
-check 'AWS::BedrockAgentCore::Harness' "x.Properties.HarnessName==='transmeet_meeting_page' && x.Properties.Model.BedrockModelConfig.ModelId==='global.anthropic.claude-opus-5-5' && x.Properties.Memory.Disabled!==undefined && x.Properties.Tools.length===3 && x.Properties.Skills.length===4 && x.Properties.MaxIterations===80 && x.Properties.TimeoutSeconds===900"
+check 'AWS::BedrockAgentCore::Harness' "x.Properties.HarnessName==='transmeet_meeting_page' && x.Properties.Model.BedrockModelConfig.ModelId==='us.anthropic.claude-opus-5-5' && x.Properties.Memory.Disabled!==undefined && x.Properties.Tools.length===3 && x.Properties.Skills.length===4 && x.Properties.MaxIterations===80 && x.Properties.TimeoutSeconds===900"
 check 'AWS::BedrockAgentCore::Harness' "x.Properties.Tools.some(t=>t.Type==='inline_function' && t.Name==='publish_page' && t.Config.InlineFunction.InputSchema.required.includes('html'))"
 check 'AWS::BedrockAgentCore::Harness' "x.Properties.SystemPrompt[0].Text.includes('publish_page')"
 check 'AWS::BedrockAgentCore::Gateway' "x.Properties.AuthorizerType==='AWS_IAM' && x.Properties.ProtocolType==='MCP'"

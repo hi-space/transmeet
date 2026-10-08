@@ -25,7 +25,7 @@ const REGION = 'us-east-1';
 const MEETINGS_TABLE = 'transmeet-meetings';
 const ROOT_DOMAIN = 'hi-yoo.com';
 const APP_DOMAIN = 'transmeet.hi-yoo.com';
-const PAGE_AGENT_MODEL_ID = 'global.anthropic.claude-opus-5-5';
+const PAGE_AGENT_MODEL_ID = 'us.anthropic.claude-opus-5-5';
 const HARNESS_NAME = 'transmeet_meeting_page';
 const SKILL_NAMES = [
   'meeting-minutes-page',

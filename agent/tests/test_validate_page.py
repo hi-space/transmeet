@@ -17,7 +17,7 @@ def minimal_page(**overrides) -> str:
         "meta",
         '<meta name="transmeet:meeting-id" content="m1">'
         '<meta name="transmeet:generated-at" content="2026-10-08T00:00:00Z">'
-        '<meta name="transmeet:model" content="global.anthropic.claude-opus-5-5">',
+        '<meta name="transmeet:model" content="us.anthropic.claude-opus-5-5">',
     )
     body_extra = overrides.get("body_extra", "")
     lang = overrides.get("lang", "ko")
