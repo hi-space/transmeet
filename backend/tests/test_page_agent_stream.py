@@ -78,6 +78,29 @@ async def test_harness_tools_emit_status_but_no_handoff():
     assert any("코드 실행" in s for s in sink.status)
 
 
+async def test_block_state_resets_between_messages():
+    sink = Sink()
+    events = [
+        {"messageStart": {"role": "assistant"}},
+        {"contentBlockStart": {"contentBlockIndex": 0, "start": {"toolUse": {"toolUseId": "pub-1", "name": PUBLISH_TOOL_NAME, "type": "tool_use"}}}},
+        {"contentBlockDelta": {"contentBlockIndex": 0, "delta": {"toolUse": {"input": "{\"title\":\"t\",\"html\":\"<html></html>\"}"}}}},
+        {"contentBlockStop": {"contentBlockIndex": 0}},
+        {"messageStop": {"stopReason": "tool_result"}},
+        {"messageStart": {"role": "assistant"}},
+        {"contentBlockStart": {"contentBlockIndex": 0, "start": {}}},
+        {"contentBlockDelta": {"contentBlockIndex": 0, "delta": {"text": "검색합니다"}}},
+        {"contentBlockStop": {"contentBlockIndex": 0}},
+        {"contentBlockStart": {"contentBlockIndex": 1, "start": {"toolUse": {"toolUseId": "ws-1", "name": "WebSearch", "type": "mcp_tool_use", "serverName": "web_search"}}}},
+        {"contentBlockDelta": {"contentBlockIndex": 1, "delta": {"toolUse": {"input": "{\"query\": \"x\"}"}}}},
+        {"contentBlockStop": {"contentBlockIndex": 1}},
+        {"messageStop": {"stopReason": "tool_use"}},
+    ]
+    out = await consume_stream(agen(events), on_text=sink.on_text, on_status=sink.on_status)
+    assert out.stop_reason == "tool_use"
+    assert out.handoff is None  # publish_page 핸드오프는 이전 메시지의 것 — 새어 나오면 안 된다
+    assert out.text == "검색합니다"
+
+
 async def test_handoff_only_counts_when_final_stop_is_tool_use():
     sink = Sink()
     events = [

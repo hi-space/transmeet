@@ -181,7 +181,10 @@ async def consume_stream(stream, *, on_text, on_status) -> StreamOutcome:
     pending_inline: Optional[ToolHandoff] = None
 
     async for event in stream:
-        if "contentBlockStart" in event:
+        if "messageStart" in event:
+            blocks = {}
+            pending_inline = None
+        elif "contentBlockStart" in event:
             cbs = event["contentBlockStart"]
             idx = cbs.get("contentBlockIndex", 0)
             tu = cbs.get("start", {}).get("toolUse")
