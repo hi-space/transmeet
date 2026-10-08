@@ -12,7 +12,7 @@ interface Props {
   onStopTts: () => void
   audioLevel?: number // 0–1, real-time mic amplitude
   isTtsPending?: boolean
-  activeTab?: 'voice' | 'notes' | 'summary'
+  activeTab?: 'voice' | 'notes' | 'summary' | 'page'
 }
 
 export default function ControlPanel({

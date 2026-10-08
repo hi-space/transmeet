@@ -1,10 +1,11 @@
 'use client'
 
 interface Props {
-  activeTab: 'voice' | 'notes' | 'summary'
-  onTabChange: (tab: 'voice' | 'notes' | 'summary') => void
+  activeTab: 'voice' | 'notes' | 'summary' | 'page'
+  onTabChange: (tab: 'voice' | 'notes' | 'summary' | 'page') => void
   hasNewVoice?: boolean
   hasNewNotes?: boolean
+  hasNewPage?: boolean
   /** 음성 탭에서만 노출되는 글자 크기 선택기 */
   fontSizeControl?: React.ReactNode
 }
@@ -13,6 +14,7 @@ const TAB_LABELS: Record<string, string> = {
   voice: '음성 입력',
   notes: '내 메모',
   summary: '요약',
+  page: '페이지',
 }
 
 export default function MobileTabBar({
@@ -20,14 +22,22 @@ export default function MobileTabBar({
   onTabChange,
   hasNewVoice,
   hasNewNotes,
+  hasNewPage,
   fontSizeControl,
 }: Props) {
   return (
     <div className="lg:hidden flex items-center flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-      {(['voice', 'notes', 'summary'] as const).map((tab) => {
+      {(['voice', 'notes', 'summary', 'page'] as const).map((tab) => {
         const isActive = activeTab === tab
         const label = TAB_LABELS[tab]
-        const hasBadge = tab === 'voice' ? hasNewVoice : tab === 'notes' ? hasNewNotes : false
+        const hasBadge =
+          tab === 'voice'
+            ? hasNewVoice
+            : tab === 'notes'
+              ? hasNewNotes
+              : tab === 'page'
+                ? hasNewPage
+                : false
         return (
           <button
             key={tab}

@@ -10,6 +10,7 @@ import SettingsPanel from '@/components/SettingsPanel'
 import QuickTranslatePopup from '@/components/QuickTranslatePopup'
 import AuthScreen from '@/components/AuthScreen'
 import MobileTabBar from '@/components/MobileTabBar'
+import MeetingPagePanel, { type PageGenState } from '@/components/MeetingPagePanel'
 import NotesArea from '@/components/NotesArea'
 import VoiceArea, { VoiceFontSizeControl } from '@/components/VoiceArea'
 import EditableTitle from '@/components/EditableTitle'
@@ -173,7 +174,12 @@ export default function Home() {
   const [summaryOpen, setSummaryOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [quickTranslateOpen, setQuickTranslateOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<'voice' | 'notes' | 'summary'>('voice')
+  const [activeTab, setActiveTab] = useState<'voice' | 'notes' | 'summary' | 'page'>('voice')
+  const [rightPanel, setRightPanel] = useState<'summary' | 'page'>('summary')
+  const [pageGen, setPageGen] = useState<PageGenState>({ status: 'idle', log: [] })
+  const [hasNewPage, setHasNewPage] = useState(false)
+  // page_stream 이벤트는 생성을 시작한 미팅에 귀속된다 (생성 중 다른 미팅으로 이동해도 안전)
+  const pageGenMeetingIdRef = useRef<string | null>(null)
   const [hasNewVoice, setHasNewVoice] = useState(false)
   const [hasNewNotes, setHasNewNotes] = useState(false)
   const [notesCollapsed, setNotesCollapsed] = useState(true)
@@ -890,6 +896,37 @@ export default function Home() {
             )
           )
         }
+      } else if (msg.type === 'page_stream') {
+        const targetId = pageGenMeetingIdRef.current
+        if (msg.phase === 'status' || msg.phase === 'delta') {
+          const line = (msg.text ?? '').trim()
+          if (line) {
+            setPageGen((g) => ({
+              ...g,
+              status: 'generating',
+              log: msg.phase === 'status' ? [...g.log, line] : g.log,
+            }))
+          }
+        } else if (msg.phase === 'done') {
+          setPageGen({ status: 'idle', log: [] })
+          if (targetId && msg.page) {
+            setMeetings((prev) =>
+              prev.map((m) => (m.id === targetId ? { ...m, page: msg.page } : m))
+            )
+            if (activeTab !== 'page') setHasNewPage(true)
+          }
+          pageGenMeetingIdRef.current = null
+        } else if (msg.phase === 'error') {
+          setPageGen((g) => ({ ...g, status: 'error', error: msg.error ?? '알 수 없는 오류' }))
+          pageGenMeetingIdRef.current = null
+        } else if (msg.phase === 'unpublished') {
+          if (targetId) {
+            setMeetings((prev) =>
+              prev.map((m) => (m.id === targetId ? { ...m, page: undefined } : m))
+            )
+          }
+          pageGenMeetingIdRef.current = null
+        }
       } else if (msg.type === 'qa_stream') {
         const qaMsgId = msg.messageId
         if (msg.phase === 'delta') {
@@ -954,6 +991,7 @@ export default function Home() {
     },
     [
       activeMeetingId,
+      activeTab,
       settings.silenceTimeout,
       settings.maxSentencesPerBubble,
       settings.ttsAutoPlay,
@@ -977,6 +1015,8 @@ export default function Home() {
     sendTranslate,
     sendTtsRequest,
     sendQaRequest,
+    sendGeneratePage,
+    sendUnpublishPage,
   } = useWebSocket({
     meetingId: activeMeetingId,
     onMessage: handleWsMessage,
@@ -1131,6 +1171,13 @@ export default function Home() {
     connect()
   }, [activeMeetingId]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    // 생성 중인 미팅과 다른 미팅을 보면 패널은 idle 로 보인다 (완료 이벤트는 ref 로 원래 미팅에 반영된다)
+    if (pageGenMeetingIdRef.current && pageGenMeetingIdRef.current !== activeMeetingId) {
+      setPageGen({ status: 'idle', log: [] })
+    }
+  }, [activeMeetingId])
+
   const handleToggleRecording = useCallback(async () => {
     if (isRecording) {
       stopAudio()
@@ -1208,6 +1255,7 @@ export default function Home() {
               : m
           )
         )
+        setRightPanel('summary')
         setSummaryOpen(true)
         isSummarizingRef.current = false
         setIsSummarizing(false)
@@ -1224,6 +1272,7 @@ export default function Home() {
           setMeetings((prev) =>
             prev.map((m) => (m.id === activeMeetingId ? { ...m, summary: '' } : m))
           )
+          setRightPanel('summary')
           setSummaryOpen(true)
           lastSummarizedCountRef.current[activeMeetingId] = msgCount
           // Safety: 60초 후 강제 리셋 (WS done/error 미수신 대비)
@@ -1248,6 +1297,7 @@ export default function Home() {
               : m
           )
         )
+        setRightPanel('summary')
         setSummaryOpen(true)
       } catch {
         // Silent — user can retry via button
@@ -1263,6 +1313,40 @@ export default function Home() {
   useEffect(() => {
     handleSummarizeRef.current = handleSummarize
   })
+
+  // ─── Meeting page (AgentCore Harness) ───────────────────────────────────────
+
+  const handleGeneratePage = useCallback(() => {
+    if (!activeMeetingId || !HAS_API) return
+    const currentMessages =
+      meetingsRef.current.find((m) => m.id === activeMeetingId)?.messages ?? []
+    if (currentMessages.length === 0) return
+    // 녹음 중에는 DynamoDB 에 아직 없는 메시지가 있을 수 있어 인라인으로 함께 보낸다
+    const inline = isRecording
+      ? currentMessages
+          .filter((m) => m.original)
+          .map((m) => ({
+            speaker: m.speaker,
+            original: m.original,
+            translation: m.translation,
+            timestamp: m.timestamp,
+          }))
+      : undefined
+    const sent = sendGeneratePage(activeMeetingId, inline)
+    if (!sent) {
+      setPageGen({ status: 'error', log: [], error: '서버와 연결되어 있지 않습니다.' })
+      return
+    }
+    pageGenMeetingIdRef.current = activeMeetingId
+    setPageGen({ status: 'generating', log: [], startedAt: Date.now() })
+    setRightPanel('page')
+    setSummaryOpen(true)
+  }, [activeMeetingId, isRecording, sendGeneratePage])
+
+  const handleUnpublishPage = useCallback(() => {
+    if (!activeMeetingId) return
+    if (sendUnpublishPage(activeMeetingId)) pageGenMeetingIdRef.current = activeMeetingId
+  }, [activeMeetingId, sendUnpublishPage])
 
   // Auto-summary: every N new messages (disabled when 0)
   useEffect(() => {
@@ -1615,9 +1699,11 @@ export default function Home() {
               setActiveTab(tab)
               if (tab === 'voice') setHasNewVoice(false)
               if (tab === 'notes') setHasNewNotes(false)
+              if (tab === 'page') setHasNewPage(false)
             }}
             hasNewVoice={hasNewVoice}
             hasNewNotes={hasNewNotes}
+            hasNewPage={hasNewPage}
             fontSizeControl={
               <VoiceFontSizeControl
                 fontSize={settings.voiceFontSize}
@@ -1662,10 +1748,16 @@ export default function Home() {
                     </button>
                   )}
                   <button
-                    onClick={() => setSummaryOpen((v) => !v)}
+                    onClick={() => {
+                      if (summaryOpen && rightPanel === 'summary') setSummaryOpen(false)
+                      else {
+                        setRightPanel('summary')
+                        setSummaryOpen(true)
+                      }
+                    }}
                     title="요약 보기"
                     className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors ${
-                      summaryOpen
+                      summaryOpen && rightPanel === 'summary'
                         ? 'text-cyan-600 dark:text-cyan-500 bg-cyan-50 dark:bg-cyan-500/10'
                         : 'text-slate-400 dark:text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                     }`}
@@ -1684,6 +1776,37 @@ export default function Home() {
                       <line x1="16" x2="8" y1="17" y2="17" />
                     </svg>
                     요약
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (summaryOpen && rightPanel === 'page') setSummaryOpen(false)
+                      else {
+                        setRightPanel('page')
+                        setSummaryOpen(true)
+                      }
+                    }}
+                    title="미팅 페이지"
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors ${
+                      summaryOpen && rightPanel === 'page'
+                        ? 'text-cyan-600 dark:text-cyan-500 bg-cyan-50 dark:bg-cyan-500/10'
+                        : 'text-slate-400 dark:text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                    }`}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      className="w-3 h-3"
+                    >
+                      <rect x="3" y="3" width="18" height="18" rx="2" />
+                      <path d="M3 9h18M9 21V9" />
+                    </svg>
+                    페이지
+                    {pageGen.status === 'generating' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
+                    )}
                   </button>
                 </div>
               </div>
@@ -1775,13 +1898,22 @@ export default function Home() {
                 onStopMessage={handleStopAllAudio}
                 onTranslateMessage={handleTranslateMessage}
               />
-            ) : (
+            ) : activeTab === 'summary' ? (
               <SummaryPanel
                 summary={activeMeeting?.summary}
                 messages={activeMeeting?.messages}
                 meetingTitle={activeMeeting?.title}
                 onSummarize={() => handleSummarize(true)}
                 isSummarizing={isSummarizing}
+              />
+            ) : (
+              <MeetingPagePanel
+                page={activeMeeting?.page}
+                gen={pageGen}
+                hasMessages={(activeMeeting?.messages?.length ?? 0) > 0}
+                wsConnected={wsStatus === 'connected'}
+                onGenerate={handleGeneratePage}
+                onUnpublish={handleUnpublishPage}
               />
             )}
           </div>
@@ -1798,14 +1930,26 @@ export default function Home() {
               onMouseDown={handleSummaryResize}
               className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-slate-300 dark:hover:bg-slate-600 active:bg-slate-400 dark:active:bg-slate-500 transition-colors"
             />
-            <SummaryPanel
-              summary={activeMeeting?.summary}
-              messages={activeMeeting?.messages}
-              meetingTitle={activeMeeting?.title}
-              onClose={() => setSummaryOpen(false)}
-              onSummarize={() => handleSummarize(true)}
-              isSummarizing={isSummarizing}
-            />
+            {rightPanel === 'summary' ? (
+              <SummaryPanel
+                summary={activeMeeting?.summary}
+                messages={activeMeeting?.messages}
+                meetingTitle={activeMeeting?.title}
+                onClose={() => setSummaryOpen(false)}
+                onSummarize={() => handleSummarize(true)}
+                isSummarizing={isSummarizing}
+              />
+            ) : (
+              <MeetingPagePanel
+                page={activeMeeting?.page}
+                gen={pageGen}
+                hasMessages={(activeMeeting?.messages?.length ?? 0) > 0}
+                wsConnected={wsStatus === 'connected'}
+                onGenerate={handleGeneratePage}
+                onUnpublish={handleUnpublishPage}
+                onClose={() => setSummaryOpen(false)}
+              />
+            )}
           </div>
         )}
       </div>
