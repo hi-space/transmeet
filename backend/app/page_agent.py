@@ -15,9 +15,13 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from decimal import Decimal
 from html.parser import HTMLParser
-from typing import Any, Dict, List, Optional
+from typing import Any, Awaitable, Callable, Dict, List, Optional
+from uuid import uuid4
 
 from boto3.dynamodb.types import TypeDeserializer, TypeSerializer
+
+from . import aws_clients
+from .config import config
 
 logger = logging.getLogger(__name__)
 
@@ -424,3 +428,172 @@ async def unpublish_page(meeting_id: str, *, s3, ddb, bucket: str, table: str, p
         Key={"meetingId": {"S": meeting_id}},
         UpdateExpression="REMOVE page",
     )
+
+
+# ─── Orchestration ───────────────────────────────────────────────────────────
+
+PAGE_AGENT_MODEL_ID = "global.anthropic.claude-opus-5-5"
+
+PUBLISH_TOOL_DEF = {
+    "type": "inline_function",
+    "name": PUBLISH_TOOL_NAME,
+    "config": {
+        "inlineFunction": {
+            "description": "검증을 통과한 완성 HTML을 공개 URL로 발행한다. 성공 시 url을 돌려주고, 실패 시 error 상태와 사유를 돌려준다.",
+            "inputSchema": {
+                "type": "object",
+                "properties": {
+                    "title": {"type": "string", "description": "페이지 제목(미팅 제목)"},
+                    "html": {"type": "string", "description": "완성된 단일 HTML 문서 전체"},
+                    "share_summary": {"type": "string", "description": "공유 시 함께 보낼 2문장 요약"},
+                },
+                "required": ["title", "html"],
+            },
+        }
+    },
+}
+
+
+@dataclass
+class PageAgentDeps:
+    agentcore_client: Callable[[], Any]
+    s3_client: Callable[[], Any]
+    ddb_client: Callable[[], Any]
+    harness_arn: str
+    bucket: str
+    base_url: str
+    table: str
+    max_bytes: int
+    publish_retries: int
+
+    @classmethod
+    def from_config(cls) -> "PageAgentDeps":
+        return cls(
+            agentcore_client=aws_clients.agentcore_client,
+            s3_client=aws_clients.s3_client,
+            ddb_client=aws_clients.dynamodb_client,
+            harness_arn=config.HARNESS_ARN,
+            bucket=config.PAGES_BUCKET,
+            base_url=config.PAGES_PUBLIC_BASE_URL,
+            table=config.MEETINGS_TABLE,
+            max_bytes=config.PAGE_MAX_BYTES,
+            publish_retries=config.PAGE_AGENT_PUBLISH_RETRIES,
+        )
+
+
+Sender = Callable[[Dict[str, Any]], Awaitable[None]]
+
+
+def _emitter(send: Sender):
+    async def emit(phase: str, **fields: Any) -> None:
+        try:
+            await send({"type": "page_stream", "phase": phase, **fields})
+        except Exception:
+            # 소켓이 끊겨도 생성은 끝까지 진행한다 — 결과는 DynamoDB 에 남는다.
+            logger.debug("[page] send failed (phase=%s)", phase, exc_info=True)
+    return emit
+
+
+async def _load_meeting(deps: PageAgentDeps, meeting_id: str) -> Dict[str, Any]:
+    async with deps.ddb_client() as ddb:
+        res = await ddb.get_item(TableName=deps.table, Key={"meetingId": {"S": meeting_id}})
+    return ddb_item_to_dict(res.get("Item") or {})
+
+
+async def run_page_generation(
+    send: Sender,
+    meeting_id: str,
+    *,
+    inline_messages: Optional[List[Dict[str, Any]]] = None,
+    deps: Optional[PageAgentDeps] = None,
+) -> Optional[PublishedPage]:
+    deps = deps or PageAgentDeps.from_config()
+    emit = _emitter(send)
+    try:
+        await emit("status", text="미팅 기록을 불러오는 중")
+        item = await _load_meeting(deps, meeting_id)
+        payload = build_meeting_payload(item, inline_messages=inline_messages, model_id=PAGE_AGENT_MODEL_ID)
+        if not payload["messages"]:
+            await emit("error", error="기록이 없습니다")
+            return None
+        previous_page_id = (item.get("page") or {}).get("pageId")
+
+        session_id = str(uuid4())
+        messages: List[Dict[str, Any]] = [{"role": "user", "content": [{"text": build_user_message(payload)}]}]
+        publish_attempts = 0
+        published: Optional[PublishedPage] = None
+
+        async def on_text(t: str) -> None:
+            await emit("delta", text=t)
+
+        async def on_status(s: str) -> None:
+            await emit("status", text=s)
+
+        await emit("status", text="에이전트를 시작합니다")
+        async with deps.agentcore_client() as ac:
+            while True:
+                resp = await ac.invoke_harness(
+                    harnessArn=deps.harness_arn,
+                    runtimeSessionId=session_id,
+                    tools=[PUBLISH_TOOL_DEF],
+                    messages=messages,
+                )
+                outcome = await consume_stream(resp["stream"], on_text=on_text, on_status=on_status)
+                if outcome.usage:
+                    logger.info("[page] meeting=%s usage=%s", meeting_id, outcome.usage)
+
+                if outcome.handoff is None:
+                    if outcome.stop_reason == "end_turn":
+                        if published:
+                            await emit("done", page=published.to_item(), text=outcome.text)
+                            return published
+                        await emit("error", error="에이전트가 페이지를 발행하지 않았습니다")
+                        return None
+                    if outcome.stop_reason == "tool_use":
+                        await emit("error", error="에이전트가 알 수 없는 도구를 기다리고 있습니다")
+                        return None
+                    await emit("error", error=f"에이전트가 중단되었습니다 ({outcome.stop_reason})")
+                    return None
+
+                # publish_page handoff
+                if published is not None:
+                    # 이미 발행했는데 다시 호출: 새 페이지로 교체한다
+                    previous_page_id = published.page_id
+                args = outcome.handoff.arguments()
+                try:
+                    async with deps.s3_client() as s3, deps.ddb_client() as ddb:
+                        published = await publish_page(
+                            meeting_id, args, s3=s3, ddb=ddb, bucket=deps.bucket, base_url=deps.base_url,
+                            table=deps.table, previous_page_id=previous_page_id, max_bytes=deps.max_bytes,
+                        )
+                    result = {"status": "success", "content": [{"text": json.dumps({"url": published.url})}]}
+                    await emit("status", text="페이지가 발행되었습니다")
+                except PublishValidationError as e:
+                    publish_attempts += 1
+                    if publish_attempts > deps.publish_retries:
+                        await emit("error", error="페이지 발행에 실패했습니다: " + "; ".join(e.errors[:3]))
+                        return None
+                    await emit("status", text="검증 실패, 에이전트가 수정합니다")
+                    result = {"status": "error", "content": [{"text": "validation failed: " + "; ".join(e.errors)}]}
+                messages = [{"role": "user", "content": [{"toolResult": {"toolUseId": outcome.handoff.tool_use_id, **result}}]}]
+    except Exception:
+        logger.exception("[page] generation failed meeting=%s", meeting_id)
+        await emit("error", error="페이지 생성 중 오류가 발생했습니다")
+        return None
+
+
+async def run_unpublish(send: Sender, meeting_id: str, *, deps: Optional[PageAgentDeps] = None) -> None:
+    deps = deps or PageAgentDeps.from_config()
+    emit = _emitter(send)
+    try:
+        item = await _load_meeting(deps, meeting_id)
+        page_id = (item.get("page") or {}).get("pageId")
+        if not page_id:
+            await emit("unpublished")
+            return
+        async with deps.s3_client() as s3, deps.ddb_client() as ddb:
+            await unpublish_page(meeting_id, s3=s3, ddb=ddb, bucket=deps.bucket, table=deps.table, page_id=page_id)
+        await emit("unpublished")
+    except Exception:
+        logger.exception("[page] unpublish failed meeting=%s", meeting_id)
+        await emit("error", error="공유 해제에 실패했습니다")

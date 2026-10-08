@@ -69,6 +69,7 @@ from .aws_clients import (
     sagemaker_client,
 )
 from .config import config
+from .page_agent import run_page_generation, run_unpublish
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -137,6 +138,8 @@ class ConnectionState:
     seg_last_speaker: Optional[str] = None  # 버퍼에 있는 마지막 화자 (화자 변경 감지용)
     # Translation timing: "sentence" | "realtime" | "manual"
     translation_timing: str = "sentence"
+    # 미팅 페이지 생성 태스크 — 연결당 동시에 하나만
+    page_task: Optional[asyncio.Task] = None
 
 
 # In-memory connection registry (single-process; scales with one Fargate task)
@@ -1258,6 +1261,30 @@ async def ws_endpoint(
                 inline_messages = data.get("messages")
                 if mid:
                     asyncio.create_task(_stream_summary(ws, mid, state.model_id, inline_messages=inline_messages))
+
+            elif action == "generate_page":
+                mid = data.get("meetingId") or state.meeting_id
+                if not mid:
+                    await _safe_send(ws, {"type": "page_stream", "phase": "error", "error": "미팅이 선택되지 않았습니다"})
+                elif state.page_task and not state.page_task.done():
+                    await _safe_send(ws, {"type": "page_stream", "phase": "error", "error": "이미 생성 중입니다"})
+                else:
+                    inline_messages = data.get("messages")
+
+                    async def _send(payload: dict, _ws=ws) -> None:
+                        await _safe_send(_ws, payload)
+
+                    state.page_task = asyncio.create_task(
+                        run_page_generation(_send, mid, inline_messages=inline_messages)
+                    )
+
+            elif action == "unpublish_page":
+                mid = data.get("meetingId") or state.meeting_id
+                if mid:
+                    async def _send_unpub(payload: dict, _ws=ws) -> None:
+                        await _safe_send(_ws, payload)
+
+                    asyncio.create_task(run_unpublish(_send_unpub, mid))
 
             elif action == "ttsRequest":
                 msg_id = data.get("messageId") or generate_message_id()
