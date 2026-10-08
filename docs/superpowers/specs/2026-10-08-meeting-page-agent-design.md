@@ -9,7 +9,7 @@
 ### 목표
 
 1. 기존 마크다운 요약(`_stream_summary`, Haiku)은 그대로 두고, **별도 에이전트**가 미팅록 **단일 HTML 페이지**를 만든다.
-2. 에이전트는 **Amazon Bedrock AgentCore Harness**로 구성한다. 구성 요소는 **스킬 3개 + Claude Opus 5.5 + Code Interpreter 내장 도구 + Web Search 도구(AgentCore Gateway 커넥터)**.
+2. 에이전트는 **Amazon Bedrock AgentCore Harness**로 구성한다. 구성 요소는 **스킬 4개 + Claude Opus 5.5 + Code Interpreter 내장 도구 + Web Search 도구(AgentCore Gateway 커넥터)**.
 3. 페이지 포맷·내용의 **통일성은 스킬이 보장**한다. 스킬은 `skill-creator`로 만들고 샘플 트랜스크립트로 검증한 뒤 S3에 올린다.
 4. 생성된 페이지는 **공개 URL(추측 불가 ID)** 로 발행되고, 앱의 **Share 버튼**으로 링크를 복사·공유한다.
 5. 앱에 **미팅 페이지 영역**(생성 진행 상황, 미리보기, 공유, 재생성, 공유 해제)을 추가한다.
@@ -29,7 +29,7 @@
 | 공유 방식 | 공개 URL, 추측 불가 ID. 페이지별 공유 해제(삭제) 가능 |
 | IaC | 기존 CDK 스택에 `CfnResource`로 Harness 선언 (CDK 2.243에 L1 없음) |
 | 페이지 구성 | 전체 트랜스크립트와 참여 통계는 **제외**. 미팅 흐름을 따라 논의 내용을 **빠짐없이** 기록. 관련 **외부 공식 링크 리서치·더블 체크**와 **인사이트 보고서** 추가 |
-| 스킬 수 | 하나가 아닌 **여러 스킬 조합** |
+| 스킬 수 | 하나가 아닌 **여러 스킬 조합**. 논의 내용을 설명하는 **다이어그램 스킬** 포함 |
 
 ## 3. 미팅 페이지 내용 (스킬이 강제하는 구조)
 
@@ -41,7 +41,7 @@
 | 2 | `tldr` | 한눈에 보기 3~5줄 | 결정·결과 중심. 형용사 최소화 |
 | 3 | `decisions` | 결정 사항 목록 | 각 항목에 근거 발언 시각(`[HH:MM]`) 표기 |
 | 4 | `action-items` | 담당 / 할 일 / 기한 / 상태 표 | 담당·기한 불명은 "미정". 추측 금지 |
-| 5 | `discussion` | **미팅 흐름을 따르는 논의 기록**. 시간순 주제 블록. 각 블록에 시각 범위, 논의 요지, 주요 발언 인용(원문+번역), 제기된 질문과 답 | 트랜스크립트의 모든 주제가 최소 한 블록에 매핑되어야 함. 사소한 잡담만 생략 가능. 블록 상단에 인라인 SVG 타임라인 1개(주제별 구간) |
+| 5 | `discussion` | **미팅 흐름을 따르는 논의 기록**. 시간순 주제 블록. 각 블록에 시각 범위, 논의 요지, 주요 발언 인용(원문+번역), 제기된 질문과 답 | 트랜스크립트의 모든 주제가 최소 한 블록에 매핑되어야 함. 사소한 잡담만 생략 가능. 섹션 상단에 주제 타임라인 다이어그램 1개, 블록 안에는 `meeting-diagrams` 스킬 기준에 맞는 논의(흐름·구조·비교·관계)에만 다이어그램 삽입 |
 | 6 | `open-questions` | 미결 사항, 후속 확인 필요 항목 | 누가 확인하는지 적혀 있으면 표기 |
 | 7 | `references` | **관련 공식 자료**. 미팅에서 언급된 제품·서비스·규격·수치·일정에 대해 Web Search로 찾은 공식 출처(벤더 문서, 표준 기구, 공식 블로그·발표) | 항목당 제목, URL, 1줄 요약, 미팅 발언과의 관계. **더블 체크 결과** 표시: `확인됨` / `상이함(미팅 내용 vs 출처)` / `확인 불가` |
 | 8 | `insights` | **인사이트 보고서**. 시사점, 리스크, 기회, 권장 후속 조치, 다음 미팅 제안 안건 | 사실(트랜스크립트·출처)과 추론을 시각적으로 구분(추론 문장에 "추정" 배지). 각 인사이트에 근거 섹션 앵커 링크 |
@@ -64,8 +64,8 @@
                                    ▼
                         AgentCore Harness "transmeet_meeting_page"
                         ├─ model: global.anthropic.claude-opus-5-5
-                        ├─ skills (S3): meeting-minutes-page / meeting-research / meeting-insights
-                        ├─ tool: agentcore_code_interpreter  (HTML 검증, SVG 타임라인 계산)
+                        ├─ skills (S3): meeting-minutes-page / meeting-research / meeting-insights / meeting-diagrams
+                        ├─ tool: agentcore_code_interpreter  (HTML 검증, 다이어그램 스크립트 실행)
                         ├─ tool: agentcore_gateway → Web Search 커넥터 (공식 자료 리서치)
                         └─ tool: inline_function publish_page ─┐ (stopReason=tool_use로 백엔드에 핸드오프)
                                                               ▼
@@ -91,9 +91,10 @@
 
 | 스킬 | 역할 | 번들 리소스 |
 |---|---|---|
-| `meeting-minutes-page` | 페이지 구조·스타일·작성 규칙(3장). 작업 순서(입력 해석 → 섹션 초안 → 리서치·인사이트 스킬 호출 → 조립 → 검증 → publish_page) | `assets/template.html`(디자인 토큰·레이아웃 골격), `references/section-rules.md`, `scripts/validate_page.py`(필수 섹션·외부 리소스·JS·메타·크기 검사, 종료 코드로 결과) |
+| `meeting-minutes-page` | 페이지 구조·스타일·작성 규칙(3장). 작업 순서(입력 해석 → 섹션 초안 → 리서치·인사이트·다이어그램 스킬 호출 → 조립 → 검증 → publish_page) | `assets/template.html`(디자인 토큰·레이아웃 골격), `references/section-rules.md`, `scripts/validate_page.py`(필수 섹션·외부 리소스·JS·메타·크기·SVG 접근성 텍스트 검사, 종료 코드로 결과) |
 | `meeting-research` | 리서치 대상 추출(제품·서비스·규격·수치·일정·인물 직함), Web Search 쿼리 작성, 공식 출처 우선순위(벤더 docs > 표준 기구 > 공식 블로그 > 보도자료 > 기타), 더블 체크 판정 기준, `references` 섹션 출력 포맷 | `references/source-priority.md`, `references/output-format.md` |
 | `meeting-insights` | 인사이트 보고서 작성법: 사실/추론 구분, 리스크·기회·후속 조치 프레임, 근거 링크 규칙, 과장 금지 | `references/insight-frames.md`, `references/output-format.md` |
+| `meeting-diagrams` | 논의 내용을 설명하는 **인라인 SVG 다이어그램**. 언제 그릴지 판단 기준(순서·분기가 있는 흐름, 구성요소 관계, 선택지 비교, 시간 구간)과 언제 그리지 않을지(단순 나열, 2개 이하 항목). 종류별 레이아웃 규칙: 타임라인, 흐름도(결정 분기), 관계도(구성요소·시스템), 비교표형 차트. 페이지 디자인 토큰과 동일한 색·폰트, 다크모드 대응(`currentColor`·CSS 변수), `<title>`/`<desc>` 접근성 텍스트, 페이지당 최대 6개, 각 다이어그램 아래 1문장 캡션 | `references/diagram-types.md`, `scripts/timeline_svg.py`(JSON 구간 → 타임라인 SVG), `scripts/flow_svg.py`(노드·엣지 JSON → 자동 배치 흐름도 SVG), `assets/diagram-tokens.css` |
 
 제작 절차는 `skill-creator`를 따른다. 샘플 트랜스크립트 3개(짧은 1:1, 다자 의사결정 회의, 기술 리뷰)를 `agent/skills/_evals/`에 두고, 스킬 유/무 비교 실행 후 `validate_page.py`와 체크리스트(섹션 누락, 추측된 담당자, 출처 없는 수치, 외부 리소스)로 평가한다. 통과 후 `improve_description.py`로 트리거 문구를 다듬는다.
 
@@ -105,7 +106,7 @@
 | Model | `BedrockModelConfig { ModelId: global.anthropic.claude-opus-5-5, MaxTokens: 32000 }` |
 | SystemPrompt | `agent/harness/system_prompt.md` 내용 (synth 시 파일 읽기) |
 | Tools | `agentcore_code_interpreter` (name `code_interpreter`), `agentcore_gateway` (name `web_search`, 아래 Gateway ARN, `outboundAuth.awsIam`), `inline_function` `publish_page` |
-| Skills | `s3://<skills-bucket>/skills/meeting-minutes-page/`, `.../meeting-research/`, `.../meeting-insights/` |
+| Skills | `s3://<skills-bucket>/skills/meeting-minutes-page/`, `.../meeting-research/`, `.../meeting-insights/`, `.../meeting-diagrams/` |
 | Memory | `Disabled: {}` |
 | MaxIterations | 80 |
 | TimeoutSeconds | 900 |
@@ -125,7 +126,7 @@
 }
 ```
 
-시스템 프롬프트 요지: 역할(미팅록 페이지 제작자), 입력 형식, 반드시 세 스킬을 읽고 따를 것, 작업 순서, 한국어 본문·원문 병기, JS·외부 리소스 금지, `validate_page.py` 통과 후에만 `publish_page`를 **정확히 한 번** 호출, 호출 결과 URL을 받은 뒤 두 문장 이내 한국어 마무리. 진행 중 사용자에게 보이는 짧은 상태 문장을 단계마다 한 줄씩 출력(UI 로그용).
+시스템 프롬프트 요지: 역할(미팅록 페이지 제작자), 입력 형식, 반드시 네 스킬을 읽고 따를 것, 작업 순서, 한국어 본문·원문 병기, JS·외부 리소스 금지, `validate_page.py` 통과 후에만 `publish_page`를 **정확히 한 번** 호출, 호출 결과 URL을 받은 뒤 두 문장 이내 한국어 마무리. 진행 중 사용자에게 보이는 짧은 상태 문장을 단계마다 한 줄씩 출력(UI 로그용).
 
 ### 5.3 인프라 추가 (`infra/lib/transmeet-stack.ts`)
 
@@ -152,7 +153,7 @@
 **`page_agent.py`** (신규, `ws_handler.py`와 분리):
 
 - `build_meeting_payload(meeting_item) -> dict`: DynamoDB 아이템에서 제목, 시작/종료, 화자 목록, 메시지(`timestamp`, `speaker`, `originalText`, `translatedText`, `detectedLanguage`)를 추출. 10초 이내 동일 화자 연속 발언 병합(프런트 `mergeLoadedMessages`와 동일 규칙).
-- `build_user_message(payload) -> str`: 메타데이터 + JSON 트랜스크립트 + "세 스킬을 따르고 마지막에 publish_page 호출" 지시.
+- `build_user_message(payload) -> str`: 메타데이터 + JSON 트랜스크립트 + "네 스킬을 따르고 마지막에 publish_page 호출" 지시.
 - `run_page_generation(ws, meeting_id, *, inline_messages=None)`: 
   1. `page_stream status "미팅 기록 불러오는 중"` 전송, 메시지 로드(없으면 `error`).
   2. `runtimeSessionId = str(uuid4())` (생성마다 새 세션).
@@ -227,7 +228,7 @@ Opus 5.5 기준 미팅 1건(발언 100~200개)에 입력 150~400K 토큰(반복 
 
 ## 10. 구현 순서 (요약)
 
-1. 스킬 3개 제작 + 로컬 평가 (skill-creator)
+1. 스킬 4개 제작 + 로컬 평가 (skill-creator)
 2. 인프라: 버킷·Gateway·역할·Harness·behavior·권한·deploy.sh
 3. 백엔드: 의존성 업그레이드, `page_agent.py` + 테스트, `ws_handler` 액션
 4. 프런트: 타입·WS 메시지·`MeetingPagePanel`·탭
