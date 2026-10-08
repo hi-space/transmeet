@@ -26,3 +26,9 @@ def test_clients_exist():
     from app import aws_clients
     assert callable(aws_clients.agentcore_client)
     assert callable(aws_clients.s3_client)
+
+
+def test_installed_botocore_supports_invoke_harness():
+    import boto3
+    ops = boto3.client("bedrock-agentcore", region_name="us-east-1").meta.service_model.operation_names
+    assert "InvokeHarness" in ops

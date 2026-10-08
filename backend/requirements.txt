@@ -1,5 +1,6 @@
 fastapi==0.115.6
 uvicorn[standard]==0.32.1
-aioboto3==15.5.0
+aiobotocore==3.9.2
+boto3==1.43.106
 amazon-transcribe==0.6.4
 pydantic-settings==2.7.0

@@ -5,47 +5,47 @@ import random
 import string
 from contextlib import asynccontextmanager
 
-import aioboto3
+import aiobotocore.session
 
 from .config import config
 
-_session = aioboto3.Session()
+_session = aiobotocore.session.get_session()
 
 
 @asynccontextmanager
 async def sagemaker_client():
-    async with _session.client("sagemaker-runtime", region_name=config.REGION) as client:
+    async with _session.create_client("sagemaker-runtime", region_name=config.REGION) as client:
         yield client
 
 
 @asynccontextmanager
 async def bedrock_client():
-    async with _session.client("bedrock-runtime", region_name=config.REGION) as client:
+    async with _session.create_client("bedrock-runtime", region_name=config.REGION) as client:
         yield client
 
 
 
 @asynccontextmanager
 async def polly_client():
-    async with _session.client("polly", region_name=config.REGION) as client:
+    async with _session.create_client("polly", region_name=config.REGION) as client:
         yield client
 
 
 @asynccontextmanager
 async def agentcore_client():
-    async with _session.client("bedrock-agentcore", region_name=config.REGION) as client:
+    async with _session.create_client("bedrock-agentcore", region_name=config.REGION) as client:
         yield client
 
 
 @asynccontextmanager
 async def s3_client():
-    async with _session.client("s3", region_name=config.REGION) as client:
+    async with _session.create_client("s3", region_name=config.REGION) as client:
         yield client
 
 
 @asynccontextmanager
 async def dynamodb_client():
-    async with _session.client("dynamodb", region_name=config.REGION) as client:
+    async with _session.create_client("dynamodb", region_name=config.REGION) as client:
         yield client
 
 
