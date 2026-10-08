@@ -113,6 +113,34 @@ public/
   icons/                        # App icons
 ```
 
+## 미팅 페이지 에이전트 (AgentCore Harness)
+
+미팅 기록으로 공유용 HTML 미팅록 페이지를 만드는 에이전트입니다. 설계: [`docs/superpowers/specs/2026-10-08-meeting-page-agent-design.md`](docs/superpowers/specs/2026-10-08-meeting-page-agent-design.md)
+
+- **구성**: Amazon Bedrock AgentCore Harness · Claude Opus 5.5 · 스킬 4개(`agent/skills/`) · Code Interpreter · Web Search(AgentCore Gateway 커넥터)
+- **발행**: 에이전트가 `publish_page`를 호출하면 백엔드가 검증 후 S3에 올리고 `https://transmeet.hi-yoo.com/p/<meetingId>/<pageId>.html`로 공개
+- **UI**: 우측 패널 `미팅 페이지` 탭 → 생성 · 미리보기 · 공유 · 재생성 · 공유 해제
+
+```
+agent/
+  skills/              meeting-minutes-page / meeting-research / meeting-insights / meeting-diagrams
+  harness/             system_prompt.md (CDK가 하네스 정의에 포함)
+  samples/, evals/     스킬 평가용 샘플과 프롬프트
+  scripts/invoke_local.py  로컬에서 하네스 직접 호출
+```
+
+### 배포 순서
+
+```bash
+./deploy.sh infra      # 하네스·Gateway·버킷 생성
+./deploy.sh skills     # agent/skills → S3 (스킬만 바꿀 때는 이것만)
+# 백엔드 이미지 (deploy.sh 범위 밖)
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <WsBackendEcrUri 호스트>
+docker build -t <WsBackendEcrUri>:latest backend && docker push <WsBackendEcrUri>:latest
+aws ecs update-service --cluster transmeet-ws-cluster --service <서비스명> --force-new-deployment --region us-east-1
+./deploy.sh frontend
+```
+
 ## Architecture
 
 > draw.io 상세 다이어그램: [`docs/transmeet-architecture.drawio`](docs/transmeet-architecture.drawio)
