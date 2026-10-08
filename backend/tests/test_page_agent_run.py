@@ -1,7 +1,23 @@
+import asyncio
 import json
 from contextlib import asynccontextmanager
 
-from app.page_agent import PUBLISH_TOOL_NAME, PageAgentDeps, run_page_generation, run_unpublish
+import pytest
+from botocore.exceptions import ClientError
+
+from app import page_agent
+from app.page_agent import (
+    MAX_INLINE_CHARS,
+    MAX_INLINE_MESSAGES,
+    PUBLISH_TOOL_NAME,
+    PageAgentDeps,
+    PageRequestError,
+    check_inline_messages,
+    check_meeting_id,
+    run_page_generation,
+    run_unpublish,
+    start_page_generation,
+)
 
 SECTIONS = ["header", "tldr", "decisions", "action-items", "discussion", "open-questions", "references", "insights", "glossary", "footer"]
 GOOD = ('<!doctype html><html lang="ko"><head><meta name="transmeet:meeting-id" content="m1">'
@@ -38,7 +54,10 @@ class FakeAgentCore:
 
     async def invoke_harness(self, **kw):
         self.calls.append(kw)
-        return {"stream": agen(self.responses.pop(0))}
+        nxt = self.responses.pop(0)
+        if isinstance(nxt, Exception):
+            raise nxt
+        return {"stream": agen(nxt)}
 
 
 class FakeS3:
@@ -54,13 +73,19 @@ class FakeS3:
 
 class FakeDDB:
     def __init__(self, item):
-        self.item, self.updates = item, []
+        self.item, self.updates = (dict(item) if item else None), []
 
     async def get_item(self, **kw):
         return {"Item": self.item} if self.item else {}
 
     async def update_item(self, **kw):
         self.updates.append(kw)
+        if "attribute_exists" in kw.get("ConditionExpression", "") and not self.item:
+            raise ClientError({"Error": {"Code": "ConditionalCheckFailedException", "Message": "x"}}, "UpdateItem")
+        old = dict(self.item or {})
+        if self.item is not None and ":p" in kw.get("ExpressionAttributeValues", {}):
+            self.item["page"] = kw["ExpressionAttributeValues"][":p"]
+        return {"Attributes": old} if kw.get("ReturnValues") == "ALL_OLD" else {}
 
 
 def deps_for(agentcore, s3, ddb):
@@ -163,3 +188,116 @@ async def test_run_unpublish():
     s3, ddb, send = FakeS3(), FakeDDB(item), Collector()
     await run_unpublish(send, "m1", deps=deps_for(FakeAgentCore([]), s3, ddb))
     assert s3.deleted == ["p/m1/old.html"] and send.events[-1]["phase"] == "unpublished"
+
+
+
+# ─── I1: 발행 이후 실패는 done 으로 보고 ──
+
+async def test_followup_invoke_failure_after_publish_still_done():
+    ac = FakeAgentCore([handoff_events("tu-1", {"title": "t", "html": GOOD}), RuntimeError("stream dropped")])
+    s3, ddb, send = FakeS3(), FakeDDB(ITEM), Collector()
+    page = await run_page_generation(send, "m1", deps=deps_for(ac, s3, ddb))
+    assert page is not None
+    assert send.events[-1]["phase"] == "done" and send.events[-1]["page"]["url"] == page.url
+    assert not any(e["phase"] == "error" for e in send.events)
+
+
+async def test_followup_stream_exception_event_after_publish_still_done():
+    ac = FakeAgentCore([handoff_events("tu-1", {"title": "t", "html": GOOD}),
+                        [{"serviceUnavailableException": {"message": "busy"}}]])
+    send = Collector()
+    page = await run_page_generation(send, "m1", deps=deps_for(ac, FakeS3(), FakeDDB(ITEM)))
+    assert page is not None and send.events[-1]["phase"] == "done"
+
+
+async def test_followup_timeout_after_publish_still_done():
+    ac = FakeAgentCore([handoff_events("tu-1", {"title": "t", "html": GOOD}),
+                        [{"messageStop": {"stopReason": "timeout_exceeded"}}]])
+    send = Collector()
+    page = await run_page_generation(send, "m1", deps=deps_for(ac, FakeS3(), FakeDDB(ITEM)))
+    assert page is not None and send.events[-1]["phase"] == "done"
+
+
+async def test_republish_validation_exhausted_after_publish_still_done():
+    bad = {"title": "t", "html": "<html></html>"}
+    ac = FakeAgentCore([handoff_events("a", {"title": "t", "html": GOOD}), handoff_events("b", bad),
+                        handoff_events("c", bad), handoff_events("d", bad)])
+    send = Collector()
+    page = await run_page_generation(send, "m1", deps=deps_for(ac, FakeS3(), FakeDDB(ITEM)))
+    assert page is not None and send.events[-1]["phase"] == "done"
+
+
+async def test_page_stream_events_carry_meeting_id():
+    ac = FakeAgentCore([handoff_events("tu-1", {"title": "t", "html": GOOD}), final_events()])
+    send = Collector()
+    await run_page_generation(send, "m1", deps=deps_for(ac, FakeS3(), FakeDDB(ITEM)))
+    assert send.events and all(e["meetingId"] == "m1" for e in send.events)
+
+
+# ─── I3: 없는 미팅·요청 검증 ──
+
+async def test_missing_meeting_errors_before_invoking_harness():
+    ac = FakeAgentCore([])
+    send = Collector()
+    assert await run_page_generation(send, "nope", deps=deps_for(ac, FakeS3(), FakeDDB(None))) is None
+    assert send.events[-1] == {"type": "page_stream", "meetingId": "nope", "phase": "error", "error": "미팅을 찾을 수 없습니다"}
+    assert ac.calls == []
+
+
+def test_meeting_id_must_match_pattern():
+    check_meeting_id("m_1-AB")
+    check_meeting_id("a" * 64)
+    for bad in ["", "a" * 65, "../x", "m 1", "m1\n", None, 5]:
+        with pytest.raises(PageRequestError):
+            check_meeting_id(bad)
+
+
+def test_inline_message_caps():
+    check_inline_messages(None)
+    check_inline_messages([{"original": "x" * 100}] * MAX_INLINE_MESSAGES)
+    with pytest.raises(PageRequestError, match="너무 많"):
+        check_inline_messages([{"original": "x"}] * (MAX_INLINE_MESSAGES + 1))
+    with pytest.raises(PageRequestError, match="너무 깁"):
+        check_inline_messages([{"original": "x" * (MAX_INLINE_CHARS // 2), "translation": "y" * (MAX_INLINE_CHARS // 2 + 1)}])
+    with pytest.raises(PageRequestError):
+        check_inline_messages("not a list")
+    with pytest.raises(PageRequestError):
+        check_inline_messages(["str"])
+
+
+# ─── I2: 같은 미팅 중복 생성 차단 ──
+
+async def test_second_generate_for_same_meeting_is_rejected(monkeypatch):
+    release = asyncio.Event()
+    started = []
+
+    async def fake_run(send, meeting_id, *, inline_messages=None, deps=None):
+        started.append(meeting_id)
+        await release.wait()
+
+    monkeypatch.setattr(page_agent, "run_page_generation", fake_run)
+    first = start_page_generation(Collector(), "m1")
+    await asyncio.sleep(0)
+    with pytest.raises(PageRequestError, match="이미 생성 중"):
+        start_page_generation(Collector(), "m1")  # 다른 연결이어도 같은 미팅이면 거절
+    other = start_page_generation(Collector(), "m2")
+    release.set()
+    await asyncio.gather(first, other)
+    await asyncio.sleep(0)
+    assert started == ["m1", "m2"] and "m1" not in page_agent._ACTIVE_PAGE_TASKS
+    again = start_page_generation(Collector(), "m1")  # 끝난 뒤에는 다시 가능
+    await again
+
+
+async def test_start_page_generation_validates_request():
+    with pytest.raises(PageRequestError):
+        start_page_generation(Collector(), "../etc")
+    with pytest.raises(PageRequestError):
+        start_page_generation(Collector(), "m1", inline_messages=[{"original": "x"}] * (MAX_INLINE_MESSAGES + 1))
+
+
+async def test_unpublish_events_are_tagged():
+    item = {**ITEM, "page": {"M": {"pageId": {"S": "old"}}}}
+    send = Collector()
+    await run_unpublish(send, "m1", deps=deps_for(FakeAgentCore([]), FakeS3(), FakeDDB(item)))
+    assert send.events[-1]["op"] == "unpublish" and send.events[-1]["meetingId"] == "m1"

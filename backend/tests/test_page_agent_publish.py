@@ -1,4 +1,5 @@
 import pytest
+from botocore.exceptions import ClientError
 
 from app.page_agent import (
     PublishValidationError,
@@ -34,12 +35,24 @@ class FakeS3:
 
 
 class FakeDDB:
-    def __init__(self):
-        self.updates = []
+    """meetingId=m1 항목 하나만 있는 테이블. ALL_OLD 와 attribute_exists 조건을 흉내 낸다."""
+
+    def __init__(self, page_id=None, exists=True, fail=None):
+        self.updates, self.exists, self.fail = [], exists, fail
+        self.item = {"meetingId": {"S": "m1"}}
+        if page_id:
+            self.item["page"] = {"M": {"pageId": {"S": page_id}}}
 
     async def update_item(self, **kw):
         self.updates.append(kw)
-        return {}
+        if self.fail:
+            raise self.fail
+        if "attribute_exists(meetingId)" in kw.get("ConditionExpression", "") and not self.exists:
+            raise ClientError({"Error": {"Code": "ConditionalCheckFailedException", "Message": "x"}}, "UpdateItem")
+        old = dict(self.item)
+        if ":p" in kw.get("ExpressionAttributeValues", {}):
+            self.item["page"] = kw["ExpressionAttributeValues"][":p"]
+        return {"Attributes": old} if kw.get("ReturnValues") == "ALL_OLD" else {}
 
 
 ARGS = {"title": "배포 파이프라인", "html": good_html(), "share_summary": "파이프라인은 금요일까지. 알림은 다음 주."}
@@ -81,7 +94,7 @@ async def test_publish_twice_replaces_previous_object():
     s3, ddb = FakeS3(), FakeDDB()
     first = await publish_page("m1", ARGS, s3=s3, ddb=ddb, bucket="pages", base_url="https://x/p", table="t", max_bytes=1_500_000)
     second = await publish_page("m1", ARGS, s3=s3, ddb=ddb, bucket="pages", base_url="https://x/p", table="t",
-                                previous_page_id=first.page_id, max_bytes=1_500_000)
+                                max_bytes=1_500_000)
     assert first.page_id != second.page_id
     assert page_key("m1", first.page_id) in s3.deleted
     assert list(s3.objects) == [page_key("m1", second.page_id)]
@@ -120,6 +133,31 @@ async def test_unpublish_keeps_field_when_delete_fails():
     with pytest.raises(RuntimeError):
         await unpublish_page("m1", s3=FailingS3(), ddb=ddb, bucket="b", table="t", page_id="abc")
     assert ddb.updates == []
+
+
+async def test_publish_deletes_page_from_all_old_not_stale_value():
+    # 몇 분 전에 읽은 값이 아니라 갱신 직전 DynamoDB 에 있던 pageId 를 지운다
+    s3, ddb = FakeS3(), FakeDDB(page_id="current")
+    page = await publish_page("m1", ARGS, s3=s3, ddb=ddb, bucket="b", base_url="https://x/p", table="t", max_bytes=1_500_000)
+    upd = ddb.updates[0]
+    assert upd["ReturnValues"] == "ALL_OLD" and upd["ConditionExpression"] == "attribute_exists(meetingId)"
+    assert s3.deleted == [page_key("m1", "current")]
+    assert list(s3.objects) == [page_key("m1", page.page_id)]
+
+
+async def test_publish_for_missing_meeting_rolls_back_upload():
+    s3, ddb = FakeS3(), FakeDDB(exists=False)
+    with pytest.raises(PublishValidationError) as ei:
+        await publish_page("ghost", ARGS, s3=s3, ddb=ddb, bucket="b", base_url="https://x/p", table="t", max_bytes=1_500_000)
+    assert ei.value.errors == ["meeting not found"]
+    assert not s3.objects and len(s3.deleted) == 1 and s3.deleted[0].startswith("p/ghost/")
+
+
+async def test_publish_ddb_failure_rolls_back_upload_and_reraises():
+    s3, ddb = FakeS3(), FakeDDB(fail=RuntimeError("ddb down"))
+    with pytest.raises(RuntimeError, match="ddb down"):
+        await publish_page("m1", ARGS, s3=s3, ddb=ddb, bucket="b", base_url="https://x/p", table="t", max_bytes=1_500_000)
+    assert not s3.objects and len(s3.deleted) == 1
 
 
 def test_ddb_item_to_dict():

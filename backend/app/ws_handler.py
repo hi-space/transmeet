@@ -69,7 +69,7 @@ from .aws_clients import (
     sagemaker_client,
 )
 from .config import config
-from .page_agent import run_page_generation, run_unpublish
+from .page_agent import PageRequestError, check_meeting_id, run_unpublish, start_page_generation
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -1267,24 +1267,30 @@ async def ws_endpoint(
                 if not mid:
                     await _safe_send(ws, {"type": "page_stream", "phase": "error", "error": "미팅이 선택되지 않았습니다"})
                 elif state.page_task and not state.page_task.done():
-                    await _safe_send(ws, {"type": "page_stream", "phase": "error", "error": "이미 생성 중입니다"})
+                    await _safe_send(ws, {"type": "page_stream", "meetingId": mid, "phase": "error", "error": "이미 생성 중입니다"})
                 else:
-                    inline_messages = data.get("messages")
-
                     async def _send(payload: dict, _ws=ws) -> None:
                         await _safe_send(_ws, payload)
 
-                    state.page_task = asyncio.create_task(
-                        run_page_generation(_send, mid, inline_messages=inline_messages)
-                    )
+                    # 미팅 ID·메시지 상한 검증, 같은 미팅 중복 생성 거절 (다른 연결이어도)
+                    try:
+                        state.page_task = start_page_generation(_send, mid, inline_messages=data.get("messages"))
+                    except PageRequestError as e:
+                        await _safe_send(ws, {"type": "page_stream", "meetingId": mid, "phase": "error", "error": str(e)})
 
             elif action == "unpublish_page":
                 mid = data.get("meetingId") or state.meeting_id
                 if mid:
-                    async def _send_unpub(payload: dict, _ws=ws) -> None:
-                        await _safe_send(_ws, payload)
+                    try:
+                        check_meeting_id(mid)
+                    except PageRequestError as e:
+                        await _safe_send(ws, {"type": "page_stream", "meetingId": mid, "op": "unpublish",
+                                              "phase": "error", "error": str(e)})
+                    else:
+                        async def _send_unpub(payload: dict, _ws=ws) -> None:
+                            await _safe_send(_ws, payload)
 
-                    asyncio.create_task(run_unpublish(_send_unpub, mid))
+                        asyncio.create_task(run_unpublish(_send_unpub, mid))
 
             elif action == "ttsRequest":
                 msg_id = data.get("messageId") or generate_message_id()

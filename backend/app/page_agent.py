@@ -7,6 +7,7 @@ the harness → final `done` event.
 """
 from __future__ import annotations
 
+import asyncio
 import html as html_lib
 import json
 import logging
@@ -220,13 +221,16 @@ async def consume_stream(stream, *, on_text, on_status) -> StreamOutcome:
         elif "messageStop" in event:
             stop_reason = event["messageStop"].get("stopReason")
         elif "metadata" in event:
-            usage = event["metadata"].get("usage", {}) or usage
-        elif "runtimeClientError" in event:
-            raise RuntimeError(event["runtimeClientError"].get("message", "runtime client error"))
-        elif "internalServerException" in event:
-            raise RuntimeError(event["internalServerException"].get("message", "internal server error"))
-        elif "validationException" in event:
-            raise RuntimeError(event["validationException"].get("message", "validation error"))
+            # 호출마다 metadata 가 여러 번 올 수 있으므로 덮어쓰지 않고 합산한다
+            for k, v in (event["metadata"].get("usage") or {}).items():
+                if isinstance(v, (int, float)):
+                    usage[k] = usage.get(k, 0) + v
+        else:
+            # runtimeClientError, internalServerException, throttlingException, serviceUnavailableException 등
+            for key, val in event.items():
+                if key == "runtimeClientError" or key.endswith("Exception"):
+                    msg = val.get("message") if isinstance(val, dict) else None
+                    raise RuntimeError(f"{key}: {msg or 'stream error'}")
 
     handoff = pending_inline if stop_reason == "tool_use" else None
     return StreamOutcome(stop_reason=stop_reason, handoff=handoff, text="".join(text_parts), usage=usage)
@@ -475,7 +479,6 @@ async def publish_page(
     bucket: str,
     base_url: str,
     table: str,
-    previous_page_id: Optional[str] = None,
     max_bytes: int,
 ) -> PublishedPage:
     errors: List[str] = []
@@ -507,15 +510,31 @@ async def publish_page(
         title=title,
         share_summary=(args.get("share_summary") or "").strip(),
     )
-    await ddb.update_item(
-        TableName=table,
-        Key={"meetingId": {"S": meeting_id}},
-        UpdateExpression="SET page = :p, updatedAt = :u",
-        ExpressionAttributeValues={
-            ":p": _serializer.serialize(page.to_item()),
-            ":u": {"S": page.generated_at},
-        },
-    )
+    try:
+        res = await ddb.update_item(
+            TableName=table,
+            Key={"meetingId": {"S": meeting_id}},
+            UpdateExpression="SET page = :p, updatedAt = :u",
+            ConditionExpression="attribute_exists(meetingId)",
+            ExpressionAttributeValues={
+                ":p": _serializer.serialize(page.to_item()),
+                ":u": {"S": page.generated_at},
+            },
+            ReturnValues="ALL_OLD",
+        )
+    except Exception as e:
+        # 기록에 실패하면 방금 올린 객체는 고아가 되므로 지운다 (best-effort)
+        try:
+            await s3.delete_object(Bucket=bucket, Key=key)
+        except Exception:
+            logger.warning("[page] failed to roll back upload %s", key, exc_info=True)
+        code = (getattr(e, "response", None) or {}).get("Error", {}).get("Code")
+        if code == "ConditionalCheckFailedException":
+            raise PublishValidationError(["meeting not found"]) from e
+        raise
+    # 갱신 직전 DynamoDB 에 있던 pageId 를 지운다 — 생성 시작 때 읽은 값은 그사이 바뀌었을 수 있다.
+    old_page = ddb_item_to_dict((res or {}).get("Attributes") or {}).get("page") or {}
+    previous_page_id = old_page.get("pageId") if isinstance(old_page, dict) else None
     if previous_page_id and previous_page_id != page_id:
         try:
             await s3.delete_object(Bucket=bucket, Key=page_key(meeting_id, previous_page_id))
@@ -558,6 +577,32 @@ PUBLISH_TOOL_DEF = {
 }
 
 
+MEETING_ID_RE = re.compile(r"[A-Za-z0-9_-]{1,64}")
+MAX_INLINE_MESSAGES = 2000
+MAX_INLINE_CHARS = 400_000
+
+
+class PageRequestError(Exception):
+    """클라이언트 요청이 잘못됐을 때 — 메시지를 그대로 page_stream error 로 보낸다."""
+
+
+def check_meeting_id(meeting_id: Any) -> None:
+    if not isinstance(meeting_id, str) or not MEETING_ID_RE.fullmatch(meeting_id):
+        raise PageRequestError("잘못된 미팅 ID입니다")
+
+
+def check_inline_messages(messages: Any) -> None:
+    if messages is None:
+        return
+    if not isinstance(messages, list) or not all(isinstance(m, dict) for m in messages):
+        raise PageRequestError("메시지 형식이 올바르지 않습니다")
+    if len(messages) > MAX_INLINE_MESSAGES:
+        raise PageRequestError(f"메시지가 너무 많습니다 (최대 {MAX_INLINE_MESSAGES}개)")
+    total = sum(len(v) for m in messages for v in m.values() if isinstance(v, str))
+    if total > MAX_INLINE_CHARS:
+        raise PageRequestError(f"트랜스크립트가 너무 깁니다 (최대 {MAX_INLINE_CHARS:,}자)")
+
+
 @dataclass
 class PageAgentDeps:
     agentcore_client: Callable[[], Any]
@@ -588,10 +633,10 @@ class PageAgentDeps:
 Sender = Callable[[Dict[str, Any]], Awaitable[None]]
 
 
-def _emitter(send: Sender):
+def _emitter(send: Sender, meeting_id: str, **tags: Any):
     async def emit(phase: str, **fields: Any) -> None:
         try:
-            await send({"type": "page_stream", "phase": phase, **fields})
+            await send({"type": "page_stream", "meetingId": meeting_id, "phase": phase, **tags, **fields})
         except Exception:
             # 소켓이 끊겨도 생성은 끝까지 진행한다 — 결과는 DynamoDB 에 남는다.
             logger.debug("[page] send failed (phase=%s)", phase, exc_info=True)
@@ -612,20 +657,31 @@ async def run_page_generation(
     deps: Optional[PageAgentDeps] = None,
 ) -> Optional[PublishedPage]:
     deps = deps or PageAgentDeps.from_config()
-    emit = _emitter(send)
+    emit = _emitter(send, meeting_id)
+    published: Optional[PublishedPage] = None
+
+    async def finish_failed(error: str, text: str = "") -> Optional[PublishedPage]:
+        # 이미 발행했다면 이후 단계가 실패해도 성공으로 보고한다 — 공유 링크는 살아 있다.
+        if published is not None:
+            await emit("done", page=published.to_item(), text=text)
+            return published
+        await emit("error", error=error)
+        return None
+
     try:
         await emit("status", text="미팅 기록을 불러오는 중")
         item = await _load_meeting(deps, meeting_id)
+        if not item:
+            await emit("error", error="미팅을 찾을 수 없습니다")
+            return None
         payload = build_meeting_payload(item, inline_messages=inline_messages, model_id=PAGE_AGENT_MODEL_ID)
         if not payload["messages"]:
             await emit("error", error="기록이 없습니다")
             return None
-        previous_page_id = (item.get("page") or {}).get("pageId")
 
         session_id = str(uuid4())
         messages: List[Dict[str, Any]] = [{"role": "user", "content": [{"text": build_user_message(payload)}]}]
         publish_attempts = 0
-        published: Optional[PublishedPage] = None
 
         async def on_text(t: str) -> None:
             await emit("delta", text=t)
@@ -648,47 +704,63 @@ async def run_page_generation(
 
                 if outcome.handoff is None:
                     if outcome.stop_reason == "end_turn":
-                        if published:
-                            await emit("done", page=published.to_item(), text=outcome.text)
-                            return published
-                        await emit("error", error="에이전트가 페이지를 발행하지 않았습니다")
-                        return None
+                        return await finish_failed("에이전트가 페이지를 발행하지 않았습니다", outcome.text)
                     if outcome.stop_reason == "tool_use":
-                        await emit("error", error="에이전트가 알 수 없는 도구를 기다리고 있습니다")
-                        return None
-                    await emit("error", error=f"에이전트가 중단되었습니다 ({outcome.stop_reason})")
-                    return None
+                        return await finish_failed("에이전트가 알 수 없는 도구를 기다리고 있습니다")
+                    return await finish_failed(f"에이전트가 중단되었습니다 ({outcome.stop_reason})")
 
-                # publish_page handoff
-                if published is not None:
-                    # 이미 발행했는데 다시 호출: 새 페이지로 교체한다
-                    previous_page_id = published.page_id
+                # publish_page handoff — 다시 호출되면 새 페이지로 교체한다 (이전 객체는 ALL_OLD 로 찾아 지운다)
                 args = outcome.handoff.arguments()
                 try:
                     async with deps.s3_client() as s3, deps.ddb_client() as ddb:
                         published = await publish_page(
                             meeting_id, args, s3=s3, ddb=ddb, bucket=deps.bucket, base_url=deps.base_url,
-                            table=deps.table, previous_page_id=previous_page_id, max_bytes=deps.max_bytes,
+                            table=deps.table, max_bytes=deps.max_bytes,
                         )
                     result = {"status": "success", "content": [{"text": json.dumps({"url": published.url})}]}
                     await emit("status", text="페이지가 발행되었습니다")
                 except PublishValidationError as e:
                     publish_attempts += 1
                     if publish_attempts > deps.publish_retries:
-                        await emit("error", error="페이지 발행에 실패했습니다: " + "; ".join(e.errors[:3]))
-                        return None
+                        return await finish_failed("페이지 발행에 실패했습니다: " + "; ".join(e.errors[:3]))
                     await emit("status", text="검증 실패, 에이전트가 수정합니다")
                     result = {"status": "error", "content": [{"text": "validation failed: " + "; ".join(e.errors)}]}
                 messages = [{"role": "user", "content": [{"toolResult": {"toolUseId": outcome.handoff.tool_use_id, **result}}]}]
     except Exception:
         logger.exception("[page] generation failed meeting=%s", meeting_id)
-        await emit("error", error="페이지 생성 중 오류가 발생했습니다")
-        return None
+        return await finish_failed("페이지 생성 중 오류가 발생했습니다")
+
+
+# 같은 미팅의 생성은 연결과 무관하게 프로세스 안에서 하나만 돈다.
+_ACTIVE_PAGE_TASKS: Dict[str, "asyncio.Task[Optional[PublishedPage]]"] = {}
+
+
+def start_page_generation(
+    send: Sender,
+    meeting_id: Any,
+    *,
+    inline_messages: Any = None,
+) -> "asyncio.Task[Optional[PublishedPage]]":
+    """요청을 검증하고 생성 태스크를 시작한다. 잘못된 요청·중복 요청은 PageRequestError."""
+    check_meeting_id(meeting_id)
+    check_inline_messages(inline_messages)
+    running = _ACTIVE_PAGE_TASKS.get(meeting_id)
+    if running is not None and not running.done():
+        raise PageRequestError("이미 생성 중입니다")
+    task = asyncio.create_task(run_page_generation(send, meeting_id, inline_messages=inline_messages))
+    _ACTIVE_PAGE_TASKS[meeting_id] = task
+
+    def _release(t: "asyncio.Task[Optional[PublishedPage]]") -> None:
+        if _ACTIVE_PAGE_TASKS.get(meeting_id) is t:
+            del _ACTIVE_PAGE_TASKS[meeting_id]
+
+    task.add_done_callback(_release)
+    return task
 
 
 async def run_unpublish(send: Sender, meeting_id: str, *, deps: Optional[PageAgentDeps] = None) -> None:
     deps = deps or PageAgentDeps.from_config()
-    emit = _emitter(send)
+    emit = _emitter(send, meeting_id, op="unpublish")
     try:
         item = await _load_meeting(deps, meeting_id)
         page_id = (item.get("page") or {}).get("pageId")

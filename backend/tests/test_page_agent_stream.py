@@ -128,3 +128,24 @@ def test_describe_tool_start():
     assert describe_tool_start("shell", None, "") == "셸 명령 실행"
     assert describe_tool_start("file_operations", None, "") == "파일 작성"
     assert describe_tool_start("other", None, "") == "도구 실행: other"
+
+
+
+async def noop(_):
+    return None
+
+
+async def test_usage_is_summed_across_metadata_events():
+    events = [
+        {"metadata": {"usage": {"inputTokens": 10, "outputTokens": 5, "totalTokens": 15}}},
+        {"messageStop": {"stopReason": "end_turn"}},
+        {"metadata": {"usage": {"inputTokens": 3, "outputTokens": 2, "totalTokens": 5}}},
+    ]
+    out = await consume_stream(agen(events), on_text=noop, on_status=noop)
+    assert out.usage == {"inputTokens": 13, "outputTokens": 7, "totalTokens": 20}
+
+
+@pytest.mark.parametrize("key", ["throttlingException", "serviceUnavailableException", "modelStreamErrorException"])
+async def test_any_exception_event_raises(key):
+    with pytest.raises(RuntimeError, match="slow down"):
+        await consume_stream(agen([{key: {"message": "slow down"}}]), on_text=noop, on_status=noop)
