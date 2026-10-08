@@ -66,7 +66,7 @@ def render_flow(data: dict) -> str:
             out.append(f'<rect x="{x}" y="{y}" width="{NODE_W}" height="{NODE_H}" rx="28" fill="var(--tm-ok-soft)" stroke="var(--tm-ok)" stroke-width="1.5"/>')
         else:
             out.append(f'<rect x="{x}" y="{y}" width="{NODE_W}" height="{NODE_H}" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>')
-        out.append(f'<text x="{cx}" y="{cy + 4.5}" text-anchor="middle" fill="currentColor" font-weight="600">{n["label"]}</text>')
+        out.append(f'<text x="{cx}" y="{cy + 4.5}" text-anchor="middle" fill="currentColor" font-weight="600">{escape(n["label"])}</text>')
     out.append("</svg>")
     return "\n".join(out)
 

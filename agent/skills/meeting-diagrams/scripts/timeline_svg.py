@@ -40,7 +40,7 @@ def render_timeline(data: dict) -> str:
         y = TOP + i * ROW
         xs, xe = x_of(_mins(tp["start"])), x_of(_mins(tp["end"]))
         w = max(xe - xs, 3)
-        out.append(f'<text x="{LEFT - 10}" y="{y + 18}" text-anchor="end" fill="currentColor">{tp["label"]}</text>')
+        out.append(f'<text x="{LEFT - 10}" y="{y + 18}" text-anchor="end" fill="currentColor">{escape(tp["label"])}</text>')
         out.append(f'<rect class="bar" x="{xs:.1f}" y="{y + 6}" width="{w:.1f}" height="16" rx="4" fill="var(--tm-accent)" opacity="0.85"><title>{escape(tp["label"])} {escape(tp["start"])}–{escape(tp["end"])}</title></rect>')
     out.append("</svg>")
     return "\n".join(out)

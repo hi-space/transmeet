@@ -1,6 +1,7 @@
 import json
 import subprocess
 import sys
+from html import escape
 from pathlib import Path
 
 from validate_page import validate_html
@@ -48,7 +49,7 @@ def test_timeline_contains_labels_title_and_only_css_vars():
     assert svg.startswith("<svg")
     assert "<title>" in svg and "<desc>" in svg
     for t in TIMELINE["topics"]:
-        assert t["label"] in svg
+        assert escape(t["label"]) in svg
     assert "var(--tm-" in svg
     assert "#" not in svg.replace("&#", "")  # 색상 하드코딩 없음
     assert validate_html(wrap(svg)) == []
@@ -64,7 +65,7 @@ def test_timeline_bars_scale_with_duration():
 def test_flow_renders_nodes_edges_and_labels():
     svg = render_flow(FLOW)
     for n in FLOW["nodes"]:
-        assert n["label"] in svg
+        assert escape(n["label"]) in svg
     assert "예" in svg and "아니오" in svg
     assert svg.count("<polygon") >= 1  # decision 노드는 다이아몬드
     assert "marker-end" in svg
