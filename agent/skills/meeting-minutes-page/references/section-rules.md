@@ -16,7 +16,7 @@
 
 ## discussion (가장 중요)
 미팅의 시간 흐름을 그대로 따른다. 트랜스크립트를 처음부터 끝까지 읽고 주제가 바뀌는 지점마다 `.topic` 블록을 만든다. 블록당 구성:
-1. `<h3>` 주제명 + `<span class="time">HH:MM–HH:MM</span>`
+1. `<div class="topic" id="topic-N">` (N은 1부터 순번) 안에 `<h3>` 주제명 + `<span class="time">HH:MM–HH:MM</span>`
 2. 논의 요지 2~5문장 (누가 무엇을 제안·반박·질문했는지)
 3. 핵심 발언 인용 1~3개: `<blockquote><span class="spk">Speaker 1 [HH:MM]</span> 한국어 번역<span class="orig">원문</span></blockquote>`
 4. 이 블록에서 나온 질문과 답(있으면)
