@@ -1,0 +1,22 @@
+{
+  "meeting": {
+    "meetingId": "sample-short",
+    "title": "주간 1:1 — 배포 파이프라인",
+    "startedAt": "2026-10-06T10:00:00+09:00",
+    "endedAt": "2026-10-06T10:14:00+09:00",
+    "speakers": ["Speaker 1", "Me"],
+    "languages": ["en", "ko"],
+    "generatedAt": "2026-10-08T09:00:00+09:00",
+    "modelId": "global.anthropic.claude-opus-5-5"
+  },
+  "messages": [
+    {"timestamp": "2026-10-06T10:00:10+09:00", "speaker": "speaker1", "original": "Quick one today. Where are we on moving the backend deploy into the pipeline?", "translation": "오늘은 짧게요. 백엔드 배포를 파이프라인으로 옮기는 건 어디까지 됐나요?", "detectedLanguage": "en"},
+    {"timestamp": "2026-10-06T10:00:40+09:00", "speaker": "me", "original": "아직 수동으로 ECR에 푸시하고 force-new-deployment를 돌리고 있어요. 이번 주에 GitHub Actions로 옮길 계획입니다.", "translation": "Still pushing to ECR manually and running force-new-deployment. Planning to move it to GitHub Actions this week.", "detectedLanguage": "ko"},
+    {"timestamp": "2026-10-06T10:01:30+09:00", "speaker": "speaker1", "original": "Use OIDC for the AWS credentials, not long-lived keys. I think GitHub's OIDC tokens are valid for about 15 minutes.", "translation": "AWS 자격증명은 장기 키 대신 OIDC를 쓰세요. GitHub OIDC 토큰은 15분쯤 유효한 것으로 알아요.", "detectedLanguage": "en"},
+    {"timestamp": "2026-10-06T10:02:20+09:00", "speaker": "me", "original": "네, aws-actions/configure-aws-credentials로 역할을 assume하는 방식으로 하겠습니다.", "translation": "Yes, I'll assume the role with aws-actions/configure-aws-credentials.", "detectedLanguage": "ko"},
+    {"timestamp": "2026-10-06T10:05:00+09:00", "speaker": "speaker1", "original": "Also, can we get a Slack message when the deploy finishes? Doesn't have to be fancy.", "translation": "그리고 배포가 끝나면 슬랙 메시지를 받을 수 있을까요? 화려할 필요는 없어요.", "detectedLanguage": "en"},
+    {"timestamp": "2026-10-06T10:05:40+09:00", "speaker": "me", "original": "가능해요. 웹훅으로 간단히 넣겠습니다. 누가 채널 만들어 주실 수 있나요?", "translation": "Doable. I'll add a simple webhook. Can someone create the channel?", "detectedLanguage": "ko"},
+    {"timestamp": "2026-10-06T10:06:10+09:00", "speaker": "speaker1", "original": "I'll create #deploys today. Let's say pipeline in place by Friday, notification can come later.", "translation": "오늘 #deploys 채널을 만들게요. 파이프라인은 금요일까지, 알림은 나중에 해도 돼요.", "detectedLanguage": "en"},
+    {"timestamp": "2026-10-06T10:13:30+09:00", "speaker": "me", "original": "알겠습니다. 금요일까지 파이프라인 올리고, 알림은 다음 주에 붙이겠습니다.", "translation": "Got it. Pipeline by Friday, notification next week.", "detectedLanguage": "ko"}
+  ]
+}

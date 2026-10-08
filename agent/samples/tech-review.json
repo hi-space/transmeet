@@ -1,0 +1,41 @@
+{
+  "meeting": {
+    "meetingId": "sample-tech-review",
+    "title": "아키텍처 리뷰 — CloudFront/ALB/Fargate",
+    "startedAt": "2026-10-07T15:00:00+09:00",
+    "endedAt": "2026-10-07T15:25:00+09:00",
+    "speakers": ["Speaker 1", "Me"],
+    "languages": ["en", "ko"],
+    "generatedAt": "2026-10-08T09:00:00+09:00",
+    "modelId": "global.anthropic.claude-opus-5-5"
+  },
+  "messages": [
+    {"timestamp": "2026-10-07T15:00:10+09:00", "speaker": "speaker1", "original": "Let's walk through the architecture — I want to check the CloudFront to S3 and ALB paths before the review.", "translation": "아키텍처를 한번 훑어보죠 — 리뷰 전에 CloudFront에서 S3, ALB로 가는 경로를 확인하고 싶어요.", "detectedLanguage": "en"},
+    {"timestamp": "2026-10-07T15:00:50+09:00", "speaker": "me", "original": "네. 정적 자산은 CloudFront가 S3를 오리진으로 쓰고 있고, /ws 경로는 ALB로 보내서 ECS Fargate로 가요.", "translation": "Right. Static assets go through CloudFront with S3 as the origin, and the /ws path routes to the ALB and then to ECS Fargate.", "detectedLanguage": "ko"},
+    {"timestamp": "2026-10-07T15:01:40+09:00", "speaker": "speaker1", "original": "For the S3 origin, are we using OAI or OAC?", "translation": "S3 오리진 쪽은 OAI 쓰나요, OAC 쓰나요?", "detectedLanguage": "en"},
+    {"timestamp": "2026-10-07T15:02:30+09:00", "speaker": "me", "original": "OAC로 설정했어요. OAI는 더 이상 권장되지 않아서요.", "translation": "We're on OAC. OAI isn't the recommended approach anymore.", "detectedLanguage": "ko"},
+    {"timestamp": "2026-10-07T15:03:20+09:00", "speaker": "speaker1", "original": "Good. And the websocket path through ALB — is that going over a VPC endpoint anywhere, or just public?", "translation": "좋아요. ALB로 가는 웹소켓 경로는 VPC endpoint를 타나요, 아니면 그냥 퍼블릭인가요?", "detectedLanguage": "en"},
+    {"timestamp": "2026-10-07T15:04:20+09:00", "speaker": "me", "original": "ALB는 퍼블릭 서브넷에 있고, Fargate 태스크가 S3나 DynamoDB에 접근할 때는 VPC endpoint를 통해요.", "translation": "The ALB sits in the public subnet, but when the Fargate tasks reach S3 or DynamoDB they go through a VPC endpoint.", "detectedLanguage": "ko"},
+    {"timestamp": "2026-10-07T15:05:20+09:00", "speaker": "speaker1", "original": "Makes sense, keeps that traffic off the internet. What about internal service-to-service calls — any SigV4 signing in there?", "translation": "타당하네요, 그러면 그 트래픽이 인터넷을 안 타겠네요. 내부 서비스 간 호출에는 SigV4 서명이 들어가나요?", "detectedLanguage": "en"},
+    {"timestamp": "2026-10-07T15:06:20+09:00", "speaker": "me", "original": "네, 백엔드가 다른 내부 API를 호출할 때 SigV4로 서명해요.", "translation": "Yes, the backend signs requests with SigV4 when calling other internal APIs.", "detectedLanguage": "ko"},
+    {"timestamp": "2026-10-07T15:07:20+09:00", "speaker": "speaker1", "original": "Okay. Let's talk data — what's the DynamoDB billing mode?", "translation": "좋아요. 데이터 쪽으로 가보죠 — DynamoDB 과금 모드는 뭔가요?", "detectedLanguage": "en"},
+    {"timestamp": "2026-10-07T15:08:20+09:00", "speaker": "me", "original": "on-demand로 가고 있어요. 트래픽이 아직 예측이 어려워서요.", "translation": "We're on on-demand, since traffic is still hard to predict.", "detectedLanguage": "ko"},
+    {"timestamp": "2026-10-07T15:09:20+09:00", "speaker": "speaker1", "original": "And PITR is on for that table, right?", "translation": "그 테이블은 PITR 켜져 있는 거죠?", "detectedLanguage": "en"},
+    {"timestamp": "2026-10-07T15:10:20+09:00", "speaker": "me", "original": "네, PITR 활성화돼 있어요. 35일치 복구가 가능해요.", "translation": "Yes, PITR is enabled. We can restore up to 35 days back.", "detectedLanguage": "ko"},
+    {"timestamp": "2026-10-07T15:11:30+09:00", "speaker": "speaker1", "original": "Good. Now, the API Gateway and Lambda path — what's the timeout we're working with there?", "translation": "좋아요. API Gateway랑 Lambda 쪽은 타임아웃이 몇 초인가요?", "detectedLanguage": "en"},
+    {"timestamp": "2026-10-07T15:12:40+09:00", "speaker": "me", "original": "API Gateway랑 Lambda 둘 다 29초 타임아웃이 한계예요. 그 이상 걸리는 작업은 다른 방식으로 처리해야 해요.", "translation": "Both API Gateway and Lambda cap out at a 29 second timeout. Anything longer needs a different pattern.", "detectedLanguage": "ko"},
+    {"timestamp": "2026-10-07T15:13:50+09:00", "speaker": "speaker1", "original": "Right, that's a hard limit. Does anything in the current flow get close to that?", "translation": "맞아요, 그건 하드 리밋이죠. 지금 흐름 중에 그 근처까지 가는 게 있나요?", "detectedLanguage": "en"},
+    {"timestamp": "2026-10-07T15:15:00+09:00", "speaker": "me", "original": "아직은 없는데, 리서치 스킬이 외부 검색을 많이 하면 걸릴 수도 있어서 지켜봐야 해요.", "translation": "Not yet, but if the research skill does a lot of external lookups it could get close, so we should keep an eye on it.", "detectedLanguage": "ko"},
+    {"timestamp": "2026-10-07T15:16:10+09:00", "speaker": "speaker1", "original": "Noted — let's leave that as something to watch rather than decide on today.", "translation": "알겠어요 — 오늘 결정하기보다는 지켜볼 항목으로 남겨두죠.", "detectedLanguage": "en"},
+    {"timestamp": "2026-10-07T15:17:20+09:00", "speaker": "me", "original": "그리고 VPC endpoint 정책 범위를 아직 다 안 봤어요. S3는 버킷 단위로 제한해야 할 것 같은데요.", "translation": "Also, I haven't fully reviewed the VPC endpoint policy scope. I think S3 should be restricted per bucket.", "detectedLanguage": "ko"},
+    {"timestamp": "2026-10-07T15:18:30+09:00", "speaker": "speaker1", "original": "That's a good open question — let's write it down and come back to it, not decide now.", "translation": "좋은 미결 질문이네요 — 적어두고 나중에 다시 보죠, 지금 결정하지는 말고요.", "detectedLanguage": "en"},
+    {"timestamp": "2026-10-07T15:19:40+09:00", "speaker": "me", "original": "두 번째로, ALB 헬스체크 경로가 Fargate 오토스케일링에 영향을 주는지도 아직 확인 안 했어요.", "translation": "Second, I also haven't confirmed whether the ALB health check path affects Fargate autoscaling.", "detectedLanguage": "ko"},
+    {"timestamp": "2026-10-07T15:20:50+09:00", "speaker": "speaker1", "original": "Fair, that's worth checking separately too. What's the third one you mentioned earlier?", "translation": "맞아요, 그것도 따로 확인해봐야겠네요. 아까 말했던 세 번째 건 뭐였죠?", "detectedLanguage": "en"},
+    {"timestamp": "2026-10-07T15:22:00+09:00", "speaker": "me", "original": "OAI에서 OAC로 완전히 전환하는 마이그레이션 일정이요. 아직 다른 배포판에 OAI가 남아있을 수 있어서요.", "translation": "The migration timeline for fully moving from OAI to OAC. Some other deployments might still have OAI left.", "detectedLanguage": "ko"},
+    {"timestamp": "2026-10-07T15:22:40+09:00", "speaker": "speaker1", "original": "Got it, that's three open items then: VPC endpoint policy scope, ALB health check impact on scaling, and the OAI to OAC migration timeline.", "translation": "알겠어요, 그러면 미결 항목이 세 개네요: VPC endpoint 정책 범위, ALB 헬스체크가 스케일링에 주는 영향, OAI에서 OAC로의 마이그레이션 일정.", "detectedLanguage": "en"},
+    {"timestamp": "2026-10-07T15:23:15+09:00", "speaker": "me", "original": "네, 오늘은 결정 없이 리뷰만 하는 걸로 하고 저 세 개를 다음에 다시 다루죠.", "translation": "Right, today's just a review with no decisions, and we'll revisit those three next time.", "detectedLanguage": "ko"},
+    {"timestamp": "2026-10-07T15:23:50+09:00", "speaker": "speaker1", "original": "Agreed, no decisions today. This was just a walkthrough.", "translation": "동의해요, 오늘은 결정 없음. 그냥 둘러보는 자리였어요.", "detectedLanguage": "en"},
+    {"timestamp": "2026-10-07T15:24:20+09:00", "speaker": "me", "original": "정리하면 CloudFront, S3, ALB, ECS Fargate 관계랑 VPC endpoint, SigV4, OAC, PITR, 29초 타임아웃, on-demand 과금까지 다 확인했어요.", "translation": "To summarize, we covered the CloudFront, S3, ALB, ECS Fargate relationships plus VPC endpoint, SigV4, OAC, PITR, the 29 second timeout, and on-demand billing.", "detectedLanguage": "ko"},
+    {"timestamp": "2026-10-07T15:24:45+09:00", "speaker": "speaker1", "original": "Great summary. Let's reconvene once someone's looked at those three open questions.", "translation": "정리 잘됐네요. 세 가지 미결 질문을 누군가 살펴본 뒤에 다시 모이죠.", "detectedLanguage": "en"}
+  ]
+}

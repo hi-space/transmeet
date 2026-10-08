@@ -1,0 +1,8 @@
+{
+  "skill_name": "meeting-minutes-page",
+  "evals": [
+    {"id": 1, "prompt": "다음 미팅 JSON으로 공유용 HTML 미팅록 페이지를 만들어 page.html로 저장해줘. 발행 도구는 없으니 파일로만 남겨.", "expected_output": "10개 섹션을 가진 self-contained HTML. validate_page.py 통과. 타임라인 SVG 1개. 1:1 미팅이므로 결정 1개(파이프라인 금요일), 액션 2개(파이프라인/채널 생성), references에 GitHub OIDC 토큰 유효기간 확인 항목.", "files": ["agent/samples/short-1on1.json"]},
+    {"id": 2, "prompt": "다음 미팅 JSON으로 공유용 HTML 미팅록 페이지를 만들어 page.html로 저장해줘. 발행 도구는 없으니 파일로만 남겨.", "expected_output": "주제 블록 5개 이상, 결정 흐름도 1개, GA 일정에 대해 '상이함' 판정 1개, 인사이트에 보안 리뷰 담당 공백 리스크.", "files": ["agent/samples/decision-meeting.json"]},
+    {"id": 3, "prompt": "다음 미팅 JSON으로 공유용 HTML 미팅록 페이지를 만들어 page.html로 저장해줘. 발행 도구는 없으니 파일로만 남겨.", "expected_output": "결정 사항 '없음' 처리, 미결 사항 3개, 관계도 1개(CloudFront/S3/ALB/ECS), 용어 사전 6개 이상, 수치 2개에 대한 references 판정.", "files": ["agent/samples/tech-review.json"]}
+  ]
+}
