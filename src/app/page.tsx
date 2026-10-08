@@ -950,9 +950,9 @@ export default function Home() {
         } else if (msg.phase === 'status' || msg.phase === 'delta') {
           const line = (msg.text ?? '').trim()
           if (line) {
-            // 이미 끝난(idle) 생성의 늦은 이벤트는 무시한다
+            // 이미 끝난(idle/error·타임아웃) 생성의 늦은 이벤트는 무시한다
             setPageGenFor(targetId, (g) =>
-              g.status === 'idle'
+              g.status !== 'generating'
                 ? g
                 : {
                     ...g,

@@ -35,6 +35,11 @@ def page(body_extra: str = "", head_extra: str = "", css: str = "body{font-famil
 
 
 BAD_PAGES = {
+    # Python 3.12 html.parser 는 </style x> 를 종료로 보지 않아 뒤의 <script> 가 미파싱으로 남는다
+    "style_end_attr": page(body_extra='<style>a{}</style x><script>alert(1)</script>'),
+    "style_end_slash": page(body_extra='<style>a{}</style/><script>alert(1)</script>'),
+    # 프레젠테이션 속성의 CSS 이스케이프로 url( 우회
+    "fill_css_escape": page(body_extra='<svg xmlns="http://www.w3.org/2000/svg"><title>t</title><rect fill="u\\72l(https://evil.example/x)"/></svg>'),
     "script": page("<script>alert(1)</script>"),
     "event_handler": page('<div onclick="alert(1)">x</div>'),
     "iframe_javascript_src": page('<iframe src="javascript:alert(1)"></iframe>'),

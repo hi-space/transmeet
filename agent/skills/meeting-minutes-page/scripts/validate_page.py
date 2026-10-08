@@ -92,6 +92,10 @@ class _HtmlAudit(HTMLParser):
                 self._error(f"namespace must be the W3C URL in <{tag} {name}>")
             return
         norm = _normalize_attr(value)
+        if "\\" in value and "(" in value:
+            # 프레젠테이션 속성(fill 등)은 CSS 로 해석되므로 `u\72l(` 같은 이스케이프를 막는다
+            self._error(f"CSS escape in <{tag} {name}> is not allowed")
+            return
         if name == "style":
             raw = html_lib.unescape(value).lower()
             if "url(" in norm or "@import" in norm or "expression" in norm or "image-set(" in norm or "\\" in raw:
@@ -186,6 +190,10 @@ def _validate(html: str, max_bytes: int) -> List[str]:
     audit.feed(html)
     audit.close()
     errors.extend(audit.errors)
+    # Python 3.12 이하 html.parser 는 `</style x>` 같은 비정상 종료 태그에서 raw-text 요소를 닫지 않아
+    # 뒤따르는 <script> 가 파싱되지 않은 채 남는다. 브라우저와 해석이 갈리는 문서는 거절한다.
+    if getattr(audit, "cdata_elem", None) or audit.rawdata.strip():
+        errors.append("unterminated raw-text element or unparsed trailing markup")
     if audit.lang != "ko":
         errors.append('<html lang="ko"> is required')
     errors.extend(f'missing data-section="{s}"' for s in REQUIRED_SECTIONS if s not in audit.sections)
