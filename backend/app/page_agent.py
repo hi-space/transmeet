@@ -9,9 +9,15 @@ from __future__ import annotations
 
 import json
 import logging
+import re
+import secrets
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from decimal import Decimal
+from html.parser import HTMLParser
 from typing import Any, Dict, List, Optional
+
+from boto3.dynamodb.types import TypeDeserializer, TypeSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -216,3 +222,202 @@ async def consume_stream(stream, *, on_text, on_status) -> StreamOutcome:
 
     handoff = pending_inline if stop_reason == "tool_use" else None
     return StreamOutcome(stop_reason=stop_reason, handoff=handoff, text="".join(text_parts), usage=usage)
+
+
+# ─── HTML validation (mirror of agent/skills/meeting-minutes-page/scripts/validate_page.py) ──
+
+REQUIRED_SECTIONS = [
+    "header", "tldr", "decisions", "action-items", "discussion",
+    "open-questions", "references", "insights", "glossary", "footer",
+]
+REQUIRED_META = ["transmeet:meeting-id", "transmeet:generated-at", "transmeet:model"]
+_URL_ATTR_RE = re.compile(r"^(https?:)?//", re.IGNORECASE)
+_URL_ATTRS = {"src", "srcset", "poster", "data", "action", "formaction", "background"}
+
+
+class _HtmlAudit(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.errors: List[str] = []
+        self.sections: set = set()
+        self.meta: Dict[str, str] = {}
+        self.lang: Optional[str] = None
+        self._svg_titles: List[bool] = []
+        self._in_style = False
+        self.css: List[str] = []
+
+    def handle_starttag(self, tag, attrs):
+        a = dict(attrs)
+        if tag == "html":
+            self.lang = a.get("lang")
+        if tag == "script":
+            self.errors.append("<script> is not allowed")
+        if tag == "meta" and (a.get("name") or "").startswith("transmeet:"):
+            self.meta[a["name"]] = a.get("content") or ""
+        if "data-section" in a:
+            self.sections.add(a["data-section"])
+        for name, value in attrs:
+            lname = name.lower()
+            if lname.startswith("on"):
+                self.errors.append(f"event handler attribute not allowed: {name}")
+            if value and lname == "href" and value.strip().lower().startswith("javascript:"):
+                self.errors.append("javascript: href not allowed")
+            if value and lname in _URL_ATTRS and _URL_ATTR_RE.match(value.strip()):
+                self.errors.append(f"external resource not allowed in <{tag} {name}>")
+        if tag == "link" and _URL_ATTR_RE.match((a.get("href") or "").strip()):
+            self.errors.append("external <link> not allowed")
+        if tag == "svg":
+            self._svg_titles.append(False)
+        if tag == "title" and self._svg_titles:
+            self._svg_titles[-1] = True
+        if tag == "style":
+            self._in_style = True
+
+    def handle_endtag(self, tag):
+        if tag == "svg" and self._svg_titles and not self._svg_titles.pop():
+            self.errors.append("every <svg> needs a <title>")
+        if tag == "style":
+            self._in_style = False
+
+    def handle_data(self, data):
+        if self._in_style:
+            self.css.append(data)
+
+
+def validate_html(html: str, max_bytes: int) -> List[str]:
+    errors: List[str] = []
+    size = len(html.encode("utf-8"))
+    if size > max_bytes:
+        errors.append(f"page is {size} bytes, limit {max_bytes} bytes")
+    if "<html" not in html.lower():
+        return errors + ["not an HTML document"]
+    audit = _HtmlAudit()
+    audit.feed(html)
+    audit.close()
+    errors.extend(audit.errors)
+    if audit.lang != "ko":
+        errors.append('<html lang="ko"> is required')
+    errors.extend(f'missing data-section="{s}"' for s in REQUIRED_SECTIONS if s not in audit.sections)
+    errors.extend(f'missing <meta name="{m}">' for m in REQUIRED_META if not audit.meta.get(m))
+    css = "\n".join(audit.css)
+    if "@import" in css:
+        errors.append("@import in <style> not allowed")
+    if re.search(r"url\(\s*['\"]?\s*(https?:)?//", css, re.IGNORECASE):
+        errors.append("url(http...) in <style> not allowed")
+    return errors
+
+
+# ─── Publishing ──────────────────────────────────────────────────────────────
+
+class PublishValidationError(Exception):
+    def __init__(self, errors: List[str]):
+        super().__init__("; ".join(errors))
+        self.errors = errors
+
+
+@dataclass
+class PublishedPage:
+    page_id: str
+    url: str
+    generated_at: str
+    title: str
+    share_summary: str
+
+    def to_item(self) -> Dict[str, Any]:
+        return {
+            "pageId": self.page_id,
+            "url": self.url,
+            "generatedAt": self.generated_at,
+            "title": self.title,
+            "shareSummary": self.share_summary,
+        }
+
+
+_serializer = TypeSerializer()
+_deserializer = TypeDeserializer()
+
+
+def _plain(value: Any) -> Any:
+    if isinstance(value, Decimal):
+        return int(value) if value == value.to_integral_value() else float(value)
+    if isinstance(value, list):
+        return [_plain(v) for v in value]
+    if isinstance(value, dict):
+        return {k: _plain(v) for k, v in value.items()}
+    return value
+
+
+def ddb_item_to_dict(item: Dict[str, Any]) -> Dict[str, Any]:
+    return {k: _plain(_deserializer.deserialize(v)) for k, v in item.items()}
+
+
+def page_key(meeting_id: str, page_id: str) -> str:
+    return f"p/{meeting_id}/{page_id}.html"
+
+
+async def publish_page(
+    meeting_id: str,
+    args: Dict[str, Any],
+    *,
+    s3,
+    ddb,
+    bucket: str,
+    base_url: str,
+    table: str,
+    previous_page_id: Optional[str] = None,
+    max_bytes: int,
+) -> PublishedPage:
+    errors: List[str] = []
+    html = args.get("html")
+    title = (args.get("title") or "").strip()
+    if not isinstance(html, str) or not html.strip():
+        errors.append("html is required and must be a non-empty string")
+    if not title:
+        errors.append("title is required")
+    if errors:
+        raise PublishValidationError(errors)
+    errors = validate_html(html, max_bytes)
+    if errors:
+        raise PublishValidationError(errors)
+
+    page_id = secrets.token_urlsafe(16)
+    key = page_key(meeting_id, page_id)
+    await s3.put_object(
+        Bucket=bucket,
+        Key=key,
+        Body=html.encode("utf-8"),
+        ContentType="text/html; charset=utf-8",
+        CacheControl="no-cache",
+    )
+    page = PublishedPage(
+        page_id=page_id,
+        url=f"{base_url.rstrip('/')}/{meeting_id}/{page_id}.html",
+        generated_at=datetime.now(timezone.utc).isoformat(),
+        title=title,
+        share_summary=(args.get("share_summary") or "").strip(),
+    )
+    await ddb.update_item(
+        TableName=table,
+        Key={"meetingId": {"S": meeting_id}},
+        UpdateExpression="SET page = :p, updatedAt = :u",
+        ExpressionAttributeValues={
+            ":p": _serializer.serialize(page.to_item()),
+            ":u": {"S": page.generated_at},
+        },
+    )
+    if previous_page_id and previous_page_id != page_id:
+        try:
+            await s3.delete_object(Bucket=bucket, Key=page_key(meeting_id, previous_page_id))
+        except Exception:
+            logger.warning("[page] failed to delete previous page %s/%s", meeting_id, previous_page_id, exc_info=True)
+    return page
+
+
+async def unpublish_page(meeting_id: str, *, s3, ddb, bucket: str, table: str, page_id: str) -> None:
+    # S3 삭제가 실패하면 DynamoDB 는 건드리지 않는다 — 링크가 살아 있는데 "해제됨"으로 보이면 안 된다.
+    await s3.delete_object(Bucket=bucket, Key=page_key(meeting_id, page_id))
+    await ddb.update_item(
+        TableName=table,
+        Key={"meetingId": {"S": meeting_id}},
+        UpdateExpression="REMOVE page",
+    )
