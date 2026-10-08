@@ -149,3 +149,8 @@ async def test_usage_is_summed_across_metadata_events():
 async def test_any_exception_event_raises(key):
     with pytest.raises(RuntimeError, match="slow down"):
         await consume_stream(agen([{key: {"message": "slow down"}}]), on_text=noop, on_status=noop)
+
+
+def test_describe_tool_start_gateway_web_search_name():
+    assert describe_tool_start("web-search-tool___WebSearch", None, '{"query": "AgentCore harness GA"}') == "웹 검색: AgentCore harness GA"
+    assert describe_tool_start("web-search-tool___WebSearch", None, "") == "웹 검색"

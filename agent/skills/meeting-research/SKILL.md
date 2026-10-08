@@ -21,7 +21,7 @@ description: 미팅록 페이지의 "관련 공식 자료 · 더블 체크" 섹�
 
 ## 2. 검색
 
-- 도구: `WebSearch` (gateway `web_search`). `query`는 200자 이내, 영어로 쓴다. 공식 문서는 대부분 영어다.
+- 도구: `web-search-tool___WebSearch` (AgentCore Gateway 의 Web Search 커넥터; 도구 목록에 이 이름으로 보인다). `query`는 200자 이내, 영어로 쓴다. 공식 문서는 대부분 영어다. 셸에서 검색 엔진을 직접 조회하지 않는다 — 차단·속도 제한에 걸린다.
 - 한 대상당 1회, 결과가 공식 출처가 아니면 도메인을 좁혀 1회 더 (`filters.domainFilter.include`에 공식 도메인). **총 12회 이내.**
 - `maxResults`는 5.
 - `references/source-priority.md`의 우선순위로 출처를 고른다. 블로그·커뮤니티·뉴스는 공식 자료가 없을 때만.

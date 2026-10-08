@@ -133,7 +133,7 @@ async def test_happy_path_publishes_and_emits_done():
     tr = ac.calls[1]["messages"][0]["content"][0]["toolResult"]
     assert tr["toolUseId"] == "tu-1" and tr["status"] == "success"
     assert json.loads(tr["content"][0]["text"])["url"] == page.url
-    assert ac.calls[1]["tools"][0]["name"] == PUBLISH_TOOL_NAME  # 오버라이드 도구는 다시 보낸다
+    assert all("tools" not in c for c in ac.calls)  # 호출 시 tools= 는 하네스 도구 목록을 대체하므로 보내지 않는다
     assert ac.calls[0]["harnessArn"].endswith("harness/h-abc")
 
 

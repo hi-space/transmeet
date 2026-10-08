@@ -165,7 +165,8 @@ def describe_tool_start(name: str, server_name: Optional[str], partial_input: st
         return "셸 명령 실행"
     if name.startswith("file_"):
         return "파일 작성"
-    if name == "WebSearch" or server_name == "web_search":
+    # Gateway 도구 이름은 <target>___<tool> 형식 (web-search-tool___WebSearch)
+    if name == "WebSearch" or name.endswith("___WebSearch") or server_name == "web_search":
         try:
             q = json.loads(partial_input or "{}").get("query", "")
         except json.JSONDecodeError:
@@ -758,10 +759,11 @@ async def run_page_generation(
             messages: List[Dict[str, Any]] = [{"role": "user", "content": [{"text": build_user_message(payload)}]}]
             publish_attempts = 0
             while True:
+                # tools= 를 넘기면 하네스에 정의된 도구 목록을 *대체*한다 (code_interpreter·web search 가 사라짐).
+                # publish_page 는 하네스 정의(infra)에 이미 있으므로 호출 시에는 도구를 넘기지 않는다.
                 resp = await ac.invoke_harness(
                     harnessArn=harness_arn,
                     runtimeSessionId=session_id,
-                    tools=[PUBLISH_TOOL_DEF],
                     messages=messages,
                 )
                 outcome = await consume_stream(resp["stream"], on_text=on_text, on_status=on_status)
