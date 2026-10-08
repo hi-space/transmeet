@@ -32,3 +32,10 @@ def test_installed_botocore_supports_invoke_harness():
     import boto3
     ops = boto3.client("bedrock-agentcore", region_name="us-east-1").meta.service_model.operation_names
     assert "InvokeHarness" in ops
+
+
+def test_agentcore_client_uses_long_read_timeout_without_retries():
+    from app import aws_clients
+    cfg = aws_clients.AGENTCORE_CLIENT_CONFIG
+    assert cfg.read_timeout == 900
+    assert cfg.retries == {"max_attempts": 0}

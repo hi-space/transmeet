@@ -6,6 +6,7 @@ import string
 from contextlib import asynccontextmanager
 
 import aiobotocore.session
+from aiobotocore.config import AioConfig
 
 from .config import config
 
@@ -31,9 +32,21 @@ async def polly_client():
         yield client
 
 
+# InvokeHarness 는 하나의 HTTP 응답을 수 분간 스트리밍한다. 에이전트가 긴 도구(코드 실행,
+# 검색)를 돌리는 동안 이벤트가 없으면 기본 60초 읽기 타임아웃이 스트림을 끊으므로
+# 하네스의 TimeoutSeconds(900) 에 맞춰 늘리고, 스트리밍 호출은 재시도하지 않는다.
+AGENTCORE_CLIENT_CONFIG = AioConfig(
+    read_timeout=900,
+    connect_timeout=10,
+    retries={"max_attempts": 0},
+)
+
+
 @asynccontextmanager
 async def agentcore_client():
-    async with _session.create_client("bedrock-agentcore", region_name=config.REGION) as client:
+    async with _session.create_client(
+        "bedrock-agentcore", region_name=config.REGION, config=AGENTCORE_CLIENT_CONFIG
+    ) as client:
         yield client
 
 
