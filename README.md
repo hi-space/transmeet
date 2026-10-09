@@ -370,7 +370,7 @@ AWS_SECRET_ACCESS_KEY=your_secret_access_key
 WHISPER_ENDPOINT=whisper-large-v3-turbo-004709
 
 # Bedrock
-BEDROCK_MODEL_ID=global.anthropic.claude-haiku-4-5-20251001-v1:0
+BEDROCK_MODEL_ID=global.anthropic.claude-haiku-5-5
 
 # API Gateway REST
 NEXT_PUBLIC_API_ENDPOINT=https://your-api-gateway-endpoint

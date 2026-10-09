@@ -47,7 +47,7 @@ const DEFAULT: Settings = {
   ttsAutoPlay: true,
   pollyEngine: 'generative',
   pollyVoiceId: 'Ruth',
-  translationModel: 'global.anthropic.claude-haiku-4-5-20251001-v1:0',
+  translationModel: 'global.anthropic.claude-haiku-5-5',
   translationTiming: 'realtime',
   partialTranslationMode: 'sentence',
   partialThrottleMs: 1500,
@@ -59,6 +59,8 @@ const DEFAULT: Settings = {
 
 const STORAGE_KEY = 'transmeet-settings'
 
+const LEGACY_MODEL_IDS = new Set(['global.anthropic.claude-haiku-4-5-20251001-v1:0'])
+
 export function useSettings() {
   const [settings, setSettings] = useState<Settings>(DEFAULT)
 
@@ -67,6 +69,9 @@ export function useSettings() {
       const raw = localStorage.getItem(STORAGE_KEY)
       if (raw) {
         const loaded = { ...DEFAULT, ...(JSON.parse(raw) as Partial<Settings>) }
+        // 이전 세대 모델 ID 가 저장돼 있으면 최신 세대로 올린다 (선택지에서 사라진 값이 남지 않게)
+        if (LEGACY_MODEL_IDS.has(loaded.translationModel))
+          loaded.translationModel = DEFAULT.translationModel
         // engine이 sourceLang을 지원하지 않으면 기본값으로 자동 수정
         const ttsLang = loaded.sourceLang === 'auto' ? 'en' : loaded.sourceLang
         const supportedEngines = LANG_VOICE_ENGINES[ttsLang]

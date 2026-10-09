@@ -390,7 +390,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
                 [
                   ['us.amazon.nova-micro-v1:0', 'Nova Micro'],
                   ['global.amazon.nova-2-lite-v1:0', 'Nova 2 Lite'],
-                  ['global.anthropic.claude-haiku-4-5-20251001-v1:0', 'Haiku 4.5'],
+                  ['global.anthropic.claude-haiku-5-5', 'Haiku 5.5'],
                 ] as const
               ).map(([val, label]) => (
                 <button

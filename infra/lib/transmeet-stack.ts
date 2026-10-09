@@ -21,7 +21,7 @@ import { Construct } from 'constructs';
 import * as path from 'path';
 
 const WHISPER_ENDPOINT = 'whisper-large';
-const BEDROCK_MODEL_ID = 'global.anthropic.claude-haiku-4-5-20251001-v1:0';
+const BEDROCK_MODEL_ID = 'global.anthropic.claude-haiku-5-5';
 const REGION = 'us-east-1';
 const MEETINGS_TABLE = 'transmeet-meetings';
 // 발행된 미팅 페이지 기록. 미팅 항목은 발언 전체를 인라인으로 담아 긴 미팅은 400 KB 한도에 닿으므로
@@ -140,8 +140,8 @@ export class TransmeetStack extends cdk.Stack {
       ...commonNodejsFunctionProps,
       environment: {
         ...commonEnv,
-        // Opus 4.7 for highest-quality meeting summaries
-        SUMMARIZE_MODEL_ID: 'global.anthropic.claude-opus-4-7',
+        // 요약 모델. WebSocket 경로(backend config.SUMMARY_MODEL_ID)와 같은 최신 Opus.
+        SUMMARIZE_MODEL_ID: 'us.anthropic.claude-opus-5-5',
       },
     });
 

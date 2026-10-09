@@ -8,8 +8,8 @@ class Config(BaseSettings):
     # 400 KB 한도에 닿을 수 있으므로 페이지 기록은 별도 테이블에 둔다.
     PAGES_TABLE: str = "transmeet-pages"
     WHISPER_ENDPOINT: str = "whisper-large"
-    BEDROCK_MODEL_ID: str = "global.anthropic.claude-haiku-4-5-20251001-v1:0"
-    QA_MODEL_ID: str = "global.anthropic.claude-sonnet-4-6"
+    BEDROCK_MODEL_ID: str = "global.anthropic.claude-haiku-5-5"
+    QA_MODEL_ID: str = "global.anthropic.claude-sonnet-5-5"
     # 요약 패널(WebSocket summarize). 실시간 번역 모델과 분리 — 페이지 수준의 디테일을 내야 해서 큰 모델을 쓴다.
     # 페이지 에이전트(PAGE_AGENT_MODEL_ID)와 같은 최신 모델. Opus 5.5 는 thinking 이 항상 켜져 있고 기본 effort 는 medium.
     SUMMARY_MODEL_ID: str = "us.anthropic.claude-opus-5-5"
