@@ -8,86 +8,158 @@
 <meta name="transmeet:generated-at" content="{{GENERATED_AT}}">
 <meta name="transmeet:model" content="{{MODEL_ID}}">
 <style>
-:root{--tm-bg:#ffffff;--tm-fg:#0f172a;--tm-muted:#64748b;--tm-line:#e2e8f0;--tm-card:#f8fafc;
-  --tm-accent:#0891b2;--tm-accent-soft:#cffafe;--tm-warn:#b45309;--tm-warn-soft:#fef3c7;
-  --tm-ok:#15803d;--tm-ok-soft:#dcfce7;--tm-bad:#b91c1c;--tm-bad-soft:#fee2e2;
-  --tm-font:system-ui,-apple-system,"Segoe UI","Apple SD Gothic Neo","Noto Sans KR",sans-serif;
-  --tm-mono:ui-monospace,SFMono-Regular,Menlo,monospace}
-@media (prefers-color-scheme:dark){:root{--tm-bg:#0b1220;--tm-fg:#e2e8f0;--tm-muted:#94a3b8;--tm-line:#1e293b;
-  --tm-card:#111a2e;--tm-accent:#22d3ee;--tm-accent-soft:#164e63;--tm-warn:#fbbf24;--tm-warn-soft:#3f2a05;
-  --tm-ok:#4ade80;--tm-ok-soft:#052e16;--tm-bad:#f87171;--tm-bad-soft:#450a0a}}
-*{box-sizing:border-box}html{scroll-behavior:smooth}
-body{margin:0;background:var(--tm-bg);color:var(--tm-fg);font-family:var(--tm-font);line-height:1.6;font-size:16px}
-main{max-width:860px;margin:0 auto;padding:24px 20px 64px}
-header[data-section=header]{border-bottom:1px solid var(--tm-line);padding-bottom:20px;margin-bottom:28px}
-header h1{font-size:1.75rem;line-height:1.25;margin:0 0 12px}
-.meta{display:flex;flex-wrap:wrap;gap:8px 16px;color:var(--tm-muted);font-size:.9rem}
+:root{--tm-bg:#ffffff;--tm-fg:#111827;--tm-muted:#6b7280;--tm-faint:#9ca3af;--tm-line:#e5e7eb;--tm-card:#f9fafb;--tm-card2:#f3f4f6;
+  --tm-accent:#0e7490;--tm-accent-soft:#e0f2fe;--tm-accent-ink:#164e63;--tm-warn:#b45309;--tm-warn-soft:#fef3c7;
+  --tm-ok:#15803d;--tm-ok-soft:#dcfce7;--tm-bad:#b91c1c;--tm-bad-soft:#fee2e2;--tm-quote:#fffbeb;--tm-quote-line:#f59e0b;
+  --tm-font:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --tm-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--tm-radius:14px}
+@media (prefers-color-scheme:dark){:root{--tm-bg:#0b1020;--tm-fg:#e5e7eb;--tm-muted:#9ca3af;--tm-faint:#6b7280;--tm-line:#1f2937;
+  --tm-card:#111827;--tm-card2:#161f33;--tm-accent:#22d3ee;--tm-accent-soft:#0c3a4a;--tm-accent-ink:#a5f3fc;--tm-warn:#fbbf24;--tm-warn-soft:#3f2a05;
+  --tm-ok:#4ade80;--tm-ok-soft:#052e16;--tm-bad:#f87171;--tm-bad-soft:#450a0a;--tm-quote:#1a1a12;--tm-quote-line:#d97706}}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:16px}
+body{margin:0;background:var(--tm-bg);color:var(--tm-fg);font-family:var(--tm-font);line-height:1.7;font-size:16px;
+  -webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:anywhere}
+main{max-width:1180px;margin:0 auto;padding:28px 20px 72px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:32px}
+@media (min-width:1100px){.layout{grid-template-columns:240px minmax(0,1fr)}}
+a{color:var(--tm-accent)}a:hover{text-decoration-thickness:2px}
+h1,h2,h3,h4{letter-spacing:-.01em}
+/* 목차 */
+.toc{font-size:.9rem;line-height:1.5}
+@media (min-width:1100px){.toc{position:sticky;top:20px;align-self:start;max-height:calc(100vh - 40px);overflow:auto;padding-right:8px}}
+.toc-title{margin:0 0 10px;font-size:.75rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tm-faint)}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc>ol>li{margin:0 0 4px}
+.toc a{display:block;padding:5px 10px;border-radius:8px;color:var(--tm-fg);text-decoration:none;border-left:2px solid transparent}
+.toc a:hover{background:var(--tm-card2)}
+.toc .n{display:inline-block;min-width:1.4em;color:var(--tm-faint);font-family:var(--tm-mono);font-size:.78rem}
+.toc ol ol{margin:2px 0 8px 12px;border-left:1px solid var(--tm-line)}
+.toc ol ol a{padding:3px 10px;font-size:.84rem;color:var(--tm-muted)}
+.toc ol ol .time{margin-left:4px}
+@media (max-width:1099px){.toc{border:1px solid var(--tm-line);border-radius:var(--tm-radius);padding:14px 16px;background:var(--tm-card)}
+  .toc ol ol{display:none}}
+/* 헤더 */
+header[data-section=header]{padding:4px 0 24px;margin:0 0 32px;border-bottom:1px solid var(--tm-line)}
+.kicker{margin:0 0 8px;font-size:.78rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--tm-accent)}
+header h1{font-size:2rem;line-height:1.25;margin:0 0 14px;font-weight:800}
+.meta{display:flex;flex-wrap:wrap;gap:6px 20px;color:var(--tm-muted);font-size:.92rem;margin:0 0 18px}
 .meta b{color:var(--tm-fg);font-weight:600}
-section{margin:0 0 36px}
-section h2{font-size:1.2rem;margin:0 0 12px;padding-left:10px;border-left:4px solid var(--tm-accent)}
-.card{background:var(--tm-card);border:1px solid var(--tm-line);border-radius:12px;padding:16px 18px}
-.tldr li{margin:4px 0}
-table{width:100%;border-collapse:collapse;font-size:.95rem}
-th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--tm-line);vertical-align:top}
-th{color:var(--tm-muted);font-weight:600;font-size:.85rem}
-.topic{border:1px solid var(--tm-line);border-radius:12px;padding:16px 18px;margin:0 0 14px;background:var(--tm-card)}
-.topic h3{margin:0 0 6px;font-size:1.05rem}
-.time{font-family:var(--tm-mono);font-size:.8rem;color:var(--tm-muted)}
-blockquote{margin:10px 0;padding:8px 14px;border-left:3px solid var(--tm-accent);background:var(--tm-bg);border-radius:0 8px 8px 0}
-blockquote .orig{display:block;color:var(--tm-muted);font-size:.9rem}
-blockquote .spk{font-weight:600;font-size:.85rem;color:var(--tm-accent)}
-.badge{display:inline-block;padding:1px 8px;border-radius:999px;font-size:.75rem;font-weight:600;vertical-align:middle}
+.stats{display:flex;flex-wrap:wrap;gap:10px;list-style:none;margin:0;padding:0}
+.stats li{background:var(--tm-card);border:1px solid var(--tm-line);border-radius:10px;padding:8px 14px;min-width:92px}
+.stats b{display:block;font-size:1.35rem;font-weight:800;line-height:1.1;color:var(--tm-accent)}
+.stats span{font-size:.78rem;color:var(--tm-muted)}
+/* 섹션 */
+section{margin:0 0 44px}
+section h2{display:flex;align-items:center;gap:12px;font-size:1.3rem;margin:0 0 16px;padding:0 0 10px;border-bottom:2px solid var(--tm-line)}
+section h2 .num{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:9px;
+  background:var(--tm-accent);color:#fff;font-size:.9rem;font-weight:800;font-family:var(--tm-mono);flex:none}
+.card{background:var(--tm-card);border:1px solid var(--tm-line);border-radius:var(--tm-radius);padding:18px 22px}
+.card+.card{margin-top:12px}
+.card p{margin:0 0 8px}.card p:last-child{margin-bottom:0}
+.lead{font-size:1.02rem}
+.tldr{margin:0;padding-left:0;list-style:none}
+.tldr li{position:relative;padding:6px 0 6px 28px;border-bottom:1px dashed var(--tm-line)}
+.tldr li:last-child{border-bottom:0}
+.tldr li::before{content:"";position:absolute;left:6px;top:17px;width:9px;height:9px;border-radius:50%;background:var(--tm-accent)}
+.prose p{margin:0 0 14px}.prose p:last-child{margin-bottom:0}
+.list{margin:0;padding:0;list-style:none;counter-reset:item}
+.list>li{position:relative;padding:10px 14px 10px 44px;border:1px solid var(--tm-line);border-radius:10px;background:var(--tm-card);margin:0 0 8px;counter-increment:item}
+.list>li::before{content:counter(item);position:absolute;left:14px;top:11px;width:22px;height:22px;border-radius:6px;background:var(--tm-accent-soft);color:var(--tm-accent-ink);
+  font-size:.8rem;font-weight:800;font-family:var(--tm-mono);display:flex;align-items:center;justify-content:center}
+.list>li.time{padding-left:14px}.list>li.time::before{display:none}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:.95rem;border:1px solid var(--tm-line);border-radius:12px;overflow:hidden}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--tm-line);vertical-align:top}
+th{background:var(--tm-card2);color:var(--tm-muted);font-weight:700;font-size:.8rem;letter-spacing:.02em}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:nth-child(even) td{background:var(--tm-card)}
+td code,.term{font-family:var(--tm-mono);font-size:.88em;background:var(--tm-card2);padding:1px 6px;border-radius:5px}
+/* 논의 흐름 */
+.topic{border:1px solid var(--tm-line);border-radius:var(--tm-radius);padding:20px 22px;margin:0 0 18px;background:var(--tm-card)}
+.topic-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 12px;margin:0 0 12px;padding:0 0 10px;border-bottom:1px solid var(--tm-line)}
+.topic-head .num{display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:0 8px;border-radius:8px;
+  background:var(--tm-accent-soft);color:var(--tm-accent-ink);font-size:.82rem;font-weight:800;font-family:var(--tm-mono);align-self:center}
+.topic h3{margin:0;font-size:1.12rem;font-weight:700}
+.topic h4{margin:16px 0 6px;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tm-faint)}
+.topic h4:first-of-type{margin-top:0}
+.topic p{margin:0 0 8px}
+.topic dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px}
+.topic dt{font-weight:700;color:var(--tm-accent)}.topic dt::before{content:"Q "}
+.topic dd{margin:0}
+.time{font-family:var(--tm-mono);font-size:.78rem;color:var(--tm-muted);white-space:nowrap}
+blockquote{margin:8px 0;padding:10px 14px 10px 16px;border-left:3px solid var(--tm-quote-line);background:var(--tm-quote);border-radius:0 10px 10px 0;font-size:.97rem}
+blockquote .time{display:inline-block;margin-right:8px;padding:1px 7px;border-radius:6px;background:var(--tm-bg);border:1px solid var(--tm-line);vertical-align:1px}
+blockquote .orig,blockquote .spk{display:none}
+.badge{display:inline-block;padding:1px 9px;border-radius:999px;font-size:.74rem;font-weight:700;vertical-align:middle;white-space:nowrap}
 .badge.ok{background:var(--tm-ok-soft);color:var(--tm-ok)}
 .badge.diff{background:var(--tm-warn-soft);color:var(--tm-warn)}
-.badge.na{background:var(--tm-line);color:var(--tm-muted)}
-.badge.infer{background:var(--tm-accent-soft);color:var(--tm-accent)}
-.ref{margin:0 0 12px}.ref a{color:var(--tm-accent);word-break:break-all}
-.ref .why{color:var(--tm-muted);font-size:.9rem}
-figure{margin:12px 0}figure svg{width:100%;height:auto;display:block}
-figcaption{color:var(--tm-muted);font-size:.85rem;margin-top:4px}
+.badge.na{background:var(--tm-card2);color:var(--tm-muted)}
+.badge.infer{background:var(--tm-accent-soft);color:var(--tm-accent-ink)}
+.badge.todo{background:var(--tm-card2);color:var(--tm-muted)}
+.badge.doing{background:var(--tm-accent-soft);color:var(--tm-accent-ink)}
+.badge.done{background:var(--tm-ok-soft);color:var(--tm-ok)}
+.ref{margin:0 0 12px}.ref a{word-break:break-all;font-weight:600}
+.ref .why{color:var(--tm-muted);font-size:.9rem;margin-top:4px}
+figure{margin:14px 0;padding:14px;background:var(--tm-bg);border:1px solid var(--tm-line);border-radius:12px}
+figure svg{width:100%;height:auto;display:block}
+figcaption{color:var(--tm-muted);font-size:.85rem;margin-top:8px}
 details summary{cursor:pointer;color:var(--tm-accent);font-weight:600}
-footer[data-section=footer]{border-top:1px solid var(--tm-line);padding-top:16px;color:var(--tm-muted);font-size:.85rem}
-@media (max-width:480px){body{font-size:15px}main{padding:16px 14px 48px}header h1{font-size:1.4rem}th,td{padding:6px}}
-@media print{main{max-width:none;padding:0}.topic,.card{break-inside:avoid}details{display:block}details>summary{display:none}}
+footer[data-section=footer]{border-top:1px solid var(--tm-line);padding-top:18px;color:var(--tm-muted);font-size:.84rem;line-height:1.6}
+@media (max-width:560px){body{font-size:15px}main{padding:16px 14px 48px}header h1{font-size:1.5rem}th,td{padding:8px}
+  .topic,.card{padding:16px}.topic dl{grid-template-columns:1fr}}
+@media print{main{max-width:none;padding:0}.layout{display:block}.toc{display:none}.topic,.card,.list>li{break-inside:avoid}details{display:block}details>summary{display:none}}
 </style>
 </head>
 <body>
 <main>
+<div class="layout">
+<nav class="toc" aria-label="목차">
+  <p class="toc-title">목차</p>
+  {{TOC}}
+</nav>
+<article>
 <header data-section="header">
+  <p class="kicker">미팅록</p>
   <h1>{{TITLE}}</h1>
   <div class="meta">
     <span>일시 <b>{{DATE}} {{START}}–{{END}}</b></span>
     <span>소요 <b>{{DURATION}}</b></span>
-    <span>참석자 <b>{{SPEAKERS}}</b></span>
-    <span>언어 <b>{{LANGS}}</b></span>
     <span>생성 <b>{{GENERATED_AT_LOCAL}}</b></span>
   </div>
+  <ul class="stats">{{STATS}}</ul>
 </header>
 
-<section data-section="tldr"><h2>한눈에 보기</h2><div class="card"><ul class="tldr">{{TLDR_ITEMS}}</ul></div></section>
+<section data-section="tldr" id="sec-tldr"><h2><span class="num">1</span>한눈에 보기</h2>
+<div class="card lead"><ul class="tldr">{{TLDR_ITEMS}}</ul></div></section>
 
-<section data-section="decisions"><h2>결정 사항</h2>{{DECISIONS}}</section>
+<section data-section="summary" id="sec-summary"><h2><span class="num">2</span>회의 요약</h2>
+<div class="prose">{{SUMMARY}}</div></section>
 
-<section data-section="action-items"><h2>액션 아이템</h2>
+<section data-section="decisions" id="sec-decisions"><h2><span class="num">3</span>결정 사항</h2>
+<ol class="list">{{DECISIONS}}</ol></section>
+
+<section data-section="action-items" id="sec-actions"><h2><span class="num">4</span>액션 아이템</h2>
 <table><thead><tr><th>담당</th><th>할 일</th><th>기한</th><th>상태</th></tr></thead><tbody>{{ACTION_ROWS}}</tbody></table></section>
 
-<section data-section="discussion"><h2>논의 흐름</h2>
+<section data-section="discussion" id="sec-discussion"><h2><span class="num">5</span>논의 흐름</h2>
 {{TIMELINE_FIGURE}}
 {{TOPIC_BLOCKS}}
 </section>
 
-<section data-section="open-questions"><h2>미결 사항</h2>{{OPEN_QUESTIONS}}</section>
+<section data-section="open-questions" id="sec-open"><h2><span class="num">6</span>미결 사항</h2>
+<ul class="list">{{OPEN_QUESTIONS}}</ul></section>
 
-<section data-section="references"><h2>관련 공식 자료 · 더블 체크</h2>{{REFERENCES}}</section>
+<section data-section="references" id="sec-references"><h2><span class="num">7</span>관련 공식 자료 · 더블 체크</h2>{{REFERENCES}}</section>
 
-<section data-section="insights"><h2>인사이트 보고서</h2>{{INSIGHTS}}</section>
+<section data-section="insights" id="sec-insights"><h2><span class="num">8</span>인사이트 보고서</h2>{{INSIGHTS}}</section>
 
-<section data-section="glossary"><h2>용어 사전</h2>
-<table><thead><tr><th>영어</th><th>한국어</th><th>설명</th></tr></thead><tbody>{{GLOSSARY_ROWS}}</tbody></table></section>
+<section data-section="glossary" id="sec-glossary"><h2><span class="num">9</span>용어 사전</h2>
+<table><thead><tr><th>용어</th><th>이 미팅에서의 뜻</th><th>녹취 표기</th></tr></thead><tbody>{{GLOSSARY_ROWS}}</tbody></table></section>
 
 <footer data-section="footer">
   TransMeet로 생성 · 모델 {{MODEL_ID}} · 미팅 ID {{MEETING_ID}} · 생성 {{GENERATED_AT}} · 참고 자료 조회일 {{RESEARCH_DATE}}
 </footer>
+</article>
+</div>
 </main>
 </body>
 </html>

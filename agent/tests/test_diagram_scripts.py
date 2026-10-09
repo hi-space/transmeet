@@ -35,7 +35,7 @@ FLOW = {
 def wrap(svg: str) -> str:
     sections = "".join(
         f'<section data-section="{s}"><p>x</p></section>'
-        for s in ["header", "tldr", "decisions", "action-items", "discussion", "open-questions", "references", "insights", "glossary", "footer"]
+        for s in ["header", "tldr", "summary", "decisions", "action-items", "discussion", "open-questions", "references", "insights", "glossary", "footer"]
     )
     return (
         '<!doctype html><html lang="ko"><head><meta name="transmeet:meeting-id" content="m">'

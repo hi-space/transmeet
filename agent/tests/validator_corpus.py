@@ -6,7 +6,7 @@ validator paths. Imported by agent/tests.
 from pathlib import Path
 
 SECTIONS = [
-    "header", "tldr", "decisions", "action-items", "discussion",
+    "header", "tldr", "summary", "decisions", "action-items", "discussion",
     "open-questions", "references", "insights", "glossary", "footer",
 ]
 FIXTURES = Path(__file__).resolve().parent / "fixtures"

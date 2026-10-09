@@ -3,7 +3,7 @@ from botocore.exceptions import ClientError
 
 from runtime.publish import PublishError, ddb_item_to_dict, page_key, publish_html
 
-SECTIONS = ["header", "tldr", "decisions", "action-items", "discussion", "open-questions", "references", "insights", "glossary", "footer"]
+from validator_corpus import SECTIONS
 
 
 def good_html(extra=""):

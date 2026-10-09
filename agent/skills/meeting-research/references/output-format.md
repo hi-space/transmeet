@@ -6,7 +6,7 @@
 <div class="ref card">
   <div><a href="https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/harness.html">AgentCore Harness 개발자 가이드</a>
     <span class="badge ok">확인됨</span></div>
-  <div class="why">미팅 [10:14] Speaker 1: "하네스는 모델·도구·스킬을 선언형으로 묶는다" — 문서의 개요 절과 일치.</div>
+  <div class="why">미팅 [10:14]: "하네스는 모델·도구·스킬을 선언형으로 묶는다" — 문서의 개요 절과 일치.</div>
   <div class="why">공식 문서 · docs.aws.amazon.com · 2026-09 갱신</div>
 </div>
 ```

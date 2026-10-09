@@ -66,6 +66,7 @@ footer[data-section=footer]{border-top:1px solid var(--tm-line);padding-top:16px
 
 <section data-section="tldr"><h2>한눈에 보기</h2><div class="card"><ul class="tldr"><li>백엔드 배포는 현재 수동(ECR 푸시 + force-new-deployment)이며, 금요일(10/9)까지 GitHub Actions 파이프라인으로 옮깁니다.</li><li>AWS 자격증명은 장기 키 대신 OIDC를 쓰고, aws-actions/configure-aws-credentials로 IAM 역할을 assume합니다.</li><li>배포 완료 슬랙 알림은 웹훅으로 다음 주에 붙이고, Speaker 1이 오늘 #deploys 채널을 만듭니다.</li><li>'GitHub OIDC 토큰은 약 15분 유효'라는 발언은 공식 문서에서 확인하지 못했습니다.</li></ul></div></section>
 
+<section data-section="summary"><h2>회의 요약</h2><p>요약.</p></section>
 <section data-section="decisions"><h2>결정 사항</h2><ul><li>AWS 자격증명은 장기 키 대신 OIDC를 쓰고, aws-actions/configure-aws-credentials로 역할을 assume한다 <span class="time">[10:01]</span> <span class="time">[10:02]</span></li><li>배포 완료 알림은 슬랙 웹훅으로 간단히 구현하고 채널은 #deploys로 한다 <span class="time">[10:05]</span> <span class="time">[10:06]</span></li><li>우선순위: 파이프라인은 금요일까지, 알림은 다음 주 <span class="time">[10:06]</span> <span class="time">[10:13]</span></li></ul></section>
 
 <section data-section="action-items"><h2>액션 아이템</h2>

@@ -17,7 +17,7 @@ MAX_BYTES = 1_500_000
 
 # ── validator core: keep identical in backend/app/page_agent.py and agent/skills/meeting-minutes-page/scripts/validate_page.py ──
 REQUIRED_SECTIONS = [
-    "header", "tldr", "decisions", "action-items", "discussion",
+    "header", "tldr", "summary", "decisions", "action-items", "discussion",
     "open-questions", "references", "insights", "glossary", "footer",
 ]
 REQUIRED_META = ["transmeet:meeting-id", "transmeet:generated-at", "transmeet:model"]

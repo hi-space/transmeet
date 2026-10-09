@@ -23,34 +23,37 @@ PAYLOAD = {
 }
 
 
-def outline_model(*outlines):
-    """outline 단계 가짜 모델: Outline 도구 호출로 구조화 출력을 돌려준다."""
-    return FakeChatModel(responses=[ai("", [tool_call("Outline", o.model_dump(), f"o{i}")]) for i, o in enumerate(outlines)])
+def analyze_model(*analyses):
+    """analyze 단계 가짜 모델: Analysis 도구 호출로 구조화 출력을 돌려준다."""
+    return FakeChatModel(responses=[ai("", [tool_call("Analysis", a.model_dump(), f"a{i}")]) for i, a in enumerate(analyses)])
 
 
-def outline(targets=1, flow=True):
-    return G.Outline(
+def analysis(targets=1, flow=True):
+    return G.Analysis(
+        summary=["배포 파이프라인 현황을 점검했다.", "금요일 마감으로 정리됐다."],
+        terms=[G.Term(term="CodeDeploy", variants=["코드 디플로이"], meaning="AWS 배포 서비스", count=3),
+               G.Term(term="OIDC", variants=[], meaning="GitHub Actions 가 AWS 역할을 맡는 인증 방식", count=5)],
         topics=[G.Topic(start="10:00", end="10:15", title="파이프라인 현황", summary="진행 상황 점검."),
                 G.Topic(start="10:15", end="10:30", title="일정 합의", summary="금요일 마감 합의.")],
         research_targets=[G.ResearchTarget(claim="CodeDeploy supports blue/green", said_at="10:05", query="AWS CodeDeploy blue green")][:targets],
         diagram_plan=[G.DiagramPlan(kind="timeline", title="타임라인", rationale="기본")]
         + ([G.DiagramPlan(kind="flow", title="결정 흐름", rationale="마감 결정")] if flow else []),
-        glossary_candidates=["CodeDeploy"],
     )
 
 
 def content_blocks(diagram_marker=""):
     """`page.html` 자리표시자를 채우는 edit_file 호출 목록 (유효한 내용)."""
-    topic = ('<div class="topic" id="topic-1"><h3>파이프라인 현황 <span class="time">10:00–10:15</span></h3><p>점검.</p>'
-             '<blockquote><span class="spk">Speaker 1 [10:00]</span> 파이프라인은 어디까지 됐나요?<span class="orig">Where are we on the pipeline?</span></blockquote>'
-             f'{diagram_marker}</div><div class="topic" id="topic-2"><h3>일정 합의 <span class="time">10:15–10:30</span></h3><p>금요일 마감.</p></div>')
+    topic = ('<div class="topic" id="topic-1"><div class="topic-head"><span class="num">1</span><h3>파이프라인 현황</h3><span class="time">10:00–10:15</span></div>'
+             '<h4>요지</h4><p>점검.</p><h4>핵심 발언</h4>'
+             '<blockquote><span class="time">[10:00]</span>Where are we on the pipeline?</blockquote>'
+             f'{diagram_marker}</div><div class="topic" id="topic-2"><div class="topic-head"><span class="num">2</span><h3>일정 합의</h3>'
+             '<span class="time">10:15–10:30</span></div><h4>요지</h4><p>금요일 마감.</p></div>')
     fills = {
         "TLDR_ITEMS": "<li>금요일까지 파이프라인 완료</li><li>다음 주 알림 연결</li><li>리스크 없음</li>",
         "DECISIONS": '<li>금요일 마감 <span class="time">[10:20]</span></li>',
-        "ACTION_ROWS": "<tr><td>Me</td><td>파이프라인 마무리 [10:20]</td><td>금요일</td><td>진행 중</td></tr>",
+        "ACTION_ROWS": '<tr><td>미정</td><td>파이프라인 마무리 <span class="time">[10:20]</span></td><td>금요일</td><td><span class="badge doing">진행 중</span></td></tr>',
         "TOPIC_BLOCKS": topic,
         "OPEN_QUESTIONS": '<li class="time">해당 없음</li>',
-        "GLOSSARY_ROWS": "<tr><td>CodeDeploy</td><td>AWS 배포 서비스</td></tr>",
     }
     calls = [tool_call("edit_file", {"path": "page.html", "old": "{{" + k + "}}", "new": v}, f"e-{k}") for k, v in fills.items()]
     return calls
@@ -133,7 +136,7 @@ class FakeSearch:
 
 async def test_full_path_publishes_once(tmp_path):
     pub = Recorder()
-    models = {"outline": outline_model(outline()), "research": research_model(), "diagrams": diagrams_model(),
+    models = {"analyze": analyze_model(analysis()), "research": research_model(), "diagrams": diagrams_model(),
               "insights": insights_model(), "assemble": good_assemble_model()}
     search = FakeSearch()
     deps = make_deps(tmp_path, models, publisher=pub)
@@ -150,6 +153,14 @@ async def test_full_path_publishes_once(tmp_path):
     assert 'data-section="references"' in html and "docs.aws.amazon.com/codedeploy" in html
     assert "마감이 촉박하다" in html
     assert "2026-10-06" in html and "10:00–10:30" in html and "30분" in html  # 헤더는 코드가 채웠다
+    assert "Speaker" not in html and 'class="spk"' not in html and 'class="orig"' not in html  # 화자·번역 없음
+    # 코드가 채운 요약·용어 사전·목차·통계
+    assert '<section data-section="summary"' in html and "<p>배포 파이프라인 현황을 점검했다.</p>" in html
+    assert '<span class="term">OIDC</span>' in html and "코드 디플로이" in html  # 횟수 순: OIDC(5) 가 먼저
+    assert html.index('<span class="term">OIDC</span>') < html.index('<span class="term">CodeDeploy</span>')
+    assert '<a href="#topic-2">일정 합의<span class="time">10:15</span></a>' in html and '<a href="#sec-glossary">' in html
+    assert "<li><b>2</b><span>주제</span></li>" in html and "<li><b>1</b><span>결정</span></li>" in html
+    assert "<li><b>1</b><span>액션</span></li>" in html and "<li><b>0</b><span>미결</span></li>" in html and "<li><b>1</b><span>참고 자료</span></li>" in html
     # 노드 순서: research/diagrams 가 insights 앞, insights 가 assemble 앞
     order = [list(u)[0] for u in updates]
     assert order.index("research") < order.index("insights") and order.index("diagrams") < order.index("insights")
@@ -159,17 +170,22 @@ async def test_full_path_publishes_once(tmp_path):
     phases = [c["phase"] for c in customs]
     assert "error" not in phases and phases.count("status") >= 6
     texts = [c.get("text", "") for c in customs]
-    assert any("2개 주제" in t for t in texts) and "페이지가 발행되었습니다" in texts and any(t.startswith("웹 검색:") for t in texts)
+    assert any("2개 주제" in t and "용어 2개" in t for t in texts) and "페이지가 발행되었습니다" in texts and any(t.startswith("웹 검색:") for t in texts)
     assert search.calls == 1
     # 작업 디렉터리 산출물
     root = Path(G.initial_state.__globals__["create_workspace"]("s" * 33, base=tmp_path, skills_dir=SKILLS).root)
-    assert json.loads((root / "outline.json").read_text())["topics"][0]["title"] == "파이프라인 현황"
+    assert json.loads((root / "analysis.json").read_text())["topics"][0]["title"] == "파이프라인 현황"
+    # 후속 단계 프롬프트에 용어 표기 블록이 들어갔다
+    from runtime.stage import message_text
+    for stage in ("research", "insights", "assemble"):
+        assert "용어 표기" in message_text(models[stage].calls[0][1]) and "MACC" not in message_text(models[stage].calls[0][1])
+        assert "**CodeDeploy** (녹취 표기: 코드 디플로이)" in message_text(models[stage].calls[0][1])
     assert (root / "diagrams" / "timeline.svg").exists()
 
 
 async def test_empty_research_targets_skip_model(tmp_path):
     research = FakeChatModel(responses=[])
-    models = {"outline": outline_model(outline(targets=0, flow=False)), "research": research,
+    models = {"analyze": analyze_model(analysis(targets=0, flow=False)), "research": research,
               "insights": insights_model(), "assemble": good_assemble_model()}
     pub = Recorder()
     customs, updates = await run(make_deps(tmp_path, models, publisher=pub))
@@ -191,7 +207,7 @@ def bad_assemble_round(script_in_topic=True):
 async def test_validation_failure_reassembles_then_publishes(tmp_path):
     fix = [ai("", [tool_call("edit_file", {"path": "page.html", "old": "<script>alert(1)</script>", "new": "<p>고침</p>"}, "fix")]), ai("고쳤습니다")]
     assemble = FakeChatModel(responses=bad_assemble_round() + fix)
-    models = {"outline": outline_model(outline(targets=0, flow=False)), "research": FakeChatModel(),
+    models = {"analyze": analyze_model(analysis(targets=0, flow=False)), "research": FakeChatModel(),
               "insights": insights_model(), "assemble": assemble}
     pub = Recorder()
     customs, updates = await run(make_deps(tmp_path, models, publisher=pub))
@@ -209,7 +225,7 @@ async def test_validation_failure_reassembles_then_publishes(tmp_path):
 
 async def test_three_failures_end_in_error(tmp_path):
     rounds = bad_assemble_round() + [ai("안 고침"), ai("안 고침")]
-    models = {"outline": outline_model(outline(targets=0, flow=False)), "research": FakeChatModel(),
+    models = {"analyze": analyze_model(analysis(targets=0, flow=False)), "research": FakeChatModel(),
               "insights": insights_model(), "assemble": FakeChatModel(responses=rounds)}
     pub = Recorder()
     customs, updates = await run(make_deps(tmp_path, models, publisher=pub))
@@ -223,7 +239,7 @@ async def test_three_failures_end_in_error(tmp_path):
 
 
 async def test_publisher_exception_propagates(tmp_path):
-    models = {"outline": outline_model(outline(targets=0, flow=False)), "research": FakeChatModel(),
+    models = {"analyze": analyze_model(analysis(targets=0, flow=False)), "research": FakeChatModel(),
               "insights": insights_model(), "assemble": good_assemble_model()}
     with pytest.raises(RuntimeError, match="s3 down"):
         await run(make_deps(tmp_path, models, publisher=Recorder(fail=RuntimeError("s3 down"))))
@@ -239,21 +255,43 @@ def test_initial_state_rejects_bad_payloads(tmp_path):
         G.initial_state({"meeting": {"meetingId": "m", "modelId": "anthropic.claude-haiku"}, "messages": [{}]}, "s" * 33, deps)
     state = G.initial_state(PAYLOAD, "s" * 33, deps)
     root = Path(state["work_dir"])
-    assert (root / "transcript.txt").read_text().startswith("[10:00:10] Speaker 1 (en) | Where are we")
+    transcript = (root / "transcript.txt").read_text()
+    assert transcript.startswith("[10:00:10] Where are we on the pipeline?\n[10:20:00] 금요일까지 끝냅니다.")
+    assert "Speaker" not in transcript and "파이프라인은 어디까지" not in transcript  # 화자·번역 없음
     assert json.loads((root / "meeting.json").read_text())["meetingId"] == "m1"
 
 
 def test_system_prompts_exist_for_all_stages():
-    for stage in ("outline", "research", "insights", "diagrams", "assemble"):
+    for stage in ("analyze", "research", "insights", "diagrams", "assemble"):
         text = G.system_prompt(stage)
-        assert "TransMeet" in text and "이 단계" in text
+        assert "TransMeet" in text and "이 단계" in text and "원문만" in text
     assert "publish_page" not in G.system_prompt("assemble") and "code_interpreter" not in G.system_prompt("assemble")
+    assert "GLOSSARY_ROWS" not in G.system_prompt("assemble") and "{{STATS}}" in G.system_prompt("assemble")
+    assert "Analysis" in G.system_prompt("analyze") and "summary" in G.system_prompt("analyze")
 
 
-async def test_outline_retries_once_on_bad_structured_output(tmp_path):
-    bad_then_good = FakeChatModel(responses=[ai("구조화 실패"), ai("", [tool_call("Outline", outline(targets=0, flow=False).model_dump(), "o1")])])
-    models = {"outline": bad_then_good, "research": FakeChatModel(), "insights": insights_model(), "assemble": good_assemble_model()}
+async def test_analyze_retries_once_on_bad_structured_output(tmp_path):
+    bad_then_good = FakeChatModel(responses=[ai("구조화 실패"), ai("", [tool_call("Analysis", analysis(targets=0, flow=False).model_dump(), "a1")])])
+    models = {"analyze": bad_then_good, "research": FakeChatModel(), "insights": insights_model(), "assemble": good_assemble_model()}
     pub = Recorder()
     await run(make_deps(tmp_path, models, publisher=pub))
     assert len(pub.calls) == 1 and len(bad_then_good.calls) == 2
     assert "스키마" in bad_then_good.calls[1][-1].content
+
+
+def test_stats_ignore_empty_placeholder_items():
+    html = ('<section data-section="decisions"><ol class="list"><li class="time">결정된 사항 없음</li></ol></section>'
+            '<section data-section="action-items"><table><thead><tr><th>a</th></tr></thead><tbody><tr><td colspan="4" class="time">해당 없음</td></tr></tbody></table></section>'
+            '<section data-section="open-questions"><ul><li>누가 채널을 만드나 <span class="time">[10:05]</span></li><li>기한은? </li></ul></section>'
+            '<section data-section="references"><p class="time">리서치 대상이 되는 외부 사실이 없었습니다.</p></section>')
+    stats = G._stats_html(html)
+    assert "<li><b>0</b><span>주제</span></li>" in stats and "<li><b>0</b><span>결정</span></li>" in stats
+    assert "<li><b>0</b><span>액션</span></li>" in stats and "<li><b>2</b><span>미결</span></li>" in stats and "<li><b>0</b><span>참고 자료</span></li>" in stats
+
+
+def test_glossary_and_summary_fallbacks_and_escaping():
+    assert G._glossary_rows({}) == G.NO_TERMS_ROW and G._summary_html({"summary": []}) == G.NO_SUMMARY_TEXT
+    rows = G._glossary_rows({"terms": [{"term": "A<B", "variants": ["x", "A<B"], "meaning": "a & b", "count": 1}]})
+    assert "A&lt;B" in rows and "a &amp; b" in rows and rows.count("x") == 1  # 정식 표기와 같은 변형은 생략
+    toc = G._toc_html({"topics": [{"title": "<T>", "start": "10:00"}]})
+    assert '<a href="#topic-1">&lt;T&gt;<span class="time">10:00</span></a>' in toc and toc.count("<li>") == len(G.TOC_SECTIONS) + 1
