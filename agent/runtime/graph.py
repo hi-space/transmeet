@@ -84,8 +84,13 @@ class Term(BaseModel):
     count: int = Field(default=1, description="언급 횟수(변형 표기 포함, 대략)")
 
 
+class SummaryGroup(BaseModel):
+    heading: str = Field(description="소제목: 배경·목적 / 주요 논의 / 합의·결정 / 남은 일 중 하나")
+    points: List[str] = Field(default_factory=list, description="불릿 각 1~2문장. 핵심 구절은 <b>, 숫자·일정은 <mark> 로 감싼다")
+
+
 class Analysis(BaseModel):
-    summary: List[str] = Field(default_factory=list, description="회의 전체 서술 요약, 문단 3~6개")
+    summary: List[SummaryGroup] = Field(default_factory=list, description="회의 전체 요약: 소제목 그룹 3~4개, 그룹마다 불릿")
     terms: List[Term] = Field(default_factory=list)
     topics: List[Topic] = Field(default_factory=list)
     research_targets: List[ResearchTarget] = Field(default_factory=list)
@@ -201,9 +206,31 @@ def _terms_block(analysis: Dict[str, Any]) -> str:
             "인용 원문에 있으면 정식 표기로 바로잡습니다.\n" + "\n".join(lines))
 
 
+_HIGHLIGHT_TAG_RE = re.compile(r"&lt;(/?)(b|mark)&gt;")
+
+
+def _escape_keep_highlight(value: str) -> str:
+    """모델이 쓴 인라인 강조(`<b>`, `<mark>`)만 살리고 그 밖의 마크업은 글자로 바꾼다."""
+    return _HIGHLIGHT_TAG_RE.sub(r"<\1\2>", _escape(value))
+
+
+def _points_html(points: Any) -> str:
+    items = [p.strip() for p in (points or []) if isinstance(p, str) and p.strip()]
+    return '<ul class="points">' + "".join(f"<li>{_escape_keep_highlight(p)}</li>" for p in items) + "</ul>" if items else ""
+
+
 def _summary_html(analysis: Dict[str, Any]) -> str:
-    paras = [p.strip() for p in (analysis.get("summary") or []) if isinstance(p, str) and p.strip()]
-    return "".join(f"<p>{_escape(p)}</p>" for p in paras) or NO_SUMMARY_TEXT
+    """`summary` 는 소제목 그룹 목록. 과거 산출물(문단 문자열 목록)은 소제목 없는 불릿으로 보여준다."""
+    raw = analysis.get("summary") or []
+    legacy = _points_html([p for p in raw if isinstance(p, str)])
+    groups = []
+    for g in raw:
+        if not isinstance(g, dict):
+            continue
+        points = _points_html(g.get("points"))
+        if points:
+            groups.append(f"<h4>{_escape(str(g.get('heading') or ''))}</h4>{points}")
+    return legacy + "".join(groups) or NO_SUMMARY_TEXT
 
 
 def _glossary_rows(analysis: Dict[str, Any]) -> str:

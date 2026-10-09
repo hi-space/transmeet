@@ -30,7 +30,8 @@ def analyze_model(*analyses):
 
 def analysis(targets=1, flow=True):
     return G.Analysis(
-        summary=["배포 파이프라인 현황을 점검했다.", "금요일 마감으로 정리됐다."],
+        summary=[G.SummaryGroup(heading="배경·목적", points=["<b>배포 파이프라인 현황</b>을 점검했다."]),
+                 G.SummaryGroup(heading="합의·결정", points=["<mark>금요일</mark> 마감으로 정리됐다."])],
         terms=[G.Term(term="CodeDeploy", variants=["코드 디플로이"], meaning="AWS 배포 서비스", count=3),
                G.Term(term="OIDC", variants=[], meaning="GitHub Actions 가 AWS 역할을 맡는 인증 방식", count=5)],
         topics=[G.Topic(start="10:00", end="10:15", title="파이프라인 현황", summary="진행 상황 점검."),
@@ -155,7 +156,9 @@ async def test_full_path_publishes_once(tmp_path):
     assert "2026-10-06" in html and "10:00–10:30" in html and "30분" in html  # 헤더는 코드가 채웠다
     assert "Speaker" not in html and 'class="spk"' not in html and 'class="orig"' not in html  # 화자·번역 없음
     # 코드가 채운 요약·용어 사전·목차·통계
-    assert '<section data-section="summary"' in html and "<p>배포 파이프라인 현황을 점검했다.</p>" in html
+    assert '<section data-section="summary"' in html
+    assert '<h4>배경·목적</h4><ul class="points"><li><b>배포 파이프라인 현황</b>을 점검했다.</li></ul>' in html
+    assert "<li><mark>금요일</mark> 마감으로 정리됐다.</li>" in html
     assert '<span class="term">OIDC</span>' in html and "코드 디플로이" in html  # 횟수 순: OIDC(5) 가 먼저
     assert html.index('<span class="term">OIDC</span>') < html.index('<span class="term">CodeDeploy</span>')
     assert '<a href="#topic-2">일정 합의<span class="time">10:15</span></a>' in html and '<a href="#sec-glossary">' in html
@@ -289,8 +292,25 @@ def test_stats_ignore_empty_placeholder_items():
     assert "<li><b>0</b><span>액션</span></li>" in stats and "<li><b>2</b><span>미결</span></li>" in stats and "<li><b>0</b><span>참고 자료</span></li>" in stats
 
 
+def test_summary_html_groups_points_and_keeps_only_highlight_tags():
+    html = G._summary_html({"summary": [
+        {"heading": "주요 <논의>", "points": ["<b>OIDC</b> 채택 & <mark>15분</mark> 토큰", " ", "<script>x</script> <i>no</i>"]},
+        {"heading": "빈 그룹", "points": []},
+    ]})
+    assert html.startswith('<h4>주요 &lt;논의&gt;</h4><ul class="points">')
+    assert "<li><b>OIDC</b> 채택 &amp; <mark>15분</mark> 토큰</li>" in html
+    assert "<li>&lt;script&gt;x&lt;/script&gt; &lt;i&gt;no&lt;/i&gt;</li>" in html  # b·mark 외의 태그는 글자로
+    assert html.count("<li>") == 2 and "빈 그룹" not in html  # 공백 항목·빈 그룹은 생략
+
+
+def test_summary_html_accepts_legacy_paragraph_strings():
+    html = G._summary_html({"summary": ["첫 문단.", "둘째 <b>핵심</b>."]})
+    assert html == '<ul class="points"><li>첫 문단.</li><li>둘째 <b>핵심</b>.</li></ul>'
+
+
 def test_glossary_and_summary_fallbacks_and_escaping():
     assert G._glossary_rows({}) == G.NO_TERMS_ROW and G._summary_html({"summary": []}) == G.NO_SUMMARY_TEXT
+    assert G._summary_html({"summary": [{"heading": "x", "points": [" "]}]}) == G.NO_SUMMARY_TEXT
     rows = G._glossary_rows({"terms": [{"term": "A<B", "variants": ["x", "A<B"], "meaning": "a & b", "count": 1}]})
     assert "A&lt;B" in rows and "a &amp; b" in rows and rows.count("x") == 1  # 정식 표기와 같은 변형은 생략
     toc = G._toc_html({"topics": [{"title": "<T>", "start": "10:00"}]})

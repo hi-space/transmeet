@@ -6,18 +6,21 @@
 
 | 자리표시자 | 내용 |
 |---|---|
-| `{{TLDR_ITEMS}}` | `<li>` 3~5개. 결정·결과·숫자 중심 한 문장씩 |
-| `{{DECISIONS}}` | `<li>무엇을 하기로 했는지 <span class="time">[HH:MM]</span></li>` 들. 없으면 `<li class="time">결정된 사항 없음</li>` |
+| `{{TLDR_ITEMS}}` | `<li>` 3~5개. 결정·결과·숫자 중심 한 문장씩. `<b>결과 구절</b>` 로 시작하고 수치·일정은 `<mark>` (예: `<li><b>자격 증명은 OIDC</b> — 장기 액세스 키 대신 IAM 역할 assume <mark>이번 주</mark> 적용</li>`) |
+| `{{DECISIONS}}` | `<li><b>무엇을 하기로 했는지</b> 조건·근거 <span class="time">[HH:MM]</span></li>` 들. 기한·수치는 `<mark>`. 없으면 `<li class="time">결정된 사항 없음</li>` |
 | `{{ACTION_ROWS}}` | `<tr><td>담당</td><td>할 일 <span class="time">[HH:MM]</span></td><td>기한</td><td><span class="badge todo">진행 예정</span></td></tr>` 행들. 상태 배지는 `todo`(진행 예정)·`doing`(진행 중)·`done`(완료). 담당은 발언에 있는 역할·팀만("데이터 팀", "미정"), 사람 이름·화자 라벨 금지. 없으면 `<tr><td colspan="4" class="time">해당 없음</td></tr>` |
 | `{{TOPIC_BLOCKS}}` | 주제 블록 전부, `analysis.json` 의 `topics` 순서대로 (아래 구조). 가장 중요한 섹션이며 가장 길어도 됩니다. 주제가 많으면 **여러 번의 `edit_file` 로 나눠** 넣어도 됩니다(먼저 `{{TOPIC_BLOCKS}}` 를 첫 블록 + `{{TOPIC_BLOCKS}}` 로 바꾸는 식) |
-| `{{OPEN_QUESTIONS}}` | `<li>` 목록(답이 나오지 않은 질문, "다음에 확인하자"고 한 항목, `<span class="time">[HH:MM]</span>` 포함). 없으면 `<li class="time">해당 없음</li>` |
+| `{{OPEN_QUESTIONS}}` | `<li><b>확인할 것</b> 왜 미결인지·누가(조직·역할) 확인하는지 <span class="time">[HH:MM]</span></li>` 목록(답이 나오지 않은 질문, "다음에 확인하자"고 한 항목). 없으면 `<li class="time">해당 없음</li>` |
 
 주제 블록 구조(N 은 1부터, 목차가 `#topic-N` 으로 링크합니다):
 ```html
 <div class="topic" id="topic-N">
   <div class="topic-head"><span class="num">N</span><h3>주제 제목</h3><span class="time">HH:MM–HH:MM</span></div>
   <h4>요지</h4>
-  <p>논의 요지 2~5문장 — 무엇이 제안·반박·질문됐고 어떻게 정리됐는지. 발언자 라벨 없이.</p>
+  <ul class="points">
+    <li><b>무엇이 정리됐는지 한 구절.</b> 보충 설명 — 조건·근거·수치(<mark>일정·숫자</mark>).</li>
+    <li><b>…</b> …</li>
+  </ul>
   <h4>핵심 발언</h4>
   <blockquote><span class="time">[HH:MM]</span>가볍게 정제한 원문</blockquote>
   <blockquote><span class="time">[HH:MM]</span>…</blockquote>
@@ -26,6 +29,7 @@
   {{DIAGRAM:파일명.svg}}
 </div>
 ```
+- `요지` 는 불릿 2~6개. 문단으로 썼을 때의 2~5문장을 **불릿으로 쪼갠 것**이라 정보량은 같아야 합니다 — 무엇이 제안·반박·질문됐고 어떻게 정리됐는지, 조건과 근거를 빼지 않습니다. 불릿마다 `<b>` 하나(앞쪽), 수치·일정은 `<mark>`. 발언자 라벨 없이.
 - `핵심 발언` 은 1~3개. 원문만, 번역·화자 표기 없음. 필러 제거·`…` 생략·용어 교정만 허용(공통 규칙 3).
 - `질문과 답` 은 그 주제에 질문이 있었을 때만 넣습니다. 다이어그램은 아래 manifest 의 `topic` 번호 블록 안에 **`{{DIAGRAM:파일명.svg}}`** 한 줄로 넣습니다. 코드가 `<figure>`·캡션과 함께 SVG 를 인라인하니 SVG 내용을 직접 복사하지 않습니다.
 - 트랜스크립트의 모든 실질 발언이 어느 블록의 요지에든 반영돼야 합니다.
