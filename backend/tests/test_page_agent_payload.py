@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timezone
 
-from app.page_agent import build_meeting_payload, build_user_message, merge_messages
+from app.page_agent import build_meeting_payload, merge_messages
 
 MODEL = "global.anthropic.claude-opus-5-5"
 
@@ -78,13 +78,3 @@ def test_inline_messages_override_stored_messages():
     assert [m["original"] for m in p["messages"]] == ["live one no ts"]
     assert p["messages"][0]["timestamp"] == "2026-10-06T10:01:00+09:00"
 
-
-def test_user_message_contains_json_and_instructions():
-    item = {"meetingId": "m1", "title": "t", "createdAt": "2026-10-06T10:00:00+09:00",
-            "messages": [msg("2026-10-06T10:00:10+09:00", "speaker1", "Hi")]}
-    text = build_user_message(build_meeting_payload(item, model_id=MODEL))
-    assert "meeting-minutes-page" in text and "publish_page" in text
-    start = text.index("```json") + len("```json")
-    end = text.index("```", start)
-    parsed = json.loads(text[start:end])
-    assert parsed["meeting"]["meetingId"] == "m1"

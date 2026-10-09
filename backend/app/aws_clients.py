@@ -32,11 +32,11 @@ async def polly_client():
         yield client
 
 
-# InvokeHarness 는 하나의 HTTP 응답을 수 분간 스트리밍한다. 에이전트가 긴 도구(코드 실행,
+# InvokeAgentRuntime 은 하나의 HTTP 응답을 수십 분간 스트리밍한다. 에이전트가 긴 도구(조립,
 # 검색)를 돌리는 동안 이벤트가 없으면 기본 60초 읽기 타임아웃이 스트림을 끊으므로
-# 하네스의 TimeoutSeconds(1800) 에 맞춰 늘리고, 스트리밍 호출은 재시도하지 않는다.
+# 그래프 시간 예산(2400초) 보다 길게 두고, 스트리밍 호출은 재시도하지 않는다.
 AGENTCORE_CLIENT_CONFIG = AioConfig(
-    read_timeout=1800,
+    read_timeout=2700,
     connect_timeout=10,
     retries={"max_attempts": 0},
 )
