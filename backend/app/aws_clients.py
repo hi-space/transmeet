@@ -19,9 +19,21 @@ async def sagemaker_client():
         yield client
 
 
+# 요약 스트림용. Opus 5.5 는 thinking 이 항상 켜져 있고 기본 표시가 omitted 라 생각하는 동안 스트림에
+# 바이트가 전혀 오지 않는다. 긴 트랜스크립트(78줄)에서 그 침묵이 기본 읽기 타임아웃 60초를 넘겨
+# SocketTimeoutError 로 끊겼다(2026-10-09). 프런트 안전 타임아웃(5분)보다 길게 둔다.
+SUMMARY_CLIENT_CONFIG = AioConfig(
+    read_timeout=600,
+    connect_timeout=10,
+    retries={"max_attempts": 1},
+)
+
+
 @asynccontextmanager
-async def bedrock_client():
-    async with _session.create_client("bedrock-runtime", region_name=config.REGION) as client:
+async def bedrock_client(client_config: AioConfig | None = None):
+    async with _session.create_client(
+        "bedrock-runtime", region_name=config.REGION, config=client_config
+    ) as client:
         yield client
 
 

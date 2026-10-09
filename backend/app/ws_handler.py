@@ -57,6 +57,7 @@ from botocore.exceptions import ClientError
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from .aws_clients import (
+    SUMMARY_CLIENT_CONFIG,
     SILENCE_RMS_THRESHOLD,
     bedrock_client,
     compute_rms,
@@ -1077,7 +1078,7 @@ async def _stream_summary(
         logger.info("[ws] summary start meeting_id=%s model=%s lines=%d", meeting_id, summary_model_id, len(lines))
 
         summary = ""
-        async with bedrock_client() as br:
+        async with bedrock_client(SUMMARY_CLIENT_CONFIG) as br:
             stream_resp = await br.converse_stream(
                 modelId=summary_model_id,
                 system=[{"text": SUMMARY_SYSTEM_PROMPT}],

@@ -45,3 +45,15 @@ def test_prompt_has_page_structure_and_embeds_transcript():
 def test_prompt_without_title_omits_title_line():
     assert "미팅 제목" not in build_summary_prompt("", "x")
     assert "미팅 제목: 주간 1:1" in build_summary_prompt("주간 1:1", "x")
+
+
+async def test_summary_bedrock_client_waits_through_silent_thinking():
+    """Opus 5.5 는 thinking 동안(표시 omitted) 스트림에 바이트가 오지 않는다. 기본 60초 읽기 타임아웃이면
+    긴 트랜스크립트에서 SocketTimeoutError 로 끊기므로(2026-10-09 운영 로그) 요약 스트림은 긴 타임아웃을 쓴다."""
+    from app import aws_clients
+
+    assert aws_clients.SUMMARY_CLIENT_CONFIG.read_timeout >= 300
+    async with aws_clients.bedrock_client(aws_clients.SUMMARY_CLIENT_CONFIG) as client:
+        assert client.meta.config.read_timeout == aws_clients.SUMMARY_CLIENT_CONFIG.read_timeout
+    async with aws_clients.bedrock_client() as client:  # 기본 호출은 그대로
+        assert client.meta.config.read_timeout == 60
