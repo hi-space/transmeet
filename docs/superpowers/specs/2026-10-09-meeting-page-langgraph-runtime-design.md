@@ -234,6 +234,7 @@ app.run()  # 0.0.0.0:8080
 | short-1on1 로컬 직접, 페이지 v3 | 300s | 213K | 77K (36%) | 14.0K | analyze 1회, 용어 11개, 요약 4문단 |
 | **[SKI] (78 병합 발언) Runtime v4, 페이지 v3** | **500s (8.3분)** | 738K | 417K (57%) | 40.8K | 번역·화자 제거로 입력 -25%. 9 주제·26 인용·SVG 3·링크 16·용어 25(녹취 변형 표기 포함)·요약 5문단. 첫 시도는 Bedrock 스트림이 3분 만에 끊겨 실패 → 일시 오류로 분류해 재시도(v4) |
 | [SKI] Runtime v5(용어 사전 CSS 수정), 페이지 v3 최종 | 660s (11분) | 762K | 392K (51%) | 47.0K | 발행 페이지 https://transmeet.hi-yoo.com/p/0df46d5c-fe7a-475e-bdaa-48896fed2c88/e7-XNd6KNemzOw3YFF3enw.html · 9 주제·26 인용·용어 28·링크 17. 같은 입력이라도 리서치 검색 수·조립 반복에 따라 ±2분 |
+| **전체 미팅 일괄 생성** (`scripts/invoke_batch.py`, 12 병렬, 113개) | 1시간 46분 · 중앙값 12분/건 | 87.4M (112건 합계) | 50.8M (58%) | 4.2M | 112 성공 · 1 실패([LGE] OSMO cadence: DynamoDB 항목 400 KB 한도 — 발언 1,156개로 항목이 393 KB 라 `page` 속성 UpdateItem 거부). 일시 오류 재시도 2건(InvokeAgentRuntime InternalServerException 1, Bedrock ServiceUnavailable 1) |
 
 관찰:
 - 벽시계는 하네스 대비 절반 이하. 입력 토큰은 단계 수가 아니라 **도구 루프 반복 수 × (프롬프트 + 스킬 문서 + 도구 결과)** 로 결정된다. 짧은 미팅에서도 200K 를 넘는 이유다. 캐시 포인트는 시스템·사용자 프롬프트까지만 덮으므로 적중률이 38% 에 머문다. 도구 결과(스킬 본문) 뒤에도 캐시 포인트를 두면 더 오를 것이다(후속).
@@ -246,6 +247,8 @@ app.run()  # 0.0.0.0:8080
 2. 백엔드 이미지 ECR 푸시 + force-new-deployment(기존 절차).
 3. 통합 확인(`invoke_local.py --runtime`, 앱에서 [SKI] 생성).
 4. 스킬 버킷 수동 비우기·삭제(완료: `transmeet-agent-skills-913524902871` 삭제), 메모리·문서 갱신.
+
+알려진 한계: 미팅 항목은 발언 전체를 인라인으로 담고 있어 발언이 1,000개를 넘는 미팅은 DynamoDB 항목 한도(400 KB)에 닿는다. 그러면 발행 단계의 `page` 속성 UpdateItem 이 `ValidationException: Item size to update has exceeded the maximum allowed size` 로 실패하고 S3 업로드는 롤백된다(2026-10-09 [LGE] OSMO cadence). 해결은 페이지 기록을 별도 항목(`<meetingId>#page`) 또는 별도 테이블로 옮기는 스키마 변경이며, 백엔드의 `_published_since`·`run_unpublish`·미팅 목록 API 와 프런트의 `page` 읽기를 함께 바꿔야 한다. 같은 미팅은 새 발언 추가도 곧 같은 한도에 막힌다.
 
 운영 주의: 백엔드 이미지를 **먼저** 푸시한 뒤 `cdk deploy` 를 돌린다(태스크 정의 교체 시 새 이미지가 뜸). ECS 롤링 중에는 태스크가 2개여서 진행 중인 생성의 WebSocket 브로드캐스트가 다른 프로세스에 닿지 않고, 종료되는 태스크의 생성은 끊긴다. Runtime 은 세션 단위로 이미지를 고정하므로 배포 시점에 돌던 세션은 이전 이미지로 끝까지 간다.
 
