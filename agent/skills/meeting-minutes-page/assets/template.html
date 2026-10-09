@@ -69,7 +69,8 @@ section h2 .num{display:inline-flex;align-items:center;justify-content:center;wi
 .list>li.time{padding-left:14px}.list>li.time::before{display:none}
 table{width:100%;border-collapse:separate;border-spacing:0;font-size:.95rem;border:1px solid var(--tm-line);border-radius:12px;overflow:hidden}
 th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--tm-line);vertical-align:top}
-th{background:var(--tm-card2);color:var(--tm-muted);font-weight:700;font-size:.8rem;letter-spacing:.02em}
+th{background:var(--tm-card2);color:var(--tm-muted);font-weight:700;font-size:.8rem;letter-spacing:.02em;white-space:nowrap}
+td:first-child{min-width:5.5em}
 tbody tr:last-child td{border-bottom:0}
 tbody tr:nth-child(even) td{background:var(--tm-card)}
 td code,.term{font-family:var(--tm-mono);font-size:.88em;background:var(--tm-card2);padding:1px 6px;border-radius:5px}
@@ -82,9 +83,9 @@ td code,.term{font-family:var(--tm-mono);font-size:.88em;background:var(--tm-car
 .topic h4{margin:16px 0 6px;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--tm-faint)}
 .topic h4:first-of-type{margin-top:0}
 .topic p{margin:0 0 8px}
-.topic dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px}
-.topic dt{font-weight:700;color:var(--tm-accent)}.topic dt::before{content:"Q "}
-.topic dd{margin:0}
+.topic dl{margin:0}
+.topic dt{font-weight:700;color:var(--tm-accent);margin:6px 0 2px}.topic dt::before{content:"Q "}
+.topic dd{margin:0 0 6px 1.3em;color:var(--tm-fg)}.topic dd::before{content:"A ";font-weight:700;color:var(--tm-muted)}
 .time{font-family:var(--tm-mono);font-size:.78rem;color:var(--tm-muted);white-space:nowrap}
 blockquote{margin:8px 0;padding:10px 14px 10px 16px;border-left:3px solid var(--tm-quote-line);background:var(--tm-quote);border-radius:0 10px 10px 0;font-size:.97rem}
 blockquote .time{display:inline-block;margin-right:8px;padding:1px 7px;border-radius:6px;background:var(--tm-bg);border:1px solid var(--tm-line);vertical-align:1px}
@@ -105,7 +106,7 @@ figcaption{color:var(--tm-muted);font-size:.85rem;margin-top:8px}
 details summary{cursor:pointer;color:var(--tm-accent);font-weight:600}
 footer[data-section=footer]{border-top:1px solid var(--tm-line);padding-top:18px;color:var(--tm-muted);font-size:.84rem;line-height:1.6}
 @media (max-width:560px){body{font-size:15px}main{padding:16px 14px 48px}header h1{font-size:1.5rem}th,td{padding:8px}
-  .topic,.card{padding:16px}.topic dl{grid-template-columns:1fr}}
+  .topic,.card{padding:16px}td:first-child{min-width:4em}}
 @media print{main{max-width:none;padding:0}.layout{display:block}.toc{display:none}.topic,.card,.list>li{break-inside:avoid}details{display:block}details>summary{display:none}}
 </style>
 </head>
