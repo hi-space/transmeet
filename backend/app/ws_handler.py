@@ -152,7 +152,7 @@ _ws_send_locks: Dict[int, asyncio.Lock] = {}
 
 
 def _meeting_broadcaster(meeting_id: str):
-    """페이지 생성 이벤트를 그 미팅을 보고 있는 *현재* 연결 전부에 보낸다.
+    """페이지 생성·요약 이벤트를 그 미팅을 보고 있는 *현재* 연결 전부에 보낸다.
 
     생성은 수 분 걸리고 그동안 브라우저 소켓은 바뀔 수 있다. 요청한 소켓 하나에 묶으면
     재접속한 클라이언트는 결과를 받지 못한다. 연결이 하나도 없으면 조용히 버린다 —
@@ -164,7 +164,7 @@ def _meeting_broadcaster(meeting_id: str):
             try:
                 await _safe_send(target, payload)
             except Exception:
-                logger.debug("[page] broadcast to a closed socket skipped meeting=%s", meeting_id, exc_info=True)
+                logger.debug("[ws] broadcast to a closed socket skipped meeting=%s", meeting_id, exc_info=True)
     return _send
 
 
@@ -1027,7 +1027,7 @@ async def _generate_title_if_default(
 
 
 async def _stream_summary(
-    ws: WebSocket,
+    send,
     meeting_id: str,
     model_id: str,
     *,
@@ -1039,8 +1039,11 @@ async def _stream_summary(
     instead of reading from DynamoDB. This ensures summaries work during
     live recording when messages may not yet be persisted.
 
-    `model_id` 는 호출자의 실시간 모델이지만 요약은 `config.SUMMARY_MODEL_ID` 로 쓴다 —
-    페이지 수준의 디테일(주제별 서술·인용·기술 디테일)을 내야 해서 큰 모델이 필요하다.
+    `model_id` 는 호출자의 실시간 모델이지만 요약은 `config.SUMMARY_MODEL_ID` 로 쓴다.
+
+    `send` 는 그 미팅의 *현재* 연결 전부에 보내는 함수(`_meeting_broadcaster`)다. Opus 5.5 는 첫 토큰까지
+    수 초~수십 초 침묵하므로, 요청한 소켓 하나에 묶으면 그 사이 미팅 전환·재접속으로 소켓이 바뀔 때
+    닫힌 소켓에 보내다 예외로 죽고 저장도 안 된다(2026-10-09). 보낼 곳이 없어도 요약은 끝까지 만들어 저장한다.
     """
     try:
         lines: List[str] = []
@@ -1069,7 +1072,7 @@ async def _stream_summary(
             )
 
         if not lines:
-            await _safe_send(ws, {"type": "summary_stream", "phase": "error", "error": "No messages to summarize"})
+            await send({"type": "summary_stream", "phase": "error", "meetingId": meeting_id, "error": "No messages to summarize"})
             return
         transcript = "\n".join(lines)
 
@@ -1084,13 +1087,14 @@ async def _stream_summary(
                 system=[{"text": SUMMARY_SYSTEM_PROMPT}],
                 messages=[{"role": "user", "content": [{"text": user_prompt}]}],
                 inferenceConfig={"maxTokens": config.SUMMARY_MAX_TOKENS},
+                additionalModelRequestFields={"output_config": {"effort": config.SUMMARY_EFFORT}},
             )
             async for event in stream_resp["stream"]:
                 delta = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
                 if not delta:
                     continue
                 summary += delta
-                await _safe_send(ws, {"type": "summary_stream", "phase": "delta", "text": delta})
+                await send({"type": "summary_stream", "phase": "delta", "meetingId": meeting_id, "text": delta})
 
         async with dynamodb_client() as ddb:
             await ddb.update_item(
@@ -1105,17 +1109,15 @@ async def _stream_summary(
 
         new_title = await _generate_title_if_default(meeting_id, current_title, lines, model_id)
 
-        done_payload: Dict[str, Any] = {"type": "summary_stream", "phase": "done", "summary": summary}
+        done_payload: Dict[str, Any] = {"type": "summary_stream", "phase": "done", "meetingId": meeting_id, "summary": summary}
         if new_title:
             done_payload["title"] = new_title
-        await _safe_send(ws, done_payload)
+        await send(done_payload)
+        logger.info("[ws] summary done meeting_id=%s chars=%d", meeting_id, len(summary))
 
     except Exception:
         logger.exception("[ws] _stream_summary failed for meeting_id=%s", meeting_id)
-        try:
-            await _safe_send(ws, {"type": "summary_stream", "phase": "error", "error": "Summary generation failed"})
-        except Exception:
-            pass
+        await send({"type": "summary_stream", "phase": "error", "meetingId": meeting_id, "error": "Summary generation failed"})
 
 
 # ─── Q&A streaming ─────────────────────────────────────────────────────────
@@ -1270,7 +1272,11 @@ async def ws_endpoint(
                 mid = data.get("meetingId") or state.meeting_id
                 inline_messages = data.get("messages")
                 if mid:
-                    asyncio.create_task(_stream_summary(ws, mid, state.model_id, inline_messages=inline_messages))
+                    # 결과는 요청한 소켓이 아니라 이 미팅을 보고 있는 현재 연결 전부에 간다 (_stream_summary 참고)
+                    state.meeting_id = state.meeting_id or mid
+                    asyncio.create_task(
+                        _stream_summary(_meeting_broadcaster(mid), mid, state.model_id, inline_messages=inline_messages)
+                    )
 
             elif action == "generate_page":
                 mid = data.get("meetingId") or state.meeting_id

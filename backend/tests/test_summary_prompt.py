@@ -27,7 +27,7 @@ def test_transcript_lines_without_timestamp_still_keep_text():
 
 def test_prompt_has_page_structure_and_embeds_transcript():
     prompt = build_summary_prompt("주간 1:1", "[10:00] 파이프라인 어디까지 왔어요?")
-    for heading in ["## 한눈에 보기", "## 회의 요약", "### 배경·목적", "### 합의·결정", "## 논의 흐름", "## 결정 사항",
+    for heading in ["## 한눈에 보기", "## 회의 요약", "### 배경·목적", "### 주요 논의", "## 논의 흐름", "## 결정 사항",
                     "## 액션 아이템", "## 미결 사항", "## 기술 디테일"]:
         assert heading in prompt, heading
     assert "## 용어" not in prompt  # 요약 패널에는 용어 사전을 두지 않는다
@@ -38,7 +38,7 @@ def test_prompt_has_page_structure_and_embeds_transcript():
     assert "**" in prompt
     # 요약 패널은 훑는 용도: 발언 인용·시각 참조를 넣지 말라고 지시한다
     assert "인용하지 않습니다" in prompt and "`>` 인용 블록" in prompt
-    assert "서술형 문단으로 풀지 않습니다" in prompt
+    assert "개조식 명사형" in prompt and "반복하지 않습니다" in prompt  # 간결한 명사형, 섹션 간 반복 금지
     assert "한국어" in SUMMARY_SYSTEM_PROMPT
 
 

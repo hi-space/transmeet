@@ -14,6 +14,9 @@ class Config(BaseSettings):
     # 페이지 에이전트(PAGE_AGENT_MODEL_ID)와 같은 최신 모델. Opus 5.5 는 thinking 이 항상 켜져 있고 기본 effort 는 medium.
     SUMMARY_MODEL_ID: str = "us.anthropic.claude-opus-5-5"
     SUMMARY_MAX_TOKENS: int = 16384
+    # Opus 5.5 는 thinking 을 끌 수 없고 기본 effort 가 medium. 78줄 기준 첫 텍스트 medium 12.8초 → low 6.6초,
+    # 명사형 형식 준수는 같았다(2026-10-09 측정).
+    SUMMARY_EFFORT: str = "low"
 
     # ─── Meeting page agent (LangGraph on AgentCore Runtime) ──────────────────
     PAGE_AGENT_RUNTIME_ARN: str = ""
