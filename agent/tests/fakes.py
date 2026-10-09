@@ -18,7 +18,8 @@ def ai(text: str = "", calls: Optional[List[dict]] = None, usage: Optional[dict]
     msg = AIMessage(content=text, tool_calls=calls or [])
     if usage:
         msg.usage_metadata = {"input_tokens": usage.get("in", 0), "output_tokens": usage.get("out", 0),
-                              "total_tokens": usage.get("in", 0) + usage.get("out", 0)}
+                              "total_tokens": usage.get("in", 0) + usage.get("out", 0),
+                              "input_token_details": {"cache_read": usage.get("cached", 0), "cache_creation": 0}}
     return msg
 
 

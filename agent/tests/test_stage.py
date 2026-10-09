@@ -17,13 +17,13 @@ def ws(tmp_path):
 async def test_stage_runs_tools_until_final(ws):
     llm = FakeChatModel(responses=[
         ai("파일을 씁니다", [tool_call("write_file", {"path": "a.txt", "content": "hi"}, "t1")], usage={"in": 10, "out": 2}),
-        ai("", [tool_call("nope", {}, "t2"), tool_call("read_file", {"path": "a.txt"}, "t3")], usage={"in": 20, "out": 3}),
+        ai("", [tool_call("nope", {}, "t2"), tool_call("read_file", {"path": "a.txt"}, "t3")], usage={"in": 20, "out": 3, "cached": 15}),
         ai("끝", usage={"in": 5, "out": 1}),
     ])
     res = await run_stage(name="t", llm=llm, system_prompt="sys", user_prompt="user",
                           tools=rtools.make_tools(ws, ["write_file", "read_file"]), max_iterations=5)
     assert res.stopped == "final" and res.iterations == 3 and res.final_text == "끝"
-    assert res.usage == {"input_tokens": 35, "output_tokens": 6, "total_tokens": 41}
+    assert res.usage == {"input_tokens": 35, "output_tokens": 6, "total_tokens": 41, "cache_read": 15}
     assert (ws.root / "a.txt").read_text() == "hi"
     msgs = res.messages
     assert isinstance(msgs[0], SystemMessage) and isinstance(msgs[1], HumanMessage)

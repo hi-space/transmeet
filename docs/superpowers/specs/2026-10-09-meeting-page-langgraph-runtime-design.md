@@ -37,8 +37,8 @@ v2 는 에이전트를 우리가 직접 작성해 AgentCore Runtime(컨테이너
                      ├─ BedrockAgentCoreApp (/invocations, /ping)  ← bedrock-agentcore SDK
                      ├─ LangGraph StateGraph
                      │    prepare ─▶ outline ─▶ ┬ research  (web_search ≤12)
-                     │                          ├ insights
-                     │                          └ diagrams  (bash: skill scripts → SVG)
+                     │                          └ diagrams  (코드: timeline_svg / 모델: flow·relations)
+                     │                        ─▶ insights (리서치 판정을 입력으로 받음)
                      │                        ─▶ assemble ─▶ validate ─▶ publish
                      │                                ▲          │ 실패(≤2회)
                      │                                └──────────┘
@@ -54,7 +54,8 @@ v2 는 에이전트를 우리가 직접 작성해 AgentCore Runtime(컨테이너
 
 ### 3.1 왜 이 구조인가
 
-- **단계 그래프**: 각 단계가 트랜스크립트를 한 번 받고 짧은 도구 루프를 돈다. 리서치·인사이트·다이어그램은 서로 독립이라 **병렬**로 돌려 벽시계 시간을 줄인다. 조립 단계만 길다.
+- **단계 그래프**: 각 단계가 트랜스크립트를 한 번 받고 짧은 도구 루프를 돈다. 리서치와 다이어그램은 서로 독립이라 **병렬**로 돌리고, 인사이트는 리서치 판정("상이함" 항목을 리스크로)을 입력으로 받으므로 그 뒤에 돈다. 조립 단계만 길다.
+- **프롬프트 캐시**: 도구 루프의 매 반복은 같은 접두(시스템 프롬프트 + 트랜스크립트 + 단계 입력)를 다시 보낸다. 두 메시지 끝에 Bedrock `cachePoint` 를 두어 반복 호출의 접두를 캐시에서 읽는다(입력 단가 약 1/10). 확인: 41K 토큰 접두가 두 번째 호출에서 전부 `cache_read`.
 - **로컬 도구**: Runtime 세션은 세션마다 격리된 microVM 이다. `bash` 로 스킬 스크립트(`validate_page.py`, `timeline_svg.py`, `flow_svg.py`)를 바로 실행하고, 결과 파일은 작업 디렉터리에 남아 다음 단계가 읽는다.
 - **HTML 재출력 제거**: 조립 단계는 `write_file` 로 `page.html` 을 쓰고 검증 실패 시 `edit_file`(문자열 치환)로 고친다. 발행 노드는 파일을 읽어 올린다. 모델이 HTML 을 두 번 출력하는 일이 없다.
 - **스트리밍 응답**: Runtime 스트리밍 연결 상한은 60분(동기 요청은 15분). 생성은 10~20분이므로 스트리밍으로 받는다. 이벤트 형식은 백엔드가 이미 쓰는 `phase` 체계를 그대로 쓴다.
@@ -102,12 +103,14 @@ class PageState(TypedDict):
 | `outline` | 1회 호출(구조화 출력) | — | 주제 분할(시각·주제명·요약), 리서치 대상(≤10), 다이어그램 계획(타임라인 + 선택적 흐름/관계도). `outline.json` 저장 |
 | `research` | 도구 루프 ≤20 | `load_skill`, `web_search`, `read_file`, `write_file` | `research.html` (meeting-research 출력 포맷). 대상 0개면 모델 호출 없이 고정 문구 |
 | `insights` | 도구 루프 ≤6 | `load_skill`, `read_file`, `write_file` | `insights.html` |
-| `diagrams` | 도구 루프 ≤12 | `load_skill`, `bash`, `read_file`, `write_file` | `diagrams/*.svg` + `diagrams/manifest.json` (파일·캡션) |
-| `assemble` | 도구 루프 ≤25 | `load_skill`, `read_file`, `write_file`, `edit_file`, `bash` | `page.html` (template 복사 → 자리표시자 채움, `validate_page.py` 실행) |
+| `diagrams` | 코드(타임라인) + 도구 루프 ≤12(flow/relations 가 계획에 있을 때만) | `load_skill`, `bash`, `read_file`, `write_file` | `diagrams/timeline.svg` + `diagrams/*.svg` + `diagrams/manifest.json` (파일·캡션·주제 번호) |
+| `assemble` | 도구 루프 ≤25 | `load_skill`, `read_file`, `write_file`, `edit_file`, `bash` | `page.html` (코드가 템플릿에서 생성·헤더·references·insights·타임라인 채움 → 모델이 내용 자리표시자 6개를 `edit_file` 로 채움 → `validate_page.py` 실행) + `page.meta.json` |
 | `validate` | 없음 | — | 백엔드와 같은 엄격 검증기(`validator.py`) 실행. 오류면 `validation_errors` 를 채워 `assemble` 로 되돌림(최대 2회), 아니면 `publish` |
 | `publish` | 없음 | — | `page.html` 읽어 S3 put, DynamoDB `SET page`, 이전 pageId 객체 삭제. `published` 설정 |
 
-엣지: `prepare → outline → [research, insights, diagrams] (병렬) → assemble → validate → (publish | assemble) → END`. 병렬 분기는 LangGraph 의 fan-out(세 노드로 나가는 엣지)으로 하고, `assemble` 은 세 노드가 모두 끝난 뒤 실행된다.
+엣지: `prepare → outline → [research, diagrams] (병렬) → insights → assemble → validate → (publish | assemble | fail) → END`. 병렬 분기는 LangGraph 의 fan-out 엣지로, `insights` 는 두 노드가 모두 끝난 뒤 실행된다(fan-in).
+
+코드가 하는 일(모델이 하지 않는 일): 헤더·푸터 값(`derive_meta`: 제목·일시·소요·참석자·언어·생성 시각·조회일), 주제 타임라인 SVG(`timeline_svg.py` 를 outline 의 topics 로 실행), 템플릿에 `references`/`insights`/타임라인 삽입(`_seed_page`), `{{DIAGRAM:파일.svg}}` 마커를 `<figure>`+캡션으로 교체(`_inline_diagrams`), 검증, 발행. 모델이 채우는 자리표시자는 `TLDR_ITEMS, DECISIONS, ACTION_ROWS, TOPIC_BLOCKS, OPEN_QUESTIONS, GLOSSARY_ROWS` 여섯 개이며 `edit_file` 로 하나씩 바꾼다.
 
 각 도구 루프 노드는 공통 함수 `run_stage(state, *, name, system_prompt, user_prompt, tools, max_iterations)` 로 구현한다. 내부는 `ChatBedrockConverse.bind_tools(tools)` → 모델 호출 → `tool_calls` 실행 → 반복. 반복 상한에 걸리면 그 단계는 "확인 불가"류 기본 산출물로 끝내고 다음 단계로 간다(`assemble` 만 예외: 상한이면 `error`). 모델 텍스트는 `delta` 로, 도구 호출 시작은 `status` 로 흘려 보낸다(`langgraph.config.get_stream_writer()` 로 커스텀 이벤트 발행).
 

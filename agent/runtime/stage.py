@@ -77,6 +77,11 @@ def _add_usage(total: Dict[str, int], msg: BaseMessage) -> None:
     for k in ("input_tokens", "output_tokens", "total_tokens"):
         if usage.get(k):
             total[k] = total.get(k, 0) + int(usage[k])
+    # input_tokens 에는 캐시에서 읽은 토큰도 들어 있다(단가 1/10). 비용 계산을 위해 따로 합산한다.
+    details = usage.get("input_token_details") or {}
+    for k in ("cache_read", "cache_creation"):
+        if details.get(k):
+            total[k] = total.get(k, 0) + int(details[k])
 
 
 async def run_stage(
