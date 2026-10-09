@@ -248,7 +248,7 @@ app.run()  # 0.0.0.0:8080
 3. 통합 확인(`invoke_local.py --runtime`, 앱에서 [SKI] 생성).
 4. 스킬 버킷 수동 비우기·삭제(완료: `transmeet-agent-skills-913524902871` 삭제), 메모리·문서 갱신.
 
-알려진 한계: 미팅 항목은 발언 전체를 인라인으로 담고 있어 발언이 1,000개를 넘는 미팅은 DynamoDB 항목 한도(400 KB)에 닿는다. 그러면 발행 단계의 `page` 속성 UpdateItem 이 `ValidationException: Item size to update has exceeded the maximum allowed size` 로 실패하고 S3 업로드는 롤백된다(2026-10-09 [LGE] OSMO cadence). 해결은 페이지 기록을 별도 항목(`<meetingId>#page`) 또는 별도 테이블로 옮기는 스키마 변경이며, 백엔드의 `_published_since`·`run_unpublish`·미팅 목록 API 와 프런트의 `page` 읽기를 함께 바꿔야 한다. 같은 미팅은 새 발언 추가도 곧 같은 한도에 막힌다.
+페이지 기록 저장 위치(2026-10-09 변경, §15): 미팅 항목은 발언 전체를 인라인으로 담고 있어 발언이 1,000개를 넘는 미팅은 DynamoDB 항목 한도(400 KB)에 닿는다. 그러면 어떤 UpdateItem 도 `ValidationException: Item size to update has exceeded the maximum allowed size` 로 실패한다([LGE] OSMO cadence 가 그랬다). 그래서 페이지 기록은 미팅 항목의 `page` 속성이 아니라 **별도 테이블 `transmeet-pages`** 에 둔다. 같은 미팅은 새 발언 추가도 곧 같은 한도에 막힌다 — 이것은 앱 저장 구조의 별개 문제다.
 
 운영 주의: 백엔드 이미지를 **먼저** 푸시한 뒤 `cdk deploy` 를 돌린다(태스크 정의 교체 시 새 이미지가 뜸). ECS 롤링 중에는 태스크가 2개여서 진행 중인 생성의 WebSocket 브로드캐스트가 다른 프로세스에 닿지 않고, 종료되는 태스크의 생성은 끊긴다. Runtime 은 세션 단위로 이미지를 고정하므로 배포 시점에 돌던 세션은 이전 이미지로 끝까지 간다.
 
@@ -267,3 +267,13 @@ app.run()  # 0.0.0.0:8080
 
 ### 14.3 규칙 (프롬프트 `common.md` 2~4)
 본문 한국어. 인용은 원문만, 화자 표기 없음, 페이지 어디에도 참석자 라벨("Speaker 1", "고객 측") 금지. 인용 정제는 필러·더듬는 반복 제거, 생략 `…`, 용어 교정만 — 뜻을 바꾸거나 보태지 않는다. 담당은 역할·팀만(사람 이름·화자 금지).
+
+## 15. 페이지 기록 테이블 `transmeet-pages` (2026-10-09)
+
+- **테이블**: PK `meetingId`, PAY_PER_REQUEST, PITR, RETAIN. 항목: `meetingId, pageId, url, title, shareSummary, generatedAt, updatedAt`. 미팅당 페이지 하나(재발행은 덮어쓰기).
+- **발행(에이전트 `publish.py`)**: 페이지 테이블 GetItem 으로 이전 pageId 확인 → S3 put → `TransactWriteItems[ConditionCheck(미팅 테이블 attribute_exists(meetingId)), Put(페이지 테이블)]` → 이전 S3 객체 삭제. 미팅 항목은 **읽기만** 하므로 400 KB 항목도 통과한다. 트랜잭션 취소 사유 첫 항목이 `ConditionalCheckFailed` 면 "meeting not found", 그 외는 원래 예외(롤백은 공통).
+- **백엔드 `page_agent.py`**: `load_page(ddb, pages_table, meeting_id)`; `_published_since` 와 `run_unpublish` 가 페이지 테이블을 읽고, `unpublish_page` 는 S3 삭제 뒤 페이지 테이블 DeleteItem. 미팅 항목에는 쓰지 않는다. 설정 `PAGES_TABLE`(기본 `transmeet-pages`).
+- **REST Lambda `meetings`**: `GET /meetings/{id}` 가 페이지 테이블을 읽어 응답에 `page`(프런트 `MeetingPage` 모양: meetingId·updatedAt 제외)를 합친다 — 프런트는 변경 없음. `DELETE /meetings/{id}` 는 발행 HTML(S3) → 페이지 기록 → 미팅 항목 순으로 지운다(S3 삭제 실패 시 기록을 남겨 링크가 보이게 둔다). 목록 `GET /meetings` 는 전과 같이 `page` 를 내지 않는다.
+- **IAM**: Runtime 역할은 페이지 테이블 GetItem·PutItem + 미팅 테이블 ConditionCheckItem(UpdateItem 제거). 태스크 역할·Lambda 역할은 페이지 테이블 RW, Lambda 역할은 pages 버킷 DeleteObject 추가.
+- **마이그레이션**: `agent/scripts/migrate_pages.py --apply` 가 미팅 항목의 `page` 를 페이지 테이블로 옮기고 `REMOVE page`. 멱등. `invoke_batch.py` 의 "페이지 있음" 판정도 페이지 테이블 기준.
+- **배포 순서**: 백엔드 이미지 푸시 → `./deploy.sh infra`(테이블·Lambda·Runtime 새 버전·태스크 정의 롤링) → 마이그레이션 → OSMO cadence 재생성으로 확인.

@@ -106,7 +106,7 @@ def build_deps(settings: Settings, web_search: Optional[WebSearchClient]) -> Gra
         return await asyncio.to_thread(
             publish_html, meeting_id, html, title, share_summary, s3=s3, ddb=ddb,
             bucket=settings.pages_bucket, base_url=settings.pages_base_url, table=settings.meetings_table,
-            max_bytes=settings.page_max_bytes,
+            pages_table=settings.pages_table, max_bytes=settings.page_max_bytes,
         )
 
     def llm_factory(model_id: str, stage: str):

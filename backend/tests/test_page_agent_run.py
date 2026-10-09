@@ -69,17 +69,24 @@ class FakeS3:
 
 
 class FakeDDB:
-    def __init__(self, item):
-        self.item, self.updates = (dict(item) if item else None), []
+    """미팅 테이블 't' 에 항목 하나, 페이지 테이블 'p' 에 (있으면) 페이지 기록 하나."""
+
+    def __init__(self, item, page=None):
+        self.item, self.page, self.deletes = (dict(item) if item else None), (dict(page) if page else None), []
 
     async def get_item(self, **kw):
+        if kw["TableName"] == "p":
+            return {"Item": self.page} if self.page else {}
         return {"Item": self.item} if self.item else {}
 
-    async def update_item(self, **kw):
-        self.updates.append(kw)
-        if self.item is not None and "REMOVE page" in kw.get("UpdateExpression", ""):
-            self.item.pop("page", None)
+    async def delete_item(self, **kw):
+        self.deletes.append(kw)
+        if kw["TableName"] == "p":
+            self.page = None
         return {}
+
+    async def update_item(self, **kw):
+        raise AssertionError("backend must not write to the meeting item")
 
 
 def deps_for(agentcore, s3, ddb, invoke_retries=2, fallback_model_id="us.anthropic.claude-opus-5"):
@@ -89,7 +96,7 @@ def deps_for(agentcore, s3, ddb, invoke_retries=2, fallback_model_id="us.anthrop
             yield obj
         return _cm
     return PageAgentDeps(agentcore_client=cm(agentcore), s3_client=cm(s3), ddb_client=cm(ddb), runtime_arn=RUNTIME,
-                         bucket="pages", table="t", invoke_retries=invoke_retries, retry_backoff=(0, 0),
+                         bucket="pages", table="t", pages_table="p", invoke_retries=invoke_retries, retry_backoff=(0, 0),
                          fallback_model_id=fallback_model_id)
 
 
@@ -188,25 +195,20 @@ async def test_stream_ended_without_terminal_is_retried():
 
 async def test_stream_broken_after_publish_reports_done_from_dynamodb():
     # 에이전트가 발행한 뒤 스트림이 끊겼다 — DynamoDB 에 새 page 가 있으면 다시 만들지 않는다
-    class DDBWithPublishedPage(FakeDDB):
-        async def get_item(self, **kw):
-            fresh = {**ITEM, "page": {"M": {"pageId": {"S": "pid"}, "url": {"S": PAGE["url"]}, "generatedAt": {"S": "2099-01-01T00:00:00+00:00"}}}}
-            return {"Item": fresh}
-
+    fresh = {"meetingId": {"S": "m1"}, "pageId": {"S": "pid"}, "url": {"S": PAGE["url"]}, "generatedAt": {"S": "2099-01-01T00:00:00+00:00"},
+             "title": {"S": "t"}, "shareSummary": {"S": "s"}, "updatedAt": {"S": "2099-01-01T00:00:00+00:00"}}
     ac = FakeAgentCore([sse({"phase": "status", "text": "페이지를 발행합니다"})])
     send = Collector()
-    page = await run_page_generation(send, "m1", deps=deps_for(ac, FakeS3(), DDBWithPublishedPage(ITEM)))
+    page = await run_page_generation(send, "m1", deps=deps_for(ac, FakeS3(), FakeDDB(ITEM, page=fresh)))
     assert page["url"] == PAGE["url"] and send.events[-1]["phase"] == "done" and len(ac.calls) == 1
+    assert "meetingId" not in page and "updatedAt" not in page and page["title"] == "t"
 
 
 async def test_stale_page_in_dynamodb_does_not_count_as_published():
-    class DDBWithOldPage(FakeDDB):
-        async def get_item(self, **kw):
-            return {"Item": {**ITEM, "page": {"M": {"pageId": {"S": "old"}, "url": {"S": "https://x/old"}, "generatedAt": {"S": "2020-01-01T00:00:00+00:00"}}}}}
-
+    old = {"meetingId": {"S": "m1"}, "pageId": {"S": "old"}, "url": {"S": "https://x/old"}, "generatedAt": {"S": "2020-01-01T00:00:00+00:00"}}
     ac = FakeAgentCore([sse({"phase": "status", "text": "a"}), ok_stream()])
     send = Collector()
-    page = await run_page_generation(send, "m1", deps=deps_for(ac, FakeS3(), DDBWithOldPage(ITEM)))
+    page = await run_page_generation(send, "m1", deps=deps_for(ac, FakeS3(), FakeDDB(ITEM, page=old)))
     assert page == PAGE and len(ac.calls) == 2
 
 
@@ -321,12 +323,14 @@ async def test_start_page_generation_validates_request():
 
 # ─── 공유 해제 ──
 
+OLD_PAGE = {"meetingId": {"S": "m1"}, "pageId": {"S": "old"}, "url": {"S": "https://x/p/m1/old.html"}}
+
+
 async def test_run_unpublish():
-    item = {**ITEM, "page": {"M": {"pageId": {"S": "old"}}}}
-    s3, ddb, send = FakeS3(), FakeDDB(item), Collector()
+    s3, ddb, send = FakeS3(), FakeDDB(ITEM, page=OLD_PAGE), Collector()
     await run_unpublish(send, "m1", deps=deps_for(FakeAgentCore([]), s3, ddb))
     assert s3.deleted == ["p/m1/old.html"] and send.events[-1]["phase"] == "unpublished"
-    assert ddb.updates[0]["UpdateExpression"] == "REMOVE page"
+    assert ddb.deletes == [{"TableName": "p", "Key": {"meetingId": {"S": "m1"}}}] and ddb.page is None
     assert send.events[-1]["op"] == "unpublish" and send.events[-1]["meetingId"] == "m1"
 
 
@@ -341,10 +345,9 @@ async def test_unpublish_keeps_field_when_delete_fails():
         async def delete_object(self, **kw):
             raise RuntimeError("boom")
 
-    item = {**ITEM, "page": {"M": {"pageId": {"S": "old"}}}}
-    ddb, send = FakeDDB(item), Collector()
+    ddb, send = FakeDDB(ITEM, page=OLD_PAGE), Collector()
     await run_unpublish(send, "m1", deps=deps_for(FakeAgentCore([]), FailingS3(), ddb))
-    assert ddb.updates == [] and send.events[-1]["phase"] == "error"
+    assert ddb.deletes == [] and ddb.page is not None and send.events[-1]["phase"] == "error"
 
 
 # ─── 재접속한 클라이언트가 놓친 결과를 되묻는다 ──

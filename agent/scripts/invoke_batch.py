@@ -29,6 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import invoke_local as il  # noqa: E402
 
 TABLE = os.environ.get("MEETINGS_TABLE", "transmeet-meetings")
+PAGES_TABLE = os.environ.get("PAGES_TABLE", "transmeet-pages")
 _print_lock = threading.Lock()
 
 
@@ -49,6 +50,19 @@ def list_meetings() -> list:
         if not token:
             break
     return items
+
+
+def meetings_with_pages() -> set:
+    ddb = boto3.client("dynamodb", region_name=il.REGION)
+    ids, token = set(), None
+    while True:
+        kw = {"TableName": PAGES_TABLE, "ProjectionExpression": "meetingId", **({"ExclusiveStartKey": token} if token else {})}
+        res = ddb.scan(**kw)
+        ids.update(i["meetingId"]["S"] for i in res.get("Items", []))
+        token = res.get("LastEvaluatedKey")
+        if not token:
+            break
+    return ids
 
 
 def run_one(item: dict, runtime_arn: str, client) -> dict:
@@ -109,6 +123,7 @@ def main() -> int:
         raise SystemExit("runtime ARN unknown: pass --runtime-arn or deploy infra first")
 
     only = {s.strip() for s in args.only.split(",") if s.strip()}
+    have_page = set() if (args.include_existing or only) else meetings_with_pages()
     todo, skipped = [], []
     for it in list_meetings():
         mid = it["meetingId"]
@@ -119,7 +134,7 @@ def main() -> int:
             skipped.append((mid, "sample"))
         elif n < args.min_messages:
             skipped.append((mid, f"{n} messages"))
-        elif not args.include_existing and not only and (it.get("page") or {}).get("pageId"):
+        elif mid in have_page:
             skipped.append((mid, "page exists"))
         else:
             todo.append(it)

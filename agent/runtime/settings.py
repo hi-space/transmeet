@@ -14,6 +14,7 @@ class Settings:
     pages_bucket: str = ""
     pages_base_url: str = "https://transmeet.hi-yoo.com/p"
     meetings_table: str = "transmeet-meetings"
+    pages_table: str = "transmeet-pages"
     gateway_url: str = ""
     page_max_bytes: int = 1_500_000
     skills_dir: Path = DEFAULT_SKILLS_DIR
@@ -29,6 +30,7 @@ class Settings:
             pages_bucket=env.get("PAGES_BUCKET", ""),
             pages_base_url=env.get("PAGES_PUBLIC_BASE_URL", cls.pages_base_url),
             meetings_table=env.get("MEETINGS_TABLE", cls.meetings_table),
+            pages_table=env.get("PAGES_TABLE", cls.pages_table),
             gateway_url=env.get("WEB_SEARCH_GATEWAY_URL", ""),
             page_max_bytes=int(env.get("PAGE_MAX_BYTES", cls.page_max_bytes)),
             skills_dir=Path(env.get("SKILLS_DIR", str(DEFAULT_SKILLS_DIR))),

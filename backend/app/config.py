@@ -4,6 +4,9 @@ from pydantic_settings import BaseSettings
 class Config(BaseSettings):
     REGION: str = "us-east-1"
     MEETINGS_TABLE: str = "transmeet-meetings"
+    # 발행된 페이지 기록(pageId·url·title·shareSummary·generatedAt). 미팅 항목은 발언 전체를 인라인으로 담아
+    # 400 KB 한도에 닿을 수 있으므로 페이지 기록은 별도 테이블에 둔다.
+    PAGES_TABLE: str = "transmeet-pages"
     WHISPER_ENDPOINT: str = "whisper-large"
     BEDROCK_MODEL_ID: str = "global.anthropic.claude-haiku-4-5-20251001-v1:0"
     QA_MODEL_ID: str = "global.anthropic.claude-sonnet-4-6"

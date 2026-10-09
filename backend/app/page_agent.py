@@ -136,14 +136,17 @@ def page_key(meeting_id: str, page_id: str) -> str:
     return f"p/{meeting_id}/{page_id}.html"
 
 
-async def unpublish_page(meeting_id: str, *, s3, ddb, bucket: str, table: str, page_id: str) -> None:
+async def unpublish_page(meeting_id: str, *, s3, ddb, bucket: str, pages_table: str, page_id: str) -> None:
     # S3 삭제가 실패하면 DynamoDB 는 건드리지 않는다 — 링크가 살아 있는데 "해제됨"으로 보이면 안 된다.
     await s3.delete_object(Bucket=bucket, Key=page_key(meeting_id, page_id))
-    await ddb.update_item(
-        TableName=table,
-        Key={"meetingId": {"S": meeting_id}},
-        UpdateExpression="REMOVE page",
-    )
+    await ddb.delete_item(TableName=pages_table, Key={"meetingId": {"S": meeting_id}})
+
+
+async def load_page(ddb, pages_table: str, meeting_id: str) -> Optional[Dict[str, Any]]:
+    """The meeting's page record from the pages table, or None."""
+    res = await ddb.get_item(TableName=pages_table, Key={"meetingId": {"S": meeting_id}})
+    item = ddb_item_to_dict(res.get("Item") or {})
+    return item if item.get("pageId") else None
 
 
 # ─── Request validation ──────────────────────────────────────────────────────
@@ -184,6 +187,7 @@ class PageAgentDeps:
     runtime_arn: str
     bucket: str
     table: str
+    pages_table: str = "transmeet-pages"
     model_id: str = PAGE_AGENT_MODEL_ID
     # 기본 모델의 재시도가 모두 일시 오류로 끝나면 넘어가는 대체 모델. 빈 문자열이면 없음.
     fallback_model_id: str = PAGE_AGENT_FALLBACK_MODEL_ID
@@ -200,6 +204,7 @@ class PageAgentDeps:
             runtime_arn=config.PAGE_AGENT_RUNTIME_ARN,
             bucket=config.PAGES_BUCKET,
             table=config.MEETINGS_TABLE,
+            pages_table=config.PAGES_TABLE,
             model_id=config.PAGE_AGENT_MODEL_ID,
             fallback_model_id=config.PAGE_AGENT_FALLBACK_MODEL_ID,
             invoke_retries=config.PAGE_AGENT_INVOKE_RETRIES,
@@ -360,13 +365,13 @@ async def _stream_once(ac: Any, deps: PageAgentDeps, payload: Dict[str, Any], em
 async def _published_since(deps: PageAgentDeps, meeting_id: str, since_iso: str) -> Optional[Dict[str, Any]]:
     """The agent may have published before the stream broke — don't generate twice."""
     try:
-        item = await _load_meeting(deps, meeting_id)
+        async with deps.ddb_client() as ddb:
+            page = await load_page(ddb, deps.pages_table, meeting_id)
     except Exception:
         logger.warning("[page] could not re-check page for %s", meeting_id, exc_info=True)
         return None
-    page = item.get("page") if isinstance(item, dict) else None
-    if isinstance(page, dict) and page.get("url") and str(page.get("generatedAt", "")) >= since_iso:
-        return page
+    if page and page.get("url") and str(page.get("generatedAt", "")) >= since_iso:
+        return {k: v for k, v in page.items() if k not in ("meetingId", "updatedAt")}
     return None
 
 
@@ -476,13 +481,13 @@ async def run_unpublish(send: Sender, meeting_id: str, *, deps: Optional[PageAge
     deps = deps or PageAgentDeps.from_config()
     emit = _emitter(send, meeting_id, op="unpublish")
     try:
-        item = await _load_meeting(deps, meeting_id)
-        page_id = (item.get("page") or {}).get("pageId")
-        if not page_id:
+        async with deps.ddb_client() as ddb:
+            page = await load_page(ddb, deps.pages_table, meeting_id)
+        if not page:
             await emit("unpublished")
             return
         async with deps.s3_client() as s3, deps.ddb_client() as ddb:
-            await unpublish_page(meeting_id, s3=s3, ddb=ddb, bucket=deps.bucket, table=deps.table, page_id=page_id)
+            await unpublish_page(meeting_id, s3=s3, ddb=ddb, bucket=deps.bucket, pages_table=deps.pages_table, page_id=page["pageId"])
         await emit("unpublished")
     except Exception:
         logger.exception("[page] unpublish failed meeting=%s", meeting_id)

@@ -24,6 +24,9 @@ const WHISPER_ENDPOINT = 'whisper-large';
 const BEDROCK_MODEL_ID = 'global.anthropic.claude-haiku-4-5-20251001-v1:0';
 const REGION = 'us-east-1';
 const MEETINGS_TABLE = 'transmeet-meetings';
+// 발행된 미팅 페이지 기록. 미팅 항목은 발언 전체를 인라인으로 담아 긴 미팅은 400 KB 한도에 닿으므로
+// 페이지 기록(수백 바이트)은 미팅 항목에 얹지 않고 별도 테이블에 둔다.
+const PAGES_TABLE = 'transmeet-pages';
 const ROOT_DOMAIN = 'hi-yoo.com';
 const APP_DOMAIN = 'transmeet.hi-yoo.com';
 const PAGE_AGENT_MODEL_ID = 'us.anthropic.claude-opus-5-5';
@@ -52,6 +55,14 @@ export class TransmeetStack extends cdk.Stack {
       indexName: 'createdAt-index',
       partitionKey: { name: 'status', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'createdAt', type: dynamodb.AttributeType.STRING },
+    });
+
+    const pagesTable = new dynamodb.Table(this, 'PagesTable', {
+      tableName: PAGES_TABLE,
+      partitionKey: { name: 'meetingId', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      pointInTimeRecovery: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
     // ─── IAM Role (REST Lambda functions only) ──────────────────────────────────
@@ -90,11 +101,13 @@ export class TransmeetStack extends cdk.Stack {
 
     // DynamoDB
     meetingsTable.grantReadWriteData(lambdaRole);
+    pagesTable.grantReadWriteData(lambdaRole);
 
     // ─── Shared Lambda Config ───────────────────────────────────────────────────
 
     const commonEnv: Record<string, string> = {
       MEETINGS_TABLE: meetingsTable.tableName,
+      PAGES_TABLE: pagesTable.tableName,
       WHISPER_ENDPOINT,
       BEDROCK_MODEL_ID,
       REGION,
@@ -205,6 +218,9 @@ export class TransmeetStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
     pagesBucket.grantRead(oai);
+    // 미팅 삭제(REST DELETE) 때 페이지 기록과 함께 발행된 HTML 도 지운다
+    pagesBucket.grantDelete(lambdaRole);
+    meetingsFn.addEnvironment('PAGES_BUCKET', pagesBucket.bucketName);
 
 
     // ─── Route53 + ACM (custom domain) ─────────────────────────────────────────
@@ -306,6 +322,7 @@ export class TransmeetStack extends cdk.Stack {
     );
 
     meetingsTable.grantReadWriteData(wsTaskRole);
+    pagesTable.grantReadWriteData(wsTaskRole);
 
     // ─── AgentCore Gateway: Web Search connector ───────────────────────────────
 
@@ -440,10 +457,12 @@ export class TransmeetStack extends cdk.Stack {
         resources: [webSearchGatewayArn],
       })
     );
-    // 발행은 에이전트가 직접 한다: pages 버킷 쓰기·삭제(이전 페이지 교체) + meeting.page 갱신
+    // 발행은 에이전트가 직접 한다: pages 버킷 쓰기·삭제(이전 페이지 교체) + 페이지 테이블 기록.
+    // 미팅 테이블은 존재 확인(TransactWriteItems 의 ConditionCheck)만 — 미팅 항목은 쓰지 않는다.
     pagesBucket.grantPut(runtimeRole);
     pagesBucket.grantDelete(runtimeRole);
-    meetingsTable.grant(runtimeRole, 'dynamodb:UpdateItem');
+    meetingsTable.grant(runtimeRole, 'dynamodb:ConditionCheckItem');
+    pagesTable.grant(runtimeRole, 'dynamodb:GetItem', 'dynamodb:PutItem');
 
     // ─── AgentCore Runtime ─────────────────────────────────────────────────────
 
@@ -461,6 +480,7 @@ export class TransmeetStack extends cdk.Stack {
         PAGES_BUCKET: pagesBucket.bucketName,
         PAGES_PUBLIC_BASE_URL: `https://${APP_DOMAIN}/p`,
         MEETINGS_TABLE: meetingsTable.tableName,
+        PAGES_TABLE: pagesTable.tableName,
         WEB_SEARCH_GATEWAY_URL: webSearchGateway.getAtt('GatewayUrl').toString(),
         PAGE_MAX_BYTES: '1500000',
         GRAPH_BUDGET_S: '2400',
@@ -494,6 +514,7 @@ export class TransmeetStack extends cdk.Stack {
       environment: {
         REGION,
         MEETINGS_TABLE,
+        PAGES_TABLE,
         WHISPER_ENDPOINT,
         BEDROCK_MODEL_ID,
         PAGE_AGENT_RUNTIME_ARN: runtimeArn,
@@ -634,6 +655,7 @@ export class TransmeetStack extends cdk.Stack {
       description: 'REST API endpoint (https://)',
     });
 
+    new cdk.CfnOutput(this, 'PagesTableName', { value: pagesTable.tableName });
     new cdk.CfnOutput(this, 'FrontendBucketName', {
       value: frontendBucket.bucketName,
       exportName: 'TransmeetFrontendBucket',

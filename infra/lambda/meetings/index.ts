@@ -9,9 +9,35 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb'
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime'
+import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { randomUUID } from 'crypto'
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({ region: process.env.REGION }))
+const s3 = new S3Client({ region: process.env.REGION })
+// 발행된 페이지 기록은 미팅 항목이 아니라 별도 테이블에 있다(미팅 항목은 400 KB 한도에 닿을 수 있다).
+const PAGES_TABLE = process.env.PAGES_TABLE ?? 'transmeet-pages'
+
+interface PageRecord {
+  meetingId: string
+  pageId: string
+  url: string
+  title?: string
+  shareSummary?: string
+  generatedAt?: string
+  updatedAt?: string
+}
+
+async function loadPage(meetingId: string): Promise<PageRecord | undefined> {
+  const result = await ddb.send(new GetCommand({ TableName: PAGES_TABLE, Key: { meetingId } }))
+  const item = result.Item as PageRecord | undefined
+  return item?.pageId ? item : undefined
+}
+
+// 응답의 `page` 는 프런트의 MeetingPage 모양(pageId·url·title·shareSummary·generatedAt)이다.
+function toMeetingPage(page: PageRecord) {
+  const { meetingId: _meetingId, updatedAt: _updatedAt, ...rest } = page
+  return rest
+}
 let _bedrock: BedrockRuntimeClient | null = null
 function getBedrock() {
   if (!_bedrock) _bedrock = new BedrockRuntimeClient({ region: process.env.REGION })
@@ -72,7 +98,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           if (!result.Item) {
             return respond(404, { error: 'Meeting not found' })
           }
-          return respond(200, result.Item)
+          const page = await loadPage(meetingId)
+          return respond(200, page ? { ...result.Item, page: toMeetingPage(page) } : result.Item)
         }
 
         // GET /meetings - list all (paginate through ScanCommand 1MB pages)
@@ -215,6 +242,16 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         // DELETE /meetings/{id}
         if (!meetingId) {
           return respond(400, { error: 'Missing meeting id' })
+        }
+        // 페이지 기록과 발행된 HTML 도 함께 지운다. S3 삭제가 실패하면 기록은 남겨 링크가 보이게 둔다.
+        const page = await loadPage(meetingId)
+        if (page && process.env.PAGES_BUCKET) {
+          await s3.send(
+            new DeleteObjectCommand({ Bucket: process.env.PAGES_BUCKET, Key: `p/${meetingId}/${page.pageId}.html` })
+          )
+        }
+        if (page) {
+          await ddb.send(new DeleteCommand({ TableName: PAGES_TABLE, Key: { meetingId } }))
         }
         await ddb.send(
           new DeleteCommand({

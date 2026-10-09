@@ -14,7 +14,9 @@ if(r.some(x=>x.Type==='$1')){console.error('UNEXPECTED: $1'); process.exit(1)} c
 
 # Runtime: 이름·네트워크·프로토콜·수명·환경 변수
 check 'AWS::BedrockAgentCore::Runtime' "x.Properties.AgentRuntimeName==='transmeet_meeting_page' && x.Properties.NetworkConfiguration.NetworkMode==='PUBLIC' && x.Properties.ProtocolConfiguration==='HTTP' && x.Properties.LifecycleConfiguration.IdleRuntimeSessionTimeout===600 && x.Properties.LifecycleConfiguration.MaxLifetime===3600"
-check 'AWS::BedrockAgentCore::Runtime' "(()=>{const e=x.Properties.EnvironmentVariables; return ['PAGES_BUCKET','PAGES_PUBLIC_BASE_URL','MEETINGS_TABLE','WEB_SEARCH_GATEWAY_URL','PAGE_MAX_BYTES','GRAPH_BUDGET_S','REGION'].every(k=>k in e)})()"
+check 'AWS::BedrockAgentCore::Runtime' "(()=>{const e=x.Properties.EnvironmentVariables; return ['PAGES_BUCKET','PAGES_PUBLIC_BASE_URL','MEETINGS_TABLE','PAGES_TABLE','WEB_SEARCH_GATEWAY_URL','PAGE_MAX_BYTES','GRAPH_BUDGET_S','REGION'].every(k=>k in e)})()"
+# 페이지 테이블: 미팅 항목(400 KB 한도)과 분리
+check 'AWS::DynamoDB::Table' "x.Properties.TableName==='transmeet-pages' && x.Properties.KeySchema.length===1 && x.Properties.KeySchema[0].AttributeName==='meetingId'"
 check 'AWS::BedrockAgentCore::Runtime' "JSON.stringify(x.Properties.AgentRuntimeArtifact.ContainerConfiguration.ContainerUri).includes('container-assets')"
 # 하네스·스킬 버킷은 더 없다
 absent 'AWS::BedrockAgentCore::Harness'
@@ -23,11 +25,16 @@ node -e "const t=require('./$T'); if(Object.values(t.Resources).some(x=>x.Type==
 check 'AWS::BedrockAgentCore::Gateway' "x.Properties.AuthorizerType==='AWS_IAM' && x.Properties.ProtocolType==='MCP'"
 check 'AWS::BedrockAgentCore::GatewayTarget' "x.Properties.TargetConfiguration.Mcp.Connector.Source.ConnectorId==='web-search' && x.Properties.CredentialProviderConfigurations[0].CredentialProviderType==='GATEWAY_IAM_ROLE'"
 check 'AWS::IAM::Policy' "JSON.stringify(x.Properties.PolicyDocument).includes('bedrock-agentcore:InvokeWebSearch')"
-# 실행 역할: 지정 모델만(와일드카드 금지), Gateway 호출, pages 버킷 쓰기, 테이블 UpdateItem
+# 실행 역할: 지정 모델만(와일드카드 금지), Gateway 호출, pages 버킷 쓰기, 페이지 테이블 Get/Put, 미팅 테이블은 ConditionCheck 만(UpdateItem 없음)
 check 'AWS::IAM::Policy' "(()=>{if(!JSON.stringify(x.Properties.Roles).includes('RuntimeExecutionRole')) return false; const st=x.Properties.PolicyDocument.Statement.find(s=>s.Sid==='BedrockModelInvocation'); if(!st) return false; const r=JSON.stringify(st.Resource); return !r.includes('foundation-model/*') && !r.includes('inference-profile/*') && r.includes('inference-profile/us.anthropic.claude-opus-5-5') && r.includes('foundation-model/anthropic.claude-opus-5-5*') && r.includes('inference-profile/us.anthropic.claude-opus-5\"')})()"
 check 'AWS::IAM::Policy' "JSON.stringify(x.Properties.Roles).includes('RuntimeExecutionRole') && x.Properties.PolicyDocument.Statement.some(s=>JSON.stringify(s.Action).includes('bedrock-agentcore:InvokeGateway'))"
 check 'AWS::IAM::Policy' "JSON.stringify(x.Properties.Roles).includes('RuntimeExecutionRole') && x.Properties.PolicyDocument.Statement.some(s=>JSON.stringify(s.Action).includes('s3:PutObject')) && x.Properties.PolicyDocument.Statement.some(s=>JSON.stringify(s.Action).includes('s3:DeleteObject'))"
-check 'AWS::IAM::Policy' "JSON.stringify(x.Properties.Roles).includes('RuntimeExecutionRole') && x.Properties.PolicyDocument.Statement.some(s=>JSON.stringify(s.Action).includes('dynamodb:UpdateItem'))"
+check 'AWS::IAM::Policy' "JSON.stringify(x.Properties.Roles).includes('RuntimeExecutionRole') && x.Properties.PolicyDocument.Statement.some(s=>JSON.stringify(s.Action).includes('dynamodb:ConditionCheckItem') && JSON.stringify(s.Resource).includes('MeetingsTable'))"
+check 'AWS::IAM::Policy' "JSON.stringify(x.Properties.Roles).includes('RuntimeExecutionRole') && x.Properties.PolicyDocument.Statement.some(s=>JSON.stringify(s.Action).includes('dynamodb:PutItem') && JSON.stringify(s.Action).includes('dynamodb:GetItem') && JSON.stringify(s.Resource).includes('PagesTable'))"
+node -e "const t=require('./$T'); const bad=Object.values(t.Resources).some(x=>x.Type==='AWS::IAM::Policy' && JSON.stringify(x.Properties.Roles).includes('RuntimeExecutionRole') && x.Properties.PolicyDocument.Statement.some(s=>JSON.stringify(s.Action).includes('dynamodb:UpdateItem'))); if(bad){console.error('UNEXPECTED runtime role UpdateItem');process.exit(1)} console.log('ok  runtime role has no UpdateItem')"
+# REST Lambda: 미팅 삭제 때 페이지 HTML 도 지운다
+check 'AWS::IAM::Policy' "JSON.stringify(x.Properties.Roles).includes('LambdaRole') && x.Properties.PolicyDocument.Statement.some(s=>JSON.stringify(s.Action).includes('s3:DeleteObject'))"
+check 'AWS::Lambda::Function' "x.Properties.FunctionName==='transmeet-meetings' && 'PAGES_TABLE' in x.Properties.Environment.Variables && 'PAGES_BUCKET' in x.Properties.Environment.Variables"
 check 'AWS::IAM::Policy' "JSON.stringify(x.Properties.Roles).includes('RuntimeExecutionRole') && x.Properties.PolicyDocument.Statement.some(s=>JSON.stringify(s.Action).includes('ecr:BatchGetImage'))"
 check 'AWS::IAM::Role' "JSON.stringify(x.Properties.AssumeRolePolicyDocument).includes('bedrock-agentcore.amazonaws.com')"
 # 태스크 역할: InvokeAgentRuntime 만 (InvokeHarness 없음), pages 버킷은 Delete 만
@@ -35,7 +42,7 @@ check 'AWS::IAM::Policy' "JSON.stringify(x.Properties.Roles).includes('WsTaskRol
 node -e "const t=require('./$T'); const bad=Object.values(t.Resources).some(x=>x.Type==='AWS::IAM::Policy' && JSON.stringify(x.Properties.PolicyDocument).includes('InvokeHarness')); if(bad){console.error('UNEXPECTED InvokeHarness');process.exit(1)} console.log('ok  no InvokeHarness')"
 node -e "const t=require('./$T'); const bad=Object.values(t.Resources).some(x=>x.Type==='AWS::IAM::Policy' && JSON.stringify(x.Properties.Roles).includes('WsTaskRole') && x.Properties.PolicyDocument.Statement.some(s=>JSON.stringify(s.Action).includes('s3:PutObject'))); if(bad){console.error('UNEXPECTED task role PutObject');process.exit(1)} console.log('ok  task role has no PutObject')"
 # ECS 환경 변수
-check 'AWS::ECS::TaskDefinition' "(()=>{const e=JSON.stringify(x.Properties.ContainerDefinitions[0].Environment); return e.includes('PAGE_AGENT_RUNTIME_ARN') && e.includes('PAGE_AGENT_MODEL_ID') && e.includes('PAGE_AGENT_FALLBACK_MODEL_ID') && !e.includes('HARNESS_ARN')})()"
+check 'AWS::ECS::TaskDefinition' "(()=>{const e=JSON.stringify(x.Properties.ContainerDefinitions[0].Environment); return e.includes('PAGE_AGENT_RUNTIME_ARN') && e.includes('PAGE_AGENT_MODEL_ID') && e.includes('PAGE_AGENT_FALLBACK_MODEL_ID') && e.includes('PAGES_TABLE') && !e.includes('HARNESS_ARN')})()"
 # 발행 페이지 서빙·CSP 는 그대로
 check 'AWS::S3::Bucket' "JSON.stringify(x.Properties.BucketName).includes('transmeet-meeting-pages')"
 check 'AWS::CloudFront::Distribution' "x.Properties.DistributionConfig.CacheBehaviors.some(b=>b.PathPattern==='/p/*' && b.ResponseHeadersPolicyId)"
