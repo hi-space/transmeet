@@ -40,6 +40,44 @@ function useElapsed(startedAt?: number, active?: boolean) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
 }
 
+// 클립보드 API 가 없거나(HTTP 로컬 등) 거부하면 숨은 textarea + execCommand 로 한 번 더 시도한다.
+// 반드시 사용자 제스처 안에서, await 없이 호출해야 한다.
+function copyText(text: string): Promise<void> {
+  const legacy = () => {
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.setAttribute('readonly', '')
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    let ok = false
+    try {
+      ok = document.execCommand('copy')
+    } finally {
+      ta.remove()
+    }
+    if (!ok) throw new Error('execCommand(copy) 가 거부되었습니다')
+  }
+  if (typeof navigator.clipboard?.writeText !== 'function') {
+    return new Promise((resolve, reject) => {
+      try {
+        legacy()
+        resolve()
+      } catch (e) {
+        reject(e)
+      }
+    })
+  }
+  return navigator.clipboard.writeText(text).catch((err: unknown) => {
+    try {
+      legacy()
+    } catch {
+      throw err
+    }
+  })
+}
+
 const btn =
   'flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
 const btnNeutral = `${btn} bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600/50`
@@ -58,6 +96,7 @@ export default function MeetingPagePanel({
 }: Props) {
   const [copied, setCopied] = useState(false)
   const [mdState, setMdState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle')
+  const [mdError, setMdError] = useState<string>()
   const [confirmRegen, setConfirmRegen] = useState(false)
   const [confirmUnpublish, setConfirmUnpublish] = useState(false)
   const generating = gen.status === 'generating'
@@ -88,28 +127,67 @@ export default function MeetingPagePanel({
     }
   }
 
-  // 페이지 본문을 마크다운으로 복사한다. iframe 은 sandbox 라 문서를 직접 읽을 수 없고,
-  // 페이지는 앱과 같은 오리진(/p/…)에서 서빙되므로 다시 받아서 변환한다.
-  const handleCopyMarkdown = async () => {
-    if (!page || mdState === 'busy') return
-    setMdState('busy')
-    try {
-      const res = await fetch(page.url, { cache: 'no-store' })
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const md = htmlToMarkdown(await res.text())
-      if (!md.trim()) throw new Error('empty page')
-      await navigator.clipboard.writeText(md)
-      setMdState('done')
-    } catch (err) {
-      console.error('Failed to copy page as markdown:', err)
-      setMdState('error')
+  // 페이지 본문의 마크다운은 페이지가 보일 때 미리 만들어 둔다. iframe 은 sandbox 라 문서를 직접
+  // 읽을 수 없어 같은 오리진(/p/…) URL 을 다시 받아 변환한다. 클릭 시점에 fetch 를 await 하고
+  // 나서 클립보드에 쓰면 Safari 가 사용자 제스처 밖이라고 거부하므로, 클릭 핸들러는 await 없이
+  // 준비된 문자열만 바로 쓴다.
+  const [markdown, setMarkdown] = useState<{ url: string; text?: string; error?: string } | null>(
+    null
+  )
+  const [mdRetry, setMdRetry] = useState(0)
+  const pageUrl = page?.url
+  useEffect(() => {
+    if (!pageUrl) {
+      setMarkdown(null)
+      return
     }
-    setTimeout(() => setMdState('idle'), 2000)
+    const ctrl = new AbortController()
+    setMarkdown({ url: pageUrl })
+    fetch(pageUrl, { cache: 'no-store', signal: ctrl.signal })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        return htmlToMarkdown(await res.text())
+      })
+      .then((text) => {
+        if (!text.trim()) throw new Error('페이지 내용이 비어 있습니다')
+        setMarkdown({ url: pageUrl, text })
+      })
+      .catch((err: unknown) => {
+        if (ctrl.signal.aborted) return
+        console.error('Failed to load page as markdown:', err)
+        setMarkdown({ url: pageUrl, error: err instanceof Error ? err.message : String(err) })
+      })
+    return () => ctrl.abort()
+  }, [pageUrl, mdRetry])
+
+  const handleCopyMarkdown = () => {
+    if (!markdown) return
+    if (markdown.error) {
+      setMdRetry((n) => n + 1) // 불러오기 실패 → 다시 시도
+      return
+    }
+    if (!markdown.text) return
+    copyText(markdown.text)
+      .then(() => setMdState('done'))
+      .catch((err: unknown) => {
+        console.error('Failed to copy page as markdown:', err)
+        setMdError(err instanceof Error ? `${err.name}: ${err.message}` : String(err))
+        setMdState('error')
+      })
+      .finally(() => setTimeout(() => setMdState('idle'), 2500))
   }
 
-  const mdLabel = { idle: '마크다운 복사', busy: '복사 중…', done: '복사됨', error: '복사 실패' }[
-    mdState
-  ]
+  const mdLoading = !!markdown && !markdown.text && !markdown.error
+  const mdLabel = markdown?.error
+    ? '불러오기 실패 · 재시도'
+    : mdLoading
+      ? '준비 중…'
+      : { idle: '마크다운 복사', busy: '복사 중…', done: '복사됨', error: '복사 실패' }[mdState]
+  const mdTitle = markdown?.error
+    ? `페이지를 불러오지 못했습니다: ${markdown.error}`
+    : mdState === 'error' && mdError
+      ? `클립보드에 쓰지 못했습니다: ${mdError}`
+      : '페이지 내용을 마크다운 텍스트로 복사'
 
   const canGenerate = hasMessages && wsConnected && !generating
 
@@ -141,9 +219,9 @@ export default function MeetingPagePanel({
               </button>
               <button
                 onClick={handleCopyMarkdown}
-                disabled={mdState === 'busy'}
-                title="페이지 내용을 마크다운 텍스트로 복사"
-                className={`${btnNeutral} ${mdState === 'error' ? 'text-red-600 dark:text-red-400' : ''}`}
+                disabled={mdLoading}
+                title={mdTitle}
+                className={`${btnNeutral} ${mdState === 'error' || markdown?.error ? 'text-red-600 dark:text-red-400' : ''}`}
               >
                 {mdLabel}
               </button>
