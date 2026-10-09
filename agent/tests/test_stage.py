@@ -27,6 +27,9 @@ async def test_stage_runs_tools_until_final(ws):
     assert (ws.root / "a.txt").read_text() == "hi"
     msgs = res.messages
     assert isinstance(msgs[0], SystemMessage) and isinstance(msgs[1], HumanMessage)
+    # 고정 접두(시스템·사용자 프롬프트)에는 Bedrock 캐시 포인트가 붙는다
+    assert msgs[0].content[0]["text"] == "sys" and msgs[0].content[-1] == {"cachePoint": {"type": "default"}}
+    assert msgs[1].content[0]["text"] == "user" and msgs[1].content[-1] == {"cachePoint": {"type": "default"}}
     tool_msgs = [m for m in msgs if isinstance(m, ToolMessage)]
     assert [m.tool_call_id for m in tool_msgs] == ["t1", "t2", "t3"]
     assert "wrote" in tool_msgs[0].content

@@ -194,7 +194,8 @@ async def test_validation_failure_reassembles_then_publishes(tmp_path):
     order = [list(u)[0] for u in updates]
     assert order.count("assemble") == 2 and order.count("validate") == 2
     # 두 번째 조립 프롬프트에 검증 오류가 들어갔고 page.html 은 유지됐다
-    second_prompt = assemble.calls[2][1].content
+    from runtime.stage import message_text
+    second_prompt = message_text(assemble.calls[2][1])
     assert "검증 오류" in second_prompt and "script" in second_prompt.lower()
     assert any("검증 실패" in c.get("text", "") for c in customs)
     final = {k: v for u in updates for k, v in u.items()}

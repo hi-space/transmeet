@@ -22,6 +22,16 @@ logger = logging.getLogger(__name__)
 TOOL_RESULT_LIMIT = 60_000
 
 
+def cached_text(text: str) -> list:
+    """Text block followed by a Bedrock prompt-cache checkpoint.
+
+    The system prompt and the user prompt (transcript + stage inputs) are identical on every
+    iteration of the tool loop, so marking them lets Bedrock reuse that prefix at ~10% of the
+    input price. Prefixes shorter than the model's minimum are simply not cached.
+    """
+    return [{"type": "text", "text": text}, {"cachePoint": {"type": "default"}}]
+
+
 @dataclass
 class StageResult:
     messages: List[BaseMessage]
@@ -79,10 +89,12 @@ async def run_stage(
     max_iterations: int,
     on_tool_start: Optional[Callable[[str, Dict[str, Any]], Optional[str]]] = None,
     stream_text: bool = True,
+    cache_prefix: bool = True,
 ) -> StageResult:
     by_name = {t.name: t for t in tools}
     bound = llm.bind_tools(list(tools)) if tools else llm
-    messages: List[BaseMessage] = [SystemMessage(content=system_prompt), HumanMessage(content=user_prompt)]
+    wrap = cached_text if cache_prefix else (lambda t: t)
+    messages: List[BaseMessage] = [SystemMessage(content=wrap(system_prompt)), HumanMessage(content=wrap(user_prompt))]
     usage: Dict[str, int] = {}
     describe = on_tool_start or describe_tool_start
 
