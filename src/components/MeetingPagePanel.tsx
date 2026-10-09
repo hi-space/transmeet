@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { htmlToMarkdown } from '@/lib/htmlToMarkdown'
 import type { MeetingPage } from '@/types/meeting'
 
 export type PageGenStatus = 'idle' | 'generating' | 'error'
@@ -56,6 +57,7 @@ export default function MeetingPagePanel({
   onClose,
 }: Props) {
   const [copied, setCopied] = useState(false)
+  const [mdState, setMdState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle')
   const [confirmRegen, setConfirmRegen] = useState(false)
   const [confirmUnpublish, setConfirmUnpublish] = useState(false)
   const generating = gen.status === 'generating'
@@ -86,6 +88,29 @@ export default function MeetingPagePanel({
     }
   }
 
+  // 페이지 본문을 마크다운으로 복사한다. iframe 은 sandbox 라 문서를 직접 읽을 수 없고,
+  // 페이지는 앱과 같은 오리진(/p/…)에서 서빙되므로 다시 받아서 변환한다.
+  const handleCopyMarkdown = async () => {
+    if (!page || mdState === 'busy') return
+    setMdState('busy')
+    try {
+      const res = await fetch(page.url, { cache: 'no-store' })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const md = htmlToMarkdown(await res.text())
+      if (!md.trim()) throw new Error('empty page')
+      await navigator.clipboard.writeText(md)
+      setMdState('done')
+    } catch (err) {
+      console.error('Failed to copy page as markdown:', err)
+      setMdState('error')
+    }
+    setTimeout(() => setMdState('idle'), 2000)
+  }
+
+  const mdLabel = { idle: '마크다운 복사', busy: '복사 중…', done: '복사됨', error: '복사 실패' }[
+    mdState
+  ]
+
   const canGenerate = hasMessages && wsConnected && !generating
 
   return (
@@ -113,6 +138,14 @@ export default function MeetingPagePanel({
             <>
               <button onClick={handleShare} title="공유 링크" className={btnPrimary}>
                 {copied ? '링크 복사됨' : '공유'}
+              </button>
+              <button
+                onClick={handleCopyMarkdown}
+                disabled={mdState === 'busy'}
+                title="페이지 내용을 마크다운 텍스트로 복사"
+                className={`${btnNeutral} ${mdState === 'error' ? 'text-red-600 dark:text-red-400' : ''}`}
+              >
+                {mdLabel}
               </button>
               <a
                 href={page.url}
