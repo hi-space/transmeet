@@ -70,6 +70,7 @@ from .aws_clients import (
 )
 from .config import config
 from .page_agent import PageRequestError, check_meeting_id, page_status_event, run_unpublish, start_page_generation
+from .summary_prompt import SUMMARY_SYSTEM_PROMPT, build_summary_prompt, transcript_lines
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -1036,16 +1037,15 @@ async def _stream_summary(
     If inline_messages is provided (from frontend), use those directly
     instead of reading from DynamoDB. This ensures summaries work during
     live recording when messages may not yet be persisted.
+
+    `model_id` 는 호출자의 실시간 모델이지만 요약은 `config.SUMMARY_MODEL_ID` 로 쓴다 —
+    페이지 수준의 디테일(주제별 서술·인용·기술 디테일)을 내야 해서 큰 모델이 필요하다.
     """
     try:
         lines: List[str] = []
         current_title = ""
         if inline_messages:
-            for m in inline_messages:
-                speaker = m.get("speaker", "")
-                orig = m.get("original", "")
-                if orig:
-                    lines.append(f"[{speaker}] {orig}")
+            lines = transcript_lines(inline_messages)
             async with dynamodb_client() as ddb:
                 meta = await ddb.get_item(
                     TableName=config.MEETINGS_TABLE,
@@ -1061,36 +1061,28 @@ async def _stream_summary(
                 )
             current_title = result.get("Item", {}).get("title", {}).get("S", "")
             raw_messages = result.get("Item", {}).get("messages", {}).get("L", [])
-            for m in raw_messages:
-                mv = m.get("M", {})
-                speaker = mv.get("speaker", {}).get("S", "")
-                orig = mv.get("originalText", {}).get("S", "")
-                if orig:
-                    lines.append(f"[{speaker}] {orig}")
+            lines = transcript_lines(
+                {"originalText": m.get("M", {}).get("originalText", {}).get("S", ""),
+                 "timestamp": m.get("M", {}).get("timestamp", {}).get("S", "")}
+                for m in raw_messages
+            )
 
         if not lines:
             await _safe_send(ws, {"type": "summary_stream", "phase": "error", "error": "No messages to summarize"})
             return
         transcript = "\n".join(lines)
 
-        system_prompt = "You are a professional meeting summarizer. Analyze meeting transcripts and produce clear, structured Korean summaries."
-        user_prompt = (
-            "Summarize the following meeting transcript in Korean. Include:\n"
-            "- 개요: one-sentence overview of the meeting\n"
-            "- 핵심 메시지: 1-2 most important takeaways\n"
-            "- 주요 포인트: key discussion items\n"
-            "- 상세 노트: any additional details worth noting\n\n"
-            "Be concise but comprehensive. Do not omit important information.\n\n"
-            f"---\n{transcript}"
-        )
+        user_prompt = build_summary_prompt(current_title, transcript)
+        summary_model_id = config.SUMMARY_MODEL_ID or model_id
+        logger.info("[ws] summary start meeting_id=%s model=%s lines=%d", meeting_id, summary_model_id, len(lines))
 
         summary = ""
         async with bedrock_client() as br:
             stream_resp = await br.converse_stream(
-                modelId=model_id,
-                system=[{"text": system_prompt}],
+                modelId=summary_model_id,
+                system=[{"text": SUMMARY_SYSTEM_PROMPT}],
                 messages=[{"role": "user", "content": [{"text": user_prompt}]}],
-                inferenceConfig={"maxTokens": 4096},
+                inferenceConfig={"maxTokens": config.SUMMARY_MAX_TOKENS},
             )
             async for event in stream_resp["stream"]:
                 delta = event.get("contentBlockDelta", {}).get("delta", {}).get("text")

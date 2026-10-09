@@ -1315,7 +1315,7 @@ export default function Home() {
       if (wsStatus === 'connected') {
         const wsMessages = currentMessages
           .filter((m) => m.original)
-          .map((m) => ({ speaker: m.speaker, original: m.original }))
+          .map((m) => ({ speaker: m.speaker, original: m.original, timestamp: m.timestamp }))
         const sent = sendSummarize(activeMeetingId, wsMessages)
         if (sent) {
           setMeetings((prev) =>
@@ -1324,12 +1324,12 @@ export default function Home() {
           setRightPanel('summary')
           setSummaryOpen(true)
           lastSummarizedCountRef.current[activeMeetingId] = msgCount
-          // Safety: 60초 후 강제 리셋 (WS done/error 미수신 대비)
+          // Safety: 5분 후 강제 리셋 (WS done/error 미수신 대비). 상세 요약은 긴 미팅에서 1~3분 걸린다.
           if (isSummarizingTimeoutRef.current) clearTimeout(isSummarizingTimeoutRef.current)
           isSummarizingTimeoutRef.current = setTimeout(() => {
             isSummarizingRef.current = false
             setIsSummarizing(false)
-          }, 60_000)
+          }, 300_000)
           return
         }
         // WS status는 connected이지만 실제 소켓 not OPEN → REST fallback

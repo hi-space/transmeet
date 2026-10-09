@@ -10,6 +10,10 @@ class Config(BaseSettings):
     WHISPER_ENDPOINT: str = "whisper-large"
     BEDROCK_MODEL_ID: str = "global.anthropic.claude-haiku-4-5-20251001-v1:0"
     QA_MODEL_ID: str = "global.anthropic.claude-sonnet-4-6"
+    # 요약 패널(WebSocket summarize). 실시간 번역 모델과 분리 — 페이지 수준의 디테일을 내야 해서 큰 모델을 쓴다.
+    # REST 폴백 Lambda(infra/lambda/summarize)와 같은 모델.
+    SUMMARY_MODEL_ID: str = "global.anthropic.claude-opus-4-7"
+    SUMMARY_MAX_TOKENS: int = 16384
 
     # ─── Meeting page agent (LangGraph on AgentCore Runtime) ──────────────────
     PAGE_AGENT_RUNTIME_ARN: str = ""

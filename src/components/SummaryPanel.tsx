@@ -45,7 +45,7 @@ function formatConversation(messages: Message[], meetingTitle?: string): string 
 
 function MarkdownSummary({ text }: { text: string }) {
   return (
-    <div className="prose text-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+    <div className="prose text-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 prose-strong:text-cyan-700 dark:prose-strong:text-cyan-300 prose-blockquote:not-italic prose-blockquote:border-amber-400 prose-td:align-top">
       <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
     </div>
   )
