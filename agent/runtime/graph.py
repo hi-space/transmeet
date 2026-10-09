@@ -26,7 +26,7 @@ from pydantic import BaseModel, Field
 
 from . import events
 from .meta import derive_meta, render_transcript
-from .model import ALLOWED_MODEL_IDS, ainvoke_with_retry, is_transient_error
+from .model import ALLOWED_MODEL_IDS, astream_with_retry, is_transient_error
 from .publish import PublishedPage
 from .stage import run_stage
 from .tools import make_tools
@@ -201,17 +201,24 @@ def build_graph(deps: GraphDeps):
     async def outline(state: PageState) -> PageState:
         ws = _ws(state, deps)
         events.emit(events.status("논의 구조를 파악합니다"))
-        structured = llm(state, "outline").with_structured_output(Outline)
+        # 구조화 출력은 Outline 도구 호출로 받는다(Opus 5.5 는 Bedrock 에서 tool_choice 강제를 지원하지 않아 auto + 프롬프트 지시).
+        # 스트리밍이라 긴 첫 토큰 대기에도 끊기지 않는다.
+        bound = llm(state, "outline").bind_tools([Outline])
         msgs = [SystemMessage(content=system_prompt("outline")), HumanMessage(content=_transcript_block(ws, state))]
         result: Any = None
         for attempt in range(2):
+            ai = await astream_with_retry(bound, msgs)
+            calls = [c for c in (ai.tool_calls or []) if c.get("name") == "Outline"] or list(ai.tool_calls or [])
             try:
-                result = await ainvoke_with_retry(structured, msgs)
+                if not calls:
+                    raise ValueError("model returned no Outline tool call")
+                result = Outline.model_validate(calls[0].get("args") or {})
                 break
             except Exception as e:
-                if is_transient_error(e) or attempt == 1:
+                if attempt == 1:
                     raise
-                logger.warning("[outline] structured output failed once, retrying: %s", e)
+                logger.warning("[outline] unusable structured output, retrying once: %s", e)
+                msgs = msgs + [ai, HumanMessage(content=f"출력이 스키마에 맞지 않았습니다 ({e}). Outline 도구를 스키마대로 다시 호출하세요.")]
         data = result.model_dump() if hasattr(result, "model_dump") else dict(result or {})
         meta = state["meta"]
         if not data.get("topics"):
@@ -222,7 +229,7 @@ def build_graph(deps: GraphDeps):
             data.setdefault("diagram_plan", []).insert(0, {"kind": "timeline", "title": "주제 타임라인", "rationale": "기본"})
         ws.write_json("outline.json", data)
         events.emit(events.status(f"논의 흐름을 {len(data['topics'])}개 주제로 나눴습니다"))
-        usage = getattr(result, "usage_metadata", None) or {}
+        usage = getattr(ai, "usage_metadata", None) or {}
         return {"outline": data, "usage": {k: v for k, v in usage.items() if isinstance(v, int)}}
 
     async def research(state: PageState) -> PageState:

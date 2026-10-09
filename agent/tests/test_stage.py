@@ -4,7 +4,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 
 from fakes import FakeChatModel, ai, tool_call
 from runtime import tools as rtools
-from runtime.model import TransientModelError, ainvoke_with_retry, is_transient_error
+from runtime.model import TransientModelError, ainvoke_with_retry, astream_with_retry, is_transient_error
 from runtime.stage import describe_tool_start, run_stage
 from runtime.workspace import create_workspace
 
@@ -119,3 +119,51 @@ async def test_retry_does_not_retry_non_transient():
     with pytest.raises(ClientError):
         await ainvoke_with_retry(llm, [HumanMessage(content="x")], attempts=3, backoff=(0, 0))
     assert llm.calls == 1
+
+
+class FlakyStream:
+    """astream 이 처음 n 번은 중간에 끊기고 그 뒤에는 텍스트 + 도구 호출 청크를 낸다."""
+
+    def __init__(self, failures):
+        self.failures, self.calls = list(failures), 0
+
+    async def astream(self, messages, **kw):
+        from langchain_core.messages import AIMessageChunk
+        self.calls += 1
+        yield AIMessageChunk(content="안녕")
+        if self.failures:
+            raise self.failures.pop(0)
+        yield AIMessageChunk(content=" 세상", tool_call_chunks=[{"name": "write_file", "args": '{"path": "a"', "id": "t1", "index": 0, "type": "tool_call_chunk"}])
+        yield AIMessageChunk(content="", tool_call_chunks=[{"name": None, "args": ', "content": "x"}', "id": None, "index": 0, "type": "tool_call_chunk"}],
+                             usage_metadata={"input_tokens": 3, "output_tokens": 2, "total_tokens": 5})
+
+
+async def test_astream_accumulates_text_tool_calls_and_usage():
+    seen = []
+    llm = FlakyStream([])
+    msg = await astream_with_retry(llm, [HumanMessage(content="x")], on_text=seen.append, backoff=(0, 0))
+    assert isinstance(msg, AIMessage) and type(msg).__name__ == "AIMessage"
+    assert msg.text == "안녕 세상" and seen == ["안녕", " 세상"]
+    assert msg.tool_calls == [{"name": "write_file", "args": {"path": "a", "content": "x"}, "id": "t1", "type": "tool_call"}]
+    assert msg.usage_metadata["total_tokens"] == 5
+
+
+async def test_astream_retries_broken_stream_then_gives_up():
+    llm = FlakyStream([ReadTimeoutError(endpoint_url="https://bedrock")])
+    msg = await astream_with_retry(llm, [HumanMessage(content="x")], attempts=3, backoff=(0, 0))
+    assert msg.text == "안녕 세상" and llm.calls == 2
+    llm = FlakyStream([_client_error("ServiceUnavailableException")] * 3)
+    with pytest.raises(TransientModelError):
+        await astream_with_retry(llm, [HumanMessage(content="x")], attempts=3, backoff=(0, 0))
+    llm = FlakyStream([_client_error("ValidationException")])
+    with pytest.raises(ClientError):
+        await astream_with_retry(llm, [HumanMessage(content="x")], attempts=3, backoff=(0, 0))
+    assert llm.calls == 1
+
+
+def test_make_chat_model_uses_long_read_timeout():
+    from runtime.model import BEDROCK_CLIENT_CONFIG, make_chat_model
+    llm = make_chat_model("us.anthropic.claude-opus-5-5", region="us-east-1")
+    assert llm.config is BEDROCK_CLIENT_CONFIG and BEDROCK_CLIENT_CONFIG.read_timeout == 900
+    with pytest.raises(ValueError):
+        make_chat_model("anthropic.claude-haiku", region="us-east-1")

@@ -158,7 +158,8 @@ def run_runtime(payload: dict, runtime_arn: str) -> bool:
         contentType="application/json", accept="text/event-stream", payload=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
     )
     ok = False
-    for raw in res["response"].iter_lines():
+    # botocore 의 read(amt) 는 amt 바이트가 모일 때까지 막힌다 — 기본 1024 면 이벤트가 10개씩 몰려 온다.
+    for raw in res["response"].iter_lines(chunk_size=64):
         line = raw.decode("utf-8") if isinstance(raw, bytes) else raw
         if not line.startswith("data: "):
             continue

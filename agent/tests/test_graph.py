@@ -23,6 +23,11 @@ PAYLOAD = {
 }
 
 
+def outline_model(*outlines):
+    """outline 단계 가짜 모델: Outline 도구 호출로 구조화 출력을 돌려준다."""
+    return FakeChatModel(responses=[ai("", [tool_call("Outline", o.model_dump(), f"o{i}")]) for i, o in enumerate(outlines)])
+
+
 def outline(targets=1, flow=True):
     return G.Outline(
         topics=[G.Topic(start="10:00", end="10:15", title="파이프라인 현황", summary="진행 상황 점검."),
@@ -128,7 +133,7 @@ class FakeSearch:
 
 async def test_full_path_publishes_once(tmp_path):
     pub = Recorder()
-    models = {"outline": FakeChatModel(structured=[outline()]), "research": research_model(), "diagrams": diagrams_model(),
+    models = {"outline": outline_model(outline()), "research": research_model(), "diagrams": diagrams_model(),
               "insights": insights_model(), "assemble": good_assemble_model()}
     search = FakeSearch()
     deps = make_deps(tmp_path, models, publisher=pub)
@@ -164,7 +169,7 @@ async def test_full_path_publishes_once(tmp_path):
 
 async def test_empty_research_targets_skip_model(tmp_path):
     research = FakeChatModel(responses=[])
-    models = {"outline": FakeChatModel(structured=[outline(targets=0, flow=False)]), "research": research,
+    models = {"outline": outline_model(outline(targets=0, flow=False)), "research": research,
               "insights": insights_model(), "assemble": good_assemble_model()}
     pub = Recorder()
     customs, updates = await run(make_deps(tmp_path, models, publisher=pub))
@@ -186,7 +191,7 @@ def bad_assemble_round(script_in_topic=True):
 async def test_validation_failure_reassembles_then_publishes(tmp_path):
     fix = [ai("", [tool_call("edit_file", {"path": "page.html", "old": "<script>alert(1)</script>", "new": "<p>고침</p>"}, "fix")]), ai("고쳤습니다")]
     assemble = FakeChatModel(responses=bad_assemble_round() + fix)
-    models = {"outline": FakeChatModel(structured=[outline(targets=0, flow=False)]), "research": FakeChatModel(),
+    models = {"outline": outline_model(outline(targets=0, flow=False)), "research": FakeChatModel(),
               "insights": insights_model(), "assemble": assemble}
     pub = Recorder()
     customs, updates = await run(make_deps(tmp_path, models, publisher=pub))
@@ -204,7 +209,7 @@ async def test_validation_failure_reassembles_then_publishes(tmp_path):
 
 async def test_three_failures_end_in_error(tmp_path):
     rounds = bad_assemble_round() + [ai("안 고침"), ai("안 고침")]
-    models = {"outline": FakeChatModel(structured=[outline(targets=0, flow=False)]), "research": FakeChatModel(),
+    models = {"outline": outline_model(outline(targets=0, flow=False)), "research": FakeChatModel(),
               "insights": insights_model(), "assemble": FakeChatModel(responses=rounds)}
     pub = Recorder()
     customs, updates = await run(make_deps(tmp_path, models, publisher=pub))
@@ -218,7 +223,7 @@ async def test_three_failures_end_in_error(tmp_path):
 
 
 async def test_publisher_exception_propagates(tmp_path):
-    models = {"outline": FakeChatModel(structured=[outline(targets=0, flow=False)]), "research": FakeChatModel(),
+    models = {"outline": outline_model(outline(targets=0, flow=False)), "research": FakeChatModel(),
               "insights": insights_model(), "assemble": good_assemble_model()}
     with pytest.raises(RuntimeError, match="s3 down"):
         await run(make_deps(tmp_path, models, publisher=Recorder(fail=RuntimeError("s3 down"))))
@@ -243,3 +248,12 @@ def test_system_prompts_exist_for_all_stages():
         text = G.system_prompt(stage)
         assert "TransMeet" in text and "이 단계" in text
     assert "publish_page" not in G.system_prompt("assemble") and "code_interpreter" not in G.system_prompt("assemble")
+
+
+async def test_outline_retries_once_on_bad_structured_output(tmp_path):
+    bad_then_good = FakeChatModel(responses=[ai("구조화 실패"), ai("", [tool_call("Outline", outline(targets=0, flow=False).model_dump(), "o1")])])
+    models = {"outline": bad_then_good, "research": FakeChatModel(), "insights": insights_model(), "assemble": good_assemble_model()}
+    pub = Recorder()
+    await run(make_deps(tmp_path, models, publisher=pub))
+    assert len(pub.calls) == 1 and len(bad_then_good.calls) == 2
+    assert "스키마" in bad_then_good.calls[1][-1].content

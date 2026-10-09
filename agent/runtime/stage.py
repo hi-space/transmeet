@@ -15,7 +15,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from langchain_core.tools import BaseTool
 
 from . import events
-from .model import ainvoke_with_retry
+from .model import astream_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -103,13 +103,14 @@ async def run_stage(
     usage: Dict[str, int] = {}
     describe = on_tool_start or describe_tool_start
 
+    def relay(text: str) -> None:
+        if stream_text:
+            events.emit(events.delta(text))
+
     for iteration in range(1, max_iterations + 1):
-        ai: AIMessage = await ainvoke_with_retry(bound, messages)
+        ai: AIMessage = await astream_with_retry(bound, messages, on_text=relay)
         messages.append(ai)
         _add_usage(usage, ai)
-        text = message_text(ai).strip()
-        if text and stream_text:
-            events.emit(events.delta(text))
         calls = list(getattr(ai, "tool_calls", None) or [])
         if not calls:
             return StageResult(messages, iteration, usage, "final")
