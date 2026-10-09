@@ -33,6 +33,10 @@ TRANSIENT_MARKERS = (
     "too many requests",
     "service unavailable",
     "remoteprotocolerror",
+    # langchain-aws: 이벤트 스트림이 messageStop 없이 끝남(연결이 중간에 끊김) — 새 턴으로 다시 시작하면 풀린다
+    "incomplete bedrock response stream",
+    "missing messagestop",
+    "connectionerror",
 )
 
 

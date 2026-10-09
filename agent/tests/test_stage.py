@@ -81,6 +81,7 @@ def _client_error(code, msg="x"):
     (EventStreamError({"Error": {"Code": "modelStreamErrorException", "Message": "x"}}, "ConverseStream"), True),
     (ReadTimeoutError(endpoint_url="https://bedrock"), True),
     (ConnectionResetError("Connection reset by peer"), True),
+    (ConnectionError("Incomplete Bedrock response stream: missing messageStop event."), True),  # langchain-aws, 스트림 중간 끊김
     (_client_error("ValidationException", "bad input"), False),
     (_client_error("AccessDeniedException"), False),
     (ValueError("page.html missing"), False),
