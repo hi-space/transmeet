@@ -28,8 +28,9 @@ def test_transcript_lines_without_timestamp_still_keep_text():
 def test_prompt_has_page_structure_and_embeds_transcript():
     prompt = build_summary_prompt("주간 1:1", "[10:00] 파이프라인 어디까지 왔어요?")
     for heading in ["## 한눈에 보기", "## 회의 요약", "### 배경·목적", "### 합의·결정", "## 논의 흐름", "## 결정 사항",
-                    "## 액션 아이템", "## 미결 사항", "## 기술 디테일", "## 용어"]:
+                    "## 액션 아이템", "## 미결 사항", "## 기술 디테일"]:
         assert heading in prompt, heading
+    assert "## 용어" not in prompt  # 요약 패널에는 용어 사전을 두지 않는다
     assert prompt.rstrip().endswith("[10:00] 파이프라인 어디까지 왔어요?")
     assert "주간 1:1" in prompt
     # 페이지와 같은 규칙: 화자 라벨 금지, 디테일 유지, 불릿당 강조 하나
