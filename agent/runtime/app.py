@@ -27,6 +27,8 @@ logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"), format="%(asctime
 GENERIC_ERROR = "페이지 생성 중 오류가 발생했습니다"
 TIMEOUT_ERROR = "시간 초과로 생성을 중단했습니다"
 NO_RESULT_ERROR = "에이전트가 결과 없이 끝났습니다"
+# 모델 턴이 침묵하는 동안 SSE 응답을 비워 두지 않는 간격(초). 100K 토큰 프롬프트는 첫 토큰까지 10분을 넘길 수 있다.
+HEARTBEAT_S = 30.0
 
 
 async def run_page_graph(
@@ -36,8 +38,14 @@ async def run_page_graph(
     deps: GraphDeps,
     budget_s: float,
     graph: Any = None,
+    heartbeat_s: float = HEARTBEAT_S,
 ) -> AsyncIterator[Dict[str, Any]]:
-    """Yield status/delta events and exactly one terminal done/error event."""
+    """Yield status/delta events and exactly one terminal done/error event.
+
+    While a model turn is silent a text-less status is yielded every `heartbeat_s` seconds so the
+    SSE response never goes quiet — a 1,156-utterance meeting lost its Runtime session with no
+    log line after an 11-minute gap before the assemble stage's first token.
+    """
     try:
         state = initial_state(payload, session_id, deps)
     except PayloadError as e:
@@ -54,7 +62,10 @@ async def run_page_graph(
     failed = False
     try:
         async with asyncio.timeout(budget_s):
-            async for mode, data in app.astream(state, stream_mode=["custom", "updates"]):
+            async for mode, data in _with_heartbeat(app.astream(state, stream_mode=["custom", "updates"]), heartbeat_s):
+                if mode == "heartbeat":
+                    yield events.heartbeat()
+                    continue
                 if mode == "custom":
                     if data.get("phase") == "error":
                         failed = True
@@ -90,6 +101,42 @@ async def run_page_graph(
         yield events.done(published, usage)
     elif not failed:
         yield events.error(NO_RESULT_ERROR, transient=True, stage="graph")
+
+
+async def _with_heartbeat(source, interval: float):
+    """Re-yield `source` items; when none arrives within `interval` seconds yield ("heartbeat", None)."""
+    queue: asyncio.Queue = asyncio.Queue()
+    sentinel = object()
+
+    async def pump():
+        try:
+            async for item in source:
+                await queue.put(item)
+        except BaseException as e:  # 예외는 소비자 쪽에서 다시 던진다
+            await queue.put(e)
+        finally:
+            await queue.put(sentinel)
+
+    task = asyncio.create_task(pump())
+    try:
+        while True:
+            try:
+                item = await asyncio.wait_for(queue.get(), timeout=interval)
+            except asyncio.TimeoutError:
+                yield "heartbeat", None
+                continue
+            if item is sentinel:
+                break
+            if isinstance(item, BaseException):
+                raise item
+            yield item
+    finally:
+        if not task.done():
+            task.cancel()
+            try:
+                await task
+            except (asyncio.CancelledError, Exception):
+                pass
 
 
 # ─── Real dependencies ───────────────────────────────────────────────────────

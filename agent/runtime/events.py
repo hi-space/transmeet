@@ -19,6 +19,12 @@ def status(text: str) -> Dict[str, Any]:
     return {"phase": "status", "text": text}
 
 
+def heartbeat() -> Dict[str, Any]:
+    """A status without text: keeps the response stream flowing while a model turn is silent.
+    The backend relays only statuses with text and the frontend ignores empty ones."""
+    return {"phase": "status"}
+
+
 def delta(text: str) -> Dict[str, Any]:
     return {"phase": "delta", "text": text}
 

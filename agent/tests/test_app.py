@@ -97,3 +97,27 @@ def test_settings_from_env(monkeypatch):
     monkeypatch.setenv("GRAPH_BUDGET_S", "120")
     s = Settings.from_env()
     assert s.pages_bucket == "b" and s.gateway_url == "https://gw/mcp" and s.budget_s == 120.0 and s.region == "us-east-1"
+
+
+async def test_heartbeat_fills_silent_gaps_and_is_textless(tmp_path):
+    g = FakeGraph([
+        ("custom", {"phase": "status", "text": "a"}),
+        ("updates", {"publish": {"published": {"pageId": "p", "url": "https://x"}}}),
+    ], delay=0.25)
+    out = []
+    async for e in A.run_page_graph(PAYLOAD, session_id="s" * 33, deps=deps(tmp_path), budget_s=5.0, graph=g, heartbeat_s=0.1):
+        out.append(e)
+    beats = [e for e in out if e == {"phase": "status"}]
+    assert len(beats) >= 2 and "text" not in beats[0]
+    assert [e["phase"] for e in out if e != {"phase": "status"}] == ["status", "done"]
+    assert out[-1]["phase"] == "done"  # 하트비트가 종결 이벤트 뒤에 오지 않는다
+
+
+async def test_heartbeat_wrapper_propagates_exceptions_and_budget(tmp_path):
+    out = await collect(FakeGraph([("custom", {"phase": "status", "text": "a"})], exc=RuntimeError("boom")), tmp_path)
+    assert out[-1]["phase"] == "error" and out[-1]["stage"] == "graph"
+    slow = FakeGraph([("custom", {"phase": "status", "text": "a"})] * 50, delay=0.2)
+    out = []
+    async for e in A.run_page_graph(PAYLOAD, session_id="s" * 33, deps=deps(tmp_path), budget_s=0.5, graph=slow, heartbeat_s=0.05):
+        out.append(e)
+    assert out[-1]["phase"] == "error" and out[-1]["stage"] == "budget"
