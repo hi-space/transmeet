@@ -236,7 +236,10 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
   }, [])
 
   const sendSummarize = useCallback(
-    (meetingId: string, messages?: { speaker: string; original: string; timestamp?: string }[]): boolean => {
+    (
+      meetingId: string,
+      messages?: { speaker: string; original: string; timestamp?: string }[]
+    ): boolean => {
       const ws = wsRef.current
       if (!ws || ws.readyState !== WebSocket.OPEN) return false
       ws.send(
