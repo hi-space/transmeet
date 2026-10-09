@@ -135,7 +135,8 @@ def print_event(event: dict) -> None:
     if phase == "delta":
         print(event.get("text", ""), end="", flush=True)
     elif phase == "status":
-        print(f"\n[status {time.strftime('%H:%M:%S')}] {event.get('text')}", flush=True)
+        if event.get("text"):  # text 없는 status 는 하트비트 — 표시하지 않는다
+            print(f"\n[status {time.strftime('%H:%M:%S')}] {event.get('text')}", flush=True)
     else:
         print(f"\n[{phase}] {json.dumps({k: v for k, v in event.items() if k != 'phase'}, ensure_ascii=False)}", flush=True)
 
