@@ -73,7 +73,9 @@ th{background:var(--tm-card2);color:var(--tm-muted);font-weight:700;font-size:.8
 td:first-child{min-width:5.5em}
 tbody tr:last-child td{border-bottom:0}
 tbody tr:nth-child(even) td{background:var(--tm-card)}
-td code,.term{font-family:var(--tm-mono);font-size:.88em;background:var(--tm-card2);padding:1px 6px;border-radius:5px}
+td code,.term{font-family:var(--tm-mono);font-size:.88em;background:var(--tm-card2);padding:1px 6px;border-radius:5px;overflow-wrap:break-word}
+.glossary{table-layout:fixed}.glossary th:nth-child(1),.glossary td:nth-child(1){width:24%}.glossary th:nth-child(3),.glossary td:nth-child(3){width:26%}
+.glossary td.time{white-space:normal;line-height:1.5}
 /* 논의 흐름 */
 .topic{border:1px solid var(--tm-line);border-radius:var(--tm-radius);padding:20px 22px;margin:0 0 18px;background:var(--tm-card)}
 .topic-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 12px;margin:0 0 12px;padding:0 0 10px;border-bottom:1px solid var(--tm-line)}
@@ -154,7 +156,7 @@ footer[data-section=footer]{border-top:1px solid var(--tm-line);padding-top:18px
 <section data-section="insights" id="sec-insights"><h2><span class="num">8</span>인사이트 보고서</h2>{{INSIGHTS}}</section>
 
 <section data-section="glossary" id="sec-glossary"><h2><span class="num">9</span>용어 사전</h2>
-<table><thead><tr><th>용어</th><th>이 미팅에서의 뜻</th><th>녹취 표기</th></tr></thead><tbody>{{GLOSSARY_ROWS}}</tbody></table></section>
+<table class="glossary"><thead><tr><th>용어</th><th>이 미팅에서의 뜻</th><th>녹취 표기</th></tr></thead><tbody>{{GLOSSARY_ROWS}}</tbody></table></section>
 
 <footer data-section="footer">
   TransMeet로 생성 · 모델 {{MODEL_ID}} · 미팅 ID {{MEETING_ID}} · 생성 {{GENERATED_AT}} · 참고 자료 조회일 {{RESEARCH_DATE}}
