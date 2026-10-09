@@ -67,3 +67,4 @@ sample/**/.git/
 
 # agent skill eval workspaces
 agent/evals/workspace/
+agent/.venv/

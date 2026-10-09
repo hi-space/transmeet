@@ -1,0 +1,231 @@
+# 미팅 페이지 에이전트 v2 (LangGraph + AgentCore Runtime) 설계
+
+작성 2026-10-09. 전작 `2026-10-08-meeting-page-agent-design.md`(AgentCore Harness)의 **대체** 설계다. 페이지 내용·스킬·프런트 UI·공유 URL 형식은 그대로 두고, 에이전트의 실행 방식과 백엔드 연결만 바꾼다.
+
+## 1. 왜 바꾸는가
+
+하네스 운용에서 확인된 문제(전작 §11):
+
+- 하네스 내부 모델 호출·도구 구성이 블랙박스다. `tools=` 가 도구 목록을 대체하는 사실, 하네스 내부 읽기 타임아웃 등을 운영 중에 발견했다.
+- 한 ReAct 루프가 80회까지 돌면서 **매 반복에 트랜스크립트를 다시 보낸다.** 329개 발언 미팅이 입력 1.04M 토큰, 19분이 걸렸다.
+- 샌드박스(code interpreter)에서 만든 HTML 을 `publish_page` 인자로 **모델이 다시 출력**해야 했다 (출력 20K 토큰, 7분 이상).
+- 모델 장애(Opus 5.5 ServiceUnavailable) 대응을 위해 하네스를 두 개 두어야 했다.
+
+v2 는 에이전트를 우리가 직접 작성해 AgentCore Runtime(컨테이너)에 올린다. 그 결과:
+
+- 단계별 그래프로 **트랜스크립트를 단계 수만큼만** 보낸다(5회 안팎).
+- 도구(셸·파일·검색·발행)가 **Runtime 세션의 microVM 안에서** 돈다. 발행 도구는 로컬 파일을 읽어 올리므로 HTML 재출력이 없다.
+- 모델 ID 는 호출 페이로드로 받는다. 대체 모델은 설정값 하나다.
+
+## 2. 사용자가 확정한 결정 (2026-10-09)
+
+| 항목 | 결정 |
+|---|---|
+| 프레임워크 | **LangGraph** (`langgraph` 최신, 1.2.x) + `langchain-aws` `ChatBedrockConverse` |
+| 코드 실행 | **Runtime 컨테이너 안에서 직접** (code interpreter 사용 안 함) |
+| 발행 주체 | **에이전트가 직접** S3 업로드 + DynamoDB 기록. 백엔드는 이벤트 중계·재시도·공유 해제만 |
+| 하네스 | 제거 (기본·대체 모두). Gateway(Web Search)는 유지해 MCP 로 직접 접속 |
+| 스킬 | 컨테이너 이미지에 포함. S3 스킬 버킷은 더 쓰지 않음 |
+
+## 3. 아키텍처
+
+```
+브라우저 ──WS generate_page──▶ ECS FastAPI (ws_handler → page_agent)
+                                 │ InvokeAgentRuntime (payload JSON, 응답 SSE 스트림, 최대 60분)
+                                 ▼
+                     AgentCore Runtime "transmeet_meeting_page"  (ARM64 컨테이너, 세션 = microVM)
+                     ├─ BedrockAgentCoreApp (/invocations, /ping)  ← bedrock-agentcore SDK
+                     ├─ LangGraph StateGraph
+                     │    prepare ─▶ outline ─▶ ┬ research  (web_search ≤12)
+                     │                          ├ insights
+                     │                          └ diagrams  (bash: skill scripts → SVG)
+                     │                        ─▶ assemble ─▶ validate ─▶ publish
+                     │                                ▲          │ 실패(≤2회)
+                     │                                └──────────┘
+                     ├─ 도구: load_skill / bash / read_file / write_file / edit_file / web_search / (publish 는 노드)
+                     ├─ 모델: ChatBedrockConverse(model_id = payload.meeting.modelId, max_tokens 64000)
+                     └─ 발행: S3 pages 버킷 put → DynamoDB meeting.page SET (실행 역할 권한)
+                                 │ SSE: {"phase": status|delta|done|error, ...}
+                                 ▼
+                      ECS FastAPI: page_stream 으로 감싸 그 미팅의 현재 연결 전부에 브로드캐스트
+브라우저 ◀── page_stream status/delta/done/error ──
+사용자 ──▶ https://transmeet.hi-yoo.com/p/<meetingId>/<pageId>.html  (변경 없음)
+```
+
+### 3.1 왜 이 구조인가
+
+- **단계 그래프**: 각 단계가 트랜스크립트를 한 번 받고 짧은 도구 루프를 돈다. 리서치·인사이트·다이어그램은 서로 독립이라 **병렬**로 돌려 벽시계 시간을 줄인다. 조립 단계만 길다.
+- **로컬 도구**: Runtime 세션은 세션마다 격리된 microVM 이다. `bash` 로 스킬 스크립트(`validate_page.py`, `timeline_svg.py`, `flow_svg.py`)를 바로 실행하고, 결과 파일은 작업 디렉터리에 남아 다음 단계가 읽는다.
+- **HTML 재출력 제거**: 조립 단계는 `write_file` 로 `page.html` 을 쓰고 검증 실패 시 `edit_file`(문자열 치환)로 고친다. 발행 노드는 파일을 읽어 올린다. 모델이 HTML 을 두 번 출력하는 일이 없다.
+- **스트리밍 응답**: Runtime 스트리밍 연결 상한은 60분(동기 요청은 15분). 생성은 10~20분이므로 스트리밍으로 받는다. 이벤트 형식은 백엔드가 이미 쓰는 `phase` 체계를 그대로 쓴다.
+- **모델 선택을 페이로드로**: 백엔드의 재시도·대체 모델 로직(검증 완료)을 유지한다. 하네스 ARN 두 개가 모델 ID 두 개로 바뀐다.
+
+## 4. 에이전트 (`agent/runtime/`)
+
+Python 3.13, 패키지 `agent/runtime/`. 의존성은 `agent/requirements.txt` 에 고정: `langgraph==1.2.14`, `langchain-core==1.6.9`, `langchain-aws==1.8.1`, `mcp==2.3.0`, `bedrock-agentcore==1.24.1`, `boto3==1.43.110`, `httpx`. 로컬 개발은 `agent/.venv`.
+
+### 4.1 입력·출력 계약
+
+**입력 페이로드** (백엔드 `build_meeting_payload` 그대로):
+```json
+{"meeting": {"meetingId","title","startedAt","endedAt","speakers","languages","generatedAt","modelId"},
+ "messages": [{"timestamp","speaker","original","translation","detectedLanguage"}]}
+```
+
+**출력 SSE 이벤트** (한 줄 JSON, `data: ...`):
+
+| phase | 필드 | 의미 |
+|---|---|---|
+| `status` | `text` | 단계 전환·도구 시작 한 줄 (예: "리서치 대상 6개를 검색합니다", "웹 검색: AgentCore Runtime quotas") |
+| `delta` | `text` | 모델 텍스트 조각(조립 단계의 상태 문장 등) |
+| `done` | `page` {pageId,url,generatedAt,title,shareSummary}, `usage` | 발행 완료 |
+| `error` | `error`, `transient`(bool), `stage` | 실패. `transient=true` 는 Bedrock 일시 오류(ServiceUnavailable/Throttling/ReadTimeout) |
+
+`done`/`error` 는 반드시 마지막 한 번 나온다. 백엔드는 둘 중 하나를 받지 못하고 스트림이 끝나면 `error` 로 본다.
+
+### 4.2 상태와 그래프 (`graph.py`)
+
+```python
+class PageState(TypedDict):
+    meeting: dict; messages: list[dict]; work_dir: str; model_id: str
+    outline: dict            # topics[], research_targets[], diagram_plan[]
+    research_html: str; insights_html: str; diagram_files: list[str]
+    page_path: str; validation_errors: list[str]; assemble_attempts: int
+    published: dict | None; usage: dict
+```
+
+노드:
+
+| 노드 | 모델 | 도구 | 산출 |
+|---|---|---|---|
+| `prepare` | 없음 | — | `work_dir` 생성, `transcript.json`·`meeting.json` 저장, 스킬 디렉터리 경로 확인 |
+| `outline` | 1회 호출(구조화 출력) | — | 주제 분할(시각·주제명·요약), 리서치 대상(≤10), 다이어그램 계획(타임라인 + 선택적 흐름/관계도). `outline.json` 저장 |
+| `research` | 도구 루프 ≤20 | `load_skill`, `web_search`, `read_file`, `write_file` | `research.html` (meeting-research 출력 포맷). 대상 0개면 모델 호출 없이 고정 문구 |
+| `insights` | 도구 루프 ≤6 | `load_skill`, `read_file`, `write_file` | `insights.html` |
+| `diagrams` | 도구 루프 ≤12 | `load_skill`, `bash`, `read_file`, `write_file` | `diagrams/*.svg` + `diagrams/manifest.json` (파일·캡션) |
+| `assemble` | 도구 루프 ≤25 | `load_skill`, `read_file`, `write_file`, `edit_file`, `bash` | `page.html` (template 복사 → 자리표시자 채움, `validate_page.py` 실행) |
+| `validate` | 없음 | — | 백엔드와 같은 엄격 검증기(`validator.py`) 실행. 오류면 `validation_errors` 를 채워 `assemble` 로 되돌림(최대 2회), 아니면 `publish` |
+| `publish` | 없음 | — | `page.html` 읽어 S3 put, DynamoDB `SET page`, 이전 pageId 객체 삭제. `published` 설정 |
+
+엣지: `prepare → outline → [research, insights, diagrams] (병렬) → assemble → validate → (publish | assemble) → END`. 병렬 분기는 LangGraph 의 fan-out(세 노드로 나가는 엣지)으로 하고, `assemble` 은 세 노드가 모두 끝난 뒤 실행된다.
+
+각 도구 루프 노드는 공통 함수 `run_stage(state, *, name, system_prompt, user_prompt, tools, max_iterations)` 로 구현한다. 내부는 `ChatBedrockConverse.bind_tools(tools)` → 모델 호출 → `tool_calls` 실행 → 반복. 반복 상한에 걸리면 그 단계는 "확인 불가"류 기본 산출물로 끝내고 다음 단계로 간다(`assemble` 만 예외: 상한이면 `error`). 모델 텍스트는 `delta` 로, 도구 호출 시작은 `status` 로 흘려 보낸다(`langgraph.config.get_stream_writer()` 로 커스텀 이벤트 발행).
+
+### 4.3 도구 (`tools.py`, `web_search.py`)
+
+모두 `work_dir` 안으로 경로를 제한한다(`..`·절대 경로 거절). 스킬 디렉터리는 읽기 전용으로 `work_dir/skills` 에 심볼릭 링크.
+
+- `load_skill(name)`: `skills/<name>/SKILL.md` 본문과 `references/`, `scripts/`, `assets/` 파일 목록을 반환. 이름은 4개 중 하나만.
+- `read_file(path)`, `write_file(path, content)`, `edit_file(path, old, new)`(정확히 1회 일치해야 성공).
+- `bash(command, timeout_s=120)`: `work_dir` 에서 `subprocess.run`. 출력 20KB 로 잘라 반환. 네트워크 접근 금지는 프롬프트로만 막지 않고, 검색은 `web_search` 를 쓰라고 시스템 프롬프트에 명시한다(Runtime PUBLIC 네트워크라 curl 은 가능하지만 검색 엔진은 차단된다 — 전작에서 확인).
+- `web_search(query, max_results=5, include_domains=[])`: AgentCore Gateway(`transmeet-web-search`)에 MCP streamable HTTP 로 접속, 도구 `web-search-tool___WebSearch` 호출. 인증은 SigV4(`httpx.Auth` 구현, 서비스 `bedrock-agentcore`)를 붙인 `httpx.AsyncClient` 를 `mcp.client.streamable_http.streamable_http_client(url, http_client=...)` 에 넘긴다(mcp 2.x 시그니처). 세션당 MCP 연결 1개를 재사용. 호출 수는 노드 단위로 12회 상한.
+
+### 4.4 발행·검증 (`validator.py`, `publish.py`)
+
+- `validator.py`: 백엔드 `page_agent.py` 의 `_HtmlAudit`/`_validate`/`validate_html` 과 `REQUIRED_SECTIONS`/`REQUIRED_META`/CSS 검사 **이동**(복사 아님 — 백엔드에서 삭제). 테스트 `backend/tests/test_page_agent_publish.py` 의 검증 부분과 `validator_corpus.py` 는 `agent/tests/` 로 이동.
+- `publish.py`: 백엔드 `publish_page`/`unpublish_page` 의 S3·DynamoDB 로직을 boto3(동기, `asyncio.to_thread`)로 이식. 인자는 `html_path` 가 아니라 **읽어 둔 HTML 문자열**과 `title`, `share_summary`. `title` 과 `share_summary` 는 조립 단계가 `page.meta.json` 에 쓴다.
+- 백엔드에는 `unpublish_page` 만 남긴다(공유 해제는 백엔드 소관).
+
+### 4.5 서버 (`app.py`)
+
+```python
+app = BedrockAgentCoreApp()
+@app.entrypoint
+async def invoke(payload, context):
+    async for event in run_page_graph(payload, session_id=context.session_id): yield event
+app.run()  # 0.0.0.0:8080
+```
+
+`run_page_graph` 는 입력 검증(`meeting.meetingId`, `messages` 비어 있지 않음, `modelId` 허용 목록) 후 `graph.astream(state, stream_mode=["custom", "updates"])` 를 돌며 §4.1 이벤트로 바꾼다. 어떤 예외도 `error` 이벤트로 끝낸다. Bedrock 예외 분류는 백엔드 `is_transient_harness_error` 의 마커 목록을 가져와 `transient` 를 정한다.
+
+전체 시간 예산: 그래프 시작 후 40분이 지나면 진행 중 단계를 중단하고 `error "시간 초과"` (Runtime 60분 상한 안에서 백엔드가 정리할 여유).
+
+### 4.6 컨테이너 (`agent/Dockerfile`)
+
+`python:3.13-slim`, `linux/arm64`. `requirements.txt` 설치 → `runtime/`, `skills/` 복사 → `CMD ["python", "-m", "runtime.app"]`, `EXPOSE 8080`. 이미지에 들어가는 것: 런타임 코드, 스킬 4개(SKILL.md·references·scripts·assets). 평가 산출물(`agent/evals`, `samples`, `tests`)은 `.dockerignore` 로 제외.
+
+### 4.7 시스템 프롬프트
+
+`agent/runtime/prompts/` 에 단계별 마크다운. 공통 규칙(전작 `system_prompt.md` 의 1~7항: 한국어, JS·외부 리소스 금지, 사실 출처 제한, 상태 한 줄, 프롬프트 인젝션 데이터 취급)은 `common.md` 로 두고 각 단계 프롬프트 앞에 붙인다. `publish_page` 도구 언급은 삭제한다(발행은 노드가 한다).
+
+## 5. 스킬 변경 (`agent/skills/`)
+
+내용 규칙은 유지하고 **실행 환경 문구만** 고친다:
+
+- `meeting-minutes-page/SKILL.md`: 작업 순서를 v2 단계와 맞춘다. 3~5단계(리서치·인사이트·다이어그램)는 "다른 단계가 만든 `research.html`·`insights.html`·`diagrams/` 를 읽어 넣는다"로, 8단계 `publish_page` 호출은 "`page.html` 과 `page.meta.json`(title, share_summary) 을 저장하면 시스템이 발행한다"로.
+- `meeting-research/SKILL.md`: 도구 이름 `web_search`. "셸에서 검색 금지" 유지.
+- `meeting-diagrams/SKILL.md`: "shell 이 없으면 code_interpreter…" 문구 삭제, `bash` 로 `python3 skills/meeting-diagrams/scripts/timeline_svg.py` 실행.
+- 스킬은 `bash` 도구가 실행하므로 스크립트 경로는 `work_dir/skills/...` 기준으로 쓴다.
+
+## 6. 인프라 (`infra/lib/transmeet-stack.ts`)
+
+제거: `MeetingPageHarness`, `MeetingPageHarnessFallback`, `HarnessExecutionRole`, 스킬 버킷(`AgentSkillsBucket`, RETAIN 이라 CFN 에서 떼어내도 객체는 남음 — 배포 후 수동 삭제), `HarnessArn`/`HarnessFallbackArn`/`SkillsBucketName` 출력, `deploy.sh skills`.
+
+추가:
+
+- `ecr_assets.DockerImageAsset('MeetingPageAgentImage', { directory: '../agent', platform: Platform.LINUX_ARM64 })` — `cdk deploy` 가 빌드·푸시(부트스트랩 자산 레포). 로컬에 qemu arm64 binfmt 필요(설치됨).
+- `RuntimeExecutionRole` (`bedrock-agentcore.amazonaws.com` 신뢰): ECR 풀(자산 레포 `GetAuthorizationToken`, `BatchGetImage`, `GetDownloadUrlForLayer`), logs/xray/cloudwatch(기존 하네스 역할과 동일 문장), `GetWorkloadAccessToken*`(`workload-identity/transmeet_meeting_page-*`), Bedrock `InvokeModel*`(두 모델 inference-profile + foundation-model, 기존 범위 유지), `bedrock-agentcore:InvokeGateway`(Web Search Gateway ARN), pages 버킷 `PutObject`/`DeleteObject`, meetings 테이블 `UpdateItem`.
+- `bedrockagentcore.CfnRuntime('MeetingPageRuntime')`: `agentRuntimeName: 'transmeet_meeting_page'`, `agentRuntimeArtifact.containerConfiguration.containerUri = image.imageUri`, `networkConfiguration.networkMode: 'PUBLIC'`, `protocolConfiguration: 'HTTP'`, `roleArn`, `lifecycleConfiguration { idleRuntimeSessionTimeout: 600, maxLifetime: 3600 }`, `environmentVariables { REGION, PAGES_BUCKET, PAGES_PUBLIC_BASE_URL, MEETINGS_TABLE, WEB_SEARCH_GATEWAY_URL, PAGE_MAX_BYTES, ALLOWED_MODEL_IDS }`. `CfnRuntimeEndpoint` 는 만들지 않고 `DEFAULT` 엔드포인트 사용.
+- 태스크 역할: `bedrock-agentcore:InvokeAgentRuntime` on runtime ARN + `/*`. pages 버킷 Put 권한은 제거(Delete 는 공유 해제용으로 유지).
+- 백엔드 환경: `PAGE_AGENT_RUNTIME_ARN`, `PAGE_AGENT_MODEL_ID`, `PAGE_AGENT_FALLBACK_MODEL_ID`. `HARNESS_*` 삭제.
+- 출력: `MeetingPageRuntimeArn`.
+- `infra/test/harness-resources.test.sh` → `agent-resources.test.sh`: Runtime(이름·PUBLIC·HTTP·lifecycle·env 키), 실행 역할 모델 범위(와일드카드 금지), 태스크 역할 InvokeAgentRuntime, Gateway/Target/CloudFront 검사 유지, Harness 리소스 **없음** 확인.
+
+## 7. 백엔드 (`backend/app/`)
+
+`page_agent.py` 는 오케스트레이션만 남긴다(약 절반으로 줄어듦):
+
+- 유지: `merge_messages`, `build_meeting_payload`, `check_*`, `PageRequestError`, `page_status_event`/`_remember_result`, `_emitter`, `start_page_generation`, `run_unpublish`(`unpublish_page` 포함), `is_transient_harness_error` → `is_transient_agent_error`(마커 동일).
+- 삭제: `_HtmlAudit`/`validate_html`/`publish_page`/`PUBLISH_TOOL_DEF`/`ToolHandoff`/`consume_stream`/`describe_tool_start`/`build_user_message`.
+- 변경: `run_page_generation`
+  1. 페이로드 생성(`modelId = config.PAGE_AGENT_MODEL_ID`).
+  2. `invoke_agent_runtime(agentRuntimeArn, runtimeSessionId=uuid4 두 개 이어 33자 이상, contentType="application/json", accept="text/event-stream", payload=json)`.
+  3. `response["response"].iter_lines()` 로 `data: ` 접두 JSON 을 읽어 `page_stream` 으로 중계. `done` 이면 `page` 를 `_remember_result` 하고 종료, `error` 면 `transient` 에 따라 재시도 판단.
+  4. 재시도 정책은 현재와 동일: 발행 전 일시 오류 → 새 세션으로 `PAGE_AGENT_INVOKE_RETRIES`(2)회, 소진 시 `PAGE_AGENT_FALLBACK_MODEL_ID` 로 바꿔 다시 2회. 비일시 오류는 즉시 `error`.
+  5. 스트림이 `done`/`error` 없이 끝나면 `error "에이전트 응답이 끊어졌습니다"` (일시 오류 취급).
+- `config.py`: `PAGE_AGENT_RUNTIME_ARN`, `PAGE_AGENT_MODEL_ID="us.anthropic.claude-opus-5-5"`, `PAGE_AGENT_FALLBACK_MODEL_ID="us.anthropic.claude-opus-5"`. `HARNESS_ARN`/`HARNESS_FALLBACK_ARN`/`PAGE_AGENT_PUBLISH_RETRIES`/`PAGE_MAX_BYTES` 삭제.
+- `aws_clients.py`: agentcore 클라이언트 설정 유지(read_timeout 1800 → 2700, 재시도 0).
+- `ws_handler.py`: 변경 없음(이벤트 형식 동일).
+
+## 8. 프런트엔드
+
+변경 없음. `PAGE_GEN_TIMEOUT_MS` 31분은 그대로 둔다(그래프 예산 40분보다 짧지만, `page_status` 로 결과를 되찾는 경로가 있다 — 조정은 실측 후).
+
+## 9. 오류 처리
+
+| 상황 | 처리 |
+|---|---|
+| 페이로드 검증 실패(메시지 0개, 허용되지 않은 modelId) | 즉시 `error`(비일시) |
+| Bedrock ServiceUnavailable/Throttling/ReadTimeout | 단계 안에서 2회 백오프 재시도 → 그래도 실패면 `error transient=true` → 백엔드가 새 세션·대체 모델로 재시도 |
+| research/insights/diagrams 반복 상한 | 기본 산출물("확인 불가"/빈 다이어그램)로 진행, `status` 로 알림 |
+| assemble 반복 상한, validate 3회 실패 | `error "페이지 조립에 실패했습니다: <첫 오류 3개>"` |
+| S3/DynamoDB 실패 | 업로드 롤백(best-effort) 후 `error`(비일시) |
+| 그래프 40분 초과 | `error "시간 초과"` |
+| 백엔드 스트림 끊김 | `error` 일시 취급 → 재시도. 발행이 이미 끝났다면(DynamoDB 에 새 page) 재시도 전 `page_status`/DynamoDB 확인으로 중복 생성 방지: 재시도 직전 `_load_meeting` 으로 `page.generatedAt > 시작시각` 이면 `done` 으로 마무리 |
+| 동시 생성 | 기존과 동일(`이미 생성 중`) |
+
+## 10. 보안
+
+- 프런트 입력은 `meetingId`(와 인라인 메시지)만. 모델 ID·도구는 백엔드/Runtime 상수.
+- 도구 경로는 `work_dir` 로 제한. `bash` 는 세션 microVM 안에서만 돈다. Runtime 실행 역할의 쓰기 권한은 pages 버킷(Put/Delete)과 meetings 테이블(UpdateItem)로 한정.
+- 발행 전 엄격 검증기(JS·`on*`·외부 리소스·필수 섹션·메타·크기)는 그대로 Runtime 안에서 강제된다. CloudFront CSP sandbox 는 유지.
+- Runtime 인바운드 인증은 IAM(기본). 호출자는 ECS 태스크 역할만.
+- Gateway 는 IAM SigV4. 실행 역할에만 `InvokeGateway`.
+
+## 11. 테스트
+
+- **agent 단위** (`agent/tests/`, venv pytest): 경로 제한(`..` 거절), `edit_file` 1회 일치 규칙, `load_skill` 허용 목록, 검증기 코퍼스(백엔드에서 이동), `publish` S3/DDB 호출 인자·롤백·이전 pageId 삭제(가짜 클라이언트), 그래프 라우팅(가짜 모델: outline → 병렬 3 → assemble → validate 실패 1회 → 재조립 → publish), SSE 이벤트 변환(`done`/`error` 마지막 보장, transient 분류), 전체 시간 예산.
+- **backend 단위**: 재시도·대체 모델·`page_status` 테스트를 SSE 라인 가짜 스트림으로 바꿔 유지. 검증기·발행 테스트는 agent 로 이동.
+- **infra**: `agent-resources.test.sh`.
+- **통합**: `agent/scripts/invoke_local.py --direct --sample ...` 는 그래프를 로컬 프로세스에서 실행(로컬 자격증명, 실제 Bedrock·Gateway·S3), `--runtime` 은 배포된 Runtime 호출. 배포 후 tech-review 샘플과 [SKI] 미팅으로 끝까지 확인(페이지 HTTP 200, 리서치 링크 존재, 다이어그램 수).
+
+## 12. 비용·시간 가늠
+
+329개 발언(≈60K 토큰) 기준: 단계별 입력 ≈ outline 60K + research 60K×(1+도구 턴) + insights 60K×2 + diagrams 60K×4 + assemble 60K×8 ≈ **600K 이하**(현재 1.04M). 출력은 HTML 1회 ≈ 25K. 벽시계는 조립 단계가 지배해 8~12분 예상. 실측 후 §12 를 갱신한다.
+
+## 13. 배포 순서
+
+1. 인프라(`./deploy.sh infra`): 이미지 빌드·푸시, Runtime 생성, 하네스·역할 삭제, 태스크 정의 환경 변경(ECS 는 새 태스크 정의로 롤링).
+2. 백엔드 이미지 ECR 푸시 + force-new-deployment(기존 절차).
+3. 통합 확인(`invoke_local.py --runtime`, 앱에서 [SKI] 생성).
+4. 스킬 버킷 수동 비우기·삭제, 메모리·문서 갱신.
