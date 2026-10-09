@@ -78,6 +78,34 @@ function copyText(text: string): Promise<void> {
   })
 }
 
+// 페이지 URL 의 호스트(transmeet.hi-yoo.com)가 앱을 연 호스트와 다르면 — CloudFront 기본 도메인이나
+// localhost — 교차 오리진이라 fetch 가 CORS 로 막힌다. 같은 배포가 /p/* 도 서빙하므로 현재 오리진의
+// 같은 경로를 먼저 시도하고, 그래도 안 되면 원래 URL 을 시도한다.
+function pageFetchUrls(url: string): string[] {
+  try {
+    const u = new URL(url)
+    const same = `${window.location.origin}${u.pathname}${u.search}`
+    return same === url ? [url] : [same, url]
+  } catch {
+    return [url]
+  }
+}
+
+async function fetchPageHtml(url: string, signal: AbortSignal): Promise<string> {
+  let lastErr: unknown
+  for (const candidate of pageFetchUrls(url)) {
+    try {
+      const res = await fetch(candidate, { cache: 'no-store', signal })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      return await res.text()
+    } catch (err) {
+      if (signal.aborted) throw err
+      lastErr = err
+    }
+  }
+  throw lastErr
+}
+
 const btn =
   'flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
 const btnNeutral = `${btn} bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600/50`
@@ -143,11 +171,8 @@ export default function MeetingPagePanel({
     }
     const ctrl = new AbortController()
     setMarkdown({ url: pageUrl })
-    fetch(pageUrl, { cache: 'no-store', signal: ctrl.signal })
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        return htmlToMarkdown(await res.text())
-      })
+    fetchPageHtml(pageUrl, ctrl.signal)
+      .then((html) => htmlToMarkdown(html))
       .then((text) => {
         if (!text.trim()) throw new Error('페이지 내용이 비어 있습니다')
         setMarkdown({ url: pageUrl, text })
