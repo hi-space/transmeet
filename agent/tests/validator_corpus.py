@@ -1,7 +1,7 @@
-"""Shared corpus for both page validators (backend publish_page and the agent skill script).
+"""Shared corpus for the page validator (skill script, loaded by runtime.validator for publishing).
 
 Every BAD_PAGES entry must yield >= 1 error and every GOOD_PAGES entry 0 errors in BOTH
-validators, with identical error lists. Imported by backend/tests and agent/tests.
+validator paths. Imported by agent/tests.
 """
 from pathlib import Path
 

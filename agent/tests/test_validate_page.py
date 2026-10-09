@@ -84,10 +84,10 @@ def test_cli_exit_code(tmp_path):
     assert json.loads(res.stdout)["ok"] is False
 
 
-# ─── Shared corpus: agent script and backend publish_page must agree ──
+# ─── Shared corpus: the skill script and the runtime wrapper must agree ──
 
 import pytest  # noqa: E402
-from app.page_agent import validate_html as backend_validate_html  # noqa: E402
+from runtime.validator import validate_html as backend_validate_html  # noqa: E402
 from validator_corpus import BAD_PAGES, GOOD_PAGES, e2e_sample_page  # noqa: E402
 
 
@@ -117,10 +117,8 @@ def test_cli_rejects_bypass_with_json_errors(tmp_path):
     assert res.returncode == 1 and out["ok"] is False and any("javascript" in e for e in out["errors"])
 
 
-def test_validator_core_is_identical_in_backend():
-    def core(path):
-        text = path.read_text(encoding="utf-8")
-        return text[text.index("# ── validator core:"):text.index("# ── end validator core ──")]
-
-    backend = Path(__file__).resolve().parents[2] / "backend/app/page_agent.py"
-    assert core(SCRIPT) == core(backend)
+def test_runtime_validator_wraps_skill_script():
+    from runtime import validator
+    assert validator.REQUIRED_SECTIONS == REQUIRED_SECTIONS
+    assert validator.validate_html("<p>x</p>", 1_500_000) == ["not an HTML document"]
+    assert validator.validate_html("<html lang=\"ko\"></html>", 3) and "limit 3 bytes" in validator.validate_html("<html lang=\"ko\"></html>", 3)[0]
