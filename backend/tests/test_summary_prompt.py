@@ -35,6 +35,9 @@ def test_prompt_has_page_structure_and_embeds_transcript():
     # 페이지와 같은 규칙: 화자 라벨 금지, 디테일 유지, 불릿당 강조 하나
     assert "화자" in prompt and "Speaker" in prompt
     assert "**" in prompt
+    # 요약 패널은 훑는 용도: 발언 인용·시각 참조를 넣지 말라고 지시한다
+    assert "인용하지 않습니다" in prompt and "`>` 인용 블록" in prompt
+    assert "서술형 문단으로 풀지 않습니다" in prompt
     assert "한국어" in SUMMARY_SYSTEM_PROMPT
 
 
