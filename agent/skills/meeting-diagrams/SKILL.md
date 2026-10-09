@@ -20,7 +20,7 @@ python3 scripts/timeline_svg.py timeline.json > timeline.svg
 python3 scripts/flow_svg.py decision.json > decision.svg
 ```
 
-shell이 없으면 code_interpreter에서 스크립트 파일 내용을 읽어 그대로 실행한다. 출력 SVG를 `<figure>` 안에 붙이고 `<figcaption>`에 한 문장 + 발언 시각을 적는다.
+스크립트는 `bash` 도구로 작업 디렉터리에서 실행한다 (`python3 skills/meeting-diagrams/scripts/flow_svg.py diagrams/decision.json > diagrams/decision.svg`). 캡션(한 문장 + 발언 시각)은 `diagrams/manifest.json`에 적는다. 페이지 조립 단계가 `{{DIAGRAM:decision.svg}}` 마커 자리에 `<figure>`와 캡션을 붙여 SVG를 인라인한다.
 
 ### 타임라인 입력
 ```json

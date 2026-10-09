@@ -3,8 +3,8 @@
 
 Usage: python3 validate_page.py <page.html>
 Prints JSON {"ok": bool, "errors": [...], "bytes": n}; exit 0 when ok.
-The backend applies the same rules again at publish time, so a page that
-fails here will also be rejected by publish_page.
+The publish step applies the same rules again, so a page that fails here will
+also be rejected when the system publishes it.
 """
 import html as html_lib
 import json

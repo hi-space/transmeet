@@ -39,9 +39,7 @@ class StageResult:
 
 def message_text(msg: BaseMessage) -> str:
     text = getattr(msg, "text", "")
-    if callable(text):
-        text = text()
-    if text:
+    if isinstance(text, str) and text:
         return str(text)
     content = msg.content
     if isinstance(content, str):

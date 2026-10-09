@@ -8,6 +8,8 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
+import * as ecr_assets from 'aws-cdk-lib/aws-ecr-assets';
+import * as bedrockagentcore from 'aws-cdk-lib/aws-bedrockagentcore';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
@@ -17,7 +19,6 @@ import * as targets from 'aws-cdk-lib/aws-route53-targets';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import { Construct } from 'constructs';
 import * as path from 'path';
-import * as fs from 'fs';
 
 const WHISPER_ENDPOINT = 'whisper-large';
 const BEDROCK_MODEL_ID = 'global.anthropic.claude-haiku-4-5-20251001-v1:0';
@@ -26,29 +27,11 @@ const MEETINGS_TABLE = 'transmeet-meetings';
 const ROOT_DOMAIN = 'hi-yoo.com';
 const APP_DOMAIN = 'transmeet.hi-yoo.com';
 const PAGE_AGENT_MODEL_ID = 'us.anthropic.claude-opus-5-5';
-const HARNESS_NAME = 'transmeet_meeting_page';
-// Opus 5.5 가 Bedrock 에서 ServiceUnavailable 을 반복하는 동안(2026-10-08 수 시간 관측) 쓰는 대체 하네스.
-// 백엔드 page_agent.PAGE_AGENT_FALLBACK_MODEL_ID 와 같은 값이어야 한다.
+// Opus 5.5 가 Bedrock 에서 ServiceUnavailable 을 반복하는 동안(2026-10-08 수 시간 관측) 백엔드가 넘어가는 대체 모델.
+// 백엔드 config.PAGE_AGENT_FALLBACK_MODEL_ID·agent/runtime/model.py ALLOWED_MODEL_IDS 와 같은 값이어야 한다.
 const PAGE_AGENT_FALLBACK_MODEL_ID = 'us.anthropic.claude-opus-5';
-const FALLBACK_HARNESS_NAME = 'transmeet_meeting_page_fallback';
-const SKILL_NAMES = [
-  'meeting-minutes-page',
-  'meeting-research',
-  'meeting-insights',
-  'meeting-diagrams',
-];
-const PUBLISH_PAGE_SCHEMA = {
-  type: 'object',
-  properties: {
-    title: { type: 'string', description: '페이지 제목(미팅 제목)' },
-    html: { type: 'string', description: '완성된 단일 HTML 문서 전체' },
-    share_summary: {
-      type: 'string',
-      description: '공유 시 함께 보낼 2문장 요약',
-    },
-  },
-  required: ['title', 'html'],
-};
+// AgentCore Runtime 에 올리는 LangGraph 미팅 페이지 에이전트 (agent/runtime, 이미지는 cdk deploy 가 빌드·푸시)
+const RUNTIME_NAME = 'transmeet_meeting_page';
 
 export class TransmeetStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -213,7 +196,7 @@ export class TransmeetStack extends cdk.Stack {
     });
     frontendBucket.grantRead(oai);
 
-    // ─── Meeting pages + agent skills buckets ───────────────────────────────────
+    // ─── Meeting pages bucket ───────────────────────────────────────────────────
 
     const pagesBucket = new s3.Bucket(this, 'MeetingPagesBucket', {
       bucketName: `transmeet-meeting-pages-${this.account}`,
@@ -223,12 +206,6 @@ export class TransmeetStack extends cdk.Stack {
     });
     pagesBucket.grantRead(oai);
 
-    const skillsBucket = new s3.Bucket(this, 'AgentSkillsBucket', {
-      bucketName: `transmeet-agent-skills-${this.account}`,
-      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
-      encryption: s3.BucketEncryption.S3_MANAGED,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-    });
 
     // ─── Route53 + ACM (custom domain) ─────────────────────────────────────────
 
@@ -352,7 +329,7 @@ export class TransmeetStack extends cdk.Stack {
       type: 'AWS::BedrockAgentCore::Gateway',
       properties: {
         Name: 'transmeet-web-search',
-        Description: 'Web Search Tool connector for the meeting page harness',
+        Description: 'Web Search Tool connector for the meeting page agent',
         AuthorizerType: 'AWS_IAM',
         ProtocolType: 'MCP',
         RoleArn: gatewayRole.roleArn,
@@ -380,30 +357,43 @@ export class TransmeetStack extends cdk.Stack {
     });
     webSearchTarget.addDependency(webSearchGateway);
 
-    // ─── Harness execution role ────────────────────────────────────────────────
+    // ─── Meeting page agent: container image + Runtime execution role ─────────
 
-    const harnessRole = new iam.Role(this, 'HarnessExecutionRole', {
+    const agentImage = new ecr_assets.DockerImageAsset(this, 'MeetingPageAgentImage', {
+      directory: path.join(__dirname, '../../agent'),
+      platform: ecr_assets.Platform.LINUX_ARM64,
+      exclude: ['.venv', 'evals', 'samples', 'tests', 'scripts', 'harness', '.pytest_cache', '**/__pycache__'],
+    });
+
+    const runtimeRole = new iam.Role(this, 'RuntimeExecutionRole', {
       assumedBy: new iam.ServicePrincipal('bedrock-agentcore.amazonaws.com'),
     });
-    harnessRole.addToPolicy(
+    runtimeRole.addToPolicy(
       new iam.PolicyStatement({
         sid: 'BedrockModelInvocation',
         actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
-        // 하네스 모델만 허용: 교차 리전 추론 프로필 + 프로필이 라우팅하는 리전별 기반 모델
+        // 에이전트가 쓰는 모델만 허용: 교차 리전 추론 프로필 + 프로필이 라우팅하는 리전별 기반 모델
         resources: [PAGE_AGENT_MODEL_ID, PAGE_AGENT_FALLBACK_MODEL_ID].flatMap((modelId) => [
           `arn:aws:bedrock:*:${this.account}:inference-profile/${modelId}`,
           `arn:aws:bedrock:*::foundation-model/${modelId.replace(/^us\./, '')}*`,
         ]),
       })
     );
-    harnessRole.addToPolicy(
+    runtimeRole.addToPolicy(
       new iam.PolicyStatement({
-        sid: 'EcrPublicAndSts',
-        actions: ['ecr-public:GetAuthorizationToken', 'sts:GetServiceBearerToken'],
+        sid: 'EcrImagePull',
+        actions: ['ecr:BatchGetImage', 'ecr:GetDownloadUrlForLayer', 'ecr:BatchCheckLayerAvailability'],
+        resources: [agentImage.repository.repositoryArn],
+      })
+    );
+    runtimeRole.addToPolicy(
+      new iam.PolicyStatement({
+        sid: 'EcrAuth',
+        actions: ['ecr:GetAuthorizationToken'],
         resources: ['*'],
       })
     );
-    harnessRole.addToPolicy(
+    runtimeRole.addToPolicy(
       new iam.PolicyStatement({
         sid: 'Observability',
         actions: [
@@ -421,7 +411,7 @@ export class TransmeetStack extends cdk.Stack {
         resources: ['*'],
       })
     );
-    harnessRole.addToPolicy(
+    runtimeRole.addToPolicy(
       new iam.PolicyStatement({
         sid: 'CloudWatchMetrics',
         actions: ['cloudwatch:PutMetricData'],
@@ -429,118 +419,65 @@ export class TransmeetStack extends cdk.Stack {
         conditions: { StringEquals: { 'cloudwatch:namespace': 'bedrock-agentcore' } },
       })
     );
-    harnessRole.addToPolicy(
+    runtimeRole.addToPolicy(
       new iam.PolicyStatement({
         sid: 'WorkloadIdentity',
         actions: [
           'bedrock-agentcore:GetWorkloadAccessToken',
           'bedrock-agentcore:GetWorkloadAccessTokenForJWT',
+          'bedrock-agentcore:GetWorkloadAccessTokenForUserId',
         ],
         resources: [
           `arn:aws:bedrock-agentcore:${REGION}:${this.account}:workload-identity-directory/default`,
-          `arn:aws:bedrock-agentcore:${REGION}:${this.account}:workload-identity-directory/default/workload-identity/harness_${HARNESS_NAME}-*`,
-          `arn:aws:bedrock-agentcore:${REGION}:${this.account}:workload-identity-directory/default/workload-identity/harness_${FALLBACK_HARNESS_NAME}-*`,
+          `arn:aws:bedrock-agentcore:${REGION}:${this.account}:workload-identity-directory/default/workload-identity/${RUNTIME_NAME}-*`,
         ],
       })
     );
-    harnessRole.addToPolicy(
-      new iam.PolicyStatement({
-        sid: 'CodeInterpreter',
-        actions: [
-          'bedrock-agentcore:StartCodeInterpreterSession',
-          'bedrock-agentcore:StopCodeInterpreterSession',
-          'bedrock-agentcore:GetCodeInterpreterSession',
-          'bedrock-agentcore:ListCodeInterpreterSessions',
-          'bedrock-agentcore:InvokeCodeInterpreter',
-        ],
-        resources: [`arn:aws:bedrock-agentcore:${REGION}:aws:code-interpreter/*`],
-      })
-    );
-    harnessRole.addToPolicy(
+    runtimeRole.addToPolicy(
       new iam.PolicyStatement({
         sid: 'WebSearchGateway',
         actions: ['bedrock-agentcore:InvokeGateway'],
         resources: [webSearchGatewayArn],
       })
     );
-    skillsBucket.grantRead(harnessRole);
+    // 발행은 에이전트가 직접 한다: pages 버킷 쓰기·삭제(이전 페이지 교체) + meeting.page 갱신
+    pagesBucket.grantPut(runtimeRole);
+    pagesBucket.grantDelete(runtimeRole);
+    meetingsTable.grant(runtimeRole, 'dynamodb:UpdateItem');
 
-    // ─── Harness (AWS::BedrockAgentCore::Harness, CDK L1 미제공 → CfnResource) ──
+    // ─── AgentCore Runtime ─────────────────────────────────────────────────────
 
-    const systemPrompt = fs.readFileSync(
-      path.join(__dirname, '../../agent/harness/system_prompt.md'),
-      'utf-8'
-    );
-
-    // 기본·대체 하네스는 모델만 다르고 프롬프트·도구·스킬은 같다.
-    const makeHarness = (id: string, harnessName: string, modelId: string) => new cdk.CfnResource(this, id, {
-      type: 'AWS::BedrockAgentCore::Harness',
-      properties: {
-        HarnessName: harnessName,
-        ExecutionRoleArn: harnessRole.roleArn,
-        Model: {
-          BedrockModelConfig: { ModelId: modelId, MaxTokens: 64000 },
-        },
-        SystemPrompt: [{ Text: systemPrompt }],
-        Tools: [
-          { Type: 'agentcore_code_interpreter', Name: 'code_interpreter' },
-          {
-            Type: 'agentcore_gateway',
-            Name: 'web_search',
-            Config: {
-              AgentCoreGateway: {
-                GatewayArn: webSearchGatewayArn,
-                OutboundAuth: { AwsIam: {} },
-              },
-            },
-          },
-          {
-            Type: 'inline_function',
-            Name: 'publish_page',
-            Config: {
-              InlineFunction: {
-                Description:
-                  '검증을 통과한 완성 HTML을 공개 URL로 발행한다. 성공 시 url을 돌려주고, 실패 시 error 상태와 사유를 돌려준다.',
-                InputSchema: PUBLISH_PAGE_SCHEMA,
-              },
-            },
-          },
-        ],
-        Skills: SKILL_NAMES.map((name) => ({
-          S3: { Uri: `s3://${skillsBucket.bucketName}/skills/${name}/` },
-        })),
-        Memory: { Disabled: {} },
-        MaxIterations: 80,
-        // 329개 발언 미팅이 15분을 넘겼다(준비 8분 + publish_page 인자로 HTML 재출력 7분+). 30분으로 둔다.
-        TimeoutSeconds: 1800,
-        Environment: {
-          AgentCoreRuntimeEnvironment: {
-            LifecycleConfiguration: {
-              IdleRuntimeSessionTimeout: 600,
-              MaxLifetime: 3600,
-            },
-          },
-        },
+    const runtime = new bedrockagentcore.CfnRuntime(this, 'MeetingPageRuntime', {
+      agentRuntimeName: RUNTIME_NAME,
+      description: 'TransMeet meeting page agent (LangGraph)',
+      agentRuntimeArtifact: { containerConfiguration: { containerUri: agentImage.imageUri } },
+      networkConfiguration: { networkMode: 'PUBLIC' },
+      protocolConfiguration: 'HTTP',
+      roleArn: runtimeRole.roleArn,
+      // 생성은 10~20분. 스트리밍 응답 상한(60분) 안에서 세션은 1시간까지만 산다.
+      lifecycleConfiguration: { idleRuntimeSessionTimeout: 600, maxLifetime: 3600 },
+      environmentVariables: {
+        REGION,
+        PAGES_BUCKET: pagesBucket.bucketName,
+        PAGES_PUBLIC_BASE_URL: `https://${APP_DOMAIN}/p`,
+        MEETINGS_TABLE: meetingsTable.tableName,
+        WEB_SEARCH_GATEWAY_URL: webSearchGateway.getAtt('GatewayUrl').toString(),
+        PAGE_MAX_BYTES: '1500000',
+        GRAPH_BUDGET_S: '2400',
       },
     });
-    const harness = makeHarness('MeetingPageHarness', HARNESS_NAME, PAGE_AGENT_MODEL_ID);
-    const fallbackHarness = makeHarness('MeetingPageHarnessFallback', FALLBACK_HARNESS_NAME, PAGE_AGENT_FALLBACK_MODEL_ID);
-    for (const h of [harness, fallbackHarness]) {
-      h.addDependency(webSearchTarget);
-      h.node.addDependency(harnessRole);
-    }
-    const harnessArn = harness.getAtt('Arn').toString();
-    const fallbackHarnessArn = fallbackHarness.getAtt('Arn').toString();
+    runtime.addDependency(webSearchTarget);
+    runtime.node.addDependency(runtimeRole);
+    const runtimeArn = runtime.attrAgentRuntimeArn;
 
-    // ─── Task role: invoke harness + publish pages ─────────────────────────────
+    // ─── Task role: invoke the agent runtime + unpublish pages ────────────────
 
     wsTaskRole.addToPolicy(
       new iam.PolicyStatement({
-        actions: ['bedrock-agentcore:InvokeHarness', 'bedrock-agentcore:InvokeAgentRuntime'],
-        resources: [harnessArn, `${harnessArn}/*`, fallbackHarnessArn, `${fallbackHarnessArn}/*`],
+        actions: ['bedrock-agentcore:InvokeAgentRuntime'],
+        resources: [runtimeArn, `${runtimeArn}/*`],
       })
     );
-    pagesBucket.grantPut(wsTaskRole);
     pagesBucket.grantDelete(wsTaskRole);
 
     // ─── ECS Task Definition ────────────────────────────────────────────────────
@@ -559,8 +496,9 @@ export class TransmeetStack extends cdk.Stack {
         MEETINGS_TABLE,
         WHISPER_ENDPOINT,
         BEDROCK_MODEL_ID,
-        HARNESS_ARN: harnessArn,
-        HARNESS_FALLBACK_ARN: fallbackHarnessArn,
+        PAGE_AGENT_RUNTIME_ARN: runtimeArn,
+        PAGE_AGENT_MODEL_ID,
+        PAGE_AGENT_FALLBACK_MODEL_ID,
         PAGES_BUCKET: pagesBucket.bucketName,
         PAGES_PUBLIC_BASE_URL: `https://${APP_DOMAIN}/p`,
       },
@@ -738,21 +676,10 @@ export class TransmeetStack extends cdk.Stack {
       description: 'Cognito User Pool Client ID',
     });
 
-    new cdk.CfnOutput(this, 'HarnessArn', {
-      value: harnessArn,
-      exportName: 'TransmeetHarnessArn',
-      description: 'AgentCore Harness ARN for meeting page generation',
-    });
-
-    new cdk.CfnOutput(this, 'HarnessFallbackArn', {
-      value: fallbackHarnessArn,
-      description: 'Fallback AgentCore Harness ARN (used when the primary model keeps returning ServiceUnavailable)',
-    });
-
-    new cdk.CfnOutput(this, 'SkillsBucketName', {
-      value: skillsBucket.bucketName,
-      exportName: 'TransmeetSkillsBucket',
-      description: 'S3 bucket holding agent skills (deploy.sh skills)',
+    new cdk.CfnOutput(this, 'MeetingPageRuntimeArn', {
+      value: runtimeArn,
+      exportName: 'TransmeetMeetingPageRuntimeArn',
+      description: 'AgentCore Runtime ARN for meeting page generation (LangGraph agent)',
     });
 
     new cdk.CfnOutput(this, 'PagesBucketName', {
