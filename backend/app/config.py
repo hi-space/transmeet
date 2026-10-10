@@ -17,6 +17,11 @@ class Config(BaseSettings):
     # Opus 5.5 는 thinking 을 끌 수 없고 기본 effort 가 medium. 78줄 기준 첫 텍스트 medium 12.8초 → low 6.6초,
     # 명사형 형식 준수는 같았다(2026-10-09 측정).
     SUMMARY_EFFORT: str = "low"
+    # Bedrock 이 일시적으로 거절(ServiceUnavailable/Throttling)하면 같은 모델로 다시 시도하는 횟수.
+    # 2026-10-10 01:43 UTC us. Opus 5.5 프로파일이 503 을 3~4초 만에 돌려줘 요약이 바로 실패했다.
+    SUMMARY_INVOKE_RETRIES: int = 1
+    # 기본 모델이 재시도 후에도 거절하면 넘어가는 대체 모델(페이지 에이전트와 동일). 비어 있으면 사용 안 함.
+    SUMMARY_FALLBACK_MODEL_ID: str = "us.anthropic.claude-opus-5"
 
     # ─── Meeting page agent (LangGraph on AgentCore Runtime) ──────────────────
     PAGE_AGENT_RUNTIME_ARN: str = ""

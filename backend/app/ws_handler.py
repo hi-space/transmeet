@@ -70,7 +70,14 @@ from .aws_clients import (
     sagemaker_client,
 )
 from .config import config
-from .page_agent import PageRequestError, check_meeting_id, page_status_event, run_unpublish, start_page_generation
+from .page_agent import (
+    PageRequestError,
+    check_meeting_id,
+    is_transient_agent_error,
+    page_status_event,
+    run_unpublish,
+    start_page_generation,
+)
 from .summary_prompt import SUMMARY_SYSTEM_PROMPT, build_summary_prompt, transcript_lines
 
 logger = logging.getLogger(__name__)
@@ -1026,6 +1033,14 @@ async def _generate_title_if_default(
         return None
 
 
+# 같은 모델 재시도 사이의 대기(초). 요약은 사용자가 스피너를 보며 기다리므로 페이지 에이전트(5, 15)보다 짧다.
+SUMMARY_RETRY_BACKOFF_S: tuple = (2.0, 5.0)
+
+
+class SummaryModelUnavailable(Exception):
+    """기본·대체 모델이 모두 일시 거절(ServiceUnavailable/Throttling)을 반복했다."""
+
+
 async def _stream_summary(
     send,
     meeting_id: str,
@@ -1082,19 +1097,46 @@ async def _stream_summary(
 
         summary = ""
         async with bedrock_client(SUMMARY_CLIENT_CONFIG) as br:
-            stream_resp = await br.converse_stream(
-                modelId=summary_model_id,
-                system=[{"text": SUMMARY_SYSTEM_PROMPT}],
-                messages=[{"role": "user", "content": [{"text": user_prompt}]}],
-                inferenceConfig={"maxTokens": config.SUMMARY_MAX_TOKENS},
-                additionalModelRequestFields={"output_config": {"effort": config.SUMMARY_EFFORT}},
-            )
-            async for event in stream_resp["stream"]:
-                delta = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
-                if not delta:
-                    continue
-                summary += delta
-                await send({"type": "summary_stream", "phase": "delta", "meetingId": meeting_id, "text": delta})
+            # Bedrock 이 일시적으로 거절(ServiceUnavailable/Throttling)하면 같은 모델로 재시도하고, 그래도 안 되면
+            # 대체 모델로 넘어간다(페이지 에이전트와 같은 정책). 이미 델타를 보낸 뒤 끊긴 스트림은 클라이언트가
+            # 되돌릴 수 없어 재시도하지 않는다.
+            failures = 0
+            using_fallback = False
+            while True:
+                try:
+                    stream_resp = await br.converse_stream(
+                        modelId=summary_model_id,
+                        system=[{"text": SUMMARY_SYSTEM_PROMPT}],
+                        messages=[{"role": "user", "content": [{"text": user_prompt}]}],
+                        inferenceConfig={"maxTokens": config.SUMMARY_MAX_TOKENS},
+                        additionalModelRequestFields={"output_config": {"effort": config.SUMMARY_EFFORT}},
+                    )
+                    async for event in stream_resp["stream"]:
+                        delta = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
+                        if not delta:
+                            continue
+                        summary += delta
+                        await send({"type": "summary_stream", "phase": "delta", "meetingId": meeting_id, "text": delta})
+                    break
+                except Exception as e:
+                    if summary or not is_transient_agent_error(e):
+                        raise
+                    failures += 1
+                    if failures > config.SUMMARY_INVOKE_RETRIES:
+                        fallback = config.SUMMARY_FALLBACK_MODEL_ID
+                        if using_fallback or not fallback or fallback == summary_model_id:
+                            raise SummaryModelUnavailable(str(e)) from e
+                        logger.warning("[ws] summary primary model exhausted meeting_id=%s, switching to %s: %s",
+                                       meeting_id, fallback, e)
+                        summary_model_id = fallback
+                        using_fallback = True
+                        failures = 0
+                        continue
+                    delay = SUMMARY_RETRY_BACKOFF_S[min(failures - 1, len(SUMMARY_RETRY_BACKOFF_S) - 1)]
+                    logger.warning("[ws] summary transient failure meeting_id=%s model=%s attempt=%d/%d: %s",
+                                   meeting_id, summary_model_id, failures, config.SUMMARY_INVOKE_RETRIES, e)
+                    if delay:
+                        await asyncio.sleep(delay)
 
         async with dynamodb_client() as ddb:
             await ddb.update_item(
@@ -1115,6 +1157,10 @@ async def _stream_summary(
         await send(done_payload)
         logger.info("[ws] summary done meeting_id=%s chars=%d", meeting_id, len(summary))
 
+    except SummaryModelUnavailable as e:
+        logger.error("[ws] _stream_summary models unavailable for meeting_id=%s: %s", meeting_id, e)
+        await send({"type": "summary_stream", "phase": "error", "meetingId": meeting_id,
+                    "error": "모델이 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해 주세요"})
     except Exception:
         logger.exception("[ws] _stream_summary failed for meeting_id=%s", meeting_id)
         await send({"type": "summary_stream", "phase": "error", "meetingId": meeting_id, "error": "Summary generation failed"})
