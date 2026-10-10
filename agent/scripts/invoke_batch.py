@@ -67,7 +67,7 @@ def meetings_with_pages() -> set:
 
 def run_one(item: dict, runtime_arn: str, client) -> dict:
     meeting_id = item["meetingId"]
-    payload = il.build_payload(item, item.get("messages") or [], "us.anthropic.claude-opus-5-5")
+    payload = il.build_payload(item, item.get("messages") or [], "global.anthropic.claude-opus-5-5")
     result = {"meetingId": meeting_id, "title": item.get("title", ""), "messages": len(payload["messages"]),
               "raw_messages": len(item.get("messages") or []), "ok": False, "attempts": 0}
     started = time.time()

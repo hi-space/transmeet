@@ -29,10 +29,10 @@ const MEETINGS_TABLE = 'transmeet-meetings';
 const PAGES_TABLE = 'transmeet-pages';
 const ROOT_DOMAIN = 'hi-yoo.com';
 const APP_DOMAIN = 'transmeet.hi-yoo.com';
-const PAGE_AGENT_MODEL_ID = 'us.anthropic.claude-opus-5-5';
+const PAGE_AGENT_MODEL_ID = 'global.anthropic.claude-opus-5-5';
 // Opus 5.5 가 Bedrock 에서 ServiceUnavailable 을 반복하는 동안(2026-10-08 수 시간 관측) 백엔드가 넘어가는 대체 모델.
 // 백엔드 config.PAGE_AGENT_FALLBACK_MODEL_ID·agent/runtime/model.py ALLOWED_MODEL_IDS 와 같은 값이어야 한다.
-const PAGE_AGENT_FALLBACK_MODEL_ID = 'us.anthropic.claude-opus-5';
+const PAGE_AGENT_FALLBACK_MODEL_ID = 'global.anthropic.claude-opus-5';
 // AgentCore Runtime 에 올리는 LangGraph 미팅 페이지 에이전트 (agent/runtime, 이미지는 cdk deploy 가 빌드·푸시)
 const RUNTIME_NAME = 'transmeet_meeting_page';
 
@@ -141,7 +141,7 @@ export class TransmeetStack extends cdk.Stack {
       environment: {
         ...commonEnv,
         // 요약 모델. WebSocket 경로(backend config.SUMMARY_MODEL_ID)와 같은 최신 Opus.
-        SUMMARIZE_MODEL_ID: 'us.anthropic.claude-opus-5-5',
+        SUMMARIZE_MODEL_ID: 'global.anthropic.claude-opus-5-5',
       },
     });
 
@@ -389,10 +389,10 @@ export class TransmeetStack extends cdk.Stack {
       new iam.PolicyStatement({
         sid: 'BedrockModelInvocation',
         actions: ['bedrock:InvokeModel', 'bedrock:InvokeModelWithResponseStream'],
-        // 에이전트가 쓰는 모델만 허용: 교차 리전 추론 프로필 + 프로필이 라우팅하는 리전별 기반 모델
+        // 에이전트가 쓰는 모델만 허용: 교차 리전 추론 프로필(global./us.) + 프로필이 라우팅하는 리전별 기반 모델
         resources: [PAGE_AGENT_MODEL_ID, PAGE_AGENT_FALLBACK_MODEL_ID].flatMap((modelId) => [
           `arn:aws:bedrock:*:${this.account}:inference-profile/${modelId}`,
-          `arn:aws:bedrock:*::foundation-model/${modelId.replace(/^us\./, '')}*`,
+          `arn:aws:bedrock:*::foundation-model/${modelId.replace(/^(us|global)\./, '')}*`,
         ]),
       })
     );

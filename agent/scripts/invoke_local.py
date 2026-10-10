@@ -110,7 +110,7 @@ def payload_from_sample(path: Path) -> dict:
     sample = json.loads(path.read_text(encoding="utf-8"))
     item = {"meetingId": sample["meeting"]["meetingId"], "title": sample["meeting"]["title"],
             "createdAt": sample["meeting"]["startedAt"]}
-    payload = build_payload(item, sample["messages"], sample["meeting"].get("modelId") or "us.anthropic.claude-opus-5-5")
+    payload = build_payload(item, sample["messages"], sample["meeting"].get("modelId") or "global.anthropic.claude-opus-5-5")
     # 샘플 미팅은 DynamoDB 에 없으므로 발행(조건부 UpdateItem)이 통과하도록 아이템을 넣어 둔다
     ddb = boto3.client("dynamodb", region_name=REGION)
     ddb.put_item(TableName=os.environ.get("MEETINGS_TABLE", "transmeet-meetings"), Item={
@@ -127,7 +127,7 @@ def payload_from_meeting(meeting_id: str) -> dict:
     if "Item" not in res:
         raise SystemExit(f"meeting not found: {meeting_id}")
     item = ddb_item_to_dict(res["Item"])
-    return build_payload(item, item.get("messages") or [], "us.anthropic.claude-opus-5-5")
+    return build_payload(item, item.get("messages") or [], "global.anthropic.claude-opus-5-5")
 
 
 def print_event(event: dict) -> None:

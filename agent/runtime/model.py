@@ -11,8 +11,8 @@ from langchain_core.messages import AIMessage, AIMessageChunk
 
 logger = logging.getLogger(__name__)
 
-PRIMARY_MODEL_ID = "us.anthropic.claude-opus-5-5"
-FALLBACK_MODEL_ID = "us.anthropic.claude-opus-5"
+PRIMARY_MODEL_ID = "global.anthropic.claude-opus-5-5"
+FALLBACK_MODEL_ID = "global.anthropic.claude-opus-5"
 ALLOWED_MODEL_IDS: Tuple[str, ...] = (PRIMARY_MODEL_ID, FALLBACK_MODEL_ID)
 DEFAULT_MAX_TOKENS = 64000
 # 60K 토큰 입력에 Opus 5.5 가 첫 토큰을 내기까지 수 분이 걸릴 수 있다. botocore 기본 60초(langchain-aws 는 300초)면 끊긴다.

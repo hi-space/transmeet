@@ -10,8 +10,8 @@ def test_page_agent_settings_defaults(monkeypatch):
     assert cfg.config.PAGES_BUCKET == ""
     assert cfg.config.PAGES_TABLE == "transmeet-pages"
     assert cfg.config.PAGES_PUBLIC_BASE_URL == "https://transmeet.hi-yoo.com/p"
-    assert cfg.config.PAGE_AGENT_MODEL_ID == "us.anthropic.claude-opus-5-5"
-    assert cfg.config.PAGE_AGENT_FALLBACK_MODEL_ID == "us.anthropic.claude-opus-5"
+    assert cfg.config.PAGE_AGENT_MODEL_ID == "global.anthropic.claude-opus-5-5"
+    assert cfg.config.PAGE_AGENT_FALLBACK_MODEL_ID == "global.anthropic.claude-opus-5"
     assert cfg.config.PAGE_AGENT_INVOKE_RETRIES == 2
     assert not hasattr(cfg.config, "HARNESS_ARN")
 

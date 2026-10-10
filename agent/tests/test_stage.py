@@ -164,7 +164,7 @@ async def test_astream_retries_broken_stream_then_gives_up():
 
 def test_make_chat_model_uses_long_read_timeout():
     from runtime.model import BEDROCK_CLIENT_CONFIG, make_chat_model
-    llm = make_chat_model("us.anthropic.claude-opus-5-5", region="us-east-1")
+    llm = make_chat_model("global.anthropic.claude-opus-5-5", region="us-east-1")
     assert llm.config is BEDROCK_CLIENT_CONFIG and BEDROCK_CLIENT_CONFIG.read_timeout == 900
     with pytest.raises(ValueError):
         make_chat_model("anthropic.claude-haiku", region="us-east-1")

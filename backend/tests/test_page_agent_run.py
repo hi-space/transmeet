@@ -89,7 +89,7 @@ class FakeDDB:
         raise AssertionError("backend must not write to the meeting item")
 
 
-def deps_for(agentcore, s3, ddb, invoke_retries=2, fallback_model_id="us.anthropic.claude-opus-5"):
+def deps_for(agentcore, s3, ddb, invoke_retries=2, fallback_model_id="global.anthropic.claude-opus-5"):
     def cm(obj):
         @asynccontextmanager
         async def _cm():
@@ -132,7 +132,7 @@ async def test_happy_path_relays_events_and_emits_done():
     assert call["agentRuntimeArn"] == RUNTIME and len(call["runtimeSessionId"]) >= 33
     assert call["contentType"] == "application/json" and call["accept"] == "text/event-stream"
     body = sent_payload(call)
-    assert body["meeting"]["meetingId"] == "m1" and body["meeting"]["modelId"] == "us.anthropic.claude-opus-5-5"
+    assert body["meeting"]["meetingId"] == "m1" and body["meeting"]["modelId"] == "global.anthropic.claude-opus-5-5"
     assert body["messages"][0]["original"] == "Hello" and body["messages"][0]["translation"] == "안녕"
 
 
@@ -161,7 +161,7 @@ async def test_invoke_exception_transient_is_retried_then_fallback_model():
     page = await run_page_generation(send, "m1", deps=deps_for(ac, FakeS3(), FakeDDB(ITEM)))
     assert page is not None and send.events[-1]["phase"] == "done"
     models = [sent_payload(c)["meeting"]["modelId"] for c in ac.calls]
-    assert models == ["us.anthropic.claude-opus-5-5"] * 3 + ["us.anthropic.claude-opus-5"]
+    assert models == ["global.anthropic.claude-opus-5-5"] * 3 + ["global.anthropic.claude-opus-5"]
     assert any(e["phase"] == "status" and "대체 모델" in e["text"] for e in send.events)
 
 

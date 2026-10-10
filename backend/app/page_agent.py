@@ -30,8 +30,8 @@ SPEAKER_LABELS = {"speaker1": "Speaker 1", "speaker2": "Speaker 2", "me": "Me"}
 MERGE_WINDOW_SECONDS = 10
 
 # 에이전트 쪽 agent/runtime/model.py ALLOWED_MODEL_IDS 와 같아야 한다 (페이지 meta 에 기록되고 Runtime 이 검증한다)
-PAGE_AGENT_MODEL_ID = "us.anthropic.claude-opus-5-5"
-PAGE_AGENT_FALLBACK_MODEL_ID = "us.anthropic.claude-opus-5"
+PAGE_AGENT_MODEL_ID = "global.anthropic.claude-opus-5-5"
+PAGE_AGENT_FALLBACK_MODEL_ID = "global.anthropic.claude-opus-5"
 
 
 def _parse_ts(ts: str) -> Optional[datetime]:

@@ -13,7 +13,7 @@ SKILLS = Path(__file__).resolve().parents[1] / "skills"
 PAYLOAD = {
     "meeting": {"meetingId": "m1", "title": "주간 1:1 — 배포", "startedAt": "2026-10-06T10:00:00+09:00",
                 "endedAt": "2026-10-06T10:30:00+09:00", "speakers": ["Speaker 1", "Me"], "languages": ["en", "ko"],
-                "generatedAt": "2026-10-08T09:00:00+09:00", "modelId": "us.anthropic.claude-opus-5-5"},
+                "generatedAt": "2026-10-08T09:00:00+09:00", "modelId": "global.anthropic.claude-opus-5-5"},
     "messages": [
         {"timestamp": "2026-10-06T10:00:10+09:00", "speaker": "speaker1", "original": "Where are we on the pipeline?",
          "translation": "파이프라인은 어디까지 됐나요?", "detectedLanguage": "en"},
@@ -73,7 +73,7 @@ class Recorder:
 
 def make_deps(tmp_path, models, publisher=None, **over):
     def factory(model_id, stage):
-        assert model_id == "us.anthropic.claude-opus-5-5"
+        assert model_id == "global.anthropic.claude-opus-5-5"
         try:
             return models[stage]
         except KeyError:

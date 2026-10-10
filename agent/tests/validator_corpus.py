@@ -29,7 +29,7 @@ def page(body_extra: str = "", head_extra: str = "", css: str = "body{font-famil
         f"<!doctype html><html {html_attrs}><head><meta charset=\"utf-8\">"
         '<meta name="viewport" content="width=device-width, initial-scale=1"><title>미팅 · 미팅록</title>'
         '<meta name="transmeet:meeting-id" content="m1"><meta name="transmeet:generated-at" content="2026-10-08T00:00:00Z">'
-        f'<meta name="transmeet:model" content="us.anthropic.claude-opus-5-5">{head_extra}<style>{css}</style></head>'
+        f'<meta name="transmeet:model" content="global.anthropic.claude-opus-5-5">{head_extra}<style>{css}</style></head>'
         f"<body><main>{secs}{body_extra}</main></body></html>"
     )
 
