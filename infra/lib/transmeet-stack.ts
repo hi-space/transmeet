@@ -588,8 +588,19 @@ export class TransmeetStack extends cdk.Stack {
     // 공유 해제가 즉시 반영되도록 엣지 캐시를 끈다 (페이지는 작고 조회는 드물다).
     // 페이지는 앱과 같은 오리진에서 서빙되므로 CSP sandbox 로 고유 오리진에 격리하고
     // 스크립트·외부 리소스 로드를 모두 막는다 (검증기를 우회한 HTML 에 대한 2차 방어선).
+    // CORS: 앱이 다른 오리진(CloudFront 기본 도메인, 로컬 dev 서버)에서 열렸을 때도 페이지 HTML 을
+    // fetch 해 마크다운으로 바꿀 수 있게 한다. 페이지는 링크를 아는 사람은 누구나 읽는 공개 자원이고
+    // GET/HEAD 만 허용되므로 모든 오리진에 열어도 새로 노출되는 것은 없다.
     const pagesHeadersPolicy = new cloudfront.ResponseHeadersPolicy(this, 'MeetingPagesHeadersPolicy', {
-      comment: 'TransMeet meeting pages: sandboxed, no scripts or external loads',
+      comment: 'TransMeet meeting pages: sandboxed, no scripts or external loads, CORS read-only',
+      corsBehavior: {
+        accessControlAllowOrigins: ['*'],
+        accessControlAllowMethods: ['GET', 'HEAD'],
+        accessControlAllowHeaders: ['*'],
+        accessControlAllowCredentials: false,
+        accessControlMaxAge: cdk.Duration.hours(1),
+        originOverride: true,
+      },
       securityHeadersBehavior: {
         contentSecurityPolicy: {
           contentSecurityPolicy:
