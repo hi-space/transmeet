@@ -153,7 +153,7 @@ async def test_transient_bedrock_error_is_retried_on_the_same_model(monkeypatch)
 
 async def test_primary_model_exhausted_falls_back_to_secondary_model(monkeypatch):
     monkeypatch.setattr(ws_handler.config, "SUMMARY_INVOKE_RETRIES", 1)
-    monkeypatch.setattr(ws_handler.config, "SUMMARY_FALLBACK_MODEL_ID", "us.anthropic.claude-opus-5")
+    monkeypatch.setattr(ws_handler.config, "SUMMARY_FALLBACK_MODEL_ID", "global.anthropic.claude-opus-5")
     bedrock, ddb = FlakyBedrock(["요약"], [_service_unavailable(), _service_unavailable()]), FakeDDB()
     install(monkeypatch, bedrock, ddb)
     _no_backoff(monkeypatch)
@@ -163,7 +163,7 @@ async def test_primary_model_exhausted_falls_back_to_secondary_model(monkeypatch
     await ws_handler._stream_summary(ws_handler._meeting_broadcaster("m1"), "m1", "x", inline_messages=MESSAGES)
 
     assert [c["modelId"] for c in bedrock.calls] == [
-        ws_handler.config.SUMMARY_MODEL_ID, ws_handler.config.SUMMARY_MODEL_ID, "us.anthropic.claude-opus-5",
+        ws_handler.config.SUMMARY_MODEL_ID, ws_handler.config.SUMMARY_MODEL_ID, "global.anthropic.claude-opus-5",
     ]
     done = [m for m in ws.sent if m.get("phase") == "done"]
     assert done and done[0]["summary"] == "요약"
@@ -171,7 +171,7 @@ async def test_primary_model_exhausted_falls_back_to_secondary_model(monkeypatch
 
 async def test_all_models_exhausted_reports_a_transient_error_in_korean(monkeypatch):
     monkeypatch.setattr(ws_handler.config, "SUMMARY_INVOKE_RETRIES", 0)
-    monkeypatch.setattr(ws_handler.config, "SUMMARY_FALLBACK_MODEL_ID", "us.anthropic.claude-opus-5")
+    monkeypatch.setattr(ws_handler.config, "SUMMARY_FALLBACK_MODEL_ID", "global.anthropic.claude-opus-5")
     bedrock, ddb = FlakyBedrock(["요약"], [_service_unavailable(), _service_unavailable()]), FakeDDB()
     install(monkeypatch, bedrock, ddb)
     _no_backoff(monkeypatch)

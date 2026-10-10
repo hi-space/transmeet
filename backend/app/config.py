@@ -11,8 +11,10 @@ class Config(BaseSettings):
     BEDROCK_MODEL_ID: str = "global.anthropic.claude-haiku-5-5"
     QA_MODEL_ID: str = "global.anthropic.claude-sonnet-5-5"
     # 요약 패널(WebSocket summarize). 실시간 번역 모델과 분리 — 페이지 수준의 디테일을 내야 해서 큰 모델을 쓴다.
-    # 페이지 에이전트(PAGE_AGENT_MODEL_ID)와 같은 최신 모델. Opus 5.5 는 thinking 이 항상 켜져 있고 기본 effort 는 medium.
-    SUMMARY_MODEL_ID: str = "us.anthropic.claude-opus-5-5"
+    # 페이지 에이전트와 같은 최신 모델. Opus 5.5 는 thinking 이 항상 켜져 있고 기본 effort 는 medium.
+    # global. 프로파일: 2026-10-10 us. 프로파일이 503 을 반복하고 정상일 때도 한 단어에 21~52초 걸린 반면
+    # global. 은 1~7초였다. 번역(BEDROCK_MODEL_ID)·Q&A(QA_MODEL_ID)도 이미 global. 을 쓴다.
+    SUMMARY_MODEL_ID: str = "global.anthropic.claude-opus-5-5"
     SUMMARY_MAX_TOKENS: int = 16384
     # Opus 5.5 는 thinking 을 끌 수 없고 기본 effort 가 medium. 78줄 기준 첫 텍스트 medium 12.8초 → low 6.6초,
     # 명사형 형식 준수는 같았다(2026-10-09 측정).
@@ -20,8 +22,8 @@ class Config(BaseSettings):
     # Bedrock 이 일시적으로 거절(ServiceUnavailable/Throttling)하면 같은 모델로 다시 시도하는 횟수.
     # 2026-10-10 01:43 UTC us. Opus 5.5 프로파일이 503 을 3~4초 만에 돌려줘 요약이 바로 실패했다.
     SUMMARY_INVOKE_RETRIES: int = 1
-    # 기본 모델이 재시도 후에도 거절하면 넘어가는 대체 모델(페이지 에이전트와 동일). 비어 있으면 사용 안 함.
-    SUMMARY_FALLBACK_MODEL_ID: str = "us.anthropic.claude-opus-5"
+    # 기본 모델이 재시도 후에도 거절하면 넘어가는 대체 모델. 비어 있으면 사용 안 함.
+    SUMMARY_FALLBACK_MODEL_ID: str = "global.anthropic.claude-opus-5"
 
     # ─── Meeting page agent (LangGraph on AgentCore Runtime) ──────────────────
     PAGE_AGENT_RUNTIME_ARN: str = ""
