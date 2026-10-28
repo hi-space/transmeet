@@ -9,7 +9,7 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb'
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime'
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, DeleteObjectCommand, DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
 import { randomUUID } from 'crypto'
 import { callerId, ownsMeeting } from '../shared/owner'
 
@@ -39,6 +39,21 @@ function toMeetingPage(page: PageRecord) {
   const { meetingId: _meetingId, updatedAt: _updatedAt, ...rest } = page
   return rest
 }
+// 녹음 구간(parts/*.pcm)과 합친 MP3 를 모두 지운다. 접두사가 meetings/{id}/ 라 다른 미팅과 섞이지 않는다.
+async function deleteMeetingAudio(meetingId: string): Promise<void> {
+  const Bucket = process.env.AUDIO_BUCKET
+  if (!Bucket) return
+  let ContinuationToken: string | undefined
+  do {
+    const listed = await s3.send(
+      new ListObjectsV2Command({ Bucket, Prefix: `meetings/${meetingId}/`, ContinuationToken })
+    )
+    const keys = (listed.Contents ?? []).flatMap((o) => (o.Key ? [{ Key: o.Key }] : []))
+    if (keys.length) await s3.send(new DeleteObjectsCommand({ Bucket, Delete: { Objects: keys, Quiet: true } }))
+    ContinuationToken = listed.IsTruncated ? listed.NextContinuationToken : undefined
+  } while (ContinuationToken)
+}
+
 let _bedrock: BedrockRuntimeClient | null = null
 function getBedrock() {
   if (!_bedrock) _bedrock = new BedrockRuntimeClient({ region: process.env.REGION })
@@ -267,6 +282,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         if (page) {
           await ddb.send(new DeleteCommand({ TableName: PAGES_TABLE, Key: { meetingId } }))
         }
+        await deleteMeetingAudio(meetingId)
         await ddb.send(
           new DeleteCommand({
             TableName: process.env.MEETINGS_TABLE,
