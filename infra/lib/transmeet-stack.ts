@@ -5,6 +5,7 @@ import { NodejsFunction } from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as ses from 'aws-cdk-lib/aws-ses';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
@@ -29,6 +30,9 @@ const MEETINGS_TABLE = 'transmeet-meetings';
 const PAGES_TABLE = 'transmeet-pages';
 const ROOT_DOMAIN = 'hi-yoo.com';
 const APP_DOMAIN = 'transmeet.hi-yoo.com';
+// 미팅 종료 메일 발신. hi-yoo.com 은 SES 도메인 identity(DKIM)로 인증한다.
+const MAIL_FROM = 'TransMeet <no-reply@hi-yoo.com>';
+const MAIL_FROM_DOMAIN = 'mail.hi-yoo.com';
 const PAGE_AGENT_MODEL_ID = 'global.anthropic.claude-opus-5-5';
 // Opus 5.5 가 Bedrock 에서 ServiceUnavailable 을 반복하는 동안(2026-10-08 수 시간 관측) 백엔드가 넘어가는 대체 모델.
 // 백엔드 config.PAGE_AGENT_FALLBACK_MODEL_ID·agent/runtime/model.py ALLOWED_MODEL_IDS 와 같은 값이어야 한다.
@@ -244,6 +248,43 @@ export class TransmeetStack extends cdk.Stack {
     // /tts
     restApi.root.addResource('tts').addMethod('POST', ttsIntegration, authed);
 
+    // /me/email — 미팅 종료 메일 수신 주소 인증(SES 개별 identity)
+    // 전용 역할: SES identity 생성·삭제 권한을 다른 REST Lambda 와 공유하지 않는다.
+    const emailRole = new iam.Role(this, 'EmailLambdaRole', {
+      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
+      ],
+    });
+    emailRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['ses:GetEmailIdentity', 'ses:CreateEmailIdentity', 'ses:DeleteEmailIdentity'],
+        resources: [`arn:aws:ses:${REGION}:${this.account}:identity/*`],
+      })
+    );
+    // 발신 도메인 identity 는 CDK 만 관리한다 — 코드 실수로 지워지면 메일 발송이 통째로 멈춘다
+    emailRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.DENY,
+        actions: ['ses:CreateEmailIdentity', 'ses:DeleteEmailIdentity'],
+        resources: [
+          `arn:aws:ses:${REGION}:${this.account}:identity/${ROOT_DOMAIN}`,
+          `arn:aws:ses:${REGION}:${this.account}:identity/*.${ROOT_DOMAIN}`,
+        ],
+      })
+    );
+    const emailFn = new NodejsFunction(this, 'EmailFn', {
+      functionName: 'transmeet-email',
+      entry: path.join(__dirname, '../lambda/email/index.ts'),
+      timeout: cdk.Duration.seconds(10),
+      ...commonNodejsFunctionProps,
+      role: emailRole,
+    });
+    const emailIntegration = new apigateway.LambdaIntegration(emailFn);
+    const meEmailResource = restApi.root.addResource('me').addResource('email');
+    meEmailResource.addMethod('GET', emailIntegration, authed);
+    meEmailResource.addResource('verify').addMethod('POST', emailIntegration, authed);
+
     // ─── S3 + CloudFront (Frontend Hosting) ────────────────────────────────────
 
     const frontendBucket = new s3.Bucket(this, 'FrontendBucket', {
@@ -271,11 +312,49 @@ export class TransmeetStack extends cdk.Stack {
     pagesBucket.grantDelete(lambdaRole);
     meetingsFn.addEnvironment('PAGES_BUCKET', pagesBucket.bucketName);
 
+    // ─── Meeting audio bucket ──────────────────────────────────────────────────
+    // 녹음 구간(PCM)과 합친 MP3. 페이지 버킷과 달리 CloudFront 로 공개하지 않고 서명 URL 로만 내려준다.
+    const audioBucket = new s3.Bucket(this, 'MeetingAudioBucket', {
+      bucketName: `transmeet-meeting-audio-${this.account}`,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+    // 미팅 삭제 때 그 미팅의 오디오도 지운다 — 목록·삭제만, 읽기는 주지 않는다
+    lambdaRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['s3:ListBucket'],
+        resources: [audioBucket.bucketArn],
+        conditions: { StringLike: { 's3:prefix': ['meetings/*'] } },
+      })
+    );
+    lambdaRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['s3:DeleteObject'],
+        resources: [audioBucket.arnForObjects('meetings/*')],
+      })
+    );
+    meetingsFn.addEnvironment('AUDIO_BUCKET', audioBucket.bucketName);
+
 
     // ─── Route53 + ACM (custom domain) ─────────────────────────────────────────
 
     const hostedZone = route53.HostedZone.fromLookup(this, 'HostedZone', {
       domainName: ROOT_DOMAIN,
+    });
+
+    // ─── SES: 발신 도메인 ───────────────────────────────────────────────────────
+    // Route53 호스티드 존에 Easy DKIM CNAME 과 MAIL FROM(MX/SPF) 레코드를 CDK 가 만든다.
+    // amazon.com 같은 사내 메일은 DKIM·SPF·DMARC 가 맞지 않으면 격리하므로 셋 다 둔다.
+    new ses.EmailIdentity(this, 'MailDomainIdentity', {
+      identity: ses.Identity.publicHostedZone(hostedZone),
+      mailFromDomain: MAIL_FROM_DOMAIN,
+    });
+    new route53.TxtRecord(this, 'MailDmarcRecord', {
+      zone: hostedZone,
+      recordName: '_dmarc',
+      values: ['v=DMARC1; p=none;'],
     });
 
     const certificate = new acm.Certificate(this, 'FrontendCertificate', {
@@ -548,6 +627,14 @@ export class TransmeetStack extends cdk.Stack {
       })
     );
     pagesBucket.grantDelete(wsTaskRole);
+    // 녹음 구간 업로드·합치기·서명 URL, 종료 메일 발송
+    audioBucket.grantReadWrite(wsTaskRole);
+    wsTaskRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['ses:SendEmail', 'ses:GetEmailIdentity'],
+        resources: [`arn:aws:ses:${REGION}:${this.account}:identity/*`],
+      })
+    );
 
     // ─── ECS Task Definition ────────────────────────────────────────────────────
 
@@ -571,6 +658,10 @@ export class TransmeetStack extends cdk.Stack {
         PAGE_AGENT_FALLBACK_MODEL_ID,
         PAGES_BUCKET: pagesBucket.bucketName,
         PAGES_PUBLIC_BASE_URL: `https://${APP_DOMAIN}/p`,
+        // 녹음 구간·MP3 와 미팅 종료 메일 (backend/app/audio_store.py, mailer.py)
+        AUDIO_BUCKET: audioBucket.bucketName,
+        MAIL_FROM,
+        APP_BASE_URL: `https://${APP_DOMAIN}`,
         // WebSocket 연결 시 ID 토큰 검증(발급자·audience)
         COGNITO_USER_POOL_ID: userPool.userPoolId,
         COGNITO_CLIENT_ID: userPoolClient.userPoolClientId,
@@ -743,6 +834,11 @@ export class TransmeetStack extends cdk.Stack {
       value: runtimeArn,
       exportName: 'TransmeetMeetingPageRuntimeArn',
       description: 'AgentCore Runtime ARN for meeting page generation (LangGraph agent)',
+    });
+
+    new cdk.CfnOutput(this, 'AudioBucketName', {
+      value: audioBucket.bucketName,
+      description: 'S3 bucket holding meeting recordings',
     });
 
     new cdk.CfnOutput(this, 'PagesBucketName', {

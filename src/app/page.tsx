@@ -14,6 +14,10 @@ import MeetingPagePanel, { PAGE_GEN_IDLE, type PageGenState } from '@/components
 import NotesArea from '@/components/NotesArea'
 import VoiceArea, { VoiceFontSizeControl } from '@/components/VoiceArea'
 import EditableTitle from '@/components/EditableTitle'
+import MeetingActions, {
+  type AudioPrepState,
+  type MeetingEndState,
+} from '@/components/MeetingActions'
 import { Meeting, Message } from '@/types/meeting'
 import { useAudioCapture } from '@/hooks/useAudioCapture'
 import { useWebSocket } from '@/hooks/useWebSocket'
@@ -163,7 +167,7 @@ function resolveDirection(
  * undefined 는 "알 수 없음"으로 보고 절대 삭제하지 않는다 (메시지 있는 회의 유실 방지).
  */
 function isPrunable(m: Meeting): boolean {
-  if (m.summary) return false
+  if (m.summary || m.hasAudio) return false
   return m.messageCount === 0
 }
 
@@ -197,6 +201,9 @@ export default function Home() {
   } | null>(null)
   const unpublishingRef = useRef<Set<string>>(new Set())
   const [hasNewVoice, setHasNewVoice] = useState(false)
+  // 미팅 종료(오디오 → 요약 → 메일) 진행과 녹음 파일 준비 상태
+  const [meetingEnd, setMeetingEnd] = useState<MeetingEndState | null>(null)
+  const [audioPrep, setAudioPrep] = useState<AudioPrepState | null>(null)
   const [hasNewNotes, setHasNewNotes] = useState(false)
   const [notesCollapsed, setNotesCollapsed] = useState(true)
   const [ttsInput, setTtsInput] = useState('')
@@ -365,11 +372,20 @@ export default function Home() {
         return
       }
 
+      // 종료 메일의 "미팅 화면에서 보기" 링크(?meeting=<id>)로 들어오면 그 미팅을 연다 — 정리 대상에서도 뺀다
+      const linked = new URLSearchParams(window.location.search).get('meeting')
+      if (linked) window.history.replaceState(null, '', window.location.pathname)
+
       // 이전에 만들어졌지만 아무 내용도 없는 회의는 정리한다
-      const stale = list.filter(isPrunable)
+      const stale = list.filter((m) => m.id !== linked && isPrunable(m))
       const staleIds = new Set(stale.map((m) => m.id))
       setMeetings([created, ...list.filter((m) => !staleIds.has(m.id))])
-      setActiveMeetingId(created.id)
+      if (linked && list.some((m) => m.id === linked)) {
+        setActiveMeetingId(linked)
+        loadMeetingMessages(linked)
+      } else {
+        setActiveMeetingId(created.id)
+      }
       setIsLoadingMeetings(false)
 
       // 삭제는 화면을 그린 뒤 백그라운드로 — 실패해도 사용자 흐름을 막지 않는다
@@ -473,6 +489,31 @@ export default function Home() {
 
   const handleWsMessage = useCallback(
     (msg: WsServerMessage) => {
+      if (msg.type === 'meeting_end') {
+        // 서버는 그 미팅을 보고 있는 연결 전부에 보낸다 — 다른 미팅 이벤트도 상태엔 남겨 두고 표시만 거른다
+        if (msg.meetingId)
+          setMeetingEnd({
+            meetingId: msg.meetingId,
+            phase: msg.phase,
+            status: msg.status,
+            error: msg.error,
+          })
+        return
+      }
+      if (msg.type === 'audio_ready') {
+        if (msg.url) {
+          setAudioPrep(null)
+          // Content-Disposition: attachment 라 페이지를 떠나지 않고 내려받는다
+          window.location.href = msg.url
+        } else {
+          setAudioPrep({
+            meetingId: msg.meetingId,
+            pending: false,
+            error: msg.error ?? '녹음 파일을 준비하지 못했습니다',
+          })
+        }
+        return
+      }
       if (msg.type === 'error') {
         // 이 분기가 없어서 백엔드 에러가 조용히 삼켜졌다 — STT 세션이 죽어도
         // 화면에는 아무 변화가 없어 마이크 문제로 오해하게 된다.
@@ -1070,6 +1111,8 @@ export default function Home() {
     sendGeneratePage,
     sendPageStatus,
     sendUnpublishPage,
+    sendEndMeeting,
+    sendPrepareAudio,
   } = useWebSocket({
     meetingId: activeMeetingId,
     onMessage: handleWsMessage,
@@ -1229,18 +1272,23 @@ export default function Home() {
     setPageGen(pageGenByMeetingRef.current.get(activeMeetingId) ?? PAGE_GEN_IDLE)
   }, [activeMeetingId])
 
+  // 마이크를 끄고 화면의 진행 중 자막 상태를 정리한다 (서버에 보내는 정지 신호는 호출부가 고른다)
+  const resetLocalRecording = useCallback(() => {
+    stopAudio()
+    setPendingTranscript(null)
+    if (partialThrottleRef.current) {
+      clearTimeout(partialThrottleRef.current)
+      partialThrottleRef.current = null
+    }
+    pendingPartialRef.current = ''
+    translationTimeoutsRef.current.forEach((t) => clearTimeout(t))
+    translationTimeoutsRef.current.clear()
+  }, [stopAudio])
+
   const handleToggleRecording = useCallback(async () => {
     if (isRecording) {
-      stopAudio()
+      resetLocalRecording()
       stopRecording()
-      setPendingTranscript(null)
-      if (partialThrottleRef.current) {
-        clearTimeout(partialThrottleRef.current)
-        partialThrottleRef.current = null
-      }
-      pendingPartialRef.current = ''
-      translationTimeoutsRef.current.forEach((t) => clearTimeout(t))
-      translationTimeoutsRef.current.clear()
       // 녹음 종료 시 자동 요약 (autoSummarizeMessageCount > 0 일 때)
       if (settings.autoSummarizeMessageCount > 0) {
         handleSummarizeRef.current()
@@ -1259,7 +1307,7 @@ export default function Home() {
   }, [
     isRecording,
     startAudio,
-    stopAudio,
+    resetLocalRecording,
     startRecording,
     stopRecording,
     settings.sttProvider,
@@ -1364,6 +1412,72 @@ export default function Home() {
   useEffect(() => {
     handleSummarizeRef.current = handleSummarize
   })
+
+  // ─── 미팅 종료 · 녹음 파일 ─────────────────────────────────────────────────
+
+  // 서버가 녹음 정지 → 오디오 합치기 → 요약 → (설정이 켜져 있으면) 메일을 끝까지 처리한다
+  const handleEndMeeting = useCallback(() => {
+    if (!activeMeetingId) return
+    if (isRecording && !window.confirm('녹음을 멈추고 미팅을 종료할까요?')) return
+    const currentMessages =
+      meetingsRef.current.find((m) => m.id === activeMeetingId)?.messages ?? []
+    const wsMessages = currentMessages
+      .filter((m) => m.original)
+      .map((m) => ({ speaker: m.speaker, original: m.original, timestamp: m.timestamp }))
+    if (!sendEndMeeting(activeMeetingId, settings.emailOnEnd, wsMessages)) {
+      setMeetingEnd({
+        meetingId: activeMeetingId,
+        phase: 'error',
+        error: '서버와 연결되어 있지 않습니다.',
+      })
+      return
+    }
+    if (isRecording) resetLocalRecording()
+    const meetingId = activeMeetingId
+    setMeetingEnd({ meetingId, phase: 'audio' })
+    // 진행 중에 다른 미팅으로 옮기거나 소켓이 끊기면 결과 이벤트를 못 받는다 — 버튼이 "종료 중"에 갇히지 않게.
+    // 서버 쪽 처리(요약 최대 수 분 + 메일)는 그와 무관하게 끝까지 간다.
+    setTimeout(() => {
+      setMeetingEnd((s) =>
+        s?.meetingId === meetingId && (s.phase === 'audio' || s.phase === 'summary')
+          ? {
+              meetingId,
+              phase: 'error',
+              error: '종료 결과를 받지 못했습니다. 메일함이나 요약 패널을 확인해 주세요.',
+            }
+          : s
+      )
+    }, 360_000)
+    // 서버 요약이 summary_stream 으로 흘러 들어온다 — 요약 패널을 열어 둔다
+    if (currentMessages.length > 0) {
+      lastSummarizedCountRef.current[activeMeetingId] = currentMessages.length
+      setMeetings((prev) => prev.map((m) => (m.id === activeMeetingId ? { ...m, summary: '' } : m)))
+      setRightPanel('summary')
+      setSummaryOpen(true)
+    }
+  }, [activeMeetingId, isRecording, sendEndMeeting, settings.emailOnEnd, resetLocalRecording])
+
+  const handleDownloadAudio = useCallback(() => {
+    if (!activeMeetingId) return
+    if (!sendPrepareAudio(activeMeetingId)) {
+      setAudioPrep({
+        meetingId: activeMeetingId,
+        pending: false,
+        error: '서버와 연결되어 있지 않습니다.',
+      })
+      return
+    }
+    const meetingId = activeMeetingId
+    setAudioPrep({ meetingId, pending: true })
+    // 응답을 놓치면(재접속 등) 버튼이 "준비 중"에 갇히지 않게 — 1시간 녹음 합치기도 수십 초면 끝난다
+    setTimeout(() => {
+      setAudioPrep((p) =>
+        p?.meetingId === meetingId && p.pending
+          ? { meetingId, pending: false, error: '응답이 없습니다. 다시 시도해 주세요.' }
+          : p
+      )
+    }, 120_000)
+  }, [activeMeetingId, sendPrepareAudio])
 
   // ─── Meeting page (AgentCore Harness) ───────────────────────────────────────
 
@@ -2105,6 +2219,17 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {HAS_API && activeMeetingId && (
+        <MeetingActions
+          isRecording={isRecording}
+          wsConnected={wsStatus === 'connected'}
+          endState={meetingEnd?.meetingId === activeMeetingId ? meetingEnd : null}
+          audioPrep={audioPrep?.meetingId === activeMeetingId ? audioPrep : null}
+          onDownloadAudio={handleDownloadAudio}
+          onEndMeeting={handleEndMeeting}
+        />
+      )}
 
       <ControlPanel
         isRecording={isRecording}

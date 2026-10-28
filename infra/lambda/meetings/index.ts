@@ -2,6 +2,7 @@ import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda'
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb'
 import {
   DynamoDBDocumentClient,
+  BatchGetCommand,
   GetCommand,
   PutCommand,
   DeleteCommand,
@@ -9,7 +10,7 @@ import {
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb'
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime'
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, DeleteObjectCommand, DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
 import { randomUUID } from 'crypto'
 import { callerId, ownsMeeting } from '../shared/owner'
 
@@ -39,6 +40,47 @@ function toMeetingPage(page: PageRecord) {
   const { meetingId: _meetingId, updatedAt: _updatedAt, ...rest } = page
   return rest
 }
+// 발언이 0개인 미팅에 녹음이 있는지 붙인다. 프런트는 발언 0개 미팅을 빈 미팅으로 보고 지우는데,
+// STT 가 실패해도 녹음은 남아 있을 수 있다. hasAudio 는 userId-index 에 투영되지 않아(GSI 투영을 바꾸면
+// 인덱스를 다시 만들어야 한다) 빈 미팅만 기본 테이블에서 읽는다 — 보통 몇 개뿐이다.
+async function attachHasAudio(items: Record<string, unknown>[]): Promise<void> {
+  const empty = items.filter((m) => !m.messageCount)
+  for (let i = 0; i < empty.length; i += 100) {
+    const chunk = empty.slice(i, i + 100)
+    const result = await ddb.send(
+      new BatchGetCommand({
+        RequestItems: {
+          [process.env.MEETINGS_TABLE!]: {
+            Keys: chunk.map((m) => ({ meetingId: m.meetingId })),
+            ProjectionExpression: 'meetingId, hasAudio',
+          },
+        },
+      })
+    )
+    const withAudio = new Set(
+      (result.Responses?.[process.env.MEETINGS_TABLE!] ?? [])
+        .filter((r) => r.hasAudio)
+        .map((r) => r.meetingId)
+    )
+    for (const m of chunk) if (withAudio.has(m.meetingId)) m.hasAudio = true
+  }
+}
+
+// 녹음 구간(parts/*.pcm)과 합친 MP3 를 모두 지운다. 접두사가 meetings/{id}/ 라 다른 미팅과 섞이지 않는다.
+async function deleteMeetingAudio(meetingId: string): Promise<void> {
+  const Bucket = process.env.AUDIO_BUCKET
+  if (!Bucket) return
+  let ContinuationToken: string | undefined
+  do {
+    const listed = await s3.send(
+      new ListObjectsV2Command({ Bucket, Prefix: `meetings/${meetingId}/`, ContinuationToken })
+    )
+    const keys = (listed.Contents ?? []).flatMap((o) => (o.Key ? [{ Key: o.Key }] : []))
+    if (keys.length) await s3.send(new DeleteObjectsCommand({ Bucket, Delete: { Objects: keys, Quiet: true } }))
+    ContinuationToken = listed.IsTruncated ? listed.NextContinuationToken : undefined
+  } while (ContinuationToken)
+}
+
 let _bedrock: BedrockRuntimeClient | null = null
 function getBedrock() {
   if (!_bedrock) _bedrock = new BedrockRuntimeClient({ region: process.env.REGION })
@@ -130,6 +172,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           if (page.Items) items.push(...page.Items)
           lastKey = page.LastEvaluatedKey
         } while (lastKey)
+        await attachHasAudio(items)
         items.sort(byCreatedAtDesc)
         return respond(200, items)
       }
@@ -267,6 +310,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         if (page) {
           await ddb.send(new DeleteCommand({ TableName: PAGES_TABLE, Key: { meetingId } }))
         }
+        await deleteMeetingAudio(meetingId)
         await ddb.send(
           new DeleteCommand({
             TableName: process.env.MEETINGS_TABLE,

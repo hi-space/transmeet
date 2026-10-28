@@ -37,6 +37,12 @@ class Config(BaseSettings):
     PAGES_BUCKET: str = ""
     PAGES_PUBLIC_BASE_URL: str = "https://transmeet.hi-yoo.com/p"
 
+    # 녹음 오디오(구간 PCM + 합친 MP3). 비어 있으면 오디오를 저장하지 않는다.
+    AUDIO_BUCKET: str = ""
+    # 미팅 종료 메일. SES 샌드박스라 수신 주소도 개별 인증돼 있어야 한다.
+    MAIL_FROM: str = "TransMeet <no-reply@hi-yoo.com>"
+    APP_BASE_URL: str = "https://transmeet.hi-yoo.com"
+
     # WebSocket 연결의 ID 토큰 검증. 비어 있으면 모든 연결을 거절한다.
     COGNITO_USER_POOL_ID: str = ""
     COGNITO_CLIENT_ID: str = ""

@@ -26,6 +26,8 @@ export interface Settings {
   autoSummarizeMessageCount: number
   /** 음성 입력 말풍선 글자 크기 — 화면 공유 시 크게 키운다 */
   voiceFontSize: 'compact' | 'md' | 'lg' | 'xl'
+  /** "미팅 종료" 때 요약과 녹음 다운로드 링크를 로그인 이메일로 보낸다 (SES 수신 주소 인증 필요) */
+  emailOnEnd: boolean
 }
 
 // engine → voice 지원 여부 검증용 (SettingsPanel과 동일 데이터)
@@ -55,6 +57,7 @@ const DEFAULT: Settings = {
   maxSentencesPerBubble: 3,
   autoSummarizeMessageCount: 10,
   voiceFontSize: 'compact',
+  emailOnEnd: false,
 }
 
 const STORAGE_KEY = 'transmeet-settings'

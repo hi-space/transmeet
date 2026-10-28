@@ -1,5 +1,9 @@
 FROM python:3.13-slim
 
+# 녹음 구간(PCM)을 MP3 로 합친다 (app/audio_store.py)
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 COPY requirements.txt .

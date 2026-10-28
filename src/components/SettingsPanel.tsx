@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Settings } from '@/hooks/useSettings'
 import { supportsSystemAudio } from '@/lib/platform'
 import ThemeSettings from '@/components/ThemeSettings'
+import EmailNotifySetting from '@/components/EmailNotifySetting'
 
 interface Props {
   settings: Settings
@@ -509,6 +510,12 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
                 이어붙입니다
               </p>
             </div>
+
+            {/* Divider */}
+            <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
+
+            {/* ── Meeting end email ───────────────────────────────────────────── */}
+            <EmailNotifySetting settings={settings} onUpdate={handleUpdate} />
 
             {/* Divider */}
             <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
