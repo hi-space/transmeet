@@ -23,21 +23,26 @@ class PutCommand extends Command {}
 class UpdateCommand extends Command {}
 class QueryCommand extends Command {}
 class BatchWriteCommand extends Command {}
-
-process.env.MESSAGES_TABLE = 'transmeet-messages'
+class InvokeModelCommand extends Command {}
 
 const generatedTitle = '제품 출시 일정 확정'
 
 function setup() {
+  process.env.MESSAGES_TABLE = 'transmeet-messages'
   let item
   let storedMessages = []
   const updates = []
+  const queries = []
+  const modelRequests = []
   const ddb = {
     async send(command) {
       if (command instanceof GetCommand) return { Item: item }
       if (command instanceof QueryCommand) {
         assert.equal(command.input.TableName, 'transmeet-messages')
-        return { Items: storedMessages }
+        queries.push(command.input)
+        // 실제 Query 처럼 Limit 만큼만 돌려준다
+        const limit = command.input.Limit ?? storedMessages.length
+        return { Items: storedMessages.slice(0, limit) }
       }
       if (command instanceof PutCommand) {
         item = command.input.Item
@@ -64,8 +69,14 @@ function setup() {
     '@aws-sdk/client-s3': { S3Client: class {} },
     '@aws-sdk/client-bedrock-runtime': {
       ConverseCommand: Command,
+      InvokeModelCommand,
       BedrockRuntimeClient: class {
         async send(command) {
+          if (command instanceof InvokeModelCommand) {
+            modelRequests.push(JSON.parse(command.input.body))
+            const body = JSON.stringify({ content: [{ text: generatedTitle }] })
+            return { body: new TextEncoder().encode(body) }
+          }
           const text = command.input.inferenceConfig.maxTokens === 64 ? generatedTitle : '회의 요약'
           return { output: { message: { content: [{ text }] } } }
         }
@@ -91,6 +102,17 @@ function setup() {
   const requestContext = { authorizer: { claims: { sub: 'user-1' } } }
   return {
     updates,
+    queries,
+    modelRequests,
+    generateTitle: (messages) => {
+      storedMessages = messages
+      return meetings.handler({
+        httpMethod: 'POST',
+        resource: '/meetings/{id}/title',
+        pathParameters: { id: item.meetingId },
+        requestContext,
+      })
+    },
     create: (title) => meetings.handler({
       httpMethod: 'POST',
       resource: '/meetings',
@@ -132,3 +154,19 @@ for (const { name, title, expectedTitle } of [
     }
   })
 }
+
+test('POST /meetings/{id}/title reads only the first 20 stored messages', async () => {
+  const session = setup()
+  await session.create()
+  const stored = Array.from({ length: 25 }, (_, i) => ({
+    meetingId: 'm', sk: `t#${i}`, id: `message-${i}`, speaker: 'A', originalText: `발언-${i}-끝`,
+  }))
+  const res = await session.generateTitle(stored)
+  assert.equal(res.statusCode, 200)
+  assert.equal(JSON.parse(res.body).title, generatedTitle)
+  assert.equal(session.queries.length, 1)
+  assert.equal(session.queries[0].Limit, 20)
+  const prompt = session.modelRequests[0].messages[0].content
+  assert.ok(prompt.includes('발언-19-끝'))
+  assert.ok(!prompt.includes('발언-20-끝'))
+})

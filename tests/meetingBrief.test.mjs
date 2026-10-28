@@ -19,8 +19,6 @@ class GetCommand extends Command {}
 class UpdateCommand extends Command {}
 class QueryCommand extends Command {}
 class BatchWriteCommand extends Command {}
-
-process.env.MESSAGES_TABLE = 'transmeet-messages'
 class ConverseCommand extends Command {}
 
 function setup({
@@ -32,6 +30,7 @@ function setup({
   enforceOrdering = false,
   clock = Date,
 } = {}) {
+  process.env.MESSAGES_TABLE = 'transmeet-messages'
   const updates = []
   const modelRequests = []
   const item = {

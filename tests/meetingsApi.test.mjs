@@ -121,6 +121,10 @@ test('DELETE deletes messages before the meeting item', async () => {
   )
   assert.ok(lastBatch >= 0 && meetingDelete >= 0)
   assert.ok(lastBatch < meetingDelete)
+  // 지울 키는 메시지 테이블에서 읽고, 같은 테이블에 BatchWrite 한다
+  const keyQuery = sent.find((c) => c instanceof QueryCommand && c.input.ProjectionExpression === 'meetingId, sk')
+  assert.equal(keyQuery?.input.TableName, 'transmeet-messages')
+  assert.deepEqual(Object.keys(sent[lastBatch].input.RequestItems), ['transmeet-messages'])
 })
 
 test('DELETE keeps the meeting when message deletion fails', async () => {
@@ -128,4 +132,6 @@ test('DELETE keeps the meeting when message deletion fails', async () => {
   const res = await call('DELETE', '/meetings/{id}')
   assert.equal(res.statusCode, 500)
   assert.ok(!sent.some((c) => c instanceof DeleteCommand && c.input.TableName === 'transmeet-meetings'))
+  const keyQuery = sent.find((c) => c instanceof QueryCommand && c.input.ProjectionExpression === 'meetingId, sk')
+  assert.equal(keyQuery?.input.TableName, 'transmeet-messages')
 })
