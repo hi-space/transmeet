@@ -46,8 +46,8 @@ export class TransmeetStack extends cdk.Stack {
 
     const qwenAsrEndpoint = this.node.tryGetContext('qwenAsrEndpoint') || process.env.QWEN_ASR_ENDPOINT || 'transmeet-qwen3-asr';
     const nemotronAsrEndpoint = this.node.tryGetContext('nemotronAsrEndpoint') || process.env.NEMOTRON_ASR_ENDPOINT || 'transmeet-nemotron-asr';
-    const qwenAsrComponent = this.node.tryGetContext('qwenAsrComponent') || process.env.QWEN_ASR_INFERENCE_COMPONENT || 'transmeet-qwen3-asr-ic';
-    const nemotronAsrComponent = this.node.tryGetContext('nemotronAsrComponent') || process.env.NEMOTRON_ASR_INFERENCE_COMPONENT || 'transmeet-nemotron-asr-ic';
+    const qwenAsrComponent = this.node.tryGetContext('qwenAsrComponent') || process.env.QWEN_ASR_INFERENCE_COMPONENT || 'transmeet-qwen3-asr-ic-v2';
+    const nemotronAsrComponent = this.node.tryGetContext('nemotronAsrComponent') || process.env.NEMOTRON_ASR_INFERENCE_COMPONENT || 'transmeet-nemotron-asr-ic-v2';
     const wsImageTag = this.node.tryGetContext('wsImageTag') || 'latest';
     const speechEndpoints = [WHISPER_ENDPOINT, qwenAsrEndpoint, nemotronAsrEndpoint].filter(Boolean);
 
@@ -532,7 +532,7 @@ export class TransmeetStack extends cdk.Stack {
     const agentImage = new ecr_assets.DockerImageAsset(this, 'MeetingPageAgentImage', {
       directory: path.join(__dirname, '../../agent'),
       platform: ecr_assets.Platform.LINUX_ARM64,
-      exclude: ['.venv', 'evals', 'samples', 'tests', 'scripts', 'harness', '.pytest_cache', '**/__pycache__'],
+      exclude: ['.venv', '.page-backup', 'evals', 'samples', 'tests', 'scripts', 'harness', '.pytest_cache', '**/__pycache__'],
     });
 
     const runtimeRole = new iam.Role(this, 'RuntimeExecutionRole', {

@@ -125,11 +125,10 @@ def main():
     parser.add_argument("--wait", action="store_true")
     parser.add_argument("--migrate", action="store_true")
     parser.add_argument("--keep-warm", action="store_true", help="Keep one copy for immediate validation")
-    parser.add_argument("--repair-component", action="store_true", help="Retry a failed component with this specification")
     args = parser.parse_args()
     spec = MODELS[args.provider]
     endpoint = args.endpoint or spec["endpoint"]
-    component = args.component or f"{spec['endpoint']}-ic"
+    component = args.component or spec["component"]
     model_name = args.model_name or f"{spec['endpoint']}-model"
     config_name = f"{endpoint}-zero-v3"
     session = boto3.Session(region_name=args.region)
@@ -172,7 +171,9 @@ def main():
             "ComputeResourceRequirements": {
                 "NumberOfCpuCoresRequired": 2,
                 "NumberOfAcceleratorDevicesRequired": resources.get("NumAccelerators", 1),
-                "MinMemoryRequiredInMb": resources.get("MinMemoryMb", 16384),
+                # One GPU copy per host. Reserve container memory, not the
+                # catalogue's total recommended host memory; leave OS headroom.
+                "MinMemoryRequiredInMb": min(resources.get("MinMemoryMb", 8192), 8192),
             },
             "StartupParameters": {
                 "ModelDataDownloadTimeoutInSeconds": 2400,
@@ -265,14 +266,30 @@ def main():
         if existing["EndpointName"] != endpoint:
             parser.error("Component name belongs to a different endpoint.")
         if existing["InferenceComponentStatus"] == "Failed":
-            if not args.repair_component:
-                raise RuntimeError(existing.get("FailureReason", "Inference component failed"))
-            update = {k: v for k, v in inference_component.items()
-                      if k in ("InferenceComponentName", "Specification", "Specifications", "RuntimeConfig")}
-            client.update_inference_component(**update)
+            raise RuntimeError(
+                f"Component {component} failed. Use a new --component name to retain the existing resource. "
+                + existing.get("FailureReason", "")
+            )
     except ClientError as exc:
         if not missing(exc):
             raise
+        current_endpoint = client.describe_endpoint(EndpointName=endpoint)
+        count = sum(v.get("CurrentInstanceCount", 0) for v in current_endpoint.get("ProductionVariants", []))
+        if count == 0:
+            # Empty IC endpoints may already have released the bootstrap host.
+            # Initial CreateInferenceComponent requires available hardware.
+            client.update_endpoint_weights_and_capacities(
+                EndpointName=endpoint,
+                DesiredWeightsAndCapacities=[{"VariantName": "AllTraffic", "DesiredInstanceCount": 1}],
+            )
+            if not args.wait:
+                print("Provisioning one bootstrap instance; rerun with --apply --wait.", flush=True)
+                return
+            current_endpoint = wait_ready(
+                client, "describe_endpoint", "EndpointName", endpoint, "EndpointStatus"
+            )
+            if not any(v.get("CurrentInstanceCount", 0) for v in current_endpoint.get("ProductionVariants", [])):
+                raise RuntimeError("Bootstrap hardware is not available yet.")
         client.create_inference_component(**inference_component)
     if args.wait:
         wait_ready(client, "describe_inference_component", "InferenceComponentName",

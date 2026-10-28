@@ -75,13 +75,13 @@ python backend/scripts/deploy_stt_scaling.py nemotron \
   --apply --wait --role "$SAGEMAKER_ROLE_ARN"
 ```
 
-기본 엔드포인트 이름은 `transmeet-qwen3-asr`, `transmeet-nemotron-asr`다. 컴포넌트 이름은 각각 엔드포인트 이름에 `-ic`를 붙인다. Qwen은 `ml.g6.xlarge`, `ml.g6.2xlarge` 우선순위 풀을 사용한다. 스크립트는 리전의 모델 메타데이터로 지원 여부를 검사한다.
+기본 엔드포인트 이름은 `transmeet-qwen3-asr`, `transmeet-nemotron-asr`다. 컴포넌트 이름은 `transmeet-qwen3-asr-ic-v2`, `transmeet-nemotron-asr-ic-v2`다. Qwen은 `ml.g6.xlarge`, `ml.g6.2xlarge` 우선순위 풀을 사용한다. 스크립트는 리전의 모델 메타데이터로 지원 여부를 검사한다.
 
 ```bash
 export QWEN_ASR_ENDPOINT=transmeet-qwen3-asr
 export NEMOTRON_ASR_ENDPOINT=transmeet-nemotron-asr
-export QWEN_ASR_INFERENCE_COMPONENT=transmeet-qwen3-asr-ic
-export NEMOTRON_ASR_INFERENCE_COMPONENT=transmeet-nemotron-asr-ic
+export QWEN_ASR_INFERENCE_COMPONENT=transmeet-qwen3-asr-ic-v2
+export NEMOTRON_ASR_INFERENCE_COMPONENT=transmeet-nemotron-asr-ic-v2
 export STT_IDLE_SECONDS=300
 ```
 

@@ -19,6 +19,7 @@ MODELS = {
         "instance_type": "ml.g6.xlarge",
         "endpoint": "transmeet-qwen3-asr",
         "setting": "QWEN_ASR_ENDPOINT",
+        "component": "transmeet-qwen3-asr-ic-v2",
     },
     "nemotron": {
         "model_id": "huggingface-asr-nvidia-nemotron-3-5-asr-streaming-0-6b",
@@ -26,6 +27,7 @@ MODELS = {
         "instance_type": "ml.g5.2xlarge",
         "endpoint": "transmeet-nemotron-asr",
         "setting": "NEMOTRON_ASR_ENDPOINT",
+        "component": "transmeet-nemotron-asr-ic-v2",
     },
 }
 
