@@ -43,7 +43,7 @@ const DEFAULT: Settings = {
   sourceLang: 'en',
   targetLang: 'ko',
   audioSource: 'mic',
-  sttProvider: 'whisper',
+  sttProvider: 'transcribe',
   ttsAutoPlay: true,
   pollyEngine: 'generative',
   pollyVoiceId: 'Ruth',

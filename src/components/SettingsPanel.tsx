@@ -171,8 +171,8 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
             <div className="flex gap-1.5">
               {(
                 [
-                  ['whisper', 'SageMaker Whisper'],
                   ['transcribe', 'AWS Transcribe'],
+                  ['whisper', 'SageMaker Whisper'],
                 ] as const
               ).map(([val, label]) => (
                 <button
