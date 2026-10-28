@@ -19,6 +19,7 @@ import {
   isSummaryStyle,
   type SummaryCustom,
 } from '../../../src/lib/summaryStyles'
+import { deleteMessages, loadMessages } from '../shared/messages'
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({ region: process.env.REGION }))
 const s3 = new S3Client({ region: process.env.REGION })
@@ -120,12 +121,6 @@ function respond(statusCode: number, body: unknown): APIGatewayProxyResult {
   return { statusCode, headers, body: JSON.stringify(body) }
 }
 
-interface MeetingMessage {
-  speaker: string
-  originalText: string
-  translatedText: string
-}
-
 // createdAt 이 없거나 파싱 불가한 레코드도 존재할 수 있다(중단된 세션/과거 데이터).
 // NaN 을 반환하는 비교 함수는 정렬 결과 전체를 뒤섞으므로 항상 유효한 순서를 돌려준다.
 function createdAtMs(item: Record<string, unknown>): number {
@@ -174,11 +169,15 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           if (!result.Item) {
             return respond(404, { error: 'Meeting not found' })
           }
+          // 대화는 메시지 테이블에 있다. 예전 항목에 남은 messages 속성은 버리고 테이블 값만 쓴다.
+          const { messages: _legacyMessages, ...meeting } = result.Item
+          const messages = await loadMessages(ddb, meetingId)
           const page = await loadPage(meetingId)
           const summaryCustom =
             result.Item.summaryStyle === CUSTOM_SUMMARY_STYLE ? await loadSummaryCustom(meetingId, userId) : undefined
           return respond(200, {
-            ...result.Item,
+            ...meeting,
+            messages,
             ...(page ? { page: toMeetingPage(page) } : {}),
             ...(summaryCustom ? { summaryCustom } : {}),
           })
@@ -225,13 +224,13 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             return respond(404, { error: 'Meeting not found' })
           }
 
-          const messages = (result.Item.messages ?? []) as MeetingMessage[]
+          // 제목에는 앞 20개 발언이면 충분하다.
+          const messages = await loadMessages(ddb, meetingId, { limit: 20 })
           if (messages.length === 0) {
             return respond(400, { error: 'No messages to generate title from' })
           }
 
           const transcript = messages
-            .slice(0, 20)
             .map((m) => `[${m.speaker}] ${m.originalText}`)
             .join('\n')
 
@@ -284,9 +283,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           status: 'active',
           createdAt: now,
           updatedAt: now,
-          messages: [],
-          // 목록 API 는 messages 를 투사하지 않는다. 빈 회의 자동 정리가
-          // messageCount === 0 을 근거로 삼으므로 생성 시점부터 0 을 기록한다.
+          // 대화는 메시지 테이블에 쌓이므로 미팅 항목에는 messages 를 두지 않는다.
+          // 빈 회의 자동 정리가 messageCount === 0 을 근거로 삼으므로 생성 시점부터 0 을 기록한다.
           messageCount: 0,
           summary: null,
           summaryStyle: DEFAULT_SUMMARY_STYLE,
@@ -297,7 +295,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             Item: newMeeting,
           })
         )
-        return respond(201, newMeeting)
+        return respond(201, { ...newMeeting, messages: [] })
       }
 
       case 'PUT': {
@@ -396,6 +394,8 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         }
         await deleteMeetingAudio(meetingId)
         await ddb.send(new DeleteCommand({ TableName: SNAPSHOTS_TABLE(), Key: { meetingId } }))
+        // 대화를 먼저 지운다. 실패하면 던져서 500 으로 끝내고 미팅 항목은 남긴다(재시도 가능).
+        await deleteMessages(ddb, meetingId)
         await ddb.send(
           new DeleteCommand({
             TableName: process.env.MEETINGS_TABLE,

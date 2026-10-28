@@ -17,6 +17,7 @@ import {
   SUMMARY_MAX_TOKENS,
   SUMMARY_SYSTEM_PROMPT,
 } from '../shared/summaryPrompt';
+import { loadMessages, type StoredMessage } from '../shared/messages';
 import { normalizeSummaryStyle } from '../../../src/lib/summaryStyles';
 
 const ddb = DynamoDBDocumentClient.from(
@@ -29,14 +30,6 @@ const headers = {
   'Access-Control-Allow-Origin': '*',
 };
 
-interface MeetingMessage {
-  id: string;
-  speaker: string;
-  originalText: string;
-  translatedText: string;
-  timestamp: string;
-}
-
 const DEFAULT_TITLE_PREFIX = 'Meeting ';
 // 기본 날짜·시간 형식. backend/app/ws_handler.py 의 판별식과 맞춘다.
 const DEFAULT_TITLE_TIMESTAMP = /^\d{4}\. \d{1,2}\. \d{1,2}\. (?:오전|오후) \d{1,2}:\d{2}:\d{2}$/;
@@ -44,7 +37,7 @@ const DEFAULT_TITLE_TIMESTAMP = /^\d{4}\. \d{1,2}\. \d{1,2}\. (?:오전|오후) 
 async function maybeGenerateTitle(args: {
   meetingId: string;
   currentTitle: string;
-  messages: MeetingMessage[];
+  messages: StoredMessage[];
 }): Promise<string | null> {
   const { meetingId, currentTitle, messages } = args;
   if (!currentTitle.startsWith(DEFAULT_TITLE_PREFIX) && !DEFAULT_TITLE_TIMESTAMP.test(currentTitle)) return null;
@@ -209,7 +202,7 @@ export const handler = async (
     const custom = snapshot?.userId === userId ? parseSummaryCustom(snapshot) : null;
     const summaryStyle = resolveSummaryStyle(body.summaryStyle, result.Item.summaryStyle, custom);
     const summaryLabel = summaryStyle === 'custom' && custom ? custom.name : undefined;
-    const messages = (result.Item.messages ?? []) as MeetingMessage[];
+    const messages = await loadMessages(ddb, meetingId);
     if (messages.length === 0) {
       return {
         statusCode: 400,

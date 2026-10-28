@@ -5,7 +5,7 @@ import test from 'node:test'
 import ts from 'typescript'
 import { loadTypeScript } from './helpers/loadTypeScript.mjs'
 
-const sources = Object.fromEntries(['meetings/index', 'summarize/index', 'shared/owner'].map((name) => [
+const sources = Object.fromEntries(['meetings/index', 'summarize/index', 'shared/owner', 'shared/messages'].map((name) => [
   name,
   ts.transpileModule(
     readFileSync(new URL(`../infra/lambda/${name}.ts`, import.meta.url), 'utf8'),
@@ -21,15 +21,24 @@ class Command {
 class GetCommand extends Command {}
 class PutCommand extends Command {}
 class UpdateCommand extends Command {}
+class QueryCommand extends Command {}
+class BatchWriteCommand extends Command {}
+
+process.env.MESSAGES_TABLE = 'transmeet-messages'
 
 const generatedTitle = '제품 출시 일정 확정'
 
 function setup() {
   let item
+  let storedMessages = []
   const updates = []
   const ddb = {
     async send(command) {
       if (command instanceof GetCommand) return { Item: item }
+      if (command instanceof QueryCommand) {
+        assert.equal(command.input.TableName, 'transmeet-messages')
+        return { Items: storedMessages }
+      }
       if (command instanceof PutCommand) {
         item = command.input.Item
         return {}
@@ -49,6 +58,8 @@ function setup() {
       GetCommand,
       PutCommand,
       UpdateCommand,
+      QueryCommand,
+      BatchWriteCommand,
     },
     '@aws-sdk/client-s3': { S3Client: class {} },
     '@aws-sdk/client-bedrock-runtime': {
@@ -74,6 +85,7 @@ function setup() {
     return exports
   }
   dependencies['../shared/owner'] = load('shared/owner')
+  dependencies['../shared/messages'] = load('shared/messages')
   const meetings = load('meetings/index')
   const summarize = load('summarize/index')
   const requestContext = { authorizer: { claims: { sub: 'user-1' } } }
@@ -86,7 +98,7 @@ function setup() {
       body: JSON.stringify({ title }),
     }),
     summarize: () => {
-      item.messages = [{ id: 'message-1', originalText: '다음 주에 출시합니다.' }]
+      storedMessages = [{ meetingId: item.meetingId, sk: 't#message-1', id: 'message-1', originalText: '다음 주에 출시합니다.' }]
       return summarize.handler({
         httpMethod: 'POST',
         pathParameters: { id: item.meetingId },

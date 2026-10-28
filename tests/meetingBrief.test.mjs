@@ -17,6 +17,10 @@ class Command {
 }
 class GetCommand extends Command {}
 class UpdateCommand extends Command {}
+class QueryCommand extends Command {}
+class BatchWriteCommand extends Command {}
+
+process.env.MESSAGES_TABLE = 'transmeet-messages'
 class ConverseCommand extends Command {}
 
 function setup({
@@ -35,14 +39,17 @@ function setup({
     userId: owner,
     title,
     summary: '기존 상세 요약',
-    messages: [{ id: 'saved-1', originalText: '저장된 첫 발언', speaker: 'speaker1' }],
   }
+  const storedMessages = [
+    { meetingId: 'meeting-1', sk: 't#saved-1', id: 'saved-1', originalText: '저장된 첫 발언', speaker: 'speaker1' },
+  ]
   const ddb = {
     async send(command) {
       if (command instanceof GetCommand) {
         if (beforeRead) await beforeRead()
         return { Item: item }
       }
+      if (command instanceof QueryCommand) return { Items: storedMessages }
       assert.ok(command instanceof UpdateCommand)
       if (saveError) throw saveError
       if (enforceOrdering) {
@@ -78,7 +85,12 @@ function setup({
       DynamoDBDocumentClient: { from: () => ddb },
       GetCommand,
       UpdateCommand,
+      QueryCommand,
+      BatchWriteCommand,
     },
+    '../shared/messages': loadTypeScript('infra/lambda/shared/messages.ts', {
+      '@aws-sdk/lib-dynamodb': { QueryCommand, BatchWriteCommand },
+    }),
     '@aws-sdk/client-bedrock-runtime': {
       BedrockRuntimeClient: class {
         send(command) {
