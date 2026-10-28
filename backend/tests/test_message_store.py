@@ -117,3 +117,21 @@ def test_load_messages_custom_table_and_missing_attrs():
     assert ddb.queries[0]["TableName"] == "other"
     assert out == [{"id": "z", "speaker": "", "originalText": "", "translatedText": "",
                     "detectedLanguage": "", "timestamp": ""}]
+
+
+def test_append_message_keeps_target_language():
+    ddb = FakeDdb()
+    run(message_store.append_message(ddb, "mtg", {**_msg(1), "targetLanguage": "en"}, updated_at="t"))
+    run(message_store.append_message(ddb, "mtg", {**_msg(2), "targetLanguage": ""}, updated_at="t"))
+    with_lang = ddb.transactions[0]["TransactItems"][0]["Put"]["Item"]
+    without = ddb.transactions[1]["TransactItems"][0]["Put"]["Item"]
+    assert with_lang["targetLanguage"] == {"S": "en"}
+    assert "targetLanguage" not in without
+
+
+def test_load_messages_returns_target_language_when_present():
+    has = {**_item(1), "targetLanguage": {"S": "ko"}}
+    ddb = FakeDdb([{"Items": [has, _item(2)]}])
+    out = run(message_store.load_messages(ddb, "mtg"))
+    assert out[0]["targetLanguage"] == "ko"
+    assert "targetLanguage" not in out[1]

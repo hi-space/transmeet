@@ -593,6 +593,7 @@ async def _process_segment(
                 "originalText": original_text,
                 "translatedText": translated_text,
                 "detectedLanguage": detected_language,
+                "targetLanguage": translation_target,
                 "timestamp": timestamp,
             },
             log_tag="process_segment",

@@ -10,6 +10,8 @@ from botocore.exceptions import ClientError
 
 from .config import config
 
+# 필수 6개 필드 외에 선택 필드 targetLanguage('ko'|'en')가 있으면 함께 저장·반환한다.
+OPTIONAL_FIELDS = ("targetLanguage",)
 MESSAGE_FIELDS = ("id", "speaker", "originalText", "translatedText", "detectedLanguage", "timestamp")
 
 
@@ -24,6 +26,9 @@ async def append_message(ddb, meeting_id: str, message: Dict[str, str], *, updat
     회의 항목이 없으면 트랜잭션이 취소된다(is_missing_meeting 으로 판별). 예외는 그대로 던진다.
     """
     item = {field: {"S": message.get(field) or ""} for field in MESSAGE_FIELDS}
+    for field in OPTIONAL_FIELDS:
+        if message.get(field):
+            item[field] = {"S": message[field]}
     item["meetingId"] = {"S": meeting_id}
     item["sk"] = {"S": sort_key(message["timestamp"], message["id"])}
     await ddb.transact_write_items(
@@ -81,7 +86,11 @@ async def load_messages(
             params["ExclusiveStartKey"] = start_key
         resp = await ddb.query(**params)
         for item in resp.get("Items", []):
-            messages.append({f: item.get(f, {}).get("S", "") for f in MESSAGE_FIELDS})
+            msg = {f: item.get(f, {}).get("S", "") for f in MESSAGE_FIELDS}
+            for f in OPTIONAL_FIELDS:
+                if item.get(f, {}).get("S"):
+                    msg[f] = item[f]["S"]
+            messages.append(msg)
             if limit is not None and len(messages) >= limit:
                 return messages
         start_key = resp.get("LastEvaluatedKey")

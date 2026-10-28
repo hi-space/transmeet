@@ -114,6 +114,7 @@ async def test_same_language_destination_preserves_original_and_still_saves(
     record = saved[0]["TransactItems"][0]["Put"]["Item"]
     assert record["originalText"]["S"] == record["translatedText"]["S"] == text
     assert record["detectedLanguage"]["S"] == language
+    assert record["targetLanguage"]["S"] == language
     assert final_events(ws)[0]["targetLanguage"] == language
 
 
