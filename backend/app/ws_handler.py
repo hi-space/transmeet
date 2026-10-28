@@ -1341,8 +1341,18 @@ async def _send_end_email(state: ConnectionState, meeting_id: str, summary: Opti
     return "sent"
 
 
-async def _end_meeting(send, state: ConnectionState, meeting_id: str, *, email_on_end: bool) -> None:
-    """오디오 마무리 → 요약 → 메일. `send` 는 미팅 브로드캐스터라 소켓이 바뀌어도 끝까지 간다."""
+async def _end_meeting(
+    send,
+    state: ConnectionState,
+    meeting_id: str,
+    *,
+    email_on_end: bool,
+    inline_messages: Optional[list] = None,
+) -> None:
+    """오디오 마무리 → 요약 → 메일. `send` 는 미팅 브로드캐스터라 소켓이 바뀌어도 끝까지 간다.
+
+    `inline_messages` 는 화면의 발언 — 녹음 직후엔 마지막 발언이 아직 저장 전일 수 있다 (summarize 와 같은 이유).
+    """
     try:
         await send({"type": "meeting_end", "meetingId": meeting_id, "phase": "audio"})
         # 메일을 안 보내도 합쳐 둔다 — 다운로드 버튼이 기다리지 않게
@@ -1357,7 +1367,7 @@ async def _end_meeting(send, state: ConnectionState, meeting_id: str, *, email_o
             )
 
         await send({"type": "meeting_end", "meetingId": meeting_id, "phase": "summary"})
-        summary = await _stream_summary(send, meeting_id, state.model_id)
+        summary = await _stream_summary(send, meeting_id, state.model_id, inline_messages=inline_messages)
 
         status = await _send_end_email(state, meeting_id, summary) if email_on_end else "skipped"
         await send({"type": "meeting_end", "meetingId": meeting_id, "phase": "email", "status": status})
@@ -1579,7 +1589,9 @@ async def ws_endpoint(
                 else:
                     await _stop_recording(state, ws, connection_id)
                     asyncio.create_task(_end_meeting(
-                        _meeting_broadcaster(mid), state, mid, email_on_end=bool(data.get("emailOnEnd")),
+                        _meeting_broadcaster(mid), state, mid,
+                        email_on_end=bool(data.get("emailOnEnd")),
+                        inline_messages=data.get("messages"),
                     ))
 
             elif action == "prepare_audio":

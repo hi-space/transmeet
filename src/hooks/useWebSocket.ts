@@ -308,6 +308,36 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     return true
   }, [])
 
+  // 미팅 종료: 녹음을 멈추고 서버가 오디오 → 요약 → (켜져 있으면) 메일을 끝까지 처리한다
+  const sendEndMeeting = useCallback(
+    (
+      meetingId: string,
+      emailOnEnd: boolean,
+      messages?: { speaker: string; original: string; timestamp?: string }[]
+    ): boolean => {
+      const ws = wsRef.current
+      if (!ws || ws.readyState !== WebSocket.OPEN) return false
+      ws.send(
+        JSON.stringify({
+          action: 'endMeeting',
+          meetingId,
+          emailOnEnd,
+          ...(messages && { messages }),
+        })
+      )
+      return true
+    },
+    []
+  )
+
+  // 그 순간까지의 녹음을 합친 MP3 서명 URL 을 요청한다 — 응답은 audio_ready
+  const sendPrepareAudio = useCallback((meetingId: string): boolean => {
+    const ws = wsRef.current
+    if (!ws || ws.readyState !== WebSocket.OPEN) return false
+    ws.send(JSON.stringify({ action: 'prepare_audio', meetingId }))
+    return true
+  }, [])
+
   const sendUnpublishPage = useCallback((meetingId: string): boolean => {
     const ws = wsRef.current
     if (!ws || ws.readyState !== WebSocket.OPEN) return false
@@ -413,5 +443,7 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     sendGeneratePage,
     sendPageStatus,
     sendUnpublishPage,
+    sendEndMeeting,
+    sendPrepareAudio,
   }
 }

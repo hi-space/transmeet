@@ -61,6 +61,23 @@ export interface PageStreamServerMessage {
   error?: string
 }
 
+/** 미팅 종료 진행. email 단계의 status 로 메일 결과를 안다 */
+export interface MeetingEndServerMessage {
+  type: 'meeting_end'
+  meetingId?: string
+  phase: 'audio' | 'summary' | 'email' | 'done' | 'error'
+  status?: 'sent' | 'skipped' | 'unverified' | 'already_sent' | 'no_email' | 'failed'
+  error?: string
+}
+
+/** prepare_audio 응답 — url(5분 유효) 또는 error */
+export interface AudioReadyServerMessage {
+  type: 'audio_ready'
+  meetingId: string
+  url?: string
+  error?: string
+}
+
 export interface ErrorServerMessage {
   type: 'error'
   message: string
@@ -79,5 +96,7 @@ export type WsServerMessage =
   | SummaryStreamServerMessage
   | QaStreamServerMessage
   | PageStreamServerMessage
+  | MeetingEndServerMessage
+  | AudioReadyServerMessage
   | ErrorServerMessage
   | PongServerMessage

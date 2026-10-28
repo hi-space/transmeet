@@ -25,6 +25,12 @@ export interface ApiMeeting {
   page?: MeetingPage
 }
 
+/** 미팅 종료 메일 수신 주소(로그인 계정)의 SES 인증 상태 */
+export interface EmailStatus {
+  email: string
+  status: 'verified' | 'pending' | 'none'
+}
+
 export interface TtsResponse {
   audioData: string // base64 MP3
   translatedText: string
@@ -139,6 +145,11 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify({ title }),
       }),
+  },
+  email: {
+    status: () => apiFetch<EmailStatus>('/me/email'),
+    // 인증 메일 (재)발송 — 받은 메일의 링크를 눌러야 verified 가 된다
+    verify: () => apiFetch<EmailStatus>('/me/email/verify', { method: 'POST' }),
   },
   tts: {
     synthesize: (

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import type { Settings } from '@/hooks/useSettings'
 import { supportsSystemAudio } from '@/lib/platform'
+import EmailNotifySetting from '@/components/EmailNotifySetting'
 
 interface Props {
   settings: Settings
@@ -376,6 +377,12 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
               이 문장 수에 도달하면 새 말풍선 시작. 단, 문장이 중간에 끊긴 경우는 항상 이어붙입니다
             </p>
           </div>
+
+          {/* Divider */}
+          <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
+
+          {/* ── Meeting end email ───────────────────────────────────────────── */}
+          <EmailNotifySetting settings={settings} onUpdate={handleUpdate} />
 
           {/* Divider */}
           <div className="my-4 h-px bg-slate-200 dark:bg-slate-800" />
