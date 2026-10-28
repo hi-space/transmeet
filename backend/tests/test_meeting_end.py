@@ -4,6 +4,7 @@
 """
 import asyncio
 import json
+import logging
 from contextlib import asynccontextmanager
 
 import pytest
@@ -41,6 +42,9 @@ class FakeDDB:
             "timestamp": {"S": "2026-10-28T00:01:00+00:00"},
         }]
         self.page = None
+        # 회의 항목이 지워졌으면 attribute_exists(meetingId) 조건 쓰기가 실패한다
+        self.deleted = False
+        self.updates = []
 
     async def query(self, **kw):
         assert kw["TableName"] == ws_handler.config.MESSAGES_TABLE
@@ -49,9 +53,12 @@ class FakeDDB:
     async def get_item(self, **kw):
         if kw["TableName"] == ws_handler.config.PAGES_TABLE:
             return {"Item": self.page} if self.page else {}
-        return {"Item": dict(self.item)}
+        return {} if self.deleted else {"Item": dict(self.item)}
 
     async def update_item(self, **kw):
+        self.updates.append(kw)
+        if self.deleted and "attribute_exists(meetingId)" in kw.get("ConditionExpression", ""):
+            raise ClientError({"Error": {"Code": "ConditionalCheckFailedException"}}, "UpdateItem")
         expr = kw["UpdateExpression"]
         if "emailSentAt" in expr and expr.startswith("SET"):
             await asyncio.sleep(0)  # 동시 종료가 서로 끼어들 틈
@@ -472,3 +479,45 @@ async def test_upload_marks_has_audio(env):
     await ws_handler._flush_meeting_audio("m1")
     assert env["ddb"].item["hasAudio"] == {"BOOL": True}
     assert "m1" not in ws_handler._pending_uploads  # 끝난 업로드 집합은 정리된다
+
+
+async def test_meeting_updates_are_guarded_against_deleted_meetings(env):
+    """hasAudio·endedAt·emailSentAt(설정·해제) 모두 회의 항목이 있을 때만 쓴다(지운 회의를 되살리지 않는다)."""
+    env["send_fails"]["value"] = True  # 발송권을 얻었다가 돌려놓는 경로까지
+    state, ws = make_state()
+    ws_handler._buffer_audio(state, "conn-1", b"\x01\x00" * 10)
+    await ws_handler._end_meeting(ws_handler._meeting_broadcaster("m1"), state, "m1", email_on_end=True)
+    await asyncio.gather(*ws_handler._pending_uploads.get("m1", set()))
+    exprs = [u["UpdateExpression"].split()[:2] for u in env["ddb"].updates]
+    assert ["SET", "hasAudio"] in exprs and ["SET", "endedAt"] in exprs
+    assert ["SET", "emailSentAt"] in exprs and ["REMOVE", "emailSentAt"] in exprs
+    for update in env["ddb"].updates:
+        assert "attribute_exists(meetingId)" in update["ConditionExpression"], update
+    claim = next(u for u in env["ddb"].updates if u["UpdateExpression"].startswith("SET emailSentAt"))
+    assert claim["ConditionExpression"] == "attribute_exists(meetingId) AND attribute_not_exists(emailSentAt)"
+
+
+async def test_end_meeting_for_deleted_meeting_stops_with_warning(env, caplog):
+    env["ddb"].deleted = True
+    state, ws = make_state()
+    with caplog.at_level(logging.WARNING):
+        await ws_handler._end_meeting(ws_handler._meeting_broadcaster("m1"), state, "m1", email_on_end=True)
+    assert env["calls"]["summaries"] == 0
+    assert env["calls"]["sent"] == []
+    assert env["calls"]["pages"] == []
+    assert events(ws, "meeting_end")[-1]["phase"] == "error"
+    assert any(r.levelno == logging.WARNING and "meeting does not exist" in r.getMessage() for r in caplog.records)
+    assert not any(r.levelno >= logging.ERROR for r in caplog.records)
+
+
+async def test_audio_and_email_marks_on_deleted_meeting_only_warn(env, caplog):
+    env["ddb"].deleted = True
+    with caplog.at_level(logging.WARNING):
+        await ws_handler._mark_has_audio("m1")
+        assert await ws_handler._claim_email_send("m1") is False
+        await ws_handler._release_email_send("m1")
+    assert len(env["ddb"].updates) == 3
+    assert not any(r.levelno >= logging.ERROR for r in caplog.records)
+    # 이미 지워진 회의에 구간마다 다시 쓰지 않는다
+    await ws_handler._mark_has_audio("m1")
+    assert len(env["ddb"].updates) == 3

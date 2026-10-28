@@ -24,6 +24,11 @@ const ddb = DynamoDBDocumentClient.from(
   new DynamoDBClient({ region: process.env.REGION })
 );
 const bedrock = new BedrockRuntimeClient({ region: process.env.REGION });
+// UpdateItem 은 키가 없으면 항목을 새로 만든다. 그사이 지워진 미팅을 되살리지 않도록 갱신에 붙인다.
+const MEETING_EXISTS = 'attribute_exists(meetingId)';
+
+const isConditionFailed = (err: unknown) =>
+  err instanceof Error && err.name === 'ConditionalCheckFailedException';
 
 const headers = {
   'Content-Type': 'application/json',
@@ -75,6 +80,7 @@ async function maybeGenerateTitle(args: {
         TableName: process.env.MEETINGS_TABLE,
         Key: { meetingId },
         UpdateExpression: 'SET title = :t, updatedAt = :u',
+        ConditionExpression: MEETING_EXISTS,
         ExpressionAttributeValues: {
           ':t': title,
           ':u': new Date().toISOString(),
@@ -83,6 +89,10 @@ async function maybeGenerateTitle(args: {
     );
     return title;
   } catch (err) {
+    if (isConditionFailed(err)) {
+      console.warn('Auto-title skipped — meeting does not exist:', meetingId);
+      return null;
+    }
     console.error('Auto-title generation failed:', err);
     return null;
   }
@@ -135,7 +145,7 @@ async function generateBrief(
       Key: { meetingId },
       UpdateExpression: 'SET brief = :b, briefUpdatedAt = :t, briefMessageCount = :c, briefLastMessageId = :id',
       // A slow response must not replace a newer brief or recreate a deleted meeting.
-      ConditionExpression: 'attribute_exists(meetingId) AND (attribute_not_exists(briefUpdatedAt) OR briefUpdatedAt < :t)',
+      ConditionExpression: `${MEETING_EXISTS} AND (attribute_not_exists(briefUpdatedAt) OR briefUpdatedAt < :t)`,
       ExpressionAttributeValues: {
         ':b': brief,
         ':t': briefUpdatedAt,
@@ -144,7 +154,7 @@ async function generateBrief(
       },
     }));
   } catch (err) {
-    if (err instanceof Error && err.name === 'ConditionalCheckFailedException') {
+    if (isConditionFailed(err)) {
       return respond(409, { error: 'Meeting changed while generating the brief' });
     }
     throw err;
@@ -236,21 +246,34 @@ export const handler = async (
       bedrockRes.output?.message?.content?.find((b) => b.text)?.text ?? '';
 
     // Persist summary
-    await ddb.send(
-      new UpdateCommand({
-        TableName: process.env.MEETINGS_TABLE,
-        Key: { meetingId },
-        UpdateExpression: summaryLabel
-          ? 'SET summary = :s, summarizedAt = :t, summaryGeneratedStyle = :style, summaryGeneratedLabel = :label'
-          : 'SET summary = :s, summarizedAt = :t, summaryGeneratedStyle = :style REMOVE summaryGeneratedLabel',
-        ExpressionAttributeValues: {
-          ':s': summary,
-          ':style': summaryStyle,
-          ':t': new Date().toISOString(),
-          ...(summaryLabel ? { ':label': summaryLabel } : {}),
-        },
-      })
-    );
+    try {
+      await ddb.send(
+        new UpdateCommand({
+          TableName: process.env.MEETINGS_TABLE,
+          Key: { meetingId },
+          UpdateExpression: summaryLabel
+            ? 'SET summary = :s, summarizedAt = :t, summaryGeneratedStyle = :style, summaryGeneratedLabel = :label'
+            : 'SET summary = :s, summarizedAt = :t, summaryGeneratedStyle = :style REMOVE summaryGeneratedLabel',
+          ConditionExpression: MEETING_EXISTS,
+          ExpressionAttributeValues: {
+            ':s': summary,
+            ':style': summaryStyle,
+            ':t': new Date().toISOString(),
+            ...(summaryLabel ? { ':label': summaryLabel } : {}),
+          },
+        })
+      );
+    } catch (err) {
+      // 요약하는 사이 미팅이 지워졌다 — 자동 제목도 만들지 않는다
+      if (isConditionFailed(err)) {
+        return {
+          statusCode: 404,
+          headers,
+          body: JSON.stringify({ error: 'Meeting not found' }),
+        };
+      }
+      throw err;
+    }
 
     const newTitle = await maybeGenerateTitle({
       meetingId,

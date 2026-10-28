@@ -30,7 +30,7 @@ const stored = [
   { meetingId: 'm1', sk: '2026-10-28T00:00:01Z#b', id: 'b', speaker: 's2', originalText: '네', translatedText: 'yes', detectedLanguage: 'ko', timestamp: '2026-10-28T00:00:01Z' },
 ]
 
-function setup({ meetingItem, failBatch = false } = {}) {
+function setup({ meetingItem, failBatch = false, updateError } = {}) {
   const sent = []
   const ddb = {
     async send(command) {
@@ -48,6 +48,7 @@ function setup({ meetingItem, failBatch = false } = {}) {
         if (failBatch) throw new Error('batch write failed')
         return {}
       }
+      if (command instanceof UpdateCommand && updateError) throw updateError
       return {}
     },
   }
@@ -134,4 +135,32 @@ test('DELETE keeps the meeting when message deletion fails', async () => {
   assert.ok(!sent.some((c) => c instanceof DeleteCommand && c.input.TableName === 'transmeet-meetings'))
   const keyQuery = sent.find((c) => c instanceof QueryCommand && c.input.ProjectionExpression === 'meetingId, sk')
   assert.equal(keyQuery?.input.TableName, 'transmeet-messages')
+})
+
+const conditionFailed = () => Object.assign(new Error('The conditional request failed'), {
+  name: 'ConditionalCheckFailedException',
+})
+
+test('PUT /meetings/{id}/title only updates an existing meeting', async () => {
+  const { call, sent } = setup({ meetingItem: ownedMeeting() })
+  const res = await call('PUT', '/meetings/{id}/title', { body: JSON.stringify({ title: '새 제목' }) })
+  assert.equal(res.statusCode, 200)
+  const update = sent.find((c) => c instanceof UpdateCommand)
+  assert.equal(update.input.UpdateExpression, 'SET title = :t, updatedAt = :u')
+  assert.equal(update.input.ConditionExpression, 'attribute_exists(meetingId)')
+})
+
+test('PUT /meetings/{id}/title returns 404 when the meeting was deleted meanwhile', async () => {
+  const { call } = setup({ meetingItem: ownedMeeting(), updateError: conditionFailed() })
+  const res = await call('PUT', '/meetings/{id}/title', { body: JSON.stringify({ title: '새 제목' }) })
+  assert.equal(res.statusCode, 404)
+  assert.deepEqual(JSON.parse(res.body), { error: 'Meeting not found' })
+})
+
+test('PUT /meetings/{id}/summary-style maps a failed condition to 404', async () => {
+  const { call, sent } = setup({ meetingItem: ownedMeeting(), updateError: conditionFailed() })
+  const res = await call('PUT', '/meetings/{id}/summary-style', { body: JSON.stringify({ summaryStyle: 'report' }) })
+  assert.equal(res.statusCode, 404)
+  const update = sent.find((c) => c instanceof UpdateCommand)
+  assert.equal(update.input.ConditionExpression, 'attribute_exists(meetingId) AND userId = :uid')
 })

@@ -3,9 +3,11 @@
 Opus 5.5 는 첫 토큰까지 수 초~수십 초 침묵한다. 그 사이 미팅 전환·재접속으로 소켓이 바뀌면
 요청한 소켓에 묶인 요약은 닫힌 소켓에 보내다 예외로 죽고 저장도 안 됐다(2026-10-09 운영 로그).
 """
+import logging
 from contextlib import asynccontextmanager
 
 import pytest
+from botocore.exceptions import ClientError
 
 from app import ws_handler
 from app.ws_handler import ConnectionState
@@ -41,10 +43,12 @@ class FakeBedrock:
 
 
 class FakeDDB:
-    def __init__(self, title="주간 1:1", summary_style=None, messages=None):
+    def __init__(self, title="주간 1:1", summary_style=None, messages=None, deleted=False):
         self.title = title
         self.summary_style = summary_style
         self.messages = messages or []
+        # 회의 항목이 지워졌으면 attribute_exists(meetingId) 조건 쓰기가 실패한다
+        self.deleted = deleted
         # 호출 기록
         self.gets = []
         self.updates = []
@@ -62,6 +66,8 @@ class FakeDDB:
 
     async def update_item(self, **kwargs):
         self.updates.append(kwargs)
+        if self.deleted and "attribute_exists(meetingId)" in kwargs.get("ConditionExpression", ""):
+            raise ClientError({"Error": {"Code": "ConditionalCheckFailedException"}}, "UpdateItem")
 
 
 def install(monkeypatch, bedrock, ddb):
@@ -383,3 +389,41 @@ async def test_stored_messages_are_read_from_messages_table(monkeypatch):
 
     assert "출시는 금요일" in bedrock.calls[0]["messages"][0]["content"][0]["text"]
     assert ddb.gets[0]["ProjectionExpression"] == "title, summaryStyle"
+
+
+async def test_summary_and_title_updates_never_recreate_a_deleted_meeting(monkeypatch):
+    bedrock, ddb = FakeBedrock(["요약"]), FakeDDB(title="2026. 10. 28. 오전 9:05:06")
+    install(monkeypatch, bedrock, ddb)
+
+    await ws_handler._stream_summary(ws_handler._meeting_broadcaster("m1"), "m1", "x", inline_messages=MESSAGES)
+
+    assert len(ddb.updates) == 2  # 요약, 자동 제목
+    assert all(u["ConditionExpression"] == "attribute_exists(meetingId)" for u in ddb.updates)
+
+
+async def test_summary_for_deleted_meeting_warns_and_reports_error(monkeypatch, caplog):
+    bedrock, ddb = FakeBedrock(["요약"]), FakeDDB(title="2026. 10. 28. 오전 9:05:06", deleted=True)
+    install(monkeypatch, bedrock, ddb)
+    ws = FakeWS()
+
+    with caplog.at_level(logging.WARNING):
+        result = await ws_handler._stream_summary(ws.send_json, "m1", "x", inline_messages=MESSAGES)
+
+    assert result is None
+    assert ws.sent[-1]["phase"] == "error"
+    assert len(ddb.updates) == 1  # 요약 저장이 실패하면 제목은 만들지 않는다
+    assert any(r.levelno == logging.WARNING and "meeting does not exist" in r.getMessage() for r in caplog.records)
+    assert not any(r.levelno >= logging.ERROR for r in caplog.records)
+
+
+async def test_auto_title_for_deleted_meeting_warns(monkeypatch, caplog):
+    bedrock, ddb = FakeBedrock([]), FakeDDB(deleted=True)
+    install(monkeypatch, bedrock, ddb)
+
+    with caplog.at_level(logging.WARNING):
+        title = await ws_handler._generate_title_if_default("m1", "2026. 10. 28. 오전 9:05:06", ["[me] 안녕"], "x")
+
+    assert title is None
+    assert ddb.updates[0]["ConditionExpression"] == "attribute_exists(meetingId)"
+    assert any(r.levelno == logging.WARNING and "meeting does not exist" in r.getMessage() for r in caplog.records)
+    assert not any(r.levelno >= logging.ERROR for r in caplog.records)

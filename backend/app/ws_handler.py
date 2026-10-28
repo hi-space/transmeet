@@ -230,17 +230,34 @@ _pending_uploads: Dict[str, set] = {}
 _audio_marked: set = set()
 
 
+# 회의 항목 갱신 조건. UpdateItem 은 키가 없으면 항목을 새로 만들므로, 지워진 회의를
+# 키와 갱신 속성만 있는 유령 항목으로 되살리지 않도록 모든 갱신에 붙인다.
+MEETING_EXISTS = "attribute_exists(meetingId)"
+
+
+def _is_condition_failed(err: Exception) -> bool:
+    """UpdateItem 조건 실패(ConditionalCheckFailedException)인지."""
+    return isinstance(err, ClientError) and err.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException"
+
+
 async def _mark_has_audio(meeting_id: str) -> None:
     """녹음이 있는 미팅은 발언이 0개여도 '빈 미팅 정리'에서 지우지 않는다 (meetings Lambda 목록이 hasAudio 를 돌려준다)."""
     if meeting_id in _audio_marked:
         return
     async with dynamodb_client() as ddb:
-        await ddb.update_item(
-            TableName=config.MEETINGS_TABLE,
-            Key={"meetingId": {"S": meeting_id}},
-            UpdateExpression="SET hasAudio = :t",
-            ExpressionAttributeValues={":t": {"BOOL": True}},
-        )
+        try:
+            await ddb.update_item(
+                TableName=config.MEETINGS_TABLE,
+                Key={"meetingId": {"S": meeting_id}},
+                UpdateExpression="SET hasAudio = :t",
+                ConditionExpression=MEETING_EXISTS,
+                ExpressionAttributeValues={":t": {"BOOL": True}},
+            )
+        except ClientError as e:
+            if not _is_condition_failed(e):
+                raise
+            # 지워진 회의 — 구간마다 다시 쓰지 않도록 기록만 해 둔다
+            logger.warning("[audio] Skipped hasAudio — meeting does not exist: meeting_id=%s", meeting_id)
     _audio_marked.add(meeting_id)
 
 
@@ -1323,6 +1340,7 @@ async def _generate_title_if_default(
                 TableName=config.MEETINGS_TABLE,
                 Key={"meetingId": {"S": meeting_id}},
                 UpdateExpression="SET title = :t, #updatedAt = :u",
+                ConditionExpression=MEETING_EXISTS,
                 ExpressionAttributeNames={"#updatedAt": "updatedAt"},
                 ExpressionAttributeValues={
                     ":t": {"S": title},
@@ -1330,7 +1348,10 @@ async def _generate_title_if_default(
                 },
             )
         return title
-    except Exception:
+    except Exception as e:
+        if _is_condition_failed(e):
+            logger.warning("[title] Skipped save — meeting does not exist: meeting_id=%s", meeting_id)
+            return None
         logger.exception("[title] auto-generate failed for meeting_id=%s", meeting_id)
         return None
 
@@ -1454,21 +1475,31 @@ async def _stream_summary(
                         await asyncio.sleep(delay)
 
         async with dynamodb_client() as ddb:
-            await ddb.update_item(
-                TableName=config.MEETINGS_TABLE,
-                Key={"meetingId": {"S": meeting_id}},
-                UpdateExpression=(
-                    "SET summary = :s, summarizedAt = :t, summaryGeneratedStyle = :style, summaryGeneratedLabel = :label"
-                    if label else
-                    "SET summary = :s, summarizedAt = :t, summaryGeneratedStyle = :style REMOVE summaryGeneratedLabel"
-                ),
-                ExpressionAttributeValues={
-                    ":s": {"S": summary},
-                    ":t": {"S": _iso_now()},
-                    ":style": {"S": style},
-                    **({":label": {"S": label}} if label else {}),
-                },
-            )
+            try:
+                await ddb.update_item(
+                    TableName=config.MEETINGS_TABLE,
+                    Key={"meetingId": {"S": meeting_id}},
+                    UpdateExpression=(
+                        "SET summary = :s, summarizedAt = :t, summaryGeneratedStyle = :style, summaryGeneratedLabel = :label"
+                        if label else
+                        "SET summary = :s, summarizedAt = :t, summaryGeneratedStyle = :style REMOVE summaryGeneratedLabel"
+                    ),
+                    ConditionExpression=MEETING_EXISTS,
+                    ExpressionAttributeValues={
+                        ":s": {"S": summary},
+                        ":t": {"S": _iso_now()},
+                        ":style": {"S": style},
+                        **({":label": {"S": label}} if label else {}),
+                    },
+                )
+            except ClientError as e:
+                if not _is_condition_failed(e):
+                    raise
+                # 요약하는 사이 회의가 지워졌다 — 저장·제목 생성 없이 오류로 알린다
+                logger.warning("[ws] Skipped summary save — meeting does not exist: meeting_id=%s", meeting_id)
+                await send({"type": "summary_stream", "phase": "error", "meetingId": meeting_id,
+                            "error": "미팅이 삭제되어 요약을 저장하지 못했습니다"})
+                return None
 
         new_title = await _generate_title_if_default(meeting_id, current_title, lines, model_id)
 
@@ -1542,11 +1573,12 @@ async def _claim_email_send(meeting_id: str) -> bool:
                 TableName=config.MEETINGS_TABLE,
                 Key={"meetingId": {"S": meeting_id}},
                 UpdateExpression="SET emailSentAt = :t",
-                ConditionExpression="attribute_not_exists(emailSentAt)",
+                # 이미 보냈거나(emailSentAt 있음) 회의가 지워졌으면 발송권이 없다
+                ConditionExpression=f"{MEETING_EXISTS} AND attribute_not_exists(emailSentAt)",
                 ExpressionAttributeValues={":t": {"S": _iso_now()}},
             )
         except ClientError as e:
-            if e.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
+            if _is_condition_failed(e):
                 return False
             raise
     return True
@@ -1555,11 +1587,18 @@ async def _claim_email_send(meeting_id: str) -> bool:
 async def _release_email_send(meeting_id: str) -> None:
     """발송이 실패하면 발송권을 돌려놓아 다음 종료 때 다시 보낼 수 있게 한다."""
     async with dynamodb_client() as ddb:
-        await ddb.update_item(
-            TableName=config.MEETINGS_TABLE,
-            Key={"meetingId": {"S": meeting_id}},
-            UpdateExpression="REMOVE emailSentAt",
-        )
+        try:
+            # REMOVE 만 있어도 키가 없으면 빈 항목이 생기므로 조건을 붙인다
+            await ddb.update_item(
+                TableName=config.MEETINGS_TABLE,
+                Key={"meetingId": {"S": meeting_id}},
+                UpdateExpression="REMOVE emailSentAt",
+                ConditionExpression=MEETING_EXISTS,
+            )
+        except ClientError as e:
+            if not _is_condition_failed(e):
+                raise
+            logger.warning("[mail] Skipped release — meeting does not exist: meeting_id=%s", meeting_id)
 
 
 async def _email_page_url(meeting_id: str) -> Optional[str]:
@@ -1624,12 +1663,22 @@ async def _end_meeting(
         title, _ = await _meeting_meta(meeting_id)
         await _merged_audio_url(meeting_id, title, DOWNLOAD_URL_EXPIRES)
         async with dynamodb_client() as ddb:
-            await ddb.update_item(
-                TableName=config.MEETINGS_TABLE,
-                Key={"meetingId": {"S": meeting_id}},
-                UpdateExpression="SET endedAt = :t",
-                ExpressionAttributeValues={":t": {"S": _iso_now()}},
-            )
+            try:
+                await ddb.update_item(
+                    TableName=config.MEETINGS_TABLE,
+                    Key={"meetingId": {"S": meeting_id}},
+                    UpdateExpression="SET endedAt = :t",
+                    ConditionExpression=MEETING_EXISTS,
+                    ExpressionAttributeValues={":t": {"S": _iso_now()}},
+                )
+            except ClientError as e:
+                if not _is_condition_failed(e):
+                    raise
+                # 지워진 회의 — 요약·페이지·메일을 하지 않는다
+                logger.warning("[ws] Skipped end — meeting does not exist: meeting_id=%s", meeting_id)
+                await send({"type": "meeting_end", "meetingId": meeting_id, "phase": "error",
+                            "error": "미팅이 삭제되어 종료 처리를 하지 못했습니다."})
+                return
 
         await send({"type": "meeting_end", "meetingId": meeting_id, "phase": "summary"})
         summary = await _stream_summary(

@@ -27,6 +27,11 @@ const s3 = new S3Client({ region: process.env.REGION })
 const PAGES_TABLE = process.env.PAGES_TABLE ?? 'transmeet-pages'
 // 내 양식 사본(meetingId 키). 회의 항목은 발언 전체를 담아 400 KB 한도에 가까우므로 따로 둔다.
 const SNAPSHOTS_TABLE = () => process.env.SUMMARY_SNAPSHOTS_TABLE ?? 'transmeet-summary-snapshots'
+// UpdateItem 은 키가 없으면 항목을 새로 만든다. 그사이 지워진 미팅을 되살리지 않도록 갱신에 붙인다.
+const MEETING_EXISTS = 'attribute_exists(meetingId)'
+
+const isConditionFailed = (err: unknown) =>
+  err instanceof Error && err.name === 'ConditionalCheckFailedException'
 
 interface PageRecord {
   meetingId: string
@@ -258,17 +263,24 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
           const title = (bedrockResult.content?.[0]?.text ?? '').trim()
 
-          await ddb.send(
-            new UpdateCommand({
-              TableName: process.env.MEETINGS_TABLE,
-              Key: { meetingId },
-              UpdateExpression: 'SET title = :t, updatedAt = :u',
-              ExpressionAttributeValues: {
-                ':t': title,
-                ':u': new Date().toISOString(),
-              },
-            })
-          )
+          try {
+            await ddb.send(
+              new UpdateCommand({
+                TableName: process.env.MEETINGS_TABLE,
+                Key: { meetingId },
+                UpdateExpression: 'SET title = :t, updatedAt = :u',
+                ConditionExpression: MEETING_EXISTS,
+                ExpressionAttributeValues: {
+                  ':t': title,
+                  ':u': new Date().toISOString(),
+                },
+              })
+            )
+          } catch (err) {
+            // 제목을 만드는 사이 미팅이 지워졌다
+            if (isConditionFailed(err)) return respond(404, { error: 'Meeting not found' })
+            throw err
+          }
 
           return respond(200, { title, meetingId })
         }
@@ -311,6 +323,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             return respond(400, { error: 'Invalid summary style' })
           }
           const summaryStyle = body.summaryStyle
+          let summaryCustom: SummaryCustom | undefined
           if (summaryStyle === CUSTOM_SUMMARY_STYLE) {
             // 내 양식은 서버가 양식 테이블에서 직접 읽어 사본을 둔다 — 클라이언트가 보낸 본문은 쓰지 않는다.
             const templateId = body.templateId
@@ -322,7 +335,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
               Key: { userId, templateId },
             }))
             if (!template.Item) return respond(404, { error: 'Template not found' })
-            const summaryCustom: SummaryCustom = {
+            summaryCustom = {
               templateId,
               name: template.Item.name,
               kind: template.Item.kind,
@@ -334,22 +347,21 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
               TableName: SNAPSHOTS_TABLE(),
               Item: { meetingId, userId, ...summaryCustom },
             }))
+          }
+          try {
             await ddb.send(new UpdateCommand({
               TableName: process.env.MEETINGS_TABLE,
               Key: { meetingId },
               UpdateExpression: 'SET summaryStyle = :style',
-              ConditionExpression: 'attribute_exists(meetingId) AND userId = :uid',
+              ConditionExpression: `${MEETING_EXISTS} AND userId = :uid`,
               ExpressionAttributeValues: { ':style': summaryStyle, ':uid': userId },
             }))
-            return respond(200, { meetingId, summaryStyle, summaryCustom })
+          } catch (err) {
+            // 그사이 지워졌거나 소유자가 아니면 없는 미팅으로 본다
+            if (isConditionFailed(err)) return respond(404, { error: 'Meeting not found' })
+            throw err
           }
-          await ddb.send(new UpdateCommand({
-            TableName: process.env.MEETINGS_TABLE,
-            Key: { meetingId },
-            UpdateExpression: 'SET summaryStyle = :style',
-            ConditionExpression: 'attribute_exists(meetingId) AND userId = :uid',
-            ExpressionAttributeValues: { ':style': summaryStyle, ':uid': userId },
-          }))
+          if (summaryCustom) return respond(200, { meetingId, summaryStyle, summaryCustom })
           return respond(200, { meetingId, summaryStyle })
         }
         if (resource.endsWith('/title')) {
@@ -361,17 +373,23 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           if (!title) {
             return respond(400, { error: 'Title cannot be empty' })
           }
-          await ddb.send(
-            new UpdateCommand({
-              TableName: process.env.MEETINGS_TABLE,
-              Key: { meetingId },
-              UpdateExpression: 'SET title = :t, updatedAt = :u',
-              ExpressionAttributeValues: {
-                ':t': title,
-                ':u': new Date().toISOString(),
-              },
-            })
-          )
+          try {
+            await ddb.send(
+              new UpdateCommand({
+                TableName: process.env.MEETINGS_TABLE,
+                Key: { meetingId },
+                UpdateExpression: 'SET title = :t, updatedAt = :u',
+                ConditionExpression: MEETING_EXISTS,
+                ExpressionAttributeValues: {
+                  ':t': title,
+                  ':u': new Date().toISOString(),
+                },
+              })
+            )
+          } catch (err) {
+            if (isConditionFailed(err)) return respond(404, { error: 'Meeting not found' })
+            throw err
+          }
           return respond(200, { title, meetingId })
         }
         return respond(404, { error: 'Not found' })

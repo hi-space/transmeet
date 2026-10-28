@@ -27,7 +27,7 @@ class InvokeModelCommand extends Command {}
 
 const generatedTitle = '제품 출시 일정 확정'
 
-function setup() {
+function setup({ deleted = false } = {}) {
   process.env.MESSAGES_TABLE = 'transmeet-messages'
   let item
   let storedMessages = []
@@ -50,6 +50,10 @@ function setup() {
       }
       assert.ok(command instanceof UpdateCommand)
       updates.push(command.input)
+      // 회의가 그사이 지워졌으면 attribute_exists(meetingId) 조건이 실패한다
+      if (deleted && command.input.ConditionExpression?.includes('attribute_exists(meetingId)')) {
+        throw Object.assign(new Error('The conditional request failed'), { name: 'ConditionalCheckFailedException' })
+      }
       return {}
     },
   }
@@ -152,6 +156,11 @@ for (const { name, title, expectedTitle } of [
     if (expectedTitle) {
       assert.equal(titleUpdates[0].ExpressionAttributeValues[':t'], expectedTitle)
     }
+    // 요약·제목 저장 모두 지워진 회의를 되살리지 않는다
+    assert.ok(session.updates.length >= 1)
+    for (const update of session.updates) {
+      assert.equal(update.ConditionExpression, 'attribute_exists(meetingId)')
+    }
   })
 }
 
@@ -169,4 +178,18 @@ test('POST /meetings/{id}/title reads only the first 20 stored messages', async 
   const prompt = session.modelRequests[0].messages[0].content
   assert.ok(prompt.includes('발언-19-끝'))
   assert.ok(!prompt.includes('발언-20-끝'))
+  assert.equal(session.updates.at(-1).ConditionExpression, 'attribute_exists(meetingId)')
+})
+
+test('title generation and summary return 404 when the meeting was deleted meanwhile', async () => {
+  const session = setup({ deleted: true })
+  await session.create()
+  const stored = [{ meetingId: 'm', sk: 't#0', id: 'message-0', speaker: 'A', originalText: '안녕하세요' }]
+  const titled = await session.generateTitle(stored)
+  assert.equal(titled.statusCode, 404)
+
+  const summarized = await session.summarize()
+  assert.equal(summarized.statusCode, 404)
+  // 제목 생성 저장 한 번, 요약 저장 한 번. 요약 저장이 실패하면 자동 제목은 만들지 않는다
+  assert.deepEqual(session.updates.map((u) => u.UpdateExpression.split(' ')[1]), ['title', 'summary'])
 })
