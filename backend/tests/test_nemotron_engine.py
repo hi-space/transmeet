@@ -5,6 +5,7 @@ import queue
 import struct
 import sys
 import threading
+import wave
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -108,7 +109,32 @@ def test_very_short_speech_is_preserved_on_explicit_stop(engine):
     events = segmenter.feed(source) + segmenter.finish()
     delivered = b"".join(data for kind, data in events if kind in ("start", "audio"))
     assert delivered == source
-    assert [kind for kind, _ in events] == ["start", "end"]
+    assert [kind for kind, _ in events].count("start") == 1
+    assert [kind for kind, _ in events].count("end") == 1
+
+
+@pytest.mark.parametrize("name", ["en-00.wav", "en-04.wav", "ko-06.wav"])
+def test_quiet_real_speech_reaches_the_model_without_losing_nonzero_samples(engine, name):
+    path = Path(__file__).resolve().parents[2] / "benchmarks/stt-ko-en-2026-10-28/audio" / name
+    with wave.open(str(path), "rb") as wav:
+        source = wav.readframes(wav.getnframes())
+    segmenter = engine.UtteranceSegmenter()
+    events = []
+    for offset in range(0, len(source), 5120):
+        events += segmenter.feed(source[offset:offset + 5120])
+    events += segmenter.finish()
+    forwarded = b"".join(data for kind, data in events if kind in ("start", "audio"))
+    assert [sample for sample in unpack(forwarded) if sample] == [
+        sample for sample in unpack(source) if sample
+    ]
+
+
+@pytest.mark.parametrize("amplitude,samples", [(1, 71), (12, 480), (20, 1681)])
+def test_quiet_speech_needs_no_amplitude_calibration_before_admission(engine, amplitude, samples):
+    segmenter = engine.UtteranceSegmenter()
+    source = pcm(samples, amplitude)
+    events = segmenter.feed(source) + segmenter.finish()
+    assert b"".join(data for kind, data in events if kind in ("start", "audio")) == source
 
 
 def test_continuous_speech_has_bounded_utterance_state(engine):
@@ -135,6 +161,13 @@ def test_auto_language_survives_trailing_rnnt_blanks(engine, special_tokens):
     assert engine.clean_transcript(
         "<blank>회의를 시작합니다.<ko-KR><blank><blank><pad>", "auto", special_tokens,
     ) == ("회의를 시작합니다.", "ko-KR")
+
+
+def test_internal_model_language_tags_never_leak_into_captions(engine):
+    assert engine.clean_transcript(
+        "합금은 두 금속의 혼합물이다.<ko-KR> 주기율표를 확인하자.<ko-KR><pad>",
+        "auto", ["<pad>", "<ko-KR>"],
+    ) == ("합금은 두 금속의 혼합물이다. 주기율표를 확인하자.", "ko-KR")
 
 
 def test_generation_handles_isolate_mutable_state_but_share_weights(engine):

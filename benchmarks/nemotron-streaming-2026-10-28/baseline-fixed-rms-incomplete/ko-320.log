@@ -1,0 +1,71 @@
+fleurs-ko-test-row-0: CER=0.264
+fleurs-ko-test-row-1: CER=0.146
+fleurs-ko-test-row-2: CER=0.000
+fleurs-ko-test-row-3: CER=0.440
+fleurs-ko-test-row-4: CER=0.019
+fleurs-ko-test-row-5: CER=0.125
+Nemotron stream failed: Nemotron worker exited: /asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/home/ubuntu/workspace/transmeet/backend/app/nemotron_stream.py", line 297, in _worker_main
+    done, _ = await asyncio.wait((sender, receiver), return_when=asyncio.FIRST_COMPLETED)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/asyncio/tasks.py", line 451, in wait
+    return await _wait(fs, timeout, return_when, loop)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/asyncio/tasks.py", line 537, in _wait
+    await waiter
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/workspace/transmeet/backend/app/nemotron_stream.py", line 544, in <module>
+    asyncio.run(_worker_main(sys.argv[2], sys.argv[3]))
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.13/asyncio/runners.py", line 123, in run
+    raise KeyboardInterrupt()
+KeyboardInterrupt
+ERROR:asyncio:Task exception was never retrieved
+future: <Task finished name='Task-7' coro=<AIOHttp2ClientStream._set_request_body_generator() done, defined at /tmp/transmeet-nemotron-sdk-venv/lib/python3.13/site-packages/awscrt/aio/http.py:527> exception=RuntimeError('2080 (AWS_ERROR_HTTP_STREAM_HAS_COMPLETED): HTTP-stream has completed, action cannot be performed.')>
+Traceback (most recent call last):
+  File "/tmp/transmeet-nemotron-sdk-venv/lib/python3.13/site-packages/awscrt/aio/http.py", line 532, in _set_request_body_generator
+  File "/tmp/transmeet-nemotron-sdk-venv/lib/python3.13/site-packages/awscrt/aio/http.py", line 524, in _write_data
+RuntimeError: 2080 (AWS_ERROR_HTTP_STREAM_HAS_COMPLETED): HTTP-stream has completed, action cannot be performed.
+Traceback (most recent call last):
+  File "/usr/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.13/asyncio/base_events.py", line 725, in run_until_complete
+    return future.result()
+           ~~~~~~~~~~~~~^^
+  File "/home/ubuntu/workspace/transmeet/backend/scripts/benchmark_nemotron_streaming.py", line 306, in run_benchmark
+    row = await measure_clip(
+          ^^^^^^^^^^^^^^^^^^^
+    ...<3 lines>...
+    )
+    ^
+  File "/home/ubuntu/workspace/transmeet/backend/scripts/benchmark_nemotron_streaming.py", line 184, in measure_clip
+    await sleep(max(0.0, audio_start + capture_end - clock()))
+  File "/usr/lib/python3.13/asyncio/tasks.py", line 718, in sleep
+    return await future
+           ^^^^^^^^^^^^
+asyncio.exceptions.CancelledError
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/ubuntu/workspace/transmeet/backend/scripts/benchmark_nemotron_streaming.py", line 343, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/home/ubuntu/workspace/transmeet/backend/scripts/benchmark_nemotron_streaming.py", line 335, in main
+    report = asyncio.run(run_benchmark(args))
+  File "/usr/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/usr/lib/python3.13/asyncio/runners.py", line 123, in run
+    raise KeyboardInterrupt()
+KeyboardInterrupt

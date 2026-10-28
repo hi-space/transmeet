@@ -58,10 +58,10 @@ Partial text is the full current hypothesis, not a delta. Language tags are remo
 
 **Produces:** The wire contract above, `/ping`, `/invocations-bidirectional-stream`, container build instructions.
 
-- [ ] Add failing tests for PCM endpointing, feature chunk continuity, short-tail flush, final deduplication, and independent sessions.
-- [ ] Implement bounded incremental feature extraction and RNNT generation using the bundled Transformers streaming interface.
-- [ ] Implement protocol validation, silence-based utterance finalization, end/flush, cancellation, and capacity bounds.
-- [ ] Build a container with the SageMaker bidirectional capability label and local tests.
+- [x] Add failing tests for PCM endpointing, feature chunk continuity, short-tail flush, final deduplication, and independent sessions.
+- [x] Implement bounded incremental feature extraction and RNNT generation using the bundled Transformers streaming interface.
+- [x] Implement protocol validation, silence-based utterance finalization, end/flush, cancellation, and capacity bounds.
+- [x] Build a container with the SageMaker bidirectional capability label and local tests.
 
 ## Task 2: Backend streaming transport and subtitle integration
 
@@ -69,10 +69,10 @@ Partial text is the full current hypothesis, not a delta. Language tags are remo
 
 **Consumes:** Container wire contract. **Produces:** Existing `subtitle_stream` events and final `_process_segment` calls.
 
-- [ ] Add failing tests for partial/final flow, final-on-stop, duplicate final handling, failures, and old-session language snapshots.
-- [ ] Implement credential refresh via the AWS credential provider chain, bidirectional transport, bounded queues, and graceful close.
-- [ ] Route enabled Nemotron recordings through the continuous stream; leave the batch adapter available for comparison/rollback.
-- [ ] Verify relevant backend tests and the complete backend suite.
+- [x] Add failing tests for partial/final flow, final-on-stop, duplicate final handling, failures, and old-session language snapshots.
+- [x] Implement credential refresh via the AWS credential provider chain, bidirectional transport, bounded queues, and graceful close.
+- [x] Route enabled Nemotron recordings through the continuous stream; leave the batch adapter available for comparison/rollback.
+- [x] Verify relevant backend tests and the complete backend suite.
 
 ## Task 3: Browser capture and settings
 
@@ -80,21 +80,21 @@ Partial text is the full current hypothesis, not a delta. Language tags are remo
 
 **Consumes:** Existing partial/final subtitle messages. **Produces:** 160 ms Nemotron audio messages and accurate settings copy.
 
-- [ ] Update tests to require continuous Nemotron capture independently of saved batch-window settings.
-- [ ] Hide batch-window controls for streaming Nemotron and explain live intermediate transcripts.
-- [ ] Preserve audio on stop/setting changes and avoid automatically translating speculative Nemotron partials.
-- [ ] Run settings/UI tests and TypeScript/build verification.
+- [x] Update tests to require continuous Nemotron capture independently of saved batch-window settings.
+- [x] Hide batch-window controls for streaming Nemotron and explain live intermediate transcripts.
+- [x] Preserve audio on stop/setting changes and avoid automatically translating speculative Nemotron partials.
+- [x] Run settings/UI tests and TypeScript/build verification.
 
 ## Task 4: Deploy and measure
 
 **Files:** `backend/scripts/deploy_nemotron_streaming.py`, `backend/scripts/benchmark_nemotron_streaming.py`, `.env.example`, `infra/lib/transmeet-stack.ts`, `docs/stt-models.md`, benchmark artifacts.
 
-- [ ] Add a reviewable dry-run deployment command with pinned artifact/image and a separate endpoint name.
-- [ ] Build/push the container and create the streaming endpoint; verify a real streaming request.
-- [ ] Compare 320/560 ms settings using the same Korean and English recordings, recording first-partial latency, final latency, and recognition errors.
-- [ ] Add scoped IAM permission and streaming environment variables; build/version/deploy the backend and frontend.
-- [ ] Verify running configuration, browser behavior, and CloudWatch errors; record actual rollout and limitations.
-- [ ] Perform a fresh independent review and fix material findings.
+- [x] Add a reviewable dry-run deployment command with pinned artifact/image and a separate endpoint name.
+- [x] Build/push the container and create the streaming endpoint; verify a real streaming request.
+- [x] Compare 320/560 ms settings using the same Korean and English recordings, recording first-partial latency, final latency, and recognition errors.
+- [x] Add scoped IAM permission and streaming environment variables; build/version/deploy the backend and frontend.
+- [x] Verify running configuration, browser behavior, and CloudWatch errors; record actual rollout and limitations.
+- [x] Perform a fresh independent review and fix material findings.
 
 ## Evidence and decisions
 
@@ -109,3 +109,8 @@ Partial text is the full current hypothesis, not a delta. Language tags are remo
 - Hosting correction: pin `InferenceAmiVersion=al2-ami-sagemaker-inference-gpu-3-1` to match the artifact's CUDA 12.4 PyTorch wheel, and expose NVIDIA compute/utility devices explicitly. The first new endpoint was still `Creating`; SageMaker refused its cancellation/update. The corrected deployment uses `transmeet-nemotron-streaming-v2`. The first new deployment remains unactivated and must be revisited when AWS permits cleanup.
 - SDK compatibility ruling: Transcribe 0.6.4 requires CRT 0.26; SageMaker HTTP/2 requires CRT 0.32. Use a separate SDK process/venv with bounded, length-prefixed pipes. This preserves the existing Transcribe runtime.
 - Shared workspace contains a concurrent change moving batch-provider region configuration toward Seoul. Preserve it; activate streaming with a selective ECS task revision and scoped IAM policy rather than deploying the entire CDK stack.
+
+- Live validation caught fixed-RMS admission dropping quiet recordings and internal locale tags leaking into captions. Both were reproduced, fixed and reviewed; all 20 input WAVs now reach the model byte-for-byte. The corrected Seoul GPU image is `c20c3f92bf90b7786e4a5122e4404e682c418fca8f2d7442601595a7261e6c23`. Full merged backend verification: 473 passed.
+
+- Completed: corrected Seoul endpoint InService (one GPU), all 40 benchmark requests successful, AUTO/concurrent/35-second-silence checks passed. Latest live backend image was preserved and only four Nemotron settings changed; task definition revision 35 stabilized at one running / zero pending. Live-role ASR and Bedrock translation probe passed, frontend HTTP200 and deployed UI verified, temporary validation audio and all failed US streaming endpoints removed.
+- Authorization verification: the live HTTP/2 runtime returned403 with only the bidirectional action. Adding standard `sagemaker:InvokeEndpoint` on the same single endpoint ARN made the identical ECS probe succeed. Source IAM includes both actions and DescribeEndpoint.

@@ -1,0 +1,2468 @@
+{
+  "created_at": "2026-10-28T20:24:19.471325+00:00",
+  "model_id": "nvidia/nemotron-3.5-asr-streaming-0.6b",
+  "jumpstart_artifact_version": "1.0.2",
+  "endpoint": "transmeet-nemotron-streaming",
+  "region": "ap-northeast-2",
+  "manifest": "/home/ubuntu/workspace/transmeet/benchmarks/stt-ko-en-2026-10-28/manifest-ko.json",
+  "manifest_sha256": "5d61914cdf01e27d3e266557bd3295624023efb6396b2b0a2f37e9c5b5606ee0",
+  "source": {
+    "dataset": "google/fleurs",
+    "config": "ko_kr",
+    "split": "test",
+    "rows": "0-9",
+    "url": "https://huggingface.co/datasets/google/fleurs"
+  },
+  "license": "CC-BY-4.0",
+  "planned_samples": 10,
+  "status": "running",
+  "conditions": {
+    "mode": "realtime_streaming",
+    "model_chunk_ms": 320,
+    "capture_frame_ms": 160,
+    "language_mode": "manifest",
+    "input": "SHA-256 verified 16 kHz mono PCM16 WAV; no trimming or augmentation",
+    "pacing": "await ready, then send every frame at its audio end time",
+    "startup": "stream start to first ready; excluded from audio-relative latency",
+    "final_lag": "last unique nonempty final minus audio end; trailing silence can make this negative",
+    "end_to_end": "audio capture start through stream close, including audio duration",
+    "event_elapsed_origin": "stream start; audio_elapsed_seconds starts after ready",
+    "cer_normalization": "benchmark_stt.score_transcript: NFKC, casefold, alphanumeric characters",
+    "wer_normalization": "English only: NFKC, casefold, remove straight/curly apostrophes, Unicode alphanumeric words",
+    "model_identity": "expected pinned artifact; endpoint deployment provenance is checked separately",
+    "ready_timeout_seconds": 45,
+    "close_timeout_seconds": 15
+  },
+  "results": [
+    {
+      "sample_id": "fleurs-ko-test-row-0",
+      "language": "ko",
+      "requested_language": "ko-KR",
+      "reference": "다리 밑 수직 간격은 15미터이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년 3월까지이다",
+      "audio_seconds": 12.48,
+      "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다리의 통행금지는 이천십칠년 삼월까지이다.",
+      "detected_languages": [
+        "ko-KR"
+      ],
+      "startup_seconds": 0.416072,
+      "first_partial_seconds": 2.123499,
+      "final_lag_seconds": -1.553157,
+      "end_to_end_seconds": 12.545728,
+      "audio_send_seconds": 12.480395,
+      "total_seconds": 12.961848,
+      "partial_count": 51,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 0.416072,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.539619,
+          "audio_elapsed_seconds": 2.123499
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.542579,
+          "audio_elapsed_seconds": 2.126459
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.858344,
+          "audio_elapsed_seconds": 2.442224
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.860584,
+          "audio_elapsed_seconds": 2.444464
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.863334,
+          "audio_elapsed_seconds": 2.447214
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.181864,
+          "audio_elapsed_seconds": 2.765744
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.184514,
+          "audio_elapsed_seconds": 2.768394
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.499711,
+          "audio_elapsed_seconds": 3.083591
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.503084,
+          "audio_elapsed_seconds": 3.086964
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.81821,
+          "audio_elapsed_seconds": 3.402091
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.822952,
+          "audio_elapsed_seconds": 3.406833
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.137792,
+          "audio_elapsed_seconds": 3.721672
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.139846,
+          "audio_elapsed_seconds": 3.723726
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.460123,
+          "audio_elapsed_seconds": 4.044003
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.463591,
+          "audio_elapsed_seconds": 4.047472
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.78027,
+          "audio_elapsed_seconds": 4.364151
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.783667,
+          "audio_elapsed_seconds": 4.367547
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.101441,
+          "audio_elapsed_seconds": 4.685321
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.104946,
+          "audio_elapsed_seconds": 4.688826
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.418039,
+          "audio_elapsed_seconds": 5.001919
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.421153,
+          "audio_elapsed_seconds": 5.005033
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.741586,
+          "audio_elapsed_seconds": 5.325466
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.060223,
+          "audio_elapsed_seconds": 5.644104
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.063657,
+          "audio_elapsed_seconds": 5.647538
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.379472,
+          "audio_elapsed_seconds": 5.963352
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.384213,
+          "audio_elapsed_seconds": 5.968094
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.697918,
+          "audio_elapsed_seconds": 6.281798
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.700411,
+          "audio_elapsed_seconds": 6.284291
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.703302,
+          "audio_elapsed_seconds": 6.287182
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.018846,
+          "audio_elapsed_seconds": 6.602727
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.021103,
+          "audio_elapsed_seconds": 6.604983
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.02499,
+          "audio_elapsed_seconds": 6.60887
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.661635,
+          "audio_elapsed_seconds": 7.245516
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.978569,
+          "audio_elapsed_seconds": 7.562449
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.299752,
+          "audio_elapsed_seconds": 7.883632
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다리",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.303537,
+          "audio_elapsed_seconds": 7.887417
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다리의",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.619294,
+          "audio_elapsed_seconds": 8.203174
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다리의 통",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.623612,
+          "audio_elapsed_seconds": 8.207493
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다리의 통행",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.62627,
+          "audio_elapsed_seconds": 8.21015
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다리의 통행금",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.941132,
+          "audio_elapsed_seconds": 8.525012
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다리의 통행금지는",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.944438,
+          "audio_elapsed_seconds": 8.528319
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다리의 통행금지는 이",
+          "language": "ko-KR",
+          "elapsed_seconds": 9.262623,
+          "audio_elapsed_seconds": 8.846504
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다리의 통행금지는 이천",
+          "language": "ko-KR",
+          "elapsed_seconds": 9.579139,
+          "audio_elapsed_seconds": 9.16302
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다리의 통행금지는 이천십",
+          "language": "ko-KR",
+          "elapsed_seconds": 9.582497,
+          "audio_elapsed_seconds": 9.166377
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다리의 통행금지는 이천십칠",
+          "language": "ko-KR",
+          "elapsed_seconds": 9.899401,
+          "audio_elapsed_seconds": 9.483282
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다리의 통행금지는 이천십칠년",
+          "language": "ko-KR",
+          "elapsed_seconds": 9.904114,
+          "audio_elapsed_seconds": 9.487994
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다리의 통행금지는 이천십칠년 삼",
+          "language": "ko-KR",
+          "elapsed_seconds": 10.220725,
+          "audio_elapsed_seconds": 9.804605
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다리의 통행금지는 이천십칠년 삼월",
+          "language": "ko-KR",
+          "elapsed_seconds": 10.540047,
+          "audio_elapsed_seconds": 10.123927
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다리의 통행금지는 이천십칠년 삼월까지",
+          "language": "ko-KR",
+          "elapsed_seconds": 10.544987,
+          "audio_elapsed_seconds": 10.128868
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다리의 통행금지는 이천십칠년 삼월까지이다",
+          "language": "ko-KR",
+          "elapsed_seconds": 10.861663,
+          "audio_elapsed_seconds": 10.445544
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다리의 통행금지는 이천십칠년 삼월까지이다.",
+          "language": "ko-KR",
+          "elapsed_seconds": 11.179878,
+          "audio_elapsed_seconds": 10.763758
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 십오미터이며 공사는 이천십일년 팔월에 마무리되었으며 해당 다리의 통행금지는 이천십칠년 삼월까지이다.",
+          "language": "ko-KR",
+          "elapsed_seconds": 11.342963,
+          "audio_elapsed_seconds": 10.926843
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 12.901326,
+          "audio_elapsed_seconds": 12.485206
+        }
+      ],
+      "errors": 14,
+      "reference_chars": 53,
+      "cer": 0.2641509433962264,
+      "audio": "audio/ko-00.wav",
+      "sha256": "692ead3d5546b300c37b0bb6b5eae299f1023d1452651ba4ae0e93173e6d9067",
+      "sha256_verified": true
+    },
+    {
+      "sample_id": "fleurs-ko-test-row-1",
+      "language": "ko",
+      "requested_language": "ko-KR",
+      "reference": "델 포트로가 2세트에서 먼저 어드밴티지를 얻었지만 6 대 6이 된 후 다시 타이 브레이크가 필요했다",
+      "audio_seconds": 10.8,
+      "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육대육이 된 후 다시 타이브레이크가 필요했다.",
+      "detected_languages": [
+        "ko-KR"
+      ],
+      "startup_seconds": 0.349403,
+      "first_partial_seconds": 2.283736,
+      "final_lag_seconds": -1.311679,
+      "end_to_end_seconds": 10.862699,
+      "audio_send_seconds": 10.800557,
+      "total_seconds": 11.212151,
+      "partial_count": 38,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 0.349403,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.633188,
+          "audio_elapsed_seconds": 2.283736
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.636043,
+          "audio_elapsed_seconds": 2.286592
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.951948,
+          "audio_elapsed_seconds": 2.602497
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.954125,
+          "audio_elapsed_seconds": 2.604673
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.957903,
+          "audio_elapsed_seconds": 2.608451
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.27342,
+          "audio_elapsed_seconds": 2.923969
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.59413,
+          "audio_elapsed_seconds": 3.244678
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.598304,
+          "audio_elapsed_seconds": 3.248853
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.911717,
+          "audio_elapsed_seconds": 3.562266
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.915088,
+          "audio_elapsed_seconds": 3.565637
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.232895,
+          "audio_elapsed_seconds": 3.883444
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.237028,
+          "audio_elapsed_seconds": 3.887577
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.870627,
+          "audio_elapsed_seconds": 4.521175
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.874365,
+          "audio_elapsed_seconds": 4.524914
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.191493,
+          "audio_elapsed_seconds": 4.842042
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.195144,
+          "audio_elapsed_seconds": 4.845692
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.197605,
+          "audio_elapsed_seconds": 4.848154
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.512307,
+          "audio_elapsed_seconds": 5.162856
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.5163,
+          "audio_elapsed_seconds": 5.166849
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.832409,
+          "audio_elapsed_seconds": 5.482958
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.83609,
+          "audio_elapsed_seconds": 5.486639
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.475354,
+          "audio_elapsed_seconds": 6.125903
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육대",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.792018,
+          "audio_elapsed_seconds": 6.442567
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육대육",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.796677,
+          "audio_elapsed_seconds": 6.447225
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육대육이",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.11251,
+          "audio_elapsed_seconds": 6.763058
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육대육이 된",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.43316,
+          "audio_elapsed_seconds": 7.083709
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육대육이 된 후",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.436895,
+          "audio_elapsed_seconds": 7.087443
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육대육이 된 후 다시",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.751887,
+          "audio_elapsed_seconds": 7.402436
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육대육이 된 후 다시 타",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.074702,
+          "audio_elapsed_seconds": 7.725251
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육대육이 된 후 다시 타이",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.391432,
+          "audio_elapsed_seconds": 8.041981
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육대육이 된 후 다시 타이브",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.394947,
+          "audio_elapsed_seconds": 8.045495
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육대육이 된 후 다시 타이브레",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.39797,
+          "audio_elapsed_seconds": 8.048519
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육대육이 된 후 다시 타이브레이",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.713462,
+          "audio_elapsed_seconds": 8.364011
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육대육이 된 후 다시 타이브레이크",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.71597,
+          "audio_elapsed_seconds": 8.366519
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육대육이 된 후 다시 타이브레이크가",
+          "language": "ko-KR",
+          "elapsed_seconds": 9.032409,
+          "audio_elapsed_seconds": 8.682958
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육대육이 된 후 다시 타이브레이크가 필요",
+          "language": "ko-KR",
+          "elapsed_seconds": 9.035197,
+          "audio_elapsed_seconds": 8.685746
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육대육이 된 후 다시 타이브레이크가 필요했다",
+          "language": "ko-KR",
+          "elapsed_seconds": 9.352886,
+          "audio_elapsed_seconds": 9.003434
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육대육이 된 후 다시 타이브레이크가 필요했다.",
+          "language": "ko-KR",
+          "elapsed_seconds": 9.355665,
+          "audio_elapsed_seconds": 9.006213
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "데리포트로가 이 세트에서 먼저 어드벤티지를 얻었지만 육대육이 된 후 다시 타이브레이크가 필요했다.",
+          "language": "ko-KR",
+          "elapsed_seconds": 9.837772,
+          "audio_elapsed_seconds": 9.488321
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 11.154371,
+          "audio_elapsed_seconds": 10.80492
+        }
+      ],
+      "errors": 6,
+      "reference_chars": 41,
+      "cer": 0.14634146341463414,
+      "audio": "audio/ko-01.wav",
+      "sha256": "8dff9bb3597dcc33c4b98c916cfb91ba682f51019144630530de5deb72481c1f",
+      "sha256_verified": true
+    },
+    {
+      "sample_id": "fleurs-ko-test-row-2",
+      "language": "ko",
+      "requested_language": "ko-KR",
+      "reference": "염소 사육은 대략 일만 년 전에 이란의 자그로스산맥에서 시작한 것으로 보입니다",
+      "audio_seconds": 8.94,
+      "text": "염소 사육은 대략 일만 년 전에 이란의 자그로스 산맥에서 시작한 것으로 보입니다.",
+      "detected_languages": [
+        "ko-KR"
+      ],
+      "startup_seconds": 0.32566,
+      "first_partial_seconds": 1.803069,
+      "final_lag_seconds": -1.85326,
+      "end_to_end_seconds": 9.006593,
+      "audio_send_seconds": 8.940971,
+      "total_seconds": 9.332302,
+      "partial_count": 28,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 0.32566,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.128778,
+          "audio_elapsed_seconds": 1.803069
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.448349,
+          "audio_elapsed_seconds": 2.122641
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.769586,
+          "audio_elapsed_seconds": 2.443877
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.772631,
+          "audio_elapsed_seconds": 2.446922
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.087735,
+          "audio_elapsed_seconds": 2.762026
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.092388,
+          "audio_elapsed_seconds": 2.76668
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.408109,
+          "audio_elapsed_seconds": 3.082401
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.412873,
+          "audio_elapsed_seconds": 3.087164
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.729993,
+          "audio_elapsed_seconds": 3.404285
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.048532,
+          "audio_elapsed_seconds": 3.722823
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.053877,
+          "audio_elapsed_seconds": 3.728168
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에 이",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.688057,
+          "audio_elapsed_seconds": 4.362349
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에 이란",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.690064,
+          "audio_elapsed_seconds": 4.364355
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에 이란의",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.00803,
+          "audio_elapsed_seconds": 4.682322
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에 이란의 자",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.011813,
+          "audio_elapsed_seconds": 4.686104
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에 이란의 자그",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.015608,
+          "audio_elapsed_seconds": 4.689899
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에 이란의 자그로",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.328045,
+          "audio_elapsed_seconds": 5.002336
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에 이란의 자그로스",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.331432,
+          "audio_elapsed_seconds": 5.005724
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에 이란의 자그로스 산",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.648633,
+          "audio_elapsed_seconds": 5.322924
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에 이란의 자그로스 산맥",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.651601,
+          "audio_elapsed_seconds": 5.325893
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에 이란의 자그로스 산맥에서",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.968344,
+          "audio_elapsed_seconds": 5.642636
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에 이란의 자그로스 산맥에서 시작",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.28771,
+          "audio_elapsed_seconds": 5.962002
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에 이란의 자그로스 산맥에서 시작한",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.292279,
+          "audio_elapsed_seconds": 5.966571
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에 이란의 자그로스 산맥에서 시작한 것",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.610702,
+          "audio_elapsed_seconds": 6.284994
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에 이란의 자그로스 산맥에서 시작한 것으로",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.614895,
+          "audio_elapsed_seconds": 6.289187
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에 이란의 자그로스 산맥에서 시작한 것으로 보",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.931788,
+          "audio_elapsed_seconds": 6.606079
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에 이란의 자그로스 산맥에서 시작한 것으로 보입니다",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.935609,
+          "audio_elapsed_seconds": 6.6099
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에 이란의 자그로스 산맥에서 시작한 것으로 보입니다.",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.938131,
+          "audio_elapsed_seconds": 6.612422
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소 사육은 대략 일만 년 전에 이란의 자그로스 산맥에서 시작한 것으로 보입니다.",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.412448,
+          "audio_elapsed_seconds": 7.08674
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 9.271701,
+          "audio_elapsed_seconds": 8.945993
+        }
+      ],
+      "errors": 0,
+      "reference_chars": 33,
+      "cer": 0.0,
+      "audio": "audio/ko-02.wav",
+      "sha256": "27d54da0d7627cfd223c3028f773fe83cff4d3e102b40aeed771035198a18e36",
+      "sha256_verified": true
+    },
+    {
+      "sample_id": "fleurs-ko-test-row-3",
+      "language": "ko",
+      "requested_language": "ko-KR",
+      "reference": "겨울에 북발트해를 건널 경우에는 빙판을 통과하면서 꽤 끔찍한 소음이 발생하기 때문에 객실의 위치를 확인하는 것이 좋다",
+      "audio_seconds": 12.54,
+      "text": "겨울의 북발트회를 건낼 경우에는 빙판에 총괄하면서 꽤 끔찍 실의 위치를 확인하는",
+      "detected_languages": [
+        "ko-KR"
+      ],
+      "startup_seconds": 0.380497,
+      "first_partial_seconds": 2.445058,
+      "final_lag_seconds": -1.93134,
+      "end_to_end_seconds": 12.607299,
+      "audio_send_seconds": 12.541156,
+      "total_seconds": 12.987835,
+      "partial_count": 29,
+      "final_count": 4,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 0.380497,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.825593,
+          "audio_elapsed_seconds": 2.445058
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.143473,
+          "audio_elapsed_seconds": 2.762938
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울의",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.462134,
+          "audio_elapsed_seconds": 3.081598
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울의 북",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.465773,
+          "audio_elapsed_seconds": 3.085237
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울의 북발",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.783293,
+          "audio_elapsed_seconds": 3.402757
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울의 북발트",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.786819,
+          "audio_elapsed_seconds": 3.406284
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울의 북발트회",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.103569,
+          "audio_elapsed_seconds": 3.723033
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울의 북발트회를",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.105924,
+          "audio_elapsed_seconds": 3.725389
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울의 북발트회를 건",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.109922,
+          "audio_elapsed_seconds": 3.729387
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울의 북발트회를 건낼",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.42556,
+          "audio_elapsed_seconds": 4.045024
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울의 북발트회를 건낼 경우",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.427908,
+          "audio_elapsed_seconds": 4.047373
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울의 북발트회를 건낼 경우에는",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.583393,
+          "audio_elapsed_seconds": 4.202857
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울의 북발트회를 건낼 경우에는",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.58763,
+          "audio_elapsed_seconds": 4.207094
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "빙",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.224427,
+          "audio_elapsed_seconds": 4.843892
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "빙판",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.542649,
+          "audio_elapsed_seconds": 5.162113
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "빙판에",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.862474,
+          "audio_elapsed_seconds": 5.481938
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "빙판에 총",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.866635,
+          "audio_elapsed_seconds": 5.486099
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "빙판에 총괄",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.870957,
+          "audio_elapsed_seconds": 5.490421
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "빙판에 총괄하면서",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.911634,
+          "audio_elapsed_seconds": 5.531098
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "빙판에 총괄하면서",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.914769,
+          "audio_elapsed_seconds": 5.534233
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 3,
+          "text": "꽤",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.144845,
+          "audio_elapsed_seconds": 6.764309
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 3,
+          "text": "꽤 끔",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.184659,
+          "audio_elapsed_seconds": 6.804124
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 3,
+          "text": "꽤 끔찍",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.188816,
+          "audio_elapsed_seconds": 6.80828
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 3,
+          "text": "꽤 끔찍",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.191215,
+          "audio_elapsed_seconds": 6.81068
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 4,
+          "text": "실",
+          "language": "ko-KR",
+          "elapsed_seconds": 10.503717,
+          "audio_elapsed_seconds": 10.123181
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 4,
+          "text": "실의",
+          "language": "ko-KR",
+          "elapsed_seconds": 10.505394,
+          "audio_elapsed_seconds": 10.124858
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 4,
+          "text": "실의 위",
+          "language": "ko-KR",
+          "elapsed_seconds": 10.509376,
+          "audio_elapsed_seconds": 10.12884
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 4,
+          "text": "실의 위치",
+          "language": "ko-KR",
+          "elapsed_seconds": 10.821465,
+          "audio_elapsed_seconds": 10.440929
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 4,
+          "text": "실의 위치를",
+          "language": "ko-KR",
+          "elapsed_seconds": 10.823671,
+          "audio_elapsed_seconds": 10.443136
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 4,
+          "text": "실의 위치를 확",
+          "language": "ko-KR",
+          "elapsed_seconds": 10.828323,
+          "audio_elapsed_seconds": 10.447788
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 4,
+          "text": "실의 위치를 확인",
+          "language": "ko-KR",
+          "elapsed_seconds": 10.984371,
+          "audio_elapsed_seconds": 10.603836
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 4,
+          "text": "실의 위치를 확인하는",
+          "language": "ko-KR",
+          "elapsed_seconds": 10.986009,
+          "audio_elapsed_seconds": 10.605473
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 4,
+          "text": "실의 위치를 확인하는",
+          "language": "ko-KR",
+          "elapsed_seconds": 10.989195,
+          "audio_elapsed_seconds": 10.60866
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 12.927511,
+          "audio_elapsed_seconds": 12.546975
+        }
+      ],
+      "errors": 22,
+      "reference_chars": 50,
+      "cer": 0.44,
+      "audio": "audio/ko-03.wav",
+      "sha256": "8214291abc74551abca9612b7504ae1b2988ecd29d4c3b8f4e1e42a389b56527",
+      "sha256_verified": true
+    },
+    {
+      "sample_id": "fleurs-ko-test-row-4",
+      "language": "ko",
+      "requested_language": "ko-KR",
+      "reference": "홍콩의 스카이라인을 이루는 빌딩 행렬은 빅토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대그래프에 비유된다",
+      "audio_seconds": 12.12,
+      "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대 그래프에 비유된다.",
+      "detected_languages": [
+        "ko-KR"
+      ],
+      "startup_seconds": 0.41758,
+      "first_partial_seconds": 2.124609,
+      "final_lag_seconds": -1.512574,
+      "end_to_end_seconds": 12.185208,
+      "audio_send_seconds": 12.120613,
+      "total_seconds": 12.602834,
+      "partial_count": 49,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 0.41758,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.542235,
+          "audio_elapsed_seconds": 2.124609
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.544849,
+          "audio_elapsed_seconds": 2.127223
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.861178,
+          "audio_elapsed_seconds": 2.443552
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.183015,
+          "audio_elapsed_seconds": 2.765389
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.18473,
+          "audio_elapsed_seconds": 2.767103
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.188177,
+          "audio_elapsed_seconds": 2.770551
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.499968,
+          "audio_elapsed_seconds": 3.082342
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.502533,
+          "audio_elapsed_seconds": 3.084907
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.504983,
+          "audio_elapsed_seconds": 3.087357
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.509003,
+          "audio_elapsed_seconds": 3.091376
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.821531,
+          "audio_elapsed_seconds": 3.403905
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.823624,
+          "audio_elapsed_seconds": 3.405998
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.827636,
+          "audio_elapsed_seconds": 3.41001
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.141404,
+          "audio_elapsed_seconds": 3.723778
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.463807,
+          "audio_elapsed_seconds": 4.046181
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.46792,
+          "audio_elapsed_seconds": 4.050294
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.781721,
+          "audio_elapsed_seconds": 4.364095
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.418803,
+          "audio_elapsed_seconds": 5.001177
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.420936,
+          "audio_elapsed_seconds": 5.003309
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.425896,
+          "audio_elapsed_seconds": 5.00827
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.739947,
+          "audio_elapsed_seconds": 5.322321
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.744603,
+          "audio_elapsed_seconds": 5.326977
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.059866,
+          "audio_elapsed_seconds": 5.64224
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.062325,
+          "audio_elapsed_seconds": 5.644699
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.066555,
+          "audio_elapsed_seconds": 5.648928
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.381103,
+          "audio_elapsed_seconds": 5.963477
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.700056,
+          "audio_elapsed_seconds": 6.28243
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.704544,
+          "audio_elapsed_seconds": 6.286918
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.020003,
+          "audio_elapsed_seconds": 6.602377
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.02267,
+          "audio_elapsed_seconds": 6.605044
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.025747,
+          "audio_elapsed_seconds": 6.608121
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.341877,
+          "audio_elapsed_seconds": 6.924251
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.345986,
+          "audio_elapsed_seconds": 6.92836
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는 모",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.661819,
+          "audio_elapsed_seconds": 7.244193
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는 모습",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.666176,
+          "audio_elapsed_seconds": 7.24855
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는 모습 때문에",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.980023,
+          "audio_elapsed_seconds": 7.562397
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는 모습 때문에 반",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.622548,
+          "audio_elapsed_seconds": 8.204921
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.93981,
+          "audio_elapsed_seconds": 8.522184
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.945041,
+          "audio_elapsed_seconds": 8.527415
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는",
+          "language": "ko-KR",
+          "elapsed_seconds": 9.262594,
+          "audio_elapsed_seconds": 8.844968
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막",
+          "language": "ko-KR",
+          "elapsed_seconds": 9.265536,
+          "audio_elapsed_seconds": 8.84791
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대",
+          "language": "ko-KR",
+          "elapsed_seconds": 9.580255,
+          "audio_elapsed_seconds": 9.162629
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대 그래",
+          "language": "ko-KR",
+          "elapsed_seconds": 9.58543,
+          "audio_elapsed_seconds": 9.167804
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대 그래프",
+          "language": "ko-KR",
+          "elapsed_seconds": 9.902708,
+          "audio_elapsed_seconds": 9.485082
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대 그래프에",
+          "language": "ko-KR",
+          "elapsed_seconds": 10.22025,
+          "audio_elapsed_seconds": 9.802624
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대 그래프에 비",
+          "language": "ko-KR",
+          "elapsed_seconds": 10.223464,
+          "audio_elapsed_seconds": 9.805837
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대 그래프에 비유",
+          "language": "ko-KR",
+          "elapsed_seconds": 10.22761,
+          "audio_elapsed_seconds": 9.809983
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대 그래프에 비유된다",
+          "language": "ko-KR",
+          "elapsed_seconds": 10.541867,
+          "audio_elapsed_seconds": 10.124241
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대 그래프에 비유된다.",
+          "language": "ko-KR",
+          "elapsed_seconds": 10.546008,
+          "audio_elapsed_seconds": 10.128382
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 비토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대 그래프에 비유된다.",
+          "language": "ko-KR",
+          "elapsed_seconds": 11.025052,
+          "audio_elapsed_seconds": 10.607426
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 12.543529,
+          "audio_elapsed_seconds": 12.125903
+        }
+      ],
+      "errors": 1,
+      "reference_chars": 52,
+      "cer": 0.019230769230769232,
+      "audio": "audio/ko-04.wav",
+      "sha256": "e28117e5ba80cdfff918199eec2350cd47d5878aca2abe689f35db47ed91bb35",
+      "sha256_verified": true
+    },
+    {
+      "sample_id": "fleurs-ko-test-row-5",
+      "language": "ko",
+      "requested_language": "ko-KR",
+      "reference": "합금은 기본적으로 금속 두 개 이상의 혼합물이다 주기율표 상에 원소가 많이 있다는 것을 잊지 마라",
+      "audio_seconds": 9.9,
+      "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기율표상의 원소가 많이 있다는 것을 잊지 마라",
+      "detected_languages": [
+        "ko-KR"
+      ],
+      "startup_seconds": 0.316208,
+      "first_partial_seconds": 1.964048,
+      "final_lag_seconds": -1.372192,
+      "end_to_end_seconds": 9.966308,
+      "audio_send_seconds": 9.900213,
+      "total_seconds": 10.282563,
+      "partial_count": 36,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 0.316208,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.280303,
+          "audio_elapsed_seconds": 1.964048
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.283105,
+          "audio_elapsed_seconds": 1.96685
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.597432,
+          "audio_elapsed_seconds": 2.281177
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.600913,
+          "audio_elapsed_seconds": 2.284659
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.60418,
+          "audio_elapsed_seconds": 2.287925
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로",
+          "language": "ko-KR",
+          "elapsed_seconds": 2.919137,
+          "audio_elapsed_seconds": 2.602882
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.241552,
+          "audio_elapsed_seconds": 2.925298
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.559986,
+          "audio_elapsed_seconds": 3.243731
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.563187,
+          "audio_elapsed_seconds": 3.246932
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개",
+          "language": "ko-KR",
+          "elapsed_seconds": 3.880226,
+          "audio_elapsed_seconds": 3.563971
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.199423,
+          "audio_elapsed_seconds": 3.883168
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.202242,
+          "audio_elapsed_seconds": 3.885987
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.205843,
+          "audio_elapsed_seconds": 3.889588
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.520464,
+          "audio_elapsed_seconds": 4.204209
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.522987,
+          "audio_elapsed_seconds": 4.206732
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.838908,
+          "audio_elapsed_seconds": 4.522653
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.842148,
+          "audio_elapsed_seconds": 4.525893
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다.",
+          "language": "ko-KR",
+          "elapsed_seconds": 4.844918,
+          "audio_elapsed_seconds": 4.528663
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.799335,
+          "audio_elapsed_seconds": 5.48308
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.801487,
+          "audio_elapsed_seconds": 5.485232
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기율",
+          "language": "ko-KR",
+          "elapsed_seconds": 5.804289,
+          "audio_elapsed_seconds": 5.488034
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기율표",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.117818,
+          "audio_elapsed_seconds": 5.801563
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기율표상",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.122492,
+          "audio_elapsed_seconds": 5.806237
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기율표상의",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.440516,
+          "audio_elapsed_seconds": 6.124261
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기율표상의 원",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.444289,
+          "audio_elapsed_seconds": 6.128034
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기율표상의 원소",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.757817,
+          "audio_elapsed_seconds": 6.441562
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기율표상의 원소가",
+          "language": "ko-KR",
+          "elapsed_seconds": 6.761568,
+          "audio_elapsed_seconds": 6.445313
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기율표상의 원소가 많이",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.078574,
+          "audio_elapsed_seconds": 6.762319
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기율표상의 원소가 많이 있다",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.399662,
+          "audio_elapsed_seconds": 7.083407
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기율표상의 원소가 많이 있다는",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.404639,
+          "audio_elapsed_seconds": 7.088384
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기율표상의 원소가 많이 있다는 것",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.719252,
+          "audio_elapsed_seconds": 7.402997
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기율표상의 원소가 많이 있다는 것을",
+          "language": "ko-KR",
+          "elapsed_seconds": 7.722741,
+          "audio_elapsed_seconds": 7.406487
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기율표상의 원소가 많이 있다는 것을 잊",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.360098,
+          "audio_elapsed_seconds": 8.043843
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기율표상의 원소가 많이 있다는 것을 잊지",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.363684,
+          "audio_elapsed_seconds": 8.047429
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기율표상의 원소가 많이 있다는 것을 잊지 마",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.681538,
+          "audio_elapsed_seconds": 8.365283
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기율표상의 원소가 많이 있다는 것을 잊지 마라",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.685221,
+          "audio_elapsed_seconds": 8.368966
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. <ko-KR> 주기율표상의 원소가 많이 있다는 것을 잊지 마라",
+          "language": "ko-KR",
+          "elapsed_seconds": 8.844063,
+          "audio_elapsed_seconds": 8.527808
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 10.222029,
+          "audio_elapsed_seconds": 9.905774
+        }
+      ],
+      "errors": 5,
+      "reference_chars": 40,
+      "cer": 0.125,
+      "audio": "audio/ko-05.wav",
+      "sha256": "98e7a8d6b9f12cad30fee3fcfbea51e64505a9e85f9e989db8df8f7a730d3ac7",
+      "sha256_verified": true
+    }
+  ],
+  "summary": {
+    "successful_samples": 6,
+    "failed_samples": 0,
+    "pending_samples": 4,
+    "error_count": 0,
+    "ranking_allowed": false,
+    "cer": null,
+    "wer": null,
+    "valid_only": {
+      "cer": 0.17843866171003717,
+      "errors": 48,
+      "reference_chars": 269,
+      "wer": null,
+      "word_errors": 0,
+      "reference_words": 0,
+      "partial_count": 231,
+      "partial_before_audio_end_samples": 6,
+      "samples_with_partial": 6,
+      "median_startup_seconds": 0.36495,
+      "median_first_partial_seconds": 2.124054,
+      "median_final_lag_seconds": -1.5328655,
+      "median_end_to_end_seconds": 11.5239535
+    }
+  }
+}

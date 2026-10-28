@@ -50,9 +50,9 @@ export class TransmeetStack extends cdk.Stack {
     const nemotronAsrEndpoint = this.node.tryGetContext('nemotronAsrEndpoint') || process.env.NEMOTRON_ASR_ENDPOINT || 'transmeet-nemotron-asr';
     const qwenAsrRegion = this.node.tryGetContext('qwenAsrRegion') || process.env.QWEN_ASR_REGION || 'ap-northeast-2';
     const nemotronAsrRegion = this.node.tryGetContext('nemotronAsrRegion') || process.env.NEMOTRON_ASR_REGION || 'ap-northeast-2';
-    const nemotronStreamingEndpoint = this.node.tryGetContext('nemotronStreamingEndpoint') || process.env.NEMOTRON_STREAMING_ENDPOINT || 'transmeet-nemotron-streaming-v2';
-    const nemotronStreamingRegion = this.node.tryGetContext('nemotronStreamingRegion') || process.env.NEMOTRON_STREAMING_REGION || REGION;
-    const nemotronStreamingEnabled = String(this.node.tryGetContext('nemotronStreamingEnabled') ?? process.env.NEMOTRON_STREAMING_ENABLED ?? 'false') === 'true';
+    const nemotronStreamingEndpoint = this.node.tryGetContext('nemotronStreamingEndpoint') || process.env.NEMOTRON_STREAMING_ENDPOINT || 'transmeet-nemotron-streaming';
+    const nemotronStreamingRegion = this.node.tryGetContext('nemotronStreamingRegion') || process.env.NEMOTRON_STREAMING_REGION || 'ap-northeast-2';
+    const nemotronStreamingEnabled = String(this.node.tryGetContext('nemotronStreamingEnabled') ?? process.env.NEMOTRON_STREAMING_ENABLED ?? 'true') === 'true';
     const qwenAsrComponent = this.node.tryGetContext('qwenAsrComponent') || process.env.QWEN_ASR_INFERENCE_COMPONENT || 'transmeet-qwen3-asr-ic-v2';
     const nemotronAsrComponent = this.node.tryGetContext('nemotronAsrComponent') || process.env.NEMOTRON_ASR_INFERENCE_COMPONENT || 'transmeet-nemotron-asr-ic-v2';
     const wsImageTag = this.node.tryGetContext('wsImageTag') || 'latest';
@@ -490,7 +490,8 @@ export class TransmeetStack extends cdk.Stack {
     );
     wsTaskRole.addToPolicy(
       new iam.PolicyStatement({
-        actions: ['sagemaker:InvokeEndpointWithBidirectionalStream', 'sagemaker:DescribeEndpoint'],
+        // The live HTTP/2 runtime also checks InvokeEndpoint on this same ARN.
+        actions: ['sagemaker:InvokeEndpoint', 'sagemaker:InvokeEndpointWithBidirectionalStream', 'sagemaker:DescribeEndpoint'],
         resources: [`arn:aws:sagemaker:${nemotronStreamingRegion}:${this.account}:endpoint/${nemotronStreamingEndpoint}`],
       })
     );

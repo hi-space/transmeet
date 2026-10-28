@@ -44,21 +44,23 @@ Transcribe와 활성화된 Nemotron은 전송 사이에도 스트리밍 세션�
 
 ## Nemotron 연속 인식
 
+[실시간 인식 검증 결과](../benchmarks/nemotron-streaming-2026-10-28/README.md)에 최종 측정과 운영 적용 기록을 보존한다.
+
 원본 모델은 `nvidia/nemotron-3.5-asr-streaming-0.6b`, 모델 파일과 Transformers 실행 환경은 기존 JumpStart `1.0.2` 아티팩트다. `inference/nemotron_streaming/`의 별도 서버가 SageMaker 양방향 WebSocket 계약을 구현한다. 같은 발화의 특징·디코더 캐시는 다음 음성 조각에 이어서 사용한다. 서로 다른 녹음은 실행 상태를 공유하지 않으며, GPU 가중치만 공유한다.
 
 - 브라우저의 **160ms 전송 간격**과 모델의 **320/560ms 처리 설정**은 별개다. 첫 자막 지연에는 음성 내용, 네트워크, 추론 시간도 포함된다.
-- 20ms 단위 RMS로 발화 시작과 무음을 판정하고, 시작 전 최대 200ms를 보존한다. 기본 확정 기준은 700ms 무음이며, 30초 연속 발화에서도 구간을 확정해 상태 크기를 제한한다. 이 방식은 학습된 화자 분리나 잡음 제거 모델이 아니다.
+- 작은 목소리를 버리지 않도록, 대기 중 정확히 0인 디지털 무음만 제외한다. 20ms 단위의 상대적 에너지는 음성을 보낼지 결정하는 대신 문장 경계를 정하는 데 사용한다. 기본 확정 기준은 700ms 무음이며, 30초 연속 발화에서도 구간을 확정해 상태 크기를 제한한다. 배경 소음도 모델에 전달될 수 있으며, 이 방식은 학습된 잡음 제거 모델이 아니다.
 - 부분 자막은 현재 가설 전체를 갱신한다. 확정된 발화만 번역·저장하며, 녹음 정지와 설정 변경은 남은 짧은 오디오까지 배출한다. 이전 구간의 늦은 결과가 새 부분 자막을 지우지 않도록 스트림·발화 ID를 사용한다.
 - SageMaker 연결은 25분마다 기존 구간을 마무리하고 재연결한다. 입력과 결과 대기열에 상한이 있으며, 처리 실패는 녹음 중단 상태로 전달한다.
-- 스트리밍 API에는 추론 컴포넌트 선택 필드가 없어, `transmeet-nemotron-streaming-v2` 단일 모델 엔드포인트를 사용한다. 기존 배치 엔드포인트·컴포넌트는 별도로 보존한다.
+- 스트리밍 API에는 추론 컴포넌트 선택 필드가 없어, 서울의 `transmeet-nemotron-streaming` 단일 모델 엔드포인트를 사용한다. 기존 배치 엔드포인트·컴포넌트는 별도로 보존한다.
 - 기존 Transcribe와 HTTP/2 SDK가 요구하는 `awscrt` 버전이 달라, HTTP/2 연결은 별도 Python 가상환경의 프로세스로 실행한다. 백엔드 Docker 이미지가 `/opt/nemotron-stream`을 구성한다.
 
 백엔드 활성화 설정:
 
 ```dotenv
 NEMOTRON_STREAMING_ENABLED=true
-NEMOTRON_STREAMING_ENDPOINT=transmeet-nemotron-streaming-v2
-NEMOTRON_STREAMING_REGION=us-east-1
+NEMOTRON_STREAMING_ENDPOINT=transmeet-nemotron-streaming
+NEMOTRON_STREAMING_REGION=ap-northeast-2
 NEMOTRON_STREAMING_CHUNK_MS=560
 NEMOTRON_STREAM_PYTHON=/opt/nemotron-stream/bin/python
 ```
@@ -70,6 +72,8 @@ NEMOTRON_STREAM_PYTHON=/opt/nemotron-stream/bin/python
 ```bash
 docker build --platform linux/amd64 -f inference/nemotron_streaming/Dockerfile -t nemotron-streaming .
 python backend/scripts/deploy_nemotron_streaming.py \
+  --region ap-northeast-2 --endpoint transmeet-nemotron-streaming \
+  --instance ml.g5.xlarge --fallback-instance ml.g5.4xlarge \
   --image "$NEMOTRON_IMAGE_DIGEST_URI" --role "$SAGEMAKER_ROLE_ARN"
 ```
 

@@ -29,11 +29,25 @@ MODEL_ENV = {
 }
 
 
-def make_plan(image, role, *, endpoint="transmeet-nemotron-streaming-v2", instance="ml.g5.xlarge"):
+def make_plan(
+    image, role, *, endpoint="transmeet-nemotron-streaming",
+    instance="ml.g5.xlarge", ami=INFERENCE_AMI, fallback_instances=(), artifact_uri=ARTIFACT,
+):
     if not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?", endpoint):
         raise ValueError("Invalid endpoint name")
+    instances = [instance, *fallback_instances]
+    if len(instances) > 5 or len(set(instances)) != len(instances):
+        raise ValueError("Instance pools must contain at most five distinct instance types")
+    pooled = len(instances) > 1
+    placement = {
+        "InstancePools": [
+            {"InstanceType": value, "Priority": index + 1}
+            for index, value in enumerate(instances)
+        ],
+        "VariantInstanceProvisionTimeoutInSeconds": 600,
+    } if pooled else {"InstanceType": instance}
     identity = json.dumps(
-        [image, role, endpoint, instance, ARTIFACT, INFERENCE_AMI, MODEL_ENV],
+        [image, role, endpoint, placement if pooled else instance, artifact_uri, ami, MODEL_ENV],
         separators=(",", ":"), sort_keys=True,
     )
     digest = hashlib.sha256(identity.encode()).hexdigest()[:12]
@@ -47,7 +61,7 @@ def make_plan(image, role, *, endpoint="transmeet-nemotron-streaming-v2", instan
             "PrimaryContainer": {
                 "Image": image,
                 "ModelDataSource": {"S3DataSource": {
-                    "S3Uri": ARTIFACT, "S3DataType": "S3Prefix", "CompressionType": "None",
+                    "S3Uri": artifact_uri, "S3DataType": "S3Prefix", "CompressionType": "None",
                 }},
                 "Environment": dict(MODEL_ENV),
             },
@@ -59,8 +73,8 @@ def make_plan(image, role, *, endpoint="transmeet-nemotron-streaming-v2", instan
                 "VariantName": "AllTraffic", "ModelName": name,
                 "InitialInstanceCount": 1, "InitialVariantWeight": 1.0,
                 # g5 has local NVMe; SageMaker rejects an EBS VolumeSizeInGB override.
-                "InstanceType": instance,
-                "InferenceAmiVersion": INFERENCE_AMI,
+                **placement,
+                **({"InferenceAmiVersion": ami} if ami else {}),
                 "ModelDataDownloadTimeoutInSeconds": 1800,
                 "ContainerStartupHealthCheckTimeoutInSeconds": 1800,
             }],
@@ -125,17 +139,30 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image", required=True, help="Immutable ECR image URI, preferably @sha256 digest")
     parser.add_argument("--role", required=True, help="Existing SageMaker execution role ARN")
-    parser.add_argument("--endpoint", default="transmeet-nemotron-streaming-v2")
+    parser.add_argument("--endpoint", default="transmeet-nemotron-streaming")
     parser.add_argument("--instance", default="ml.g5.xlarge")
-    parser.add_argument("--region", default="us-east-1")
+    parser.add_argument("--fallback-instance", action="append", default=[],
+                        help="Additional instance type in fallback priority order (up to four)")
+    parser.add_argument("--ami", default=INFERENCE_AMI, help="Inference AMI version, or 'default' for the instance family's default")
+    parser.add_argument("--region", default="ap-northeast-2")
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--update", action="store_true")
     parser.add_argument("--wait", action="store_true")
     parser.add_argument("--record", type=Path)
     args = parser.parse_args()
+    artifact = ARTIFACT
     if args.region != "us-east-1":
-        parser.error("This pinned artifact is verified in us-east-1; select a verified regional artifact first")
-    plan = make_plan(args.image, args.role, endpoint=args.endpoint, instance=args.instance)
+        metadata = boto3.client("sagemaker", region_name=args.region).describe_hub_content(
+            HubName="SageMakerPublicHub", HubContentType="Model",
+            HubContentName="huggingface-asr-nvidia-nemotron-3-5-asr-streaming-0-6b",
+            HubContentVersion="1.0.2",
+        )
+        artifact = json.loads(metadata["HubContentDocument"])["HostingArtifactUri"]
+    plan = make_plan(
+        args.image, args.role, endpoint=args.endpoint, instance=args.instance,
+        ami=None if args.ami == "default" else args.ami, fallback_instances=args.fallback_instance,
+        artifact_uri=artifact,
+    )
     print(json.dumps(plan, indent=2), flush=True)
     if args.record:
         args.record.parent.mkdir(parents=True, exist_ok=True)

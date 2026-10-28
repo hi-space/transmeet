@@ -1,0 +1,59 @@
+{
+  "region": "ap-northeast-2",
+  "endpoint": "transmeet-nemotron-streaming",
+  "status": "InService",
+  "variants": [
+    {
+      "VariantName": "AllTraffic",
+      "DeployedImages": [
+        {
+          "SpecifiedImage": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-nemotron-streaming@sha256:c20c3f92bf90b7786e4a5122e4404e682c418fca8f2d7442601595a7261e6c23",
+          "ResolvedImage": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-nemotron-streaming@sha256:c20c3f92bf90b7786e4a5122e4404e682c418fca8f2d7442601595a7261e6c23",
+          "ResolutionTime": "2026-10-28 20:28:25.844000+00:00"
+        }
+      ],
+      "CurrentWeight": 1.0,
+      "DesiredWeight": 1.0,
+      "CurrentInstanceCount": 1,
+      "DesiredInstanceCount": 1,
+      "InstancePools": [
+        {
+          "InstanceType": "ml.g5.xlarge",
+          "CurrentInstanceCount": 1
+        }
+      ]
+    }
+  ],
+  "model_name": "transmeet-nemotron-streaming-859ae8f54c75",
+  "image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-nemotron-streaming@sha256:c20c3f92bf90b7786e4a5122e4404e682c418fca8f2d7442601595a7261e6c23",
+  "artifact": {
+    "S3DataSource": {
+      "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-nvidia-nemotron-3-5-asr-streaming-0-6b/artifacts/inference-prepack/v1.0.2/",
+      "S3DataType": "S3Prefix",
+      "CompressionType": "None"
+    }
+  },
+  "regional_artifact_check": {
+    "us-east-1": {
+      "weights_size": 2552062944,
+      "weights_etag": "\"2ae793258e8fee050b76d164a2a2d004-305\"",
+      "config_sha256": "62d186fd91f518e00e7867500f1f5819225e8ee95ea3e21b546514bf2048e845"
+    },
+    "ap-northeast-2": {
+      "weights_size": 2552062944,
+      "weights_etag": "\"2ae793258e8fee050b76d164a2a2d004-305\"",
+      "config_sha256": "62d186fd91f518e00e7867500f1f5819225e8ee95ea3e21b546514bf2048e845"
+    }
+  },
+  "workspace_source_sha256_at_measurement": {
+    "inference/nemotron_streaming/engine.py": "bfb7bd57f8db60932639bea99656b10138e6e8305ecc4b5741390194f00bcdbd",
+    "inference/nemotron_streaming/endpoint_policy.py": "0e7b97c3eec15be595c8be0a2c15f1e37a9834d6f38e67477637712002e2d222",
+    "inference/nemotron_streaming/model_runtime.py": "00a75564c34d2ad015a434bf534b501d88601d61544f1824d678a150e13dd5aa",
+    "inference/nemotron_streaming/server.py": "a2baf9bc5b658c02fafb72351157c07de5d7f49ee3e6bf74063eb3fcbf167d51",
+    "backend/app/nemotron_stream.py": "dbefdfcb0c97011ac43d26ef46e9d268350b331e4957b85904e4b039483a9d9e",
+    "backend/scripts/benchmark_nemotron_streaming.py": "d489b5bf425224669a20c4333a306c9b68d1dd9dffdbdee6a3f0260153610ea9"
+  },
+  "deployed_backend_image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-ws-backend@sha256:bb9fdc8f9895b8a4bb9776fc69138ae065bfd47ff430f17dae28b276a9091fbe",
+  "deployed_task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+  "source_note": "Workspace hashes describe the files inspected during measurement. The deployed backend version is identified by its immutable image digest; the latest live image was retained during the environment-only cutover."
+}

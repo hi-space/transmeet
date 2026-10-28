@@ -1,0 +1,38 @@
+{
+  "verified_at": "2026-10-28T21:00:21.977253+00:00",
+  "service_task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+  "service_running": 1,
+  "service_pending": 0,
+  "backend_image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-ws-backend@sha256:bb9fdc8f9895b8a4bb9776fc69138ae065bfd47ff430f17dae28b276a9091fbe",
+  "streaming_settings": {
+    "NEMOTRON_STREAMING_ENABLED": "true",
+    "NEMOTRON_STREAMING_ENDPOINT": "transmeet-nemotron-streaming",
+    "NEMOTRON_STREAMING_REGION": "ap-northeast-2",
+    "NEMOTRON_STREAMING_CHUNK_MS": "560"
+  },
+  "model_status": "InService",
+  "model_instances": 1,
+  "website_http_status": 200,
+  "website_page_script": "/_next/static/chunks/app/page-e75bbd3a3ee091c1.js",
+  "deployed_ui_state_tracking": true,
+  "application_probe": {
+    "audio_seconds": 7.02,
+    "first_partial_including_connection_seconds": 2.4568389249999996,
+    "partial_count": 37,
+    "finals": [
+      {
+        "elapsed_seconds": 8.410705294000003,
+        "original": "그래도 관계자의 조언을 듣고 모든 표지판을 시키고 안전경고에 세심한 주의를 기울여야 합니다.",
+        "translation": "Even so, you should heed the advice of the relevant personnel, follow all the signs, and pay careful attention to safety warnings.",
+        "language": "ko"
+      }
+    ],
+    "errors": [],
+    "meeting_writes": false
+  },
+  "retained_batch_endpoint": {
+    "name": "transmeet-nemotron-asr",
+    "status": "InService",
+    "instances": 1
+  }
+}
