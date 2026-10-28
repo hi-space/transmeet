@@ -240,11 +240,15 @@ async def test_websocket_disconnect_flushes_silent_short_tail_and_persists_final
         pass
 
     async def update_item(**request):
+        pass
+
+    async def transact_write_items(**request):
+        # 발언은 메시지 테이블 Put + 회의 항목 갱신 트랜잭션으로 저장된다
         saved.append(request)
 
     @asynccontextmanager
     async def dynamodb():
-        yield SimpleNamespace(update_item=update_item)
+        yield SimpleNamespace(update_item=update_item, transact_write_items=transact_write_items)
 
     monkeypatch.setattr(ws_handler, "_authenticate", authenticate)
     monkeypatch.setattr(ws_handler, "_claim_meeting", claim)
@@ -255,10 +259,10 @@ async def test_websocket_disconnect_flushes_silent_short_tail_and_persists_final
     await eventually(lambda: saved)
     assert streaming.connections[0].audio == [pcm]
     assert streaming.connections[0].closed
-    messages = [request["ExpressionAttributeValues"][":msg"] for request in saved
-                if ":msg" in request.get("ExpressionAttributeValues", {})]
-    assert len(messages) == 1
-    record = messages[0]["L"][0]["M"]
+    puts = [op["Put"] for request in saved for op in request["TransactItems"] if "Put" in op]
+    assert len(puts) == 1
+    assert puts[0]["TableName"] == ws_handler.config.MESSAGES_TABLE
+    record = puts[0]["Item"]
     assert record["originalText"]["S"] == "회의를 시작합니다."
     assert record["translatedText"]["S"] == "회의를 시작합니다."
     assert record["detectedLanguage"]["S"] == "ko"
