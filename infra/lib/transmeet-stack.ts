@@ -713,7 +713,11 @@ export class TransmeetStack extends cdk.Stack {
     const runtime = new bedrockagentcore.CfnRuntime(this, 'MeetingPageRuntime', {
       agentRuntimeName: RUNTIME_NAME,
       description: 'TransMeet meeting page agent (LangGraph)',
-      agentRuntimeArtifact: { containerConfiguration: { containerUri: agentImage.imageUri } },
+      // -c agentImageUri=<이미 배포된 이미지> 로 Runtime 을 고정할 수 있다. 다른 세션이 배포한 Runtime 을
+      // 이 체크아웃의 agent/ 로 되돌리지 않고 인프라만 바꿀 때 쓴다. 지정하지 않으면 agent/ 를 빌드한다.
+      agentRuntimeArtifact: {
+        containerConfiguration: { containerUri: this.node.tryGetContext('agentImageUri') || agentImage.imageUri },
+      },
       networkConfiguration: { networkMode: 'PUBLIC' },
       protocolConfiguration: 'HTTP',
       roleArn: runtimeRole.roleArn,
