@@ -1111,6 +1111,8 @@ async def _handle_tts_request(
 # ─── Summary streaming ───────────────────────────────────────────────────────
 
 _DEFAULT_TITLE_PREFIX = "Meeting "
+# 기본 날짜·시간 형식. infra/lambda/summarize/index.ts 의 판별식과 맞춘다.
+_DEFAULT_TITLE_TIMESTAMP = re.compile(r"\d{4}\. \d{1,2}\. \d{1,2}\. (?:오전|오후) \d{1,2}:\d{2}:\d{2}")
 
 
 async def _generate_title_if_default(
@@ -1123,7 +1125,10 @@ async def _generate_title_if_default(
 
     Returns the new title on success, None if skipped or failed.
     """
-    if not current_title.startswith(_DEFAULT_TITLE_PREFIX):
+    if not (
+        current_title.startswith(_DEFAULT_TITLE_PREFIX)
+        or _DEFAULT_TITLE_TIMESTAMP.fullmatch(current_title)
+    ):
         return None
     if not transcript_lines:
         return None

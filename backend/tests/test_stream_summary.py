@@ -5,6 +5,8 @@ Opus 5.5 는 첫 토큰까지 수 초~수십 초 침묵한다. 그 사이 미팅
 """
 from contextlib import asynccontextmanager
 
+import pytest
+
 from app import ws_handler
 from app.ws_handler import ConnectionState
 
@@ -34,13 +36,17 @@ class FakeBedrock:
 
         return {"stream": stream()}
 
+    async def converse(self, **kwargs):
+        return {"output": {"message": {"content": [{"text": "제품 출시 일정 확정"}]}}}
+
 
 class FakeDDB:
-    def __init__(self):
+    def __init__(self, title="주간 1:1"):
+        self.title = title
         self.updates = []
 
     async def get_item(self, **kwargs):
-        return {"Item": {"title": {"S": "주간 1:1"}}}
+        return {"Item": {"title": {"S": self.title}}}
 
     async def update_item(self, **kwargs):
         self.updates.append(kwargs)
@@ -102,6 +108,31 @@ async def test_summary_request_uses_low_effort(monkeypatch):
     await ws_handler._stream_summary(ws_handler._meeting_broadcaster("m1"), "m1", "x", inline_messages=MESSAGES)
 
     assert bedrock.calls[0]["additionalModelRequestFields"] == {"output_config": {"effort": "low"}}
+
+
+@pytest.mark.parametrize(("title", "expected_title"), [
+    ("2026. 10. 28. 오전 9:05:06", "제품 출시 일정 확정"),
+    ("2026. 10. 28. 오후 1:05:06", "제품 출시 일정 확정"),
+    ("Meeting 2026. 10. 28. 오후 1:05:06", "제품 출시 일정 확정"),
+    ("제품 회의", None),
+    ("2026. 10. 28. 오후 1:05:06 제품 회의", None),
+])
+async def test_summary_generates_titles_only_for_defaults(monkeypatch, title, expected_title):
+    bedrock, ddb = FakeBedrock(["요약"]), FakeDDB(title)
+    install(monkeypatch, bedrock, ddb)
+    ws = FakeWS()
+    ws_handler.active_connections["c"] = ConnectionState(ws=ws, meeting_id="m1")
+
+    await ws_handler._stream_summary(
+        ws_handler._meeting_broadcaster("m1"), "m1", "x", inline_messages=MESSAGES
+    )
+
+    done = next(message for message in ws.sent if message.get("phase") == "done")
+    assert done.get("title") == expected_title
+    title_updates = [update for update in ddb.updates if update["UpdateExpression"].startswith("SET title")]
+    assert len(title_updates) == (1 if expected_title else 0)
+    if expected_title:
+        assert title_updates[0]["ExpressionAttributeValues"][":t"] == {"S": expected_title}
 
 
 # ─── Bedrock 일시 장애: 재시도 → 대체 모델 ──────────────────────────────────────

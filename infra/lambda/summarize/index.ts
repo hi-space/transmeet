@@ -41,6 +41,8 @@ function buildSummaryPrompt(title: string, transcript: string): string {
 }
 
 const DEFAULT_TITLE_PREFIX = 'Meeting ';
+// 기본 날짜·시간 형식. backend/app/ws_handler.py 의 판별식과 맞춘다.
+const DEFAULT_TITLE_TIMESTAMP = /^\d{4}\. \d{1,2}\. \d{1,2}\. (?:오전|오후) \d{1,2}:\d{2}:\d{2}$/;
 
 async function maybeGenerateTitle(args: {
   meetingId: string;
@@ -48,7 +50,7 @@ async function maybeGenerateTitle(args: {
   messages: MeetingMessage[];
 }): Promise<string | null> {
   const { meetingId, currentTitle, messages } = args;
-  if (!currentTitle.startsWith(DEFAULT_TITLE_PREFIX)) return null;
+  if (!currentTitle.startsWith(DEFAULT_TITLE_PREFIX) && !DEFAULT_TITLE_TIMESTAMP.test(currentTitle)) return null;
   if (messages.length === 0) return null;
 
   try {

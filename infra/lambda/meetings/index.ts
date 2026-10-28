@@ -250,7 +250,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         const newMeeting = {
           meetingId: randomUUID(),
           userId,
-          title: body.title ?? `Meeting ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}`,
+          title: body.title ?? new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' }),
           status: 'active',
           createdAt: now,
           updatedAt: now,
