@@ -6,7 +6,8 @@ plan → (write ∥ draw×N) → review → render
 - write  : writes all page text from the plan (JSON). Tone rules live only here and in review.
 - draw   : one SVG per call, all in parallel (the overview gets a wide and a tall version).
 - review : checks the text against the transcript and returns path → replacement fixes.
-- render : code fills a fixed layout (`assets/visual.css`) — section order and names live here.
+- render : code fills a fixed layout (`assets/visual.css`) — section order and names live here
+           (회의 개요 → 회의 요약 → 논의 흐름 → 회의 결과 → 참고 자료).
 
 A single call that designs, writes and draws the whole page ran out of output tokens and squeezed
 the text to ~11% of the page; splitting lets the writer spend its whole output on text.
@@ -382,9 +383,9 @@ def render_page(inp: VisualInputs, w: Dict[str, Any], svgs: Dict[str, str], css:
     toc = ('<nav class="toc" aria-label="목차"><p class="toc-title">목차</p><ol>'
            '<li><a href="#meeting">회의 개요</a></li><li><a href="#key">핵심 메시지</a></li><li><a href="#background">백그라운드</a></li>'
            '<li><a href="#summary">회의 요약</a></li>'
+           f'<li><a href="#flow">논의 흐름</a><ol class="toc-topics">{"".join(toc_topics)}</ol></li>'
            '<li><a href="#outcomes">회의 결과</a><ol><li><a href="#decisions">결정 사항</a></li><li><a href="#actions">액션 아이템</a></li>'
            '<li><a href="#open">미결 사항</a></li></ol></li>'
-           f'<li><a href="#flow">논의 흐름</a><ol class="toc-topics">{"".join(toc_topics)}</ol></li>'
            '<li><a href="#refs">참고 자료</a></li></ol></nav>')
     none = '<p class="hint">해당 없음</p>'
     return f"""<!doctype html>
@@ -431,15 +432,15 @@ def render_page(inp: VisualInputs, w: Dict[str, Any], svgs: Dict[str, str], css:
   <ol class="points">{points}</ol>
 </section>
 
+<section class="sec" id="flow" data-section="discussion">{sec_head("논의 흐름", "flow", "주제 제목을 누르면 접고 펼칠 수 있습니다.")}
+{''.join(topics) or none}
+</section>
+
 <section class="sec" id="outcomes">{sec_head("회의 결과", "outcomes")}
   <div class="out dec" id="decisions" data-section="decisions"><h3>결정 사항 <span class="count">{len(decisions)}건</span></h3>{f'<ul class="rows">{rows(decisions)}</ul>' if decisions else none}</div>
   <div class="out act" id="actions" data-section="action-items"><h3>액션 아이템 <span class="count">{len(actions)}건</span></h3>
     {f'<table class="actions"><thead><tr><th>할 일</th><th>담당</th><th>기한</th></tr></thead><tbody>{action_rows}</tbody></table>' if actions else none}</div>
   <div class="out open" id="open" data-section="open-questions"><h3>미결 사항 <span class="count">{len(opens)}건</span></h3>{f'<ul class="rows">{rows(opens)}</ul>' if opens else none}</div>
-</section>
-
-<section class="sec" id="flow" data-section="discussion">{sec_head("논의 흐름", "flow", "주제 제목을 누르면 접고 펼칠 수 있습니다.")}
-{''.join(topics) or none}
 </section>
 
 <section class="sec" id="refs">

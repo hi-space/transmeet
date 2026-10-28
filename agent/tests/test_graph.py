@@ -354,6 +354,8 @@ async def test_visual_style_builds_page_in_stages_and_publishes(tmp_path):
     assert "CodeDeploy는 진행 중입니다." in html  # 리뷰 수정 적용 + 조사 띄어쓰기 보정
     assert "&lt;script&gt;" not in html and "<script" not in html
     assert html.count("<svg") == 3 and 'href="#topic-1"' in html and "파이프라인 마무리" in html
+    assert html.index('id="summary"') < html.index('id="flow"') < html.index('id="outcomes"') < html.index('id="refs"')
+    assert html.index('href="#flow"') < html.index('href="#outcomes"')  # 목차도 같은 순서
     assert summary.startswith("금요일까지 파이프라인을 끝냅니다.") and title == PAYLOAD["meeting"]["title"]
     from runtime.stage import message_text
     plan_prompt = message_text(models["plan"].calls[0][1])
