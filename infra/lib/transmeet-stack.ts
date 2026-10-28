@@ -249,18 +249,37 @@ export class TransmeetStack extends cdk.Stack {
     restApi.root.addResource('tts').addMethod('POST', ttsIntegration, authed);
 
     // /me/email — 미팅 종료 메일 수신 주소 인증(SES 개별 identity)
-    const emailFn = new NodejsFunction(this, 'EmailFn', {
-      functionName: 'transmeet-email',
-      entry: path.join(__dirname, '../lambda/email/index.ts'),
-      timeout: cdk.Duration.seconds(10),
-      ...commonNodejsFunctionProps,
+    // 전용 역할: SES identity 생성·삭제 권한을 다른 REST Lambda 와 공유하지 않는다.
+    const emailRole = new iam.Role(this, 'EmailLambdaRole', {
+      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com'),
+      managedPolicies: [
+        iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'),
+      ],
     });
-    lambdaRole.addToPolicy(
+    emailRole.addToPolicy(
       new iam.PolicyStatement({
         actions: ['ses:GetEmailIdentity', 'ses:CreateEmailIdentity', 'ses:DeleteEmailIdentity'],
         resources: [`arn:aws:ses:${REGION}:${this.account}:identity/*`],
       })
     );
+    // 발신 도메인 identity 는 CDK 만 관리한다 — 코드 실수로 지워지면 메일 발송이 통째로 멈춘다
+    emailRole.addToPolicy(
+      new iam.PolicyStatement({
+        effect: iam.Effect.DENY,
+        actions: ['ses:CreateEmailIdentity', 'ses:DeleteEmailIdentity'],
+        resources: [
+          `arn:aws:ses:${REGION}:${this.account}:identity/${ROOT_DOMAIN}`,
+          `arn:aws:ses:${REGION}:${this.account}:identity/*.${ROOT_DOMAIN}`,
+        ],
+      })
+    );
+    const emailFn = new NodejsFunction(this, 'EmailFn', {
+      functionName: 'transmeet-email',
+      entry: path.join(__dirname, '../lambda/email/index.ts'),
+      timeout: cdk.Duration.seconds(10),
+      ...commonNodejsFunctionProps,
+      role: emailRole,
+    });
     const emailIntegration = new apigateway.LambdaIntegration(emailFn);
     const meEmailResource = restApi.root.addResource('me').addResource('email');
     meEmailResource.addMethod('GET', emailIntegration, authed);
@@ -302,9 +321,20 @@ export class TransmeetStack extends cdk.Stack {
       enforceSSL: true,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
-    // 미팅 삭제 때 그 미팅의 오디오도 지운다
-    audioBucket.grantRead(lambdaRole);
-    audioBucket.grantDelete(lambdaRole);
+    // 미팅 삭제 때 그 미팅의 오디오도 지운다 — 목록·삭제만, 읽기는 주지 않는다
+    lambdaRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['s3:ListBucket'],
+        resources: [audioBucket.bucketArn],
+        conditions: { StringLike: { 's3:prefix': ['meetings/*'] } },
+      })
+    );
+    lambdaRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['s3:DeleteObject'],
+        resources: [audioBucket.arnForObjects('meetings/*')],
+      })
+    );
     meetingsFn.addEnvironment('AUDIO_BUCKET', audioBucket.bucketName);
 
 
