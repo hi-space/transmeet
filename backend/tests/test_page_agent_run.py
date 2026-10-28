@@ -71,8 +71,16 @@ class FakeS3:
 class FakeDDB:
     """미팅 테이블 't' 에 항목 하나, 페이지 테이블 'p' 에 (있으면) 페이지 기록 하나."""
 
-    def __init__(self, item, page=None):
+    def __init__(self, item, page=None, messages=None):
         self.item, self.page, self.deletes = (dict(item) if item else None), (dict(page) if page else None), []
+        # 대화는 메시지 테이블 'm' 에 있다(기본: 모듈 상수 STORED).
+        self.messages = list(STORED if messages is None else messages)
+        self.queries = []
+
+    async def query(self, **kw):
+        assert kw["TableName"] == "m"
+        self.queries.append(kw)
+        return {"Items": list(self.messages)}
 
     async def get_item(self, **kw):
         if kw["TableName"] == "p":
@@ -96,13 +104,13 @@ def deps_for(agentcore, s3, ddb, invoke_retries=2, fallback_model_id="global.ant
             yield obj
         return _cm
     return PageAgentDeps(agentcore_client=cm(agentcore), s3_client=cm(s3), ddb_client=cm(ddb), runtime_arn=RUNTIME,
-                         bucket="pages", table="t", pages_table="p", invoke_retries=invoke_retries, retry_backoff=(0, 0),
+                         bucket="pages", table="t", pages_table="p", messages_table="m", invoke_retries=invoke_retries, retry_backoff=(0, 0),
                          fallback_model_id=fallback_model_id)
 
 
-ITEM = {"meetingId": {"S": "m1"}, "title": {"S": "t"}, "createdAt": {"S": "2026-10-06T10:00:00+09:00"},
-        "messages": {"L": [{"M": {"speaker": {"S": "speaker1"}, "originalText": {"S": "Hello"}, "translatedText": {"S": "안녕"},
-                                   "timestamp": {"S": "2026-10-06T10:00:10+09:00"}}}]}}
+ITEM = {"meetingId": {"S": "m1"}, "title": {"S": "t"}, "createdAt": {"S": "2026-10-06T10:00:00+09:00"}}
+STORED = [{"speaker": {"S": "speaker1"}, "originalText": {"S": "Hello"}, "translatedText": {"S": "안녕"},
+           "timestamp": {"S": "2026-10-06T10:00:10+09:00"}}]
 
 
 class Collector:
@@ -221,10 +229,9 @@ async def test_malformed_sse_lines_are_skipped():
 
 
 async def test_no_messages_is_immediate_error():
-    empty = {**ITEM, "messages": {"L": []}}
     ac = FakeAgentCore([])
     send = Collector()
-    assert await run_page_generation(send, "m1", deps=deps_for(ac, FakeS3(), FakeDDB(empty))) is None
+    assert await run_page_generation(send, "m1", deps=deps_for(ac, FakeS3(), FakeDDB(ITEM, messages=[]))) is None
     assert send.events[-1]["phase"] == "error" and ac.calls == []
 
 
@@ -422,3 +429,15 @@ async def test_discovery_does_not_restore_unpublished_page():
     await run_unpublish(Collector(), "m1", deps=deps)
 
     assert page_status_event("m1", discover=True) is None
+
+
+async def test_stored_messages_come_from_messages_table():
+    # 마이그레이션 중 회의 항목에 옛 messages 속성이 남아 있어도 메시지 테이블 내용이 우선한다.
+    legacy = {**ITEM, "messages": {"L": [{"M": {"speaker": {"S": "old"}, "originalText": {"S": "LEGACY"},
+                                                 "timestamp": {"S": "2026-10-06T10:00:01+09:00"}}}]}}
+    ddb = FakeDDB(legacy)
+    ac = FakeAgentCore([ok_stream()])
+    await run_page_generation(Collector(), "m1", deps=deps_for(ac, FakeS3(), ddb))
+    body = sent_payload(ac.calls[0])
+    assert [m["original"] for m in body["messages"]] == ["Hello"]
+    assert ddb.queries[0]["ConsistentRead"] is True and ddb.queries[0]["ExpressionAttributeValues"] == {":m": {"S": "m1"}}

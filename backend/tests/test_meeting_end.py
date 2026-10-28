@@ -33,13 +33,18 @@ class FakeDDB:
             "meetingId": {"S": "m1"},
             "title": {"S": "주간 1:1"},
             "createdAt": {"S": "2026-10-28T00:00:00+00:00"},
-            "messages": {"L": [{"M": {
-                "speaker": {"S": "speaker1"},
-                "originalText": {"S": "Let's ship next week."},
-                "timestamp": {"S": "2026-10-28T00:01:00+00:00"},
-            }}]},
         }
+        # 대화는 메시지 테이블에 있다. 회의 항목에는 두지 않는다.
+        self.messages = [{
+            "speaker": {"S": "speaker1"},
+            "originalText": {"S": "Let's ship next week."},
+            "timestamp": {"S": "2026-10-28T00:01:00+00:00"},
+        }]
         self.page = None
+
+    async def query(self, **kw):
+        assert kw["TableName"] == ws_handler.config.MESSAGES_TABLE
+        return {"Items": list(self.messages)}
 
     async def get_item(self, **kw):
         if kw["TableName"] == ws_handler.config.PAGES_TABLE:
@@ -273,7 +278,7 @@ async def test_end_meeting_uses_selected_summary_style_for_emailed_summary(env):
 
 async def test_end_meeting_automatically_publishes_page_with_latest_messages(env):
     # 저장된 발언이 없는 경우 화면 기록을 대체 입력으로 사용한다.
-    env["ddb"].item["messages"] = {"L": []}
+    env["ddb"].messages = []
     state, ws = make_state()
     latest = [{"speaker": "me", "original": "Ship on Friday.", "translation": "금요일 출시",
                "timestamp": "2026-10-28T00:02:00+00:00", "detectedLanguage": "en"}]
@@ -300,11 +305,11 @@ async def test_end_meeting_uses_transcript_finalized_after_button_click(env):
         "timestamp": "2026-10-28T00:01:00+00:00",
     }]
     # _stop_recording에서 확정·저장한 마지막 발언은 클릭 당시 화면에는 없었다.
-    env["ddb"].item["messages"]["L"].append({"M": {
+    env["ddb"].messages.append({
         "speaker": {"S": "speaker2"},
         "originalText": {"S": "Final decision: ship on Friday."},
         "timestamp": {"S": "2026-10-28T00:02:00+00:00"},
-    }})
+    })
     await ws_handler._end_meeting(
         ws_handler._meeting_broadcaster("m1"), state, "m1",
         email_on_end=False, inline_messages=clicked_messages,
@@ -326,11 +331,11 @@ async def test_end_meeting_waits_for_final_transcribe_segment(env, monkeypatch):
 
     async def process_segment(ws, text, speaker, lang, state, timestamp):
         await release.wait()
-        env["ddb"].item["messages"]["L"].append({"M": {
+        env["ddb"].messages.append({
             "speaker": {"S": speaker},
             "originalText": {"S": text},
             "timestamp": {"S": timestamp},
-        }})
+        })
         finalized.set()
 
     monkeypatch.setattr(ws_handler, "_process_segment", process_segment)
@@ -427,7 +432,7 @@ async def test_page_request_error_does_not_fail_meeting_end(env):
 
 
 async def test_end_meeting_without_transcript_does_not_invoke_page_agent(env):
-    env["ddb"].item["messages"] = {"L": []}
+    env["ddb"].messages = []
     state, ws = make_state()
     await ws_handler._end_meeting(ws_handler._meeting_broadcaster("m1"), state, "m1", email_on_end=False)
     await env["finish_pages"]()

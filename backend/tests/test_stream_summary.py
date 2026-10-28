@@ -41,12 +41,19 @@ class FakeBedrock:
 
 
 class FakeDDB:
-    def __init__(self, title="주간 1:1", summary_style=None):
+    def __init__(self, title="주간 1:1", summary_style=None, messages=None):
         self.title = title
+        self.messages = messages or []
+        self.gets = []
         self.summary_style = summary_style
         self.updates = []
 
+    async def query(self, **kwargs):
+        assert kwargs["TableName"] == ws_handler.config.MESSAGES_TABLE
+        return {"Items": list(self.messages)}
+
     async def get_item(self, **kwargs):
+        self.gets.append(kwargs)
         item = {"title": {"S": self.title}}
         if self.summary_style is not None:
             item["summaryStyle"] = {"S": self.summary_style}
@@ -302,21 +309,20 @@ class CustomDDB(FakeDDB):
     """회의·사본 테이블만 읽을 수 있다 — 양식 테이블을 읽으면 실패해서, 양식을 지워도 동작함을 고정한다."""
 
     def __init__(self, custom=None, stored_messages=False, **kwargs):
+        if stored_messages:
+            # 저장된 대화는 회의 항목이 아니라 메시지 테이블에서 온다
+            kwargs["messages"] = [{"id": {"S": "s1"}, "originalText": {"S": "금요일까지 끝냅니다."},
+                                   "timestamp": {"S": "2026-10-28T00:01:00+00:00"}}]
         super().__init__(**kwargs)
         self.custom = custom
-        self.stored_messages = stored_messages
-        self.gets = []
 
     async def get_item(self, **kwargs):
         table = kwargs["TableName"]
         assert table in (ws_handler.config.MEETINGS_TABLE, ws_handler.config.SUMMARY_SNAPSHOTS_TABLE), table
-        self.gets.append(kwargs)
         if table == ws_handler.config.SUMMARY_SNAPSHOTS_TABLE:
+            self.gets.append(kwargs)
             return {"Item": self.custom} if self.custom is not None else {}
-        item = (await super().get_item(**kwargs))["Item"]
-        if self.stored_messages:
-            item["messages"] = {"L": [{"M": {"originalText": {"S": "금요일까지 끝냅니다."}}}]}
-        return {"Item": item}
+        return await super().get_item(**kwargs)  # 회의 테이블 읽기는 FakeDDB 가 gets 에 기록한다
 
 
 @pytest.mark.parametrize("inline", [True, False])
@@ -365,3 +371,14 @@ async def test_builtin_style_does_not_read_the_snapshot_table(monkeypatch):
     install(monkeypatch, bedrock, ddb)
     await ws_handler._stream_summary(FakeWS().send_json, "m1", "x", inline_messages=MESSAGES)
     assert [g["TableName"] for g in ddb.gets] == [ws_handler.config.MEETINGS_TABLE]
+
+
+async def test_stored_messages_are_read_from_messages_table(monkeypatch):
+    stored = [{"id": {"S": "a"}, "originalText": {"S": "출시는 금요일"}, "timestamp": {"S": "2026-10-28T00:01:00+00:00"}}]
+    bedrock, ddb = FakeBedrock(["요약"]), FakeDDB(messages=stored)
+    install(monkeypatch, bedrock, ddb)
+
+    await ws_handler._stream_summary(ws_handler._meeting_broadcaster("m1"), "m1", "x")
+
+    assert "출시는 금요일" in bedrock.calls[0]["messages"][0]["content"][0]["text"]
+    assert ddb.gets[0]["ProjectionExpression"] == "title, summaryStyle"

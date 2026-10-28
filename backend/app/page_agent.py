@@ -22,6 +22,7 @@ from boto3.dynamodb.types import TypeDeserializer
 
 from . import aws_clients
 from .config import config
+from .message_store import load_messages
 
 logger = logging.getLogger(__name__)
 
@@ -206,6 +207,7 @@ class PageAgentDeps:
     bucket: str
     table: str
     pages_table: str = "transmeet-pages"
+    messages_table: str = "transmeet-messages"
     model_id: str = PAGE_AGENT_MODEL_ID
     # 기본 모델의 재시도가 모두 일시 오류로 끝나면 넘어가는 대체 모델. 빈 문자열이면 없음.
     fallback_model_id: str = PAGE_AGENT_FALLBACK_MODEL_ID
@@ -223,6 +225,7 @@ class PageAgentDeps:
             bucket=config.PAGES_BUCKET,
             table=config.MEETINGS_TABLE,
             pages_table=config.PAGES_TABLE,
+            messages_table=config.MESSAGES_TABLE,
             model_id=config.PAGE_AGENT_MODEL_ID,
             fallback_model_id=config.PAGE_AGENT_FALLBACK_MODEL_ID,
             invoke_retries=config.PAGE_AGENT_INVOKE_RETRIES,
@@ -311,7 +314,12 @@ async def _load_meeting(deps: PageAgentDeps, meeting_id: str) -> Dict[str, Any]:
         res = await ddb.get_item(
             TableName=deps.table, Key={"meetingId": {"S": meeting_id}}, ConsistentRead=True,
         )
-    return ddb_item_to_dict(res.get("Item") or {})
+        raw = res.get("Item")
+        item = ddb_item_to_dict(raw or {})
+        if raw:
+            # 대화는 메시지 테이블에서 읽는다. 마이그레이션 중 회의 항목에 남은 옛 messages 는 덮어쓴다.
+            item["messages"] = await load_messages(ddb, meeting_id, table=deps.messages_table)
+    return item
 
 
 # ─── Runtime stream ──────────────────────────────────────────────────────────

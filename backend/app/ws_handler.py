@@ -1388,15 +1388,13 @@ async def _stream_summary(
                 result = await ddb.get_item(
                     TableName=config.MEETINGS_TABLE,
                     Key={"meetingId": {"S": meeting_id}},
+                    ProjectionExpression="title, summaryStyle",
                 )
+                # 대화는 회의 항목이 아니라 메시지 테이블에서 읽는다.
+                stored = await message_store.load_messages(ddb, meeting_id)
             current_title = result.get("Item", {}).get("title", {}).get("S", "")
             saved_style = result.get("Item", {}).get("summaryStyle", {}).get("S")
-            raw_messages = result.get("Item", {}).get("messages", {}).get("L", [])
-            lines = transcript_lines(
-                {"originalText": m.get("M", {}).get("originalText", {}).get("S", ""),
-                 "timestamp": m.get("M", {}).get("timestamp", {}).get("S", "")}
-                for m in raw_messages
-            )
+            lines = transcript_lines(stored)
 
         # 내 양식은 고를 때 만든 사본(meetingId 키 테이블)으로만 만든다 — 양식 테이블을 읽지 않으므로 양식을 지워도 동작한다.
         if normalize_summary_style(summary_style if summary_style is not None else saved_style) == "custom":
