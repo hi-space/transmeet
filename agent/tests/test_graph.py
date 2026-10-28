@@ -165,10 +165,12 @@ async def test_full_path_publishes_once(tmp_path):
     assert html.index('<span class="term">OIDC</span>') < html.index('<span class="term">CodeDeploy</span>')
     assert '<a href="#topic-2">일정 합의<span class="time">10:15</span></a>' in html and '<a href="#sec-glossary">' in html
     assert "river" not in html  # 상단 시간 막대는 없앴다
-    # 노드 순서: research/diagrams 가 insights 앞, insights 가 assemble 앞
+    # 노드 순서: sources(리서치 → 인사이트)와 diagrams 가 assemble 앞
     order = [list(u)[0] for u in updates]
-    assert order.index("research") < order.index("insights") and order.index("diagrams") < order.index("insights")
-    assert order.index("insights") < order.index("assemble") < order.index("validate") < order.index("publish")
+    assert order.index("sources") < order.index("assemble") and order.index("diagrams") < order.index("assemble")
+    assert order.index("assemble") < order.index("validate") < order.index("publish")
+    final_sources = next(u["sources"] for u in updates if "sources" in u)
+    assert "CodeDeploy" in final_sources["research_html"] and "마감이 촉박하다" in final_sources["insights_html"]
     final = {k: v for u in updates for k, v in u.items()}
     assert final["publish"]["published"]["url"].endswith("/m1/pid.html")
     phases = [c["phase"] for c in customs]
@@ -363,6 +365,23 @@ async def test_visual_style_builds_page_in_stages_and_publishes(tmp_path):
     assert (root / "visual" / "final.json").exists() and (root / "visual" / "plan.json").exists()
 
 
+async def test_visual_plan_runs_after_research_and_alongside_insights(tmp_path):
+    models = visual_models()
+    pub = Recorder()
+    payload = {**PAYLOAD, "meeting": {**PAYLOAD["meeting"], "style": "visual"}}
+    customs, updates = await run(make_deps(tmp_path, models, publisher=pub), payload)
+    assert len(pub.calls) == 1 and pub.calls[0][1].count("<svg") == 3
+    from runtime.stage import message_text
+    plan_user = message_text(models["plan"].calls[0][1])
+    assert "CodeDeploy" in plan_user  # 기획이 리서치 결과를 본다
+    write_user = message_text(models["write"].calls[0][1])
+    assert "### 리서치 결과 (references 재료)" in write_user and "마감이 촉박하다" in write_user  # 글쓰기는 인사이트까지 본다
+    sources = next(u["sources"] for u in updates if "sources" in u)
+    assert sources["visual_plan"]["topics"][0]["id"] == "t1" and "Analysis" not in message_text(models["plan"].calls[0][0])
+    root = next(tmp_path.iterdir())
+    assert (root / "visual" / "plan.json").exists() and (root / "visual" / "svgs.json").exists()
+
+
 async def test_visual_style_retry_rerenders_without_figures(tmp_path, monkeypatch):
     calls = {"n": 0}
     real = G.validate_html
@@ -389,11 +408,19 @@ async def test_visual_style_loads_the_workspace_design_skill(tmp_path):
 
     await run(deps, payload)
 
-    for stage in ("plan", "draw"):
-        assert models[stage].calls
-        assert all("WORKSPACE_DESIGN_ADAPTER" in call[0].content for call in models[stage].calls)
-    for stage in ("write", "review"):
+    assert models["draw"].calls and all("WORKSPACE_DESIGN_ADAPTER" in call[0].content for call in models["draw"].calls)
+    assert all("freeform" in call[0].content and "WORKSPACE_DESIGN_ADAPTER" not in call[0].content for call in models["plan"].calls)
+    for stage in ("plan", "write", "review"):
         assert all("WORKSPACE_DESIGN_ADAPTER" not in call[0].content for call in models[stage].calls)
+
+
+def test_normalize_plan_fills_missing_topic_ids():
+    from runtime import visual
+    plan = visual.normalize_plan({"topics": [{"title": "요청 경로", "start": "15:00", "end": "15:02", "figure": {"kind": "flowchart"}},
+                                             {"id": "t1", "title_hint": "중복 id"}, "bad"]})
+    assert [t["id"] for t in plan["topics"]] == ["t1", "t2"] and plan["topics"][0]["title_hint"] == "요청 경로"
+    assert plan["topics"][0]["span"] == "15:00–15:02" and [j["key"] for j in visual.figure_jobs(plan)] == ["t1", "t2"]
+    assert visual.normalize_plan(None) == {}
 
 
 def test_default_style_is_visual(tmp_path):

@@ -63,13 +63,16 @@ def _context(root: Path, parts: list[str]) -> str:
 
 
 def planning_context(skills_dir: Path) -> str:
+    """기획 단계에는 유형 코드와 기술 일러스트 안내만 준다(유형별 문서·스킬 본문은 그림 단계가 받는다).
+
+    같은 입력에서 스킬 본문·참고 문서 전부(약 13K자)를 기획 프롬프트에 붙이면 모은 사실이 120 → 105 개로
+    줄었다 — 기획의 본업은 사실 수집이다. 실물 그림(센서 위치·동작)을 고르려면 일러스트 안내는 필요해 남긴다.
+    """
     root = skills_dir / SKILL_NAME
-    return _context(root, [
-        _sections(root, (1, 2, 3)),
-        "### figure.kind 코드\n" + ", ".join(TYPE_REFERENCES),
+    return "\n\n".join([
+        f"## 그림 유형 (참고 스킬: {SKILL_NAME})\n`figure.kind` 와 `reference_kinds` 에 쓸 수 있는 코드: "
+        + ", ".join(TYPE_REFERENCES) + ". 유형별 상세 문서는 그림 단계가 받습니다. 여기서는 전달할 메시지와 배치만 정합니다.",
         _reference(root, "technical-illustration.md"),
-        _reference(root, "comparison.md"),
-        _reference(root, "freeform.md"),
     ])
 
 

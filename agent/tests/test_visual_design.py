@@ -57,8 +57,8 @@ async def test_planner_receives_the_deployed_skill_catalog(skill_bundle):
     assert "aws-diagram-design" in system
     assert "DEPLOYED_ILLUSTRATION_GUIDANCE" in system
     assert "DEPLOYED_SEQUENCE_GUIDANCE" not in system  # selected later by draw
-    assert "type-sequence.md" in system
-    assert "type-gantt.md" in system
+    assert "sequence" in system and "gantt" in system  # 고를 수 있는 유형 코드
+    assert "## 1. " not in system  # 스킬 본문·유형별 문서는 그림 단계에서만
 
 
 async def test_freeform_drawing_can_combine_reference_types(skill_bundle):
