@@ -159,29 +159,8 @@ async def plan_page(llm, inp: VisualInputs, usage: Dict[str, int]) -> Dict[str, 
     return await _call_json(llm, system("page_plan", design_context=design), user, usage)
 
 
-def normalize_plan(plan: Any) -> Dict[str, Any]:
-    """기획 JSON 의 흔한 형식 어긋남을 고친다 — 주제 `id` 가 없으면 그림과 본문이 이어지지 않는다."""
-    if not isinstance(plan, dict):
-        return {}
-    topics = [t for t in plan.get("topics") or [] if isinstance(t, dict)]
-    seen = set()
-    for i, t in enumerate(topics, start=1):
-        tid = str(t.get("id") or "").strip()
-        if not tid or tid in seen:
-            tid = f"t{i}"
-        t["id"] = tid
-        seen.add(tid)
-        t.setdefault("title_hint", t.get("title") or t.get("conclusion") or "")
-        if not t.get("span") and t.get("start"):
-            t["span"] = f"{t.get('start')}–{t.get('end', '')}"
-    plan["topics"] = topics
-    return plan
-
-
 async def write_page(llm, inp: VisualInputs, plan: Dict[str, Any], usage: Dict[str, int]) -> Dict[str, Any]:
-    user = (f"{_head(inp)}\n\n### 기획 (plan.json)\n```json\n{_dump(plan)}\n```\n\n"
-            f"### 리서치 결과 (references 재료)\n```html\n{inp.research_html or '(없음)'}\n```\n\n"
-            f"### 인사이트 (implications 재료)\n```html\n{inp.insights_html or '(없음)'}\n```\n\n{_transcript(inp)}")
+    user = f"{_head(inp)}\n\n### 기획 (plan.json)\n```json\n{_dump(plan)}\n```\n\n{_transcript(inp)}"
     return await _call_json(llm, system("page_tone", "page_write"), user, usage)
 
 
@@ -457,20 +436,15 @@ def render_page(inp: VisualInputs, w: Dict[str, Any], svgs: Dict[str, str], css:
 # ─── pipeline ───────────────────────────────────────────────────────────────
 
 async def build_visual_page(llm_for: LlmFor, inp: VisualInputs, css: str,
-                            save: Optional[Callable[[str, Any], None]] = None,
-                            plan: Optional[Dict[str, Any]] = None) -> VisualResult:
-    """(plan) → (write ∥ draw×N) → review → render. `save(name, obj)` 는 중간 산출물을 작업 디렉터리에 남긴다.
-
-    그래프에서는 sources 노드가 리서치 직후 기획해 둔다. plan 이 없으면 여기서 기획한다.
-    """
+                            save: Optional[Callable[[str, Any], None]] = None) -> VisualResult:
+    """plan → (write ∥ draw×N) → review → render. `save(name, obj)` 는 중간 산출물을 작업 디렉터리에 남긴다."""
     save = save or (lambda name, obj: None)
     usage: Dict[str, int] = {}
-    plan = normalize_plan(plan)
-    if not plan:
-        events.emit(events.status("페이지 구성을 기획합니다 — 주제별 사실과 그림 설계"))
-        plan = normalize_plan(await plan_page(llm_for("plan"), inp, usage))
-        save("visual/plan.json", plan)
-    events.emit(events.status(f"본문을 쓰고 그림 {len(figure_jobs(plan))}개를 동시에 그립니다"))
+    events.emit(events.status("페이지 구성을 기획합니다 — 주제별 사실과 그림 설계"))
+    plan = await plan_page(llm_for("plan"), inp, usage)
+    save("visual/plan.json", plan)
+    n_figs = len(figure_jobs(plan))
+    events.emit(events.status(f"본문을 쓰고 그림 {n_figs}개를 동시에 그립니다"))
     written, svgs = await asyncio.gather(write_page(llm_for("write"), inp, plan, usage), draw_all(llm_for, inp, plan, usage))
     save("visual/write.json", written)
     save("visual/svgs.json", svgs)

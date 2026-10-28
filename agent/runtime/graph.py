@@ -1,16 +1,11 @@
 """The meeting-page LangGraph.
 
-prepare → analyze → [research → insights ∥ diagrams] → assemble → validate → (publish | assemble | fail)
-
-research 와 insights 는 한 노드(`sources`) 안에서 차례로 돈다 — LangGraph 는 같은 단계의 노드가 모두 끝나야
-다음 단계로 넘어가므로, 두 노드로 나누면 insights 가 그림(diagrams)이 끝날 때까지 기다린다.
+prepare → analyze → [research ∥ diagrams] → insights → assemble → validate → (publish | assemble | fail)
 
 The page style (`meeting.style`) picks how `assemble` builds the page and which optional stages
 (research/diagrams/insights) run; skipped stages are no-ops.
-- visual (default): `sources` plans the page as soon as research is done (in parallel with insights),
-  then `assemble` writes the text while drawing every figure, and reviews it (`runtime/visual.py`);
-  code renders a fixed layout. The plan is a separate call on purpose — folding it into analyze
-  cut the collected facts by 22% and dropped the research findings from the body.
+- visual (default): `runtime/visual.py` builds the page in stages (plan → write ∥ draw → review)
+  and code renders a fixed layout.
 - detailed: the template + `assemble` tool loop that fills placeholders.
 
 Every model-using node sends the transcript once and runs a short tool loop
@@ -19,7 +14,6 @@ diagram SVGs, validation, publishing) is done in code, not by the model.
 """
 from __future__ import annotations
 
-import asyncio
 import html as html_lib
 import json
 import logging
@@ -141,7 +135,6 @@ class PageState(TypedDict, total=False):
     research_html: str
     insights_html: str
     diagram_manifest: List[Dict[str, Any]]
-    visual_plan: Optional[Dict[str, Any]]
     page_path: str
     validation_errors: List[str]
     assemble_attempts: int
@@ -301,13 +294,6 @@ def _figure(svg: str, caption: str) -> str:
     return f"<figure>{svg.strip()}{cap}</figure>"
 
 
-def _visual_inputs(ws: Workspace, state: PageState) -> visual.VisualInputs:
-    analysis = state.get("analysis") or {}
-    return visual.VisualInputs(meta=state["meta"], analysis=analysis, transcript=ws.read_text("transcript.txt"),
-                               terms_block=_terms_block(analysis), research_html=state.get("research_html") or "",
-                               insights_html=state.get("insights_html") or "", skills_dir=ws.skills_dir)
-
-
 def _escape(value: str) -> str:
     return html_lib.escape(value or "", quote=False)
 
@@ -463,12 +449,14 @@ def build_graph(deps: GraphDeps):
         """visual 스타일: 첫 시도는 단계별 파이프라인, 검증 실패 뒤 재시도는 모델 없이 그림을 빼고 다시 렌더한다."""
         ws = _ws(state, deps)
         attempts = state.get("assemble_attempts", 0)
-        inp = _visual_inputs(ws, state)
+        analysis = state.get("analysis") or {}
+        inp = visual.VisualInputs(meta=state["meta"], analysis=analysis, transcript=ws.read_text("transcript.txt"),
+                                  terms_block=_terms_block(analysis), research_html=state.get("research_html") or "",
+                                  insights_html=state.get("insights_html") or "", skills_dir=ws.skills_dir)
         css = ws.read_text(f"{ASSETS_REL}/{_style(state).template}").strip()
         usage: Dict[str, int] = {}
         if attempts == 0 or not ws.exists("visual/final.json"):
-            result = await visual.build_visual_page(lambda stage: llm(state, stage), inp, css, save=ws.write_json,
-                                                    plan=state.get("visual_plan"))
+            result = await visual.build_visual_page(lambda stage: llm(state, stage), inp, css, save=ws.write_json)
             html, written, usage = result.html, result.written, result.usage
         else:
             events.emit(events.status(f"검증 오류로 그림을 빼고 다시 조립합니다 ({attempts}/{deps.max_assemble_attempts - 1})"))
@@ -547,35 +535,16 @@ def build_graph(deps: GraphDeps):
         events.emit(events.error(msg, stage="assemble"))
         return {"failed": True, "stage_errors": [msg]}
 
-    async def plan_visual(state: PageState) -> PageState:
-        """시각 회의록: 리서치 결과까지 보고 페이지를 기획한다(인사이트와 동시에)."""
-        ws = _ws(state, deps)
-        usage: Dict[str, int] = {}
-        events.emit(events.status("페이지 구성을 기획합니다 — 주제별 사실과 그림 설계"))
-        plan = visual.normalize_plan(await visual.plan_page(llm(state, "plan"), _visual_inputs(ws, state), usage))
-        ws.write_json("visual/plan.json", plan)
-        return {"visual_plan": plan, "usage": usage}
-
-    async def sources(state: PageState) -> PageState:
-        """리서치 → (인사이트 ∥ 시각 회의록 기획). 한 노드로 묶어 그림 단계와 기다림 없이 이어진다."""
-        found = await research(state)
-        merged: PageState = {**state, **found}
-        if _style(state).staged:
-            thought, planned = await asyncio.gather(insights(merged), plan_visual(merged))
-        else:
-            thought, planned = await insights(merged), {}
-        usage = merge_usage(merge_usage(found.get("usage"), thought.get("usage")), planned.get("usage"))
-        return {**found, **thought, **planned, "usage": usage}
-
     g = StateGraph(PageState)
-    for name, fn in [("prepare", prepare), ("analyze", analyze), ("sources", sources), ("diagrams", diagrams),
-                     ("assemble", assemble), ("validate", validate), ("publish", publish), ("fail", fail)]:
+    for name, fn in [("prepare", prepare), ("analyze", analyze), ("research", research), ("diagrams", diagrams),
+                     ("insights", insights), ("assemble", assemble), ("validate", validate), ("publish", publish), ("fail", fail)]:
         g.add_node(name, fn)
     g.add_edge(START, "prepare")
     g.add_edge("prepare", "analyze")
-    g.add_edge("analyze", "sources")
+    g.add_edge("analyze", "research")
     g.add_edge("analyze", "diagrams")
-    g.add_edge(["sources", "diagrams"], "assemble")
+    g.add_edge(["research", "diagrams"], "insights")
+    g.add_edge("insights", "assemble")
     g.add_edge("assemble", "validate")
     g.add_conditional_edges("validate", after_validate, {"publish": "publish", "assemble": "assemble", "fail": "fail"})
     g.add_edge("publish", END)
