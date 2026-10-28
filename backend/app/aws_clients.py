@@ -69,6 +69,12 @@ async def s3_client():
 
 
 @asynccontextmanager
+async def sesv2_client():
+    async with _session.create_client("sesv2", region_name=config.REGION) as client:
+        yield client
+
+
+@asynccontextmanager
 async def dynamodb_client():
     async with _session.create_client("dynamodb", region_name=config.REGION) as client:
         yield client
