@@ -16,11 +16,14 @@ class GetCommand extends Command {}
 class PutCommand extends Command {}
 class UpdateCommand extends Command {}
 class DeleteCommand extends Command {}
+class QueryCommand extends Command {}
+class BatchWriteCommand extends Command {}
 
 process.env.SUMMARY_TEMPLATES_TABLE = 'templates-table'
 process.env.SUMMARY_SNAPSHOTS_TABLE = 'snapshots-table'
+process.env.MESSAGES_TABLE = 'messages-table'
 
-function setup({ style, generatedStyle = 'detailed', owner = 'user-1', beforeModelReply, custom } = {}) {
+function setup({ style, generatedStyle = 'detailed', owner = 'user-1', beforeModelReply, custom, onTemplateRead } = {}) {
   const templates = {
     'user-1|tpl-1': {
       userId: 'user-1', templateId: 'tpl-1', name: '주간 회의', kind: 'instruction',
@@ -35,8 +38,15 @@ function setup({ style, generatedStyle = 'detailed', owner = 'user-1', beforeMod
     'meeting-1': {
       meetingId: 'meeting-1', userId: owner, title: '출시 준비 회의',
       summary: '기존 상세 요약', summaryStyle: style, summaryGeneratedStyle: generatedStyle,
-      messages: [{ id: 'message-1', originalText: '데이터 팀은 금요일까지 검증합니다.', speaker: 'speaker1' }],
     },
+  }
+  // 대화는 회의 항목이 아니라 메시지 테이블(meetingId·sk 키)에 한 건씩 있다
+  const messages = {
+    'meeting-1': [{
+      meetingId: 'meeting-1', sk: '2026-10-28T00:00:00Z#message-1', id: 'message-1', speaker: 'speaker1',
+      originalText: '데이터 팀은 금요일까지 검증합니다.', translatedText: '', detectedLanguage: 'ko',
+      timestamp: '2026-10-28T00:00:00Z',
+    }],
   }
   // 내 양식 사본은 회의 항목이 아니라 별도 테이블(meetingId 키)에 둔다 — 긴 회의의 400 KB 한도
   const snapshots = custom ? { 'meeting-1': { meetingId: 'meeting-1', userId: owner, ...custom } } : {}
@@ -47,10 +57,24 @@ function setup({ style, generatedStyle = 'detailed', owner = 'user-1', beforeMod
     async send(command) {
       const input = command.input
       if (command instanceof GetCommand) {
-        if (input.TableName === 'templates-table') return { Item: templates[`${input.Key.userId}|${input.Key.templateId}`] }
+        if (input.TableName === 'templates-table') {
+          onTemplateRead?.(records)
+          return { Item: templates[`${input.Key.userId}|${input.Key.templateId}`] }
+        }
         if (input.TableName === 'snapshots-table') return { Item: snapshots[input.Key.meetingId] }
         if (input.TableName !== process.env.MEETINGS_TABLE) return {}
         return { Item: records[input.Key.meetingId] }
+      }
+      if (command instanceof QueryCommand) {
+        assert.equal(input.TableName, 'messages-table')
+        return { Items: (messages[input.ExpressionAttributeValues[':m']] ?? []).map((m) => ({ ...m })) }
+      }
+      if (command instanceof BatchWriteCommand) {
+        for (const request of input.RequestItems['messages-table']) {
+          const { meetingId, sk } = request.DeleteRequest.Key
+          messages[meetingId] = (messages[meetingId] ?? []).filter((m) => m.sk !== sk)
+        }
+        return {}
       }
       if (command instanceof PutCommand) {
         if (input.TableName === 'snapshots-table') snapshots[input.Item.meetingId] = input.Item
@@ -64,8 +88,12 @@ function setup({ style, generatedStyle = 'detailed', owner = 'user-1', beforeMod
         return {}
       }
       assert.ok(command instanceof UpdateCommand)
-      updates.push(input)
       const item = records[input.Key.meetingId]
+      // attribute_exists(meetingId) 조건: 지워진 회의는 되살리지 않는다
+      if (!item && input.ConditionExpression?.includes('attribute_exists(meetingId)')) {
+        throw Object.assign(new Error('The conditional request failed'), { name: 'ConditionalCheckFailedException' })
+      }
+      updates.push(input)
       const [setPart, removePart] = input.UpdateExpression.split(/\s+REMOVE\s+/)
       for (const assignment of setPart.replace(/^SET /, '').split(',')) {
         const [field, parameter] = assignment.split('=').map((part) => part.trim())
@@ -80,6 +108,7 @@ function setup({ style, generatedStyle = 'detailed', owner = 'user-1', beforeMod
     '@aws-sdk/client-dynamodb': { DynamoDBClient: class {} },
     '@aws-sdk/lib-dynamodb': {
       DynamoDBDocumentClient: { from: () => ddb }, GetCommand, PutCommand, UpdateCommand, DeleteCommand,
+      QueryCommand, BatchWriteCommand,
     },
     '@aws-sdk/client-s3': {
       S3Client: class { async send() { return {} } },
@@ -103,7 +132,7 @@ function setup({ style, generatedStyle = 'detailed', owner = 'user-1', beforeMod
     pathParameters: { id: 'meeting-1' }, requestContext, body: JSON.stringify(body),
   })
   return {
-    records, updates, modelRequests, templates, snapshots, deletes,
+    records, messages, updates, modelRequests, templates, snapshots, deletes,
     get: () => meetings.handler({ ...event(), httpMethod: 'GET', resource: '/meetings/{id}' }),
     remove: () => meetings.handler({ ...event(), httpMethod: 'DELETE', resource: '/meetings/{id}' }),
     save: (summaryStyle, extra = {}) => meetings.handler({
@@ -238,6 +267,24 @@ test('GET meeting merges its snapshot as summaryCustom; deleting the meeting del
   assert.deepEqual(got.summaryCustom, SNAPSHOT)
   assert.equal((await session.remove()).statusCode, 204)
   assert.deepEqual(session.snapshots, {})
+  assert.deepEqual(session.messages['meeting-1'], [])
+})
+
+test('selecting a custom template for a meeting deleted meanwhile is 404 and does not recreate it', async () => {
+  const session = setup({ onTemplateRead: (records) => { delete records['meeting-1'] } })
+  assert.equal((await session.save('custom', { templateId: 'tpl-1' })).statusCode, 404)
+  assert.equal('meeting-1' in session.records, false)
+  assert.equal(session.updates.length, 0)
+})
+
+test('a custom-label summary for a meeting deleted meanwhile is 404 and does not recreate it', async () => {
+  const session = setup({
+    style: 'custom', custom: SNAPSHOT,
+    beforeModelReply: () => { delete session.records['meeting-1'] },
+  })
+  assert.equal((await session.summarize()).statusCode, 404)
+  assert.equal('meeting-1' in session.records, false)
+  assert.equal(session.updates.length, 0)
 })
 
 test('GET meeting on a builtin style does not attach a stale snapshot', async () => {

@@ -427,3 +427,21 @@ async def test_auto_title_for_deleted_meeting_warns(monkeypatch, caplog):
     assert ddb.updates[0]["ConditionExpression"] == "attribute_exists(meetingId)"
     assert any(r.levelno == logging.WARNING and "meeting does not exist" in r.getMessage() for r in caplog.records)
     assert not any(r.levelno >= logging.ERROR for r in caplog.records)
+
+
+async def test_custom_label_summary_for_deleted_meeting_reports_error(monkeypatch, caplog):
+    """내 양식 라벨을 함께 쓰는 요약 저장도 지워진 회의를 되살리지 않는다."""
+    bedrock = FakeBedrock(["요약"])
+    ddb = CustomDDB(custom=SNAPSHOT, summary_style="custom", title="2026. 10. 28. 오전 9:05:06", deleted=True)
+    install(monkeypatch, bedrock, ddb)
+    ws = FakeWS()
+
+    with caplog.at_level(logging.WARNING):
+        result = await ws_handler._stream_summary(ws.send_json, "m1", "x", inline_messages=MESSAGES)
+
+    assert result is None
+    assert ws.sent[-1]["phase"] == "error"
+    assert len(ddb.updates) == 1  # 요약 저장이 실패하면 제목은 만들지 않는다
+    assert "summaryGeneratedLabel = :label" in ddb.updates[0]["UpdateExpression"]
+    assert ddb.updates[0]["ConditionExpression"] == "attribute_exists(meetingId)"
+    assert any(r.levelno == logging.WARNING and "meeting does not exist" in r.getMessage() for r in caplog.records)
