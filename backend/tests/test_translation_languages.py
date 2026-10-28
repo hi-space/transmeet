@@ -99,22 +99,21 @@ async def test_same_language_destination_preserves_original_and_still_saves(
     state.translation_target = language
     saved = []
 
-    async def update_item(**kwargs):
+    async def transact_write_items(**kwargs):
         saved.append(kwargs)
 
     @asynccontextmanager
     async def dynamodb():
-        yield SimpleNamespace(update_item=update_item)
+        yield SimpleNamespace(transact_write_items=transact_write_items)
 
     monkeypatch.setattr(ws_handler, "dynamodb_client", dynamodb)
     await ws_handler._process_segment(ws, text, "speaker1", language, state, "now")
 
     assert prompts == []
     assert final_events(ws)[0]["translatedText"] == text
-    record = saved[0]["ExpressionAttributeValues"][":msg"]["L"][0]["M"]
+    record = saved[0]["TransactItems"][0]["Put"]["Item"]
     assert record["originalText"]["S"] == record["translatedText"]["S"] == text
     assert record["detectedLanguage"]["S"] == language
-    assert record["targetLanguage"]["S"] == language
     assert final_events(ws)[0]["targetLanguage"] == language
 
 

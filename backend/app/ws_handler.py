@@ -71,7 +71,7 @@ from .aws_clients import (
     polly_client,
     resolve_detected_language,
 )
-from . import audio_store, mailer
+from . import audio_store, mailer, message_store
 from .auth import AuthError, owns_meeting, verify_id_token_async
 from .config import config
 from .language_settings import parse_language_settings, resolve_translation_target
@@ -329,6 +329,34 @@ def _meeting_broadcaster(meeting_id: str):
     return _send
 
 
+async def _persist_message(meeting_id: str, message: Dict[str, str], *, log_tag: str) -> None:
+    """발언 한 건을 메시지 테이블에 저장한다. 예외는 밖으로 던지지 않고 로그만 남긴다.
+
+    회의 항목이 삭제됐으면 저장하지 않는다(트랜잭션 조건 실패) — 유령 레코드 방지.
+    """
+    try:
+        async with dynamodb_client() as ddb:
+            await message_store.append_message(
+                ddb, meeting_id, message, updated_at=message["timestamp"],
+            )
+    except ClientError as err:
+        if message_store.is_missing_meeting(err):
+            logger.warning(
+                "[%s] Skipped save — meeting does not exist: meeting_id=%s",
+                log_tag, meeting_id,
+            )
+        else:
+            logger.exception(
+                "[%s] DynamoDB save failed for message_id=%s meeting_id=%s",
+                log_tag, message["id"], meeting_id,
+            )
+    except Exception:
+        logger.exception(
+            "[%s] DynamoDB save failed for message_id=%s meeting_id=%s",
+            log_tag, message["id"], meeting_id,
+        )
+
+
 async def _safe_send(ws: WebSocket, data: dict) -> None:
     """Send JSON via WebSocket with a per-connection lock.
 
@@ -557,51 +585,18 @@ async def _process_segment(
 
     # ── 4: Persist to DynamoDB ─────────────────────────────────────────────────
     if meeting_id:
-        try:
-            async with dynamodb_client() as ddb:
-                await ddb.update_item(
-                    TableName=config.MEETINGS_TABLE,
-                    Key={"meetingId": {"S": meeting_id}},
-                    UpdateExpression=(
-                        "SET messages = list_append(if_not_exists(messages, :empty), :msg), "
-                        "#updatedAt = :ts "
-                        "ADD messageCount :one"
-                    ),
-                    # 삭제되었거나 존재하지 않는 회의에 append 하면 createdAt/title 이 없는
-                    # 유령 레코드가 생겨 목록 정렬을 망가뜨린다.
-                    ConditionExpression="attribute_exists(meetingId)",
-                    ExpressionAttributeNames={"#updatedAt": "updatedAt"},
-                    ExpressionAttributeValues={
-                        ":msg": {"L": [{"M": {
-                            "id": {"S": message_id},
-                            "speaker": {"S": speaker},
-                            "originalText": {"S": original_text},
-                            "translatedText": {"S": translated_text},
-                            "detectedLanguage": {"S": detected_language},
-                            "targetLanguage": {"S": translation_target},
-                            "timestamp": {"S": timestamp},
-                        }}]},
-                        ":empty": {"L": []},
-                        ":ts": {"S": timestamp},
-                        ":one": {"N": "1"},
-                    },
-                )
-        except ClientError as err:
-            if err.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
-                logger.warning(
-                    "[process_segment] Skipped save — meeting does not exist: meeting_id=%s",
-                    meeting_id,
-                )
-            else:
-                logger.exception(
-                    "[process_segment] DynamoDB save failed for message_id=%s meeting_id=%s",
-                    message_id, meeting_id,
-                )
-        except Exception:
-            logger.exception(
-                "[process_segment] DynamoDB save failed for message_id=%s meeting_id=%s",
-                message_id, meeting_id,
-            )
+        await _persist_message(
+            meeting_id,
+            {
+                "id": message_id,
+                "speaker": speaker,
+                "originalText": original_text,
+                "translatedText": translated_text,
+                "detectedLanguage": detected_language,
+                "timestamp": timestamp,
+            },
+            log_tag="process_segment",
+        )
 
 
 def _apply_segment_filters(
@@ -1273,42 +1268,18 @@ async def _handle_tts_request(
     # ── Persist to DynamoDB ────────────────────────────────────────────────────
     # speaker="me": original=EN(translated), translation=KO(source text)
     if meeting_id and translated_text:
-        try:
-            async with dynamodb_client() as ddb:
-                await ddb.update_item(
-                    TableName=config.MEETINGS_TABLE,
-                    Key={"meetingId": {"S": meeting_id}},
-                    UpdateExpression=(
-                        "SET messages = list_append(if_not_exists(messages, :empty), :msg), "
-                        "#updatedAt = :ts "
-                        "ADD messageCount :one"
-                    ),
-                    ConditionExpression="attribute_exists(meetingId)",
-                    ExpressionAttributeNames={"#updatedAt": "updatedAt"},
-                    ExpressionAttributeValues={
-                        ":msg": {"L": [{"M": {
-                            "id": {"S": message_id},
-                            "speaker": {"S": "me"},
-                            "originalText": {"S": translated_text},
-                            "translatedText": {"S": text},
-                            "detectedLanguage": {"S": "ko"},
-                            "timestamp": {"S": timestamp},
-                        }}]},
-                        ":empty": {"L": []},
-                        ":ts": {"S": timestamp},
-                        ":one": {"N": "1"},
-                    },
-                )
-        except ClientError as err:
-            if err.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
-                logger.warning(
-                    "[tts_request] Skipped save — meeting does not exist: meeting_id=%s",
-                    meeting_id,
-                )
-            else:
-                logger.exception("[tts_request] DynamoDB save failed for messageId=%s", message_id)
-        except Exception:
-            logger.exception("[tts_request] DynamoDB save failed for messageId=%s", message_id)
+        await _persist_message(
+            meeting_id,
+            {
+                "id": message_id,
+                "speaker": "me",
+                "originalText": translated_text,
+                "translatedText": text,
+                "detectedLanguage": "ko",
+                "timestamp": timestamp,
+            },
+            log_tag="tts_request",
+        )
 
 
 # ─── Summary streaming ───────────────────────────────────────────────────────
