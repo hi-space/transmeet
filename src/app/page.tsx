@@ -13,6 +13,7 @@ import MeetingPagePanel, { PAGE_GEN_IDLE, type PageGenState } from '@/components
 import NotesArea from '@/components/NotesArea'
 import NotesComposer from '@/components/NotesComposer'
 import VoiceArea, { VoiceFontSizeControl } from '@/components/VoiceArea'
+import MeetingContentStatus from '@/components/MeetingContentStatus'
 import EditableTitle from '@/components/EditableTitle'
 import Icon from '@/components/ui/Icon'
 import Tabs from '@/components/ui/Tabs'
@@ -237,6 +238,10 @@ export default function Home() {
     translation?: string
   } | null>(null)
   const [isLoadingMeetings, setIsLoadingMeetings] = useState(HAS_API)
+  const [meetingLoadStates, setMeetingLoadStates] = useState<
+    Record<string, 'loading' | 'error' | undefined>
+  >({})
+  const loadingMeetingIdsRef = useRef(new Set<string>())
   const [meetingListError, setMeetingListError] = useState<string | null>(null)
   const [isCreatingMeeting, setIsCreatingMeeting] = useState(HAS_API)
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null)
@@ -355,6 +360,7 @@ export default function Home() {
   const deletedMeetingIdsRef = useRef(new Set<string>())
 
   const activeMeeting = meetings.find((m) => m.id === activeMeetingId)
+  const activeMeetingLoadState = meetingLoadStates[activeMeetingId]
 
   // 탭 배지: 비활성 탭에 새 메시지 도착 시 표시
   useEffect(() => {
@@ -378,7 +384,11 @@ export default function Home() {
   // ─── Task #10: Load meetings on mount ──────────────────────────────────────
 
   const loadMeetingMessages = useCallback(async (id: string) => {
+    // 회의를 빠르게 오가도 진행 중인 요청은 재사용하고, 상태는 회의별로 유지한다.
+    if (loadingMeetingIdsRef.current.has(id)) return
+    loadingMeetingIdsRef.current.add(id)
     openedMeetingIdsRef.current.add(id)
+    setMeetingLoadStates((prev) => ({ ...prev, [id]: 'loading' }))
     try {
       const full = await api.meetings.get(id)
       const meeting = toMeeting(full)
@@ -388,8 +398,15 @@ export default function Home() {
         lastSummarizedCountRef.current[id] = meeting.messages.length
       }
       setMeetings((prev) => prev.map((m) => (m.id === id ? meeting : m)))
+      setMeetingLoadStates((prev) => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
     } catch {
-      // silent — sidebar still shows the meeting
+      setMeetingLoadStates((prev) => ({ ...prev, [id]: 'error' }))
+    } finally {
+      loadingMeetingIdsRef.current.delete(id)
     }
   }, [])
 
@@ -2215,6 +2232,7 @@ export default function Home() {
               id="meeting-voice-panel"
               role="tabpanel"
               aria-label="대화"
+              aria-busy={activeMeetingLoadState === 'loading'}
               className={`ui-surface min-w-0 flex-1 flex-col overflow-hidden ${activeTab === 'voice' ? 'flex' : 'hidden lg:flex'}`}
             >
               <div className="ui-panel-header">
@@ -2230,20 +2248,27 @@ export default function Home() {
                   onChange={(voiceFontSize) => updateSettings({ voiceFontSize })}
                 />
               </div>
-              <VoiceArea
-                key={activeMeetingId}
-                isVisible={desktopLayout || activeTab === 'voice'}
-                messages={activeMeeting?.messages ?? []}
-                isRecording={isRecording}
-                isProcessing={isTtsPending}
-                playingMessageId={playingMessageId}
-                isMessageLoading={isMessageLoading}
-                onPlayMessage={handlePlayMessage}
-                onStopMessage={handleStopAllAudio}
-                onTranslateMessage={handleTranslateMessage}
-                pendingTranscript={pendingTranscript}
-                fontSize={settings.voiceFontSize}
-              />
+              {activeMeetingLoadState ? (
+                <MeetingContentStatus
+                  status={activeMeetingLoadState}
+                  onRetry={() => loadMeetingMessages(activeMeetingId)}
+                />
+              ) : (
+                <VoiceArea
+                  key={activeMeetingId}
+                  isVisible={desktopLayout || activeTab === 'voice'}
+                  messages={activeMeeting?.messages ?? []}
+                  isRecording={isRecording}
+                  isProcessing={isTtsPending}
+                  playingMessageId={playingMessageId}
+                  isMessageLoading={isMessageLoading}
+                  onPlayMessage={handlePlayMessage}
+                  onStopMessage={handleStopAllAudio}
+                  onTranslateMessage={handleTranslateMessage}
+                  pendingTranscript={pendingTranscript}
+                  fontSize={settings.voiceFontSize}
+                />
+              )}
             </section>
 
             {summaryOpen && (
@@ -2297,9 +2322,16 @@ export default function Home() {
                     id="meeting-utility-panel"
                     role="tabpanel"
                     aria-label={panelLabels[visibleUtilityTab]}
+                    aria-busy={activeMeetingLoadState === 'loading'}
                     className="flex min-h-0 flex-1 flex-col"
                   >
-                    {visibleUtilityTab === 'notes' ? (
+                    {activeMeetingLoadState ? (
+                      <MeetingContentStatus
+                        status={activeMeetingLoadState}
+                        loadingMessage={`${panelLabels[visibleUtilityTab]} 불러오는 중…`}
+                        onRetry={() => loadMeetingMessages(activeMeetingId)}
+                      />
+                    ) : visibleUtilityTab === 'notes' ? (
                       <>
                         <NotesArea
                           key={activeMeetingId}

@@ -515,6 +515,19 @@
 
 /* ---- Animations ---- */
 
+@keyframes meeting-load-progress {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+
+.meeting-load-progress {
+  animation: meeting-load-progress 1.2s ease-in-out infinite;
+}
+
 @keyframes wave-bar {
   0%,
   100% {
@@ -583,6 +596,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .meeting-load-progress {
+    animation: none;
+    margin-left: 33.333%;
+  }
+
   *,
   *::before,
   *::after {
