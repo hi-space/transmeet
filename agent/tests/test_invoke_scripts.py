@@ -82,3 +82,20 @@ def test_batch_list_meetings_attaches_table_messages(ddb):
     assert [m["id"] for m in item["messages"]] == ["m0", "m1", "m2"]
     payload = invoke_local.build_payload(item, item["messages"], "model")
     assert len(payload["messages"]) == 3
+
+
+def test_payload_from_sample_puts_meeting_without_messages(ddb, tmp_path):
+    puts = []
+    ddb.put_item = lambda **kw: puts.append(kw)
+    sample = tmp_path / "s.json"
+    sample.write_text(
+        '{"meeting": {"meetingId": "sample-1", "title": "샘플", "startedAt": "2026-10-28T00:00:00+00:00"},'
+        ' "messages": [{"timestamp": "2026-10-28T00:00:01+00:00", "speaker": "speaker1", "originalText": "hi"}]}',
+        encoding="utf-8",
+    )
+    payload = invoke_local.payload_from_sample(sample)
+    assert [m["original"] for m in payload["messages"]] == ["hi"]
+    (put,) = puts
+    assert put["TableName"] == invoke_local.MEETINGS_TABLE
+    # 대화는 메시지 테이블에 있으므로 회의 항목에 빈 messages 를 두지 않는다
+    assert "messages" not in put["Item"]

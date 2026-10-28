@@ -43,9 +43,10 @@ class FakeBedrock:
 class FakeDDB:
     def __init__(self, title="주간 1:1", summary_style=None, messages=None):
         self.title = title
-        self.messages = messages or []
-        self.gets = []
         self.summary_style = summary_style
+        self.messages = messages or []
+        # 호출 기록
+        self.gets = []
         self.updates = []
 
     async def query(self, **kwargs):

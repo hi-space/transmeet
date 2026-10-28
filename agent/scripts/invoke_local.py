@@ -113,11 +113,12 @@ def payload_from_sample(path: Path) -> dict:
     item = {"meetingId": sample["meeting"]["meetingId"], "title": sample["meeting"]["title"],
             "createdAt": sample["meeting"]["startedAt"]}
     payload = build_payload(item, sample["messages"], sample["meeting"].get("modelId") or "global.anthropic.claude-opus-5-5")
-    # 샘플 미팅은 DynamoDB 에 없으므로 발행(조건부 UpdateItem)이 통과하도록 아이템을 넣어 둔다
+    # 샘플 미팅은 DynamoDB 에 없으므로 발행(조건부 UpdateItem)이 통과하도록 아이템을 넣어 둔다.
+    # 대화는 메시지 테이블에 있고 회의 항목의 messages 는 아무도 읽지 않으므로 두지 않는다.
     ddb = boto3.client("dynamodb", region_name=REGION)
     ddb.put_item(TableName=MEETINGS_TABLE, Item={
         "meetingId": {"S": item["meetingId"]}, "title": {"S": item["title"]},
-        "createdAt": {"S": item["createdAt"]}, "status": {"S": "sample"}, "messages": {"L": []},
+        "createdAt": {"S": item["createdAt"]}, "status": {"S": "sample"},
     })
     return payload
 

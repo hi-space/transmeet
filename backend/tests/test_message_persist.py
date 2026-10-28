@@ -51,6 +51,18 @@ async def test_persist_writes_transaction(monkeypatch):
     _install(monkeypatch, ddb)
     await ws_handler._persist_message("m1", MESSAGE, log_tag="process_segment")
     assert len(ddb.calls) == 1
+    put, update = ddb.calls[0]["TransactItems"]
+    item = put["Put"]["Item"]
+    assert put["Put"]["TableName"] == ws_handler.config.MESSAGES_TABLE
+    assert item == {
+        **{k: {"S": v} for k, v in MESSAGE.items()},
+        "meetingId": {"S": "m1"},
+        "sk": {"S": f"{MESSAGE['timestamp']}#{MESSAGE['id']}"},
+    }
+    # 회의 항목의 updatedAt 은 발언 시각으로 맞춘다
+    upd = update["Update"]
+    assert upd["Key"] == {"meetingId": {"S": "m1"}}
+    assert upd["ExpressionAttributeValues"][":ts"] == {"S": MESSAGE["timestamp"]}
 
 
 @pytest.mark.asyncio
