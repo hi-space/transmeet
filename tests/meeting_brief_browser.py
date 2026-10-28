@@ -41,12 +41,15 @@ async def main():
           window.WebSocket = TestSocket;
         """)
         page = await context.new_page()
+        brief_status = page.get_by_role("status", name="회의 한 줄 요약", exact=True)
         errors, calls = [], []
         started = {count: asyncio.Event() for count in (60, 80, 100, 101, 121)}
         release = {count: asyncio.Event() for count in (60, 121)}
         completed = {count: asyncio.Event() for count in (60, 80, 100, 101, 121)}
         stale_load_started, release_stale_load = asyncio.Event(), asyncio.Event()
+        first_brief_started, release_first_brief = asyncio.Event(), asyncio.Event()
         delay_load = False
+        fail_first_brief = False
         page.on("pageerror", lambda error: errors.append(str(error)))
         messages = [{
             "id": f"saved-{i}", "speaker": f"speaker{i % 2 + 1}",
@@ -64,6 +67,8 @@ async def main():
             path = urlparse(request.url).path.removeprefix("/__ui_api")
             if request.method == "GET" and path == "/meetings":
                 result = [{k: v for k, v in meeting.items() if k != "messages"}]
+            elif request.method == "GET" and path == "/me/summary-templates":
+                result = {"templates": []}
             elif request.method == "GET" and path == "/meetings/meeting-1":
                 result = json.loads(json.dumps(meeting))
                 if delay_load:
@@ -76,6 +81,11 @@ async def main():
                 calls.append(body)
                 assert body["mode"] == "brief", "The long auto-summary must remain disabled"
                 count = len(body["messages"])
+                if fail_first_brief:
+                    first_brief_started.set()
+                    await release_first_brief.wait()
+                    await route.fulfill(status=503, body="Temporarily unavailable")
+                    return
                 # Model completion can lag behind persistence of the live utterances.
                 epoch = datetime(2026, 10, 28, tzinfo=timezone.utc)
                 meeting["messages"] = [{
@@ -125,7 +135,7 @@ async def main():
             await expect(page.locator("main").get_by_label("대화 19개", exact=True)).to_be_visible()
             assert not calls
             await add_messages(1)
-            await expect(page.get_by_label("회의 한 줄 요약", exact=True)).to_contain_text(BRIEF, timeout=3000)
+            await expect(brief_status).to_contain_text(BRIEF, timeout=3000)
             assert len(calls) == 1 and len(calls[0]["messages"]) == 20
             await expect(page.get_by_role("button", name=f"{TITLE} 제목 편집", exact=True)).to_be_visible()
             await add_messages(19)
@@ -133,10 +143,13 @@ async def main():
             assert len(calls) == 1
             await add_messages(1)
             await expect(page.locator("main").get_by_label("대화 40개", exact=True)).to_be_visible()
-            await expect(page.get_by_label("회의 한 줄 요약", exact=True)).to_have_attribute("aria-busy", "false")
+            await expect(brief_status).to_have_attribute("aria-busy", "false")
             assert len(calls) == 2 and len(calls[1]["messages"]) == 40
             await page.set_viewport_size({"width": 390, "height": 844})
-            await expect(page.get_by_label("회의 한 줄 요약", exact=True)).to_contain_text(BRIEF)
+            await page.get_by_role("button", name="회의 한 줄 요약 보기", exact=True).click()
+            await expect(brief_status).to_contain_text(BRIEF)
+            await page.keyboard.press("Escape")
+            await expect(page.get_by_role("button", name="회의 한 줄 요약 보기", exact=True)).to_be_focused()
             assert await page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
             await page.screenshot(path="/tmp/transmeet-meeting-brief-mobile.png", full_page=True)
             await page.set_viewport_size({"width": 1280, "height": 900})
@@ -145,23 +158,23 @@ async def main():
             # New messages during a slow request must trigger a catch-up afterward.
             await add_messages(20)
             await asyncio.wait_for(started[60].wait(), timeout=5)
-            await expect(page.get_by_label("회의 한 줄 요약")).to_contain_text(BRIEF)
+            await expect(brief_status).to_contain_text(BRIEF)
             await add_messages(20)
             await expect(page.locator("main").get_by_label("대화 80개", exact=True)).to_be_visible()
             assert len(calls) == 3, "Do not send a duplicate while a brief is pending"
             release[60].set()
             await asyncio.wait_for(completed[80].wait(), timeout=5)
-            await expect(page.get_by_label("회의 한 줄 요약")).to_contain_text("검토 80")
+            await expect(brief_status).to_contain_text("검토 80")
 
             # A failure retains the prior text; the next new message permits retry.
             await add_messages(20)
             await asyncio.wait_for(completed[100].wait(), timeout=5)
-            await expect(page.get_by_label("회의 한 줄 요약")).to_have_attribute("aria-busy", "false")
-            await expect(page.get_by_label("회의 한 줄 요약")).to_contain_text("검토 80")
+            await expect(brief_status).to_have_attribute("aria-busy", "false")
+            await expect(brief_status).to_contain_text("검토 80")
             assert len(calls) == 5
             await add_messages(1)
             await asyncio.wait_for(completed[101].wait(), timeout=5)
-            await expect(page.get_by_label("회의 한 줄 요약")).to_contain_text("검토 101")
+            await expect(brief_status).to_contain_text("검토 101")
 
             # An older GET response must not erase a brief that completed meanwhile.
             await add_messages(20)
@@ -171,18 +184,39 @@ async def main():
             await asyncio.wait_for(stale_load_started.wait(), timeout=5)
             release[121].set()
             await asyncio.wait_for(completed[121].wait(), timeout=5)
-            await expect(page.get_by_label("회의 한 줄 요약")).to_contain_text("검토 121")
+            await expect(brief_status).to_contain_text("검토 121")
             release_stale_load.set()
             await expect(page.locator("#meeting-voice-panel")).to_have_attribute("aria-busy", "false")
-            await expect(page.get_by_label("회의 한 줄 요약")).to_contain_text("검토 121")
+            await expect(brief_status).to_contain_text("검토 121")
             delay_load = False
 
             # Refresh restores both the text and its checkpoint, with no extra request.
             await page.goto(BASE + "/?meeting=meeting-1", wait_until="domcontentloaded")
             await expect(page.locator("#meeting-voice-panel")).to_have_attribute("aria-busy", "false")
-            await expect(page.get_by_label("회의 한 줄 요약")).to_contain_text("검토 121")
+            await expect(brief_status).to_contain_text("검토 121")
             await expect(page.get_by_role("button", name=f"{TITLE} 제목 편집", exact=True)).to_be_visible()
             assert len(calls) == 7
+
+            # A failed first brief must not leave the mobile dialog claiming to load.
+            for field in ("brief", "briefUpdatedAt", "briefMessageCount", "briefLastMessageId"):
+                meeting.pop(field, None)
+            meeting["messages"] = meeting["messages"][:19]
+            meeting["messageCount"] = 19
+            fail_first_brief = True
+            await page.set_viewport_size({"width": 320, "height": 568})
+            await page.goto(BASE + "/?meeting=meeting-1", wait_until="domcontentloaded")
+            await expect(page.locator("#meeting-voice-panel")).to_have_attribute("aria-busy", "false")
+            await expect(page.locator("main").get_by_label("대화 19개", exact=True)).to_be_visible()
+            await add_messages(1)
+            await asyncio.wait_for(first_brief_started.wait(), timeout=5)
+            await page.get_by_role("button", name="회의 한 줄 요약 보기", exact=True).click()
+            brief_dialog = page.get_by_role("dialog", name="회의 한 줄 요약", exact=True)
+            await expect(brief_dialog.get_by_role("status")).to_have_attribute("aria-busy", "true")
+            release_first_brief.set()
+            await expect(brief_dialog.get_by_role("status")).to_have_attribute("aria-busy", "false")
+            await expect(brief_dialog).to_contain_text("아직 한 줄 요약이 없습니다")
+            await page.keyboard.press("Escape")
+            await expect(brief_dialog).to_have_count(0)
             assert not errors, errors
             print(json.dumps({"passed": True, "requestMessageCounts": [len(c["messages"]) for c in calls], "runtimeErrors": errors}))
         except Exception:
@@ -192,6 +226,7 @@ async def main():
             for gate in release.values():
                 gate.set()
             release_stale_load.set()
+            release_first_brief.set()
             await context.close()
             await browser.close()
 

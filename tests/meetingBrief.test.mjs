@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import ts from 'typescript'
+import { loadTypeScript } from './helpers/loadTypeScript.mjs'
 
 // Run the Lambda itself; replace only its external AWS clients.
 const { outputText } = ts.transpileModule(
@@ -246,6 +247,7 @@ function loadApi() {
   new Function('require', 'exports', apiCode)((name) => {
     if (name === '@/lib/cognito') return { getIdToken: async () => null }
     if (name === '@/lib/speakers') return { normalizeSpeaker: (speaker) => speaker }
+    if (name === '@/lib/summaryStyles') return loadTypeScript('src/lib/summaryStyles.ts')
     throw new Error(`Unexpected import: ${name}`)
   }, exports)
   return exports

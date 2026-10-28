@@ -1,18 +1,20 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef, type CSSProperties } from 'react'
-import Header, { LanguageDirection } from '@/components/Header'
+import Header from '@/components/Header'
 import MeetingSidebar from '@/components/MeetingSidebar'
 import SummaryPanel from '@/components/SummaryPanel'
 import ControlPanel from '@/components/ControlPanel'
-import SettingsPanel from '@/components/SettingsPanel'
+import SettingsPanel, { type SettingsTab } from '@/components/SettingsPanel'
 import QuickTranslatePopup from '@/components/QuickTranslatePopup'
 import AuthScreen from '@/components/AuthScreen'
 import MobileTabBar from '@/components/MobileTabBar'
+import type { PageStyle } from '@/lib/pageStyles'
 import MeetingPagePanel, { PAGE_GEN_IDLE, type PageGenState } from '@/components/MeetingPagePanel'
 import NotesArea from '@/components/NotesArea'
 import NotesComposer from '@/components/NotesComposer'
 import VoiceArea, { VoiceFontSizeControl } from '@/components/VoiceArea'
+import ConversationCopyButton from '@/components/ConversationCopyButton'
 import MeetingContentStatus from '@/components/MeetingContentStatus'
 import EditableTitle from '@/components/EditableTitle'
 import Icon from '@/components/ui/Icon'
@@ -27,13 +29,21 @@ import MeetingActions, {
 import { Meeting, Message, type MeetingBrief } from '@/types/meeting'
 import { useAudioCapture } from '@/hooks/useAudioCapture'
 import { useWebSocket } from '@/hooks/useWebSocket'
-import { useSettings, type Settings } from '@/hooks/useSettings'
+import { useSettings } from '@/hooks/useSettings'
 import { useSummaryResize } from '@/hooks/useSummaryResize'
 import { useMeetingBrief } from '@/hooks/useMeetingBrief'
 import { useAuth } from '@/context/AuthContext'
+import { useSummaryTemplates } from '@/hooks/useSummaryTemplates'
 import type { WsServerMessage } from '@/lib/websocket'
 import { api, toMeeting, parseSummary } from '@/lib/api'
 import { getVisibleUtilityTab } from '@/lib/workspace'
+import { normalizeSummaryStyle, type SummaryCustom, type SummaryStyle } from '@/lib/summaryStyles'
+import {
+  effectiveSourceLanguage,
+  resolveDirection,
+  type SourceLanguage,
+  type TranslationTarget,
+} from '@/lib/speechLanguages'
 import {
   sttChunkDuration,
   sttRecordingAction,
@@ -152,30 +162,6 @@ function extractCompleteSentences(text: string): string {
   return match ? match[1].trim() : ''
 }
 
-// ─── 번역 방향 ────────────────────────────────────────────────────────────────
-
-/**
- * 번역 방향을 결정한다.
- *
- * sourceLang 이 'auto' 면 방향이 고정 설정이 아니라 발화마다 감지된 언어에서
- * 나온다 — 감지 언어의 반대편이 타겟이다. 감지값이 아직 없으면(첫 partial 등)
- * 'en' 으로 가정한다.
- *
- * 백엔드도 같은 규칙을 독립적으로 적용한다 (ws_handler._auto_target_lang).
- * 프론트가 계산하는 이유는 partial 번역 요청에 방향을 실어 보내야 하기 때문.
- */
-function resolveDirection(
-  sourceLang: Settings['sourceLang'],
-  targetLang: Settings['targetLang'],
-  detected?: 'ko' | 'en' | null
-): { source: 'ko' | 'en'; target: 'ko' | 'en' } {
-  if (sourceLang === 'auto') {
-    const source = detected ?? 'en'
-    return { source, target: source === 'ko' ? 'en' : 'ko' }
-  }
-  return { source: sourceLang, target: targetLang }
-}
-
 // ─── 빈 회의 정리 ─────────────────────────────────────────────────────────────
 
 /**
@@ -192,7 +178,9 @@ function isPrunable(m: Meeting): boolean {
 
 export default function Home() {
   const { user, isLoading: authLoading, setUser, logout } = useAuth()
+  const summaryTemplates = useSummaryTemplates(HAS_API && !authLoading && (!HAS_COGNITO || !!user))
   const { settings, updateSettings } = useSettings()
+  const speechSourceLang = effectiveSourceLanguage(settings.sttProvider, settings.sourceLang)
   const [sttStatuses, setSttStatuses] = useState<Partial<Record<SttProvider, SttStatus>>>({})
   const selectedSttStatus = sttStatuses[settings.sttProvider]
   const {
@@ -206,9 +194,15 @@ export default function Home() {
   const [meetings, setMeetings] = useState<Meeting[]>(HAS_API ? [] : MOCK_MEETINGS)
   const [activeMeetingId, setActiveMeetingId] = useState(HAS_API ? '' : MOCK_MEETINGS[0].id)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [mobileBriefOpen, setMobileBriefOpen] = useState(false)
   const [desktopLayout, setDesktopLayout] = useState(false)
   const [summaryOpen, setSummaryOpen] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('general')
+  const openSettings = useCallback((tab: SettingsTab) => {
+    setSettingsTab(tab)
+    setSettingsOpen(true)
+  }, [])
   const [quickTranslateOpen, setQuickTranslateOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'voice' | 'notes' | 'summary' | 'page'>('voice')
   const [rightPanel, setRightPanel] = useState<'notes' | 'summary' | 'page'>('summary')
@@ -233,6 +227,13 @@ export default function Home() {
   const [hasNewNotes, setHasNewNotes] = useState(false)
   const [ttsInput, setTtsInput] = useState('')
   const [isSummarizing, setIsSummarizing] = useState(false)
+  const [summaryStyleSaving, setSummaryStyleSaving] = useState<Record<string, boolean>>({})
+  const [summaryStyleErrors, setSummaryStyleErrors] = useState<Record<string, string | undefined>>(
+    {}
+  )
+  const summaryStyleSavingRef = useRef(new Map<string, Promise<SummaryStyle>>())
+  const summaryRequestRef = useRef<{ meetingId: string; style: SummaryStyle } | null>(null)
+  const summaryStreamsRef = useRef(new Set<string>())
   const [isTtsPending, setIsTtsPending] = useState(false)
   const [pendingTranscript, setPendingTranscript] = useState<{
     messageId: string
@@ -254,6 +255,8 @@ export default function Home() {
     phase: 'translating' | 'done'
   } | null>(null)
 
+  const voicePanelRef = useRef<HTMLElement>(null)
+  const utilityPanelRef = useRef<HTMLElement>(null)
   const notesComposerRef = useRef<HTMLFormElement>(null)
   const pageFooterRef = useRef<HTMLDivElement>(null)
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null)
@@ -321,6 +324,7 @@ export default function Home() {
   // realtime 모드 스로틀: 1.5초 간격으로 최신 partial 번역
   const partialThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingPartialRef = useRef<string>('')
+  const pendingDirectionRef = useRef<ReturnType<typeof resolveDirection> | null>(null)
   // AUTO 모드: 마지막으로 감지된 언어. ref 는 handleWsMessage 안에서 즉시 비교하려고,
   // state 는 헤더 배지 렌더링용 — 둘을 함께 갱신한다.
   const detectedLangRef = useRef<'ko' | 'en' | null>(null)
@@ -698,10 +702,19 @@ export default function Home() {
         // 확정된 발화의 감지 언어를 헤더 배지에 반영한다. Whisper 모드는 partial 이
         // 없어서 이 경로가 유일한 갱신 지점이다. __pending__/__manual__/__quick__ 는
         // 우리가 보낸 방향을 되돌려주는 것이므로 근거가 아니다.
-        if (msg.phase === 'done' && msg.detectedLanguage && !msg.messageId.startsWith('__')) {
-          if (detectedLangRef.current !== msg.detectedLanguage) {
-            detectedLangRef.current = msg.detectedLanguage
-            setDetectedLang(msg.detectedLanguage)
+        if (
+          (msg.phase === 'stt' || msg.phase === 'done') &&
+          msg.detectedLanguage &&
+          !msg.messageId.startsWith('__')
+        ) {
+          // A late final translation cannot replace a newer partial's language.
+          const currentLanguage =
+            msg.phase === 'done' && pendingDirectionRef.current
+              ? pendingDirectionRef.current.source
+              : msg.detectedLanguage
+          if (detectedLangRef.current !== currentLanguage) {
+            detectedLangRef.current = currentLanguage
+            setDetectedLang(currentLanguage)
           }
         }
         if (msg.phase === 'stt_partial') {
@@ -712,12 +725,12 @@ export default function Home() {
           // AUTO 모드: 백엔드가 partial 에 실어 보낸 감지 언어로 방향을 잡는다.
           // 감지 언어가 바뀌면 이전 언어로 쌓인 partial 번역을 버려야 한다 —
           // 영어 번역 위에 한국어 번역이 이어붙으면 두 언어가 한 말풍선에 섞인다.
-          const partialDetected = msg.detectedLanguage ?? detectedLangRef.current
+          const partialDetected =
+            msg.detectedLanguage ?? pendingDirectionRef.current?.source ?? detectedLangRef.current
           const langFlipped =
-            settings.sourceLang === 'auto' &&
             partialDetected != null &&
-            detectedLangRef.current != null &&
-            partialDetected !== detectedLangRef.current
+            pendingDirectionRef.current != null &&
+            partialDetected !== pendingDirectionRef.current.source
           if (partialDetected && partialDetected !== detectedLangRef.current) {
             detectedLangRef.current = partialDetected
             setDetectedLang(partialDetected)
@@ -740,10 +753,11 @@ export default function Home() {
           }))
 
           const { source: srcLang, target: tgtLang } = resolveDirection(
-            settings.sourceLang,
-            settings.targetLang,
+            speechSourceLang,
+            settings.translationTarget,
             partialDetected
           )
+          pendingDirectionRef.current = { source: srcLang, target: tgtLang }
 
           if (settings.partialTranslationMode === 'realtime') {
             // 스로틀: 타이머가 없을 때만 새 타이머 등록 (1.5초 간격)
@@ -835,6 +849,12 @@ export default function Home() {
           // partial 번역을 carry over: pending bubble에 쌓인 번역을 새 말풍선 초기값으로 설정
           const carryoverTranslation = pendingTranscriptRef.current?.translation ?? ''
           lastTranslatedPartialRef.current = ''
+          pendingDirectionRef.current = null
+          pendingPartialRef.current = ''
+          if (partialThrottleRef.current) {
+            clearTimeout(partialThrottleRef.current)
+            partialThrottleRef.current = null
+          }
           setPendingTranscript(null)
           const streamSpeaker = (msg.speaker as Message['speaker']) ?? 'speaker1'
           setMeetings((prev) =>
@@ -852,6 +872,8 @@ export default function Home() {
               const canMerge =
                 lastMsg &&
                 lastMsg.speaker === streamSpeaker &&
+                lastMsg.detectedLanguage === msg.detectedLanguage &&
+                lastMsg.targetLanguage === msg.targetLanguage &&
                 (!isSentenceComplete ||
                   (countSentences(lastMsg.original) < MAX_SENTENCES &&
                     timeDiff < SILENCE_TIMEOUT_MS))
@@ -877,6 +899,8 @@ export default function Home() {
                 speaker: streamSpeaker,
                 original: msg.originalText ?? '',
                 translation: carryoverTranslation,
+                detectedLanguage: msg.detectedLanguage,
+                targetLanguage: msg.targetLanguage,
                 streamPhase: 'stt',
                 timestamp: msg.timestamp,
               }
@@ -923,6 +947,16 @@ export default function Home() {
           if (msg.messageId === '__quick__') {
             setQuickTranslateStream({ text: msg.translatedText ?? '', phase: 'done' })
             return
+          }
+          if (msg.messageId === '__pending__' || msg.messageId === '__pending_append__') {
+            const currentDirection = pendingDirectionRef.current
+            if (
+              !currentDirection ||
+              (msg.detectedLanguage && msg.detectedLanguage !== currentDirection.source) ||
+              (msg.targetLanguage && msg.targetLanguage !== currentDirection.target)
+            ) {
+              return
+            }
           }
           // pending 버블 번역 완료
           if (msg.messageId === '__pending__') {
@@ -972,6 +1006,7 @@ export default function Home() {
                                 original: msg.originalText ?? existing.original,
                                 translation: msg.translatedText ?? '',
                                 detectedLanguage: msg.detectedLanguage,
+                                targetLanguage: msg.targetLanguage ?? existing.targetLanguage,
                                 streamPhase: 'done' as const,
                               }
                           : existing
@@ -1018,6 +1053,7 @@ export default function Home() {
                                 ? (existing.translation || '') + ' ' + (msg.translatedText ?? '')
                                 : (msg.translatedText ?? ''),
                               detectedLanguage: msg.detectedLanguage,
+                              targetLanguage: msg.targetLanguage,
                               streamPhase: 'done' as const,
                             }
                         : existing
@@ -1090,27 +1126,52 @@ export default function Home() {
           setIsTtsPending(false)
         }
       } else if (msg.type === 'summary_stream') {
+        const targetId = msg.meetingId ?? summaryRequestRef.current?.meetingId ?? activeMeetingId
+        const generatedStyle = normalizeSummaryStyle(
+          msg.summaryStyle ??
+            (summaryRequestRef.current?.meetingId === targetId
+              ? summaryRequestRef.current.style
+              : undefined)
+        )
+        const generatedLabel = generatedStyle === 'custom' ? msg.summaryLabel : undefined
         if (msg.phase === 'delta') {
+          const firstChunk = !summaryStreamsRef.current.has(targetId)
+          summaryStreamsRef.current.add(targetId)
           setMeetings((prev) =>
             prev.map((m) =>
-              m.id === activeMeetingId ? { ...m, summary: (m.summary ?? '') + (msg.text ?? '') } : m
+              m.id === targetId
+                ? {
+                    ...m,
+                    summary: (firstChunk ? '' : (m.summary ?? '')) + (msg.text ?? ''),
+                    summaryGeneratedStyle: generatedStyle,
+                    summaryGeneratedLabel: generatedLabel,
+                  }
+                : m
             )
           )
         } else if (msg.phase === 'done') {
+          summaryStreamsRef.current.delete(targetId)
           if (isSummarizingTimeoutRef.current) {
             clearTimeout(isSummarizingTimeoutRef.current)
             isSummarizingTimeoutRef.current = null
           }
           setMeetings((prev) =>
             prev.map((m) =>
-              m.id === activeMeetingId
-                ? { ...m, summary: msg.summary ?? m.summary, title: msg.title ?? m.title }
+              m.id === targetId
+                ? {
+                    ...m,
+                    summary: msg.summary ?? m.summary,
+                    summaryGeneratedStyle: generatedStyle,
+                    summaryGeneratedLabel: generatedLabel,
+                    title: msg.title ?? m.title,
+                  }
                 : m
             )
           )
           isSummarizingRef.current = false
           setIsSummarizing(false)
         } else if (msg.phase === 'error') {
+          summaryStreamsRef.current.delete(targetId)
           if (isSummarizingTimeoutRef.current) {
             clearTimeout(isSummarizingTimeoutRef.current)
             isSummarizingTimeoutRef.current = null
@@ -1119,7 +1180,7 @@ export default function Home() {
           setIsSummarizing(false)
           setMeetings((prev) =>
             prev.map((m) =>
-              m.id === activeMeetingId
+              m.id === targetId
                 ? { ...m, summary: `요약 실패: ${msg.error ?? '알 수 없는 오류'}` }
                 : m
             )
@@ -1253,8 +1314,8 @@ export default function Home() {
       settings.ttsAutoPlay,
       settings.partialTranslationMode,
       settings.partialThrottleMs,
-      settings.sourceLang,
-      settings.targetLang,
+      speechSourceLang,
+      settings.translationTarget,
       settings.translationModel,
       setPageGenFor,
       startPageGenFor,
@@ -1300,12 +1361,12 @@ export default function Home() {
       sendAudio(
         wav,
         'speaker1',
-        settings.sourceLang !== 'auto' ? settings.sourceLang : undefined,
-        settings.targetLang,
+        speechSourceLang,
+        settings.translationTarget,
         settings.translationModel
       )
     },
-    [sendAudio, settings.sourceLang, settings.targetLang, settings.translationModel]
+    [sendAudio, speechSourceLang, settings.translationTarget, settings.translationModel]
   )
 
   const {
@@ -1359,8 +1420,8 @@ export default function Home() {
       console.warn('[WS] Reconnected during recording — resending startRecording')
       startRecording({
         sttProvider: settings.sttProvider,
-        sourceLang: settings.sourceLang,
-        targetLang: settings.targetLang,
+        sourceLang: speechSourceLang,
+        translationTarget: settings.translationTarget,
         modelId: settings.translationModel,
         speaker: 'speaker1',
         translationTiming: settings.translationTiming,
@@ -1371,21 +1432,30 @@ export default function Home() {
     isRecording,
     startRecording,
     settings.sttProvider,
-    settings.sourceLang,
-    settings.targetLang,
+    speechSourceLang,
+    settings.translationTarget,
     settings.translationModel,
     settings.translationTiming,
   ])
 
   // 언어 또는 엔진을 변경하면 기존 발화를 마무리하고 새 설정으로 인식한다.
-  const prevSourceLangRef = useRef(settings.sourceLang)
+  const prevSourceLangRef = useRef(speechSourceLang)
+  const prevTranslationTargetRef = useRef(settings.translationTarget)
   const prevSttProviderRef = useRef(settings.sttProvider)
   useEffect(() => {
     const prev = prevSourceLangRef.current
+    const prevTarget = prevTranslationTargetRef.current
     const prevProvider = prevSttProviderRef.current
-    prevSourceLangRef.current = settings.sourceLang
+    prevSourceLangRef.current = speechSourceLang
+    prevTranslationTargetRef.current = settings.translationTarget
     prevSttProviderRef.current = settings.sttProvider
-    if (prev === settings.sourceLang && prevProvider === settings.sttProvider) return
+    if (
+      prev === speechSourceLang &&
+      prevTarget === settings.translationTarget &&
+      prevProvider === settings.sttProvider
+    ) {
+      return
+    }
     if (!isRecording || wsStatus !== 'connected') return
 
     console.warn(
@@ -1393,15 +1463,18 @@ export default function Home() {
       prevProvider,
       prev,
       settings.sttProvider,
-      settings.sourceLang
+      speechSourceLang
     )
     // 이전 언어로 쌓인 partial 은 버린다 — 새 언어 결과와 섞이면 안 된다
     setPendingTranscript(null)
     lastTranslatedPartialRef.current = ''
     pendingPartialRef.current = ''
+    pendingDirectionRef.current = null
     // 감지 배지도 리셋 — 이전 모드의 감지값이 남으면 AUTO 진입 직후 오해를 준다
-    detectedLangRef.current = null
-    setDetectedLang(null)
+    if (prev !== speechSourceLang || prevProvider !== settings.sttProvider) {
+      detectedLangRef.current = null
+      setDetectedLang(null)
+    }
     if (partialThrottleRef.current) {
       clearTimeout(partialThrottleRef.current)
       partialThrottleRef.current = null
@@ -1410,20 +1483,20 @@ export default function Home() {
     flushAudio()
     startRecording({
       sttProvider: settings.sttProvider,
-      sourceLang: settings.sourceLang,
-      targetLang: settings.targetLang,
+      sourceLang: speechSourceLang,
+      translationTarget: settings.translationTarget,
       modelId: settings.translationModel,
       speaker: 'speaker1',
       translationTiming: settings.translationTiming,
     })
   }, [
-    settings.sourceLang,
+    speechSourceLang,
     isRecording,
     wsStatus,
     startRecording,
     flushAudio,
     settings.sttProvider,
-    settings.targetLang,
+    settings.translationTarget,
     settings.translationModel,
     settings.translationTiming,
   ])
@@ -1437,8 +1510,8 @@ export default function Home() {
         console.warn('[STT-Watchdog] 25s 무응답 — startRecording 재전송')
         startRecording({
           sttProvider: settings.sttProvider,
-          sourceLang: settings.sourceLang,
-          targetLang: settings.targetLang,
+          sourceLang: speechSourceLang,
+          translationTarget: settings.translationTarget,
           modelId: settings.translationModel,
           speaker: 'speaker1',
           translationTiming: settings.translationTiming,
@@ -1451,8 +1524,8 @@ export default function Home() {
     isRecording,
     settings.sttProvider,
     wsStatus,
-    settings.sourceLang,
-    settings.targetLang,
+    speechSourceLang,
+    settings.translationTarget,
     settings.translationModel,
     settings.translationTiming,
     startRecording,
@@ -1473,6 +1546,8 @@ export default function Home() {
   const resetLocalRecording = useCallback(() => {
     stopAudio()
     setPendingTranscript(null)
+    pendingDirectionRef.current = null
+    lastTranslatedPartialRef.current = ''
     if (partialThrottleRef.current) {
       clearTimeout(partialThrottleRef.current)
       partialThrottleRef.current = null
@@ -1527,8 +1602,8 @@ export default function Home() {
       if (!(await startAudio())) return
       startRecording({
         sttProvider: settings.sttProvider,
-        sourceLang: settings.sourceLang,
-        targetLang: settings.targetLang,
+        sourceLang: speechSourceLang,
+        translationTarget: settings.translationTarget,
         modelId: settings.translationModel,
         speaker: 'speaker1',
         translationTiming: settings.translationTiming,
@@ -1542,8 +1617,8 @@ export default function Home() {
     startRecording,
     stopRecording,
     settings.sttProvider,
-    settings.sourceLang,
-    settings.targetLang,
+    speechSourceLang,
+    settings.translationTarget,
     settings.translationModel,
     settings.translationTiming,
     settings.autoSummarizeMessageCount,
@@ -1553,10 +1628,62 @@ export default function Home() {
 
   // ─── Task #8: Summarize ─────────────────────────────────────────────────────
 
+  const handleSummaryStyleChange = useCallback(
+    async (style: SummaryStyle, templateId?: string) => {
+      const meetingId = activeMeetingId
+      if (
+        !meetingId ||
+        summaryStyleSavingRef.current.has(meetingId) ||
+        isSummarizingRef.current ||
+        (meetingEnd?.meetingId === meetingId && isEnding(meetingEnd))
+      )
+        return
+      // 내 양식은 서버가 사본을 만들어 돌려준다 — 같은 회의의 다음 요약은 그 사본을 쓴다
+      let savedCustom: SummaryCustom | undefined
+      const saving = HAS_API
+        ? api.meetings.updateSummaryStyle(meetingId, style, templateId).then((result) => {
+            savedCustom = result.summaryCustom
+            return normalizeSummaryStyle(result.summaryStyle)
+          })
+        : Promise.resolve(style)
+      summaryStyleSavingRef.current.set(meetingId, saving)
+      setSummaryStyleSaving((prev) => ({ ...prev, [meetingId]: true }))
+      setSummaryStyleErrors((prev) => ({ ...prev, [meetingId]: undefined }))
+      try {
+        const saved = await saving
+        setMeetings((prev) =>
+          prev.map((meeting) =>
+            meeting.id === meetingId
+              ? {
+                  ...meeting,
+                  summaryStyle: normalizeSummaryStyle(saved),
+                  summaryCustom: savedCustom ?? meeting.summaryCustom,
+                }
+              : meeting
+          )
+        )
+      } catch {
+        setSummaryStyleErrors((prev) => ({
+          ...prev,
+          [meetingId]: '요약 방식을 저장하지 못했습니다. 다시 선택해 주세요.',
+        }))
+      } finally {
+        summaryStyleSavingRef.current.delete(meetingId)
+        setSummaryStyleSaving((prev) => ({ ...prev, [meetingId]: false }))
+      }
+    },
+    [activeMeetingId, meetingEnd]
+  )
+
   // force=true: 버튼 클릭 시 stuck 상태 강제 리셋 후 재시도
   // force=false (기본): 자동 요약 트리거 — 이미 진행 중이면 skip
   const handleSummarize = useCallback(
     async (force = false) => {
+      if (!activeMeetingId) return
+      // A recording-stop trigger must survive a pending preference save,
+      // even when there are fewer than N new messages for the periodic trigger.
+      const saving = summaryStyleSavingRef.current.get(activeMeetingId)
+      const savedStyle = saving ? await saving.catch(() => undefined) : undefined
       if (isSummarizingRef.current) {
         if (!force) return
         // 강제 리셋: 기존 safety timeout 취소 후 즉시 재시도
@@ -1568,10 +1695,9 @@ export default function Home() {
         setIsSummarizing(false)
       }
 
-      if (!activeMeetingId) return
-
-      const currentMessages =
-        meetingsRef.current.find((m) => m.id === activeMeetingId)?.messages ?? []
+      const currentMeeting = meetingsRef.current.find((m) => m.id === activeMeetingId)
+      const currentMessages = currentMeeting?.messages ?? []
+      const summaryStyle = savedStyle ?? normalizeSummaryStyle(currentMeeting?.summaryStyle)
       const msgCount = currentMessages.length
 
       if (msgCount === 0) return
@@ -1585,6 +1711,8 @@ export default function Home() {
 
       isSummarizingRef.current = true
       setIsSummarizing(true)
+      summaryRequestRef.current = { meetingId: activeMeetingId, style: summaryStyle }
+      summaryStreamsRef.current.delete(activeMeetingId)
 
       if (!HAS_API) {
         setMeetings((prev) =>
@@ -1604,7 +1732,7 @@ export default function Home() {
         const wsMessages = currentMessages
           .filter((m) => m.original)
           .map((m) => ({ speaker: m.speaker, original: m.original, timestamp: m.timestamp }))
-        const sent = sendSummarize(activeMeetingId, wsMessages)
+        const sent = sendSummarize(activeMeetingId, wsMessages, summaryStyle)
         if (sent) {
           setMeetings((prev) =>
             prev.map((m) => (m.id === activeMeetingId ? { ...m, summary: '' } : m))
@@ -1623,12 +1751,21 @@ export default function Home() {
 
       // REST API fallback
       try {
-        const { summary, title } = await api.meetings.summarize(activeMeetingId)
+        const { summary, title, summaryGeneratedStyle, summaryGeneratedLabel } =
+          await api.meetings.summarize(activeMeetingId, summaryStyle)
         lastSummarizedCountRef.current[activeMeetingId] = msgCount
         setMeetings((prev) =>
           prev.map((m) =>
             m.id === activeMeetingId
-              ? { ...m, summary: parseSummary(summary), title: title ?? m.title }
+              ? {
+                  ...m,
+                  summary: parseSummary(summary),
+                  summaryGeneratedStyle: normalizeSummaryStyle(
+                    summaryGeneratedStyle ?? summaryStyle
+                  ),
+                  summaryGeneratedLabel,
+                  title: title ?? m.title,
+                }
               : m
           )
         )
@@ -1651,10 +1788,16 @@ export default function Home() {
 
   // 서버가 녹음 정지 → 오디오 합치기 → 요약 → 페이지 생성·메일을 끝까지 처리한다.
   const handleEndMeeting = useCallback(() => {
-    if (!activeMeetingId) return
+    if (
+      !activeMeetingId ||
+      activeMeetingLoadState ||
+      summaryStyleSavingRef.current.has(activeMeetingId)
+    )
+      return
     if (isRecording && !window.confirm('녹음을 멈추고 회의를 종료할까요?')) return
-    const currentMessages =
-      meetingsRef.current.find((m) => m.id === activeMeetingId)?.messages ?? []
+    const currentMeeting = meetingsRef.current.find((m) => m.id === activeMeetingId)
+    const currentMessages = currentMeeting?.messages ?? []
+    const summaryStyle = normalizeSummaryStyle(currentMeeting?.summaryStyle)
     const wsMessages = currentMessages
       .filter((m) => m.original)
       .map((m) => ({
@@ -1666,7 +1809,7 @@ export default function Home() {
       }))
     // endMeeting closes server-side audio intake, so enqueue the buffered tail first.
     if (isRecording) flushAudio()
-    if (!sendEndMeeting(activeMeetingId, settings.emailOnEnd, wsMessages)) {
+    if (!sendEndMeeting(activeMeetingId, settings.emailOnEnd, wsMessages, summaryStyle)) {
       setMeetingEnd({
         meetingId: activeMeetingId,
         phase: 'error',
@@ -1676,6 +1819,8 @@ export default function Home() {
     }
     if (isRecording) resetLocalRecording()
     const meetingId = activeMeetingId
+    summaryRequestRef.current = { meetingId, style: summaryStyle }
+    summaryStreamsRef.current.delete(meetingId)
     setMeetingEnd({ meetingId, phase: 'audio' })
     // 진행 중에 다른 미팅으로 옮기거나 소켓이 끊기면 결과 이벤트를 못 받는다 — 버튼이 "종료 중"에 갇히지 않게.
     // 서버 쪽 처리(요약 최대 수 분 + 메일)는 그와 무관하게 끝까지 간다.
@@ -1699,6 +1844,7 @@ export default function Home() {
     }
   }, [
     activeMeetingId,
+    activeMeetingLoadState,
     isRecording,
     flushAudio,
     sendEndMeeting,
@@ -1730,39 +1876,42 @@ export default function Home() {
 
   // ─── Meeting page (AgentCore Harness) ───────────────────────────────────────
 
-  const handleGeneratePage = useCallback(() => {
-    if (!activeMeetingId || !HAS_API) return
-    const meetingId = activeMeetingId
-    if (pageGenByMeetingRef.current.get(meetingId)?.status === 'generating') return
-    const meeting = meetingsRef.current.find((m) => m.id === meetingId)
-    const currentMessages = meeting?.messages ?? []
-    if (currentMessages.length === 0) return
-    // 녹음 중에는 DynamoDB 에 아직 없는 메시지가 있을 수 있어 인라인으로 함께 보낸다
-    const inline = isRecording
-      ? currentMessages
-          .filter((m) => m.original)
-          .map((m) => ({
-            speaker: m.speaker,
-            original: m.original,
-            translation: m.translation,
-            timestamp: m.timestamp,
-            detectedLanguage: m.detectedLanguage,
-          }))
-      : undefined
-    const sent = sendGeneratePage(meetingId, inline)
-    if (!sent) {
-      setPageGenFor(meetingId, {
-        status: 'error',
-        log: [],
-        error: '서버와 연결되어 있지 않습니다.',
-      })
-      return
-    }
-    startPageGenFor(meetingId)
-    setRightPanel('page')
-    setSummaryOpen(true)
-    setActiveTab('page')
-  }, [activeMeetingId, isRecording, sendGeneratePage, setPageGenFor, startPageGenFor])
+  const handleGeneratePage = useCallback(
+    (pageStyle?: PageStyle) => {
+      if (!activeMeetingId || !HAS_API) return
+      const meetingId = activeMeetingId
+      if (pageGenByMeetingRef.current.get(meetingId)?.status === 'generating') return
+      const meeting = meetingsRef.current.find((m) => m.id === meetingId)
+      const currentMessages = meeting?.messages ?? []
+      if (currentMessages.length === 0) return
+      // 녹음 중에는 DynamoDB 에 아직 없는 메시지가 있을 수 있어 인라인으로 함께 보낸다
+      const inline = isRecording
+        ? currentMessages
+            .filter((m) => m.original)
+            .map((m) => ({
+              speaker: m.speaker,
+              original: m.original,
+              translation: m.translation,
+              timestamp: m.timestamp,
+              detectedLanguage: m.detectedLanguage,
+            }))
+        : undefined
+      const sent = sendGeneratePage(meetingId, inline, pageStyle)
+      if (!sent) {
+        setPageGenFor(meetingId, {
+          status: 'error',
+          log: [],
+          error: '서버와 연결되어 있지 않습니다.',
+        })
+        return
+      }
+      startPageGenFor(meetingId)
+      setRightPanel('page')
+      setSummaryOpen(true)
+      setActiveTab('page')
+    },
+    [activeMeetingId, isRecording, sendGeneratePage, setPageGenFor, startPageGenFor]
+  )
 
   const handleUnpublishPage = useCallback(() => {
     const meetingId = activeMeetingId
@@ -1839,7 +1988,12 @@ export default function Home() {
     if (count >= n && count - lastCount >= n) {
       handleSummarizeRef.current()
     }
-  }, [activeMeeting?.messages.length, activeMeetingId, settings.autoSummarizeMessageCount])
+  }, [
+    activeMeeting?.messages.length,
+    activeMeetingId,
+    settings.autoSummarizeMessageCount,
+    summaryStyleSaving,
+  ])
 
   // ─── Task #9: TTS ────────────────────────────────────────────────────────────
 
@@ -1868,8 +2022,8 @@ export default function Home() {
       // 그 외: AUTO 면 저장된 감지 언어의 반대편으로, 수동이면 설정된 방향으로.
       const isMe = speaker === 'me'
       const dir = resolveDirection(
-        settings.sourceLang,
-        settings.targetLang,
+        speechSourceLang,
+        settings.translationTarget,
         detectedLanguage ?? detectedLangRef.current
       )
       const sourceLang = isMe ? 'ko' : (detectedLanguage ?? dir.source)
@@ -1893,7 +2047,12 @@ export default function Home() {
                   msg.id === id
                     ? isMe
                       ? { ...msg, original: '', streamPhase: 'stt' as const }
-                      : { ...msg, translation: '', streamPhase: 'stt' as const }
+                      : {
+                          ...msg,
+                          translation: '',
+                          targetLanguage: targetLang,
+                          streamPhase: 'stt' as const,
+                        }
                     : msg
                 ),
               }
@@ -1905,8 +2064,8 @@ export default function Home() {
       wsStatus,
       sendTranslate,
       activeMeetingId,
-      settings.sourceLang,
-      settings.targetLang,
+      speechSourceLang,
+      settings.translationTarget,
       settings.translationModel,
     ]
   )
@@ -2070,7 +2229,10 @@ export default function Home() {
     const desktop = window.matchMedia('(min-width: 1024px)')
     const closeDrawer = () => {
       setDesktopLayout(desktop.matches)
-      if (desktop.matches) setSidebarOpen(false)
+      if (desktop.matches) {
+        setSidebarOpen(false)
+        setMobileBriefOpen(false)
+      }
     }
     closeDrawer()
     desktop.addEventListener('change', closeDrawer)
@@ -2103,13 +2265,9 @@ export default function Home() {
     return <AuthScreen onAuth={setUser} />
   }
 
-  const changeDirection = (source: 'en' | 'ko' | 'auto') => {
-    updateSettings(
-      source === 'auto'
-        ? { sourceLang: 'auto' }
-        : { sourceLang: source, targetLang: source === 'en' ? 'ko' : 'en' }
-    )
-  }
+  const changeSourceLanguage = (sourceLang: SourceLanguage) => updateSettings({ sourceLang })
+  const changeTranslationTarget = (translationTarget: TranslationTarget) =>
+    updateSettings({ translationTarget })
 
   const changeTab = (tab: 'voice' | 'notes' | 'summary' | 'page') => {
     setActiveTab(tab)
@@ -2156,13 +2314,15 @@ export default function Home() {
   const visibleUtilityTab = getVisibleUtilityTab(desktopLayout, activeTab, rightPanel)
   const activeMeetingEnd = meetingEnd?.meetingId === activeMeetingId ? meetingEnd : null
   const activeAudioPrep = audioPrep?.meetingId === activeMeetingId ? audioPrep : null
-  const floatingAvoidRef = desktopLayout
-    ? undefined
-    : activeTab === 'notes'
-      ? notesComposerRef
-      : activeTab === 'page' && activeMeeting?.page && pageGen.status === 'idle'
-        ? pageFooterRef
-        : undefined
+  const floatingAnchorRef = desktopLayout || activeTab === 'voice' ? voicePanelRef : utilityPanelRef
+  const floatingAvoidRef =
+    desktopLayout || activeMeetingLoadState
+      ? undefined
+      : activeTab === 'notes'
+        ? notesComposerRef
+        : activeTab === 'page' && activeMeeting?.page && pageGen.status === 'idle'
+          ? pageFooterRef
+          : undefined
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-canvas font-sans">
@@ -2173,12 +2333,18 @@ export default function Home() {
         sidebarOpen={sidebarOpen}
         onToggleQuickTranslate={() => setQuickTranslateOpen((value) => !value)}
         quickTranslateOpen={quickTranslateOpen}
-        onToggleSettings={() => setSettingsOpen((value) => !value)}
+        onToggleSettings={() => {
+          setSettingsTab('general')
+          setSettingsOpen((value) => !value)
+        }}
         settingsOpen={settingsOpen}
         onLogout={HAS_COGNITO ? logout : undefined}
+        sttProvider={settings.sttProvider}
         sourceLang={settings.sourceLang}
+        translationTarget={settings.translationTarget}
         detectedLang={detectedLang}
-        onChangeLangDirection={changeDirection}
+        onChangeSourceLang={changeSourceLanguage}
+        onChangeTranslationTarget={changeTranslationTarget}
       />
 
       <div className="flex min-h-0 flex-1">
@@ -2186,9 +2352,9 @@ export default function Home() {
           <MeetingSidebar {...sidebarProps} headingId="desktop-meeting-list-title" />
         </aside>
 
-        <main className="relative flex min-w-0 flex-1 flex-col">
+        <main className="relative flex min-h-0 min-w-0 flex-1 flex-col">
           <div className="meeting-heading shrink-0">
-            <div className="flex h-12 items-center gap-2 px-4 sm:px-5">
+            <div className="flex h-11 items-center gap-2 px-3 lg:h-12 lg:px-5">
               <div className="flex min-w-0 flex-1 items-center gap-2.5">
                 <div className="min-w-0 flex-1">
                   {activeMeeting ? (
@@ -2234,13 +2400,19 @@ export default function Home() {
                   )}
                 </div>
               </div>
-              <div className="meeting-language w-[6rem] shrink-0 sm:hidden">
-                <LanguageDirection
-                  compact
-                  sourceLang={settings.sourceLang}
-                  onChange={changeDirection}
-                />
-              </div>
+              {(activeMeeting?.brief || isBriefRefreshing) && (
+                <button
+                  type="button"
+                  onClick={() => setMobileBriefOpen(true)}
+                  aria-label="회의 한 줄 요약 보기"
+                  aria-haspopup="dialog"
+                  aria-expanded={mobileBriefOpen}
+                  title="회의 한 줄 요약"
+                  className="ui-icon-button text-accent-700 dark:text-accent-300 lg:hidden"
+                >
+                  <Icon name="sparkles" />
+                </button>
+              )}
               <div className="hidden items-center gap-2 lg:flex">
                 {!summaryOpen && (
                   <button
@@ -2255,7 +2427,7 @@ export default function Home() {
                 )}
               </div>
             </div>
-            {(activeMeeting?.brief || isBriefRefreshing) && (
+            {desktopLayout && (activeMeeting?.brief || isBriefRefreshing) && (
               <div
                 role="status"
                 aria-label="회의 한 줄 요약"
@@ -2281,13 +2453,14 @@ export default function Home() {
             hasNewPage={hasNewPage}
           />
 
-          <div className="flex min-h-0 flex-1 gap-3 px-3 pb-3 sm:px-5 sm:pb-5">
+          <div className="flex min-h-0 flex-1 pb-[env(safe-area-inset-bottom)] lg:gap-3 lg:px-5 lg:pb-5">
             <section
+              ref={voicePanelRef}
               id="meeting-voice-panel"
               role="tabpanel"
               aria-label="대화"
               aria-busy={activeMeetingLoadState === 'loading'}
-              className={`ui-surface min-w-0 flex-1 flex-col overflow-hidden ${activeTab === 'voice' ? 'flex' : 'hidden lg:flex'}`}
+              className={`ui-surface min-h-0 min-w-0 flex-1 flex-col overflow-hidden max-lg:rounded-none max-lg:border-x-0 max-lg:border-b-0 ${activeTab === 'voice' ? 'flex' : 'hidden lg:flex'}`}
             >
               <div className="ui-panel-header">
                 <div className="flex items-center gap-2">
@@ -2297,10 +2470,18 @@ export default function Home() {
                     <span className="text-[0.6875rem] tabular-nums text-muted">{voiceCount}</span>
                   )}
                 </div>
-                <VoiceFontSizeControl
-                  fontSize={settings.voiceFontSize}
-                  onChange={(voiceFontSize) => updateSettings({ voiceFontSize })}
-                />
+                <div className="flex items-center gap-1">
+                  <ConversationCopyButton
+                    key={activeMeetingId}
+                    messages={activeMeeting?.messages ?? []}
+                    meetingTitle={activeMeeting?.title}
+                    disabled={!!activeMeetingLoadState}
+                  />
+                  <VoiceFontSizeControl
+                    fontSize={settings.voiceFontSize}
+                    onChange={(voiceFontSize) => updateSettings({ voiceFontSize })}
+                  />
+                </div>
               </div>
               {activeMeetingLoadState ? (
                 <MeetingContentStatus
@@ -2327,8 +2508,9 @@ export default function Home() {
 
             {summaryOpen && (
               <aside
+                ref={utilityPanelRef}
                 aria-label="회의 도구"
-                className={`relative min-w-0 w-full shrink-0 flex-col lg:w-[var(--utility-width)] lg:max-w-[70%] ${activeTab === 'voice' ? 'hidden lg:flex' : 'flex'}`}
+                className={`relative min-h-0 min-w-0 w-full shrink-0 flex-col lg:w-[var(--utility-width)] lg:max-w-[70%] ${activeTab === 'voice' ? 'hidden lg:flex' : 'flex'}`}
                 data-summary-width={summaryWidth}
                 style={{ '--utility-width': `${summaryWidth}px` } as CSSProperties}
               >
@@ -2344,7 +2526,7 @@ export default function Home() {
                   onKeyDown={handleResizeKeyDown}
                   className="absolute -left-2 top-3 bottom-3 z-10 hidden w-1.5 cursor-col-resize touch-none rounded-full transition-colors hover:bg-accent-300 focus-visible:bg-accent-300 lg:block"
                 />
-                <div className="ui-surface flex min-h-0 flex-1 flex-col overflow-hidden">
+                <div className="ui-surface flex min-h-0 flex-1 flex-col overflow-hidden max-lg:rounded-none max-lg:border-x-0 max-lg:border-b-0">
                   <div className="hidden min-h-12 shrink-0 items-center gap-1 border-b border-subtle px-2 py-1.5 lg:flex">
                     <Tabs
                       label="회의 도구"
@@ -2411,10 +2593,19 @@ export default function Home() {
                       <SummaryPanel
                         key={activeMeetingId}
                         summary={activeMeeting?.summary}
-                        messages={activeMeeting?.messages}
-                        meetingTitle={activeMeeting?.title}
+                        hasMessages={(activeMeeting?.messages.length ?? 0) > 0}
+                        summaryStyle={activeMeeting?.summaryStyle}
+                        summaryGeneratedStyle={activeMeeting?.summaryGeneratedStyle}
+                        summaryGeneratedLabel={activeMeeting?.summaryGeneratedLabel}
+                        summaryCustom={activeMeeting?.summaryCustom}
+                        templates={summaryTemplates.templates}
+                        templatesLoaded={summaryTemplates.loaded}
+                        onManageTemplates={HAS_API ? () => openSettings('summary') : undefined}
+                        onStyleChange={activeMeetingId ? handleSummaryStyleChange : undefined}
+                        isSavingStyle={summaryStyleSaving[activeMeetingId]}
+                        styleError={summaryStyleErrors[activeMeetingId]}
                         onSummarize={() => handleSummarize(true)}
-                        isSummarizing={isSummarizing}
+                        isSummarizing={isSummarizing || isEnding(activeMeetingEnd)}
                       />
                     ) : (
                       <MeetingPagePanel
@@ -2446,6 +2637,7 @@ export default function Home() {
 
           <ControlPanel
             key={activeMeetingId}
+            anchorElementRef={floatingAnchorRef}
             avoidElementRef={floatingAvoidRef}
             isRecording={isRecording}
             onToggleRecording={handleToggleRecording}
@@ -2461,7 +2653,11 @@ export default function Home() {
             audioSource={settings.audioSource}
             onEndMeeting={HAS_API && activeMeetingId ? handleEndMeeting : undefined}
             isEndingMeeting={isEnding(activeMeetingEnd)}
-            endMeetingDisabled={wsStatus !== 'connected'}
+            endMeetingDisabled={
+              wsStatus !== 'connected' ||
+              !!activeMeetingLoadState ||
+              summaryStyleSaving[activeMeetingId]
+            }
             meetingActions={
               HAS_API && activeMeetingId ? (
                 <MeetingActions
@@ -2491,6 +2687,34 @@ export default function Home() {
         </main>
       </div>
 
+      {!desktopLayout && mobileBriefOpen && (
+        <Dialog labelledBy="mobile-brief-title" onClose={() => setMobileBriefOpen(false)}>
+          <div className="ui-panel-header">
+            <h2 id="mobile-brief-title" className="text-sm font-semibold text-ink">
+              회의 한 줄 요약
+            </h2>
+            <button
+              type="button"
+              onClick={() => setMobileBriefOpen(false)}
+              aria-label="한 줄 요약 닫기"
+              className="ui-icon-button"
+            >
+              <Icon name="close" />
+            </button>
+          </div>
+          <p
+            role="status"
+            aria-label="회의 한 줄 요약"
+            aria-busy={isBriefRefreshing}
+            className="min-h-0 overflow-y-auto break-words p-4 text-sm leading-reading text-ink"
+          >
+            {activeMeeting?.brief ??
+              (isBriefRefreshing
+                ? '회의 내용을 한 줄로 정리하고 있어요…'
+                : '아직 한 줄 요약이 없습니다')}
+          </p>
+        </Dialog>
+      )}
       {sidebarOpen && (
         <Dialog
           labelledBy="meeting-list-title"
@@ -2509,6 +2733,8 @@ export default function Home() {
           onSttSelect={handleSttSelect}
           onPrepareStt={() => prepareSelectedStt()}
           onClose={() => setSettingsOpen(false)}
+          initialTab={settingsTab}
+          summaryTemplates={HAS_API ? summaryTemplates : undefined}
         />
       )}
       {quickTranslateOpen && (

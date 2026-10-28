@@ -13,16 +13,9 @@ import {
   normalizeTranslationModel,
   type TranslationModelId,
 } from '@/lib/translationModels'
+import { normalizeSpeechLanguages, type SpeechLanguages } from '@/lib/speechLanguages'
 
-export interface Settings {
-  /**
-   * 음성 입력 언어. 'auto' 면 발화마다 감지된 언어의 반대편으로 번역하며
-   * targetLang 은 무시된다 (백엔드도 동일하게 동작 — ws_handler._auto_target_lang).
-   * Transcribe 화자 구분은 AUTO 모드에서도 사용한다.
-   */
-  sourceLang: 'ko' | 'en' | 'auto'
-  /** sourceLang 이 'ko' | 'en' 일 때만 유효 */
-  targetLang: 'ko' | 'en'
+export interface Settings extends SpeechLanguages {
   audioSource: 'mic' | 'system' | 'both'
   sttProvider: SttProvider
   sttChunkSeconds: SttChunkSeconds
@@ -56,7 +49,7 @@ const LANG_DEFAULT_VOICE: Record<'en' | 'ko', { id: string; engine: Settings['po
 
 const DEFAULT: Settings = {
   sourceLang: 'en',
-  targetLang: 'ko',
+  translationTarget: 'ko',
   audioSource: 'mic',
   sttProvider: 'transcribe',
   sttChunkSeconds: DEFAULT_STT_CHUNK_SECONDS,
@@ -83,7 +76,14 @@ export function useSettings() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
       if (raw) {
-        const loaded = { ...DEFAULT, ...(JSON.parse(raw) as Partial<Settings>) }
+        const saved: unknown = JSON.parse(raw)
+        if (!saved || typeof saved !== 'object' || Array.isArray(saved)) return
+        const { targetLang: _legacyTarget, ...savedSettings } = saved as Record<string, unknown>
+        const loaded: Settings = {
+          ...DEFAULT,
+          ...(savedSettings as Partial<Settings>),
+          ...normalizeSpeechLanguages(saved),
+        }
         // 이전 모델 선택도 현재 제공하는 글로벌 추론 프로필로 정리한다.
         loaded.translationModel = normalizeTranslationModel(loaded.translationModel)
         loaded.sttProvider = normalizeSttProvider(loaded.sttProvider)
@@ -95,9 +95,9 @@ export function useSettings() {
           const d = LANG_DEFAULT_VOICE[ttsLang]
           loaded.pollyEngine = d.engine
           loaded.pollyVoiceId = d.id
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded))
         }
         setSettings(loaded)
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded))
       }
     } catch {
       // ignore corrupt storage
@@ -106,7 +106,11 @@ export function useSettings() {
 
   const updateSettings = (patch: Partial<Settings>) => {
     setSettings((prev) => {
-      const next = { ...prev, ...patch }
+      const next = {
+        ...prev,
+        ...patch,
+        ...normalizeSpeechLanguages({ ...prev, ...patch }),
+      }
       next.translationModel = normalizeTranslationModel(next.translationModel)
       next.sttProvider = normalizeSttProvider(next.sttProvider)
       next.sttChunkSeconds = normalizeSttChunkSeconds(next.sttChunkSeconds)

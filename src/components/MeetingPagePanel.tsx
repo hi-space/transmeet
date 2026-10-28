@@ -2,8 +2,12 @@
 
 import { useEffect, useState, type Ref } from 'react'
 import { htmlToMarkdown } from '@/lib/htmlToMarkdown'
+import { copyText, type ClipboardContent } from '@/lib/clipboard'
+import { createPageClipboardContent } from '@/lib/clipboardContent'
 import type { MeetingPage } from '@/types/meeting'
 import Icon from '@/components/ui/Icon'
+import { DEFAULT_PAGE_STYLE, PAGE_STYLES, type PageStyle } from '@/lib/pageStyles'
+import MarkdownCopyButtons from '@/components/MarkdownCopyButtons'
 
 export type PageGenStatus = 'idle' | 'generating' | 'error'
 
@@ -24,7 +28,7 @@ interface Props {
   wsConnected: boolean
   unpublishing?: boolean
   unpublishError?: string
-  onGenerate: () => void
+  onGenerate: (style: PageStyle) => void
   onUnpublish: () => void
   onClose?: () => void
   footerRef?: Ref<HTMLDivElement>
@@ -40,44 +44,6 @@ function useElapsed(startedAt?: number, active?: boolean) {
   if (!startedAt || !active) return ''
   const s = Math.floor((now - startedAt) / 1000)
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
-}
-
-// 클립보드 API 가 없거나(HTTP 로컬 등) 거부하면 숨은 textarea + execCommand 로 한 번 더 시도한다.
-// 반드시 사용자 제스처 안에서, await 없이 호출해야 한다.
-function copyText(text: string): Promise<void> {
-  const legacy = () => {
-    const ta = document.createElement('textarea')
-    ta.value = text
-    ta.setAttribute('readonly', '')
-    ta.style.position = 'fixed'
-    ta.style.opacity = '0'
-    document.body.appendChild(ta)
-    ta.select()
-    let ok = false
-    try {
-      ok = document.execCommand('copy')
-    } finally {
-      ta.remove()
-    }
-    if (!ok) throw new Error('execCommand(copy) 가 거부되었습니다')
-  }
-  if (typeof navigator.clipboard?.writeText !== 'function') {
-    return new Promise((resolve, reject) => {
-      try {
-        legacy()
-        resolve()
-      } catch (e) {
-        reject(e)
-      }
-    })
-  }
-  return navigator.clipboard.writeText(text).catch((err: unknown) => {
-    try {
-      legacy()
-    } catch {
-      throw err
-    }
-  })
 }
 
 // 페이지 URL 의 호스트(transmeet.hi-yoo.com)가 앱을 연 호스트와 다르면 — CloudFront 기본 도메인이나
@@ -112,6 +78,46 @@ const btn = 'ui-button'
 const btnNeutral = 'ui-button ui-button-secondary'
 const btnPrimary = 'ui-button ui-button-primary'
 
+// 만들 페이지 모양 고르기 — 설명이 있는 라디오 목록 (선택지 셋이라 드롭다운보다 한눈에 보인다)
+function PageStylePicker({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: PageStyle
+  onChange: (style: PageStyle) => void
+  disabled?: boolean
+}) {
+  return (
+    <fieldset className="w-full max-w-xs space-y-1.5 text-left" disabled={disabled}>
+      <legend className="mb-1.5 text-xs font-medium text-ink">페이지 모양</legend>
+      {PAGE_STYLES.map((option) => (
+        <label
+          key={option.value}
+          className={`flex cursor-pointer gap-2 rounded-lg border p-2.5 text-xs transition-colors ${
+            value === option.value
+              ? 'border-accent-600 bg-accent-50 dark:border-accent-400 dark:bg-accent-500/10'
+              : 'border-subtle hover:bg-black/[0.03] dark:hover:bg-white/[0.04]'
+          }`}
+        >
+          <input
+            type="radio"
+            name="page-style"
+            value={option.value}
+            checked={value === option.value}
+            onChange={() => onChange(option.value)}
+            className="mt-0.5 accent-accent-600"
+          />
+          <span>
+            <span className="block font-medium text-ink">{option.label}</span>
+            <span className="mt-0.5 block leading-relaxed text-muted">{option.description}</span>
+          </span>
+        </label>
+      ))}
+    </fieldset>
+  )
+}
+
 export default function MeetingPagePanel({
   page,
   gen,
@@ -125,9 +131,8 @@ export default function MeetingPagePanel({
   footerRef,
 }: Props) {
   const [copied, setCopied] = useState(false)
-  const [mdState, setMdState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle')
-  const [mdError, setMdError] = useState<string>()
   const [confirmRegen, setConfirmRegen] = useState(false)
+  const [style, setStyle] = useState<PageStyle>(DEFAULT_PAGE_STYLE)
   const [confirmUnpublish, setConfirmUnpublish] = useState(false)
   const generating = gen.status === 'generating'
   const elapsed = useElapsed(gen.startedAt, generating)
@@ -149,7 +154,7 @@ export default function MeetingPagePanel({
       }
     }
     try {
-      await navigator.clipboard.writeText(page.url)
+      await copyText(page.url)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (err) {
@@ -160,10 +165,13 @@ export default function MeetingPagePanel({
   // 페이지 본문의 마크다운은 페이지가 보일 때 미리 만들어 둔다. iframe 은 sandbox 라 문서를 직접
   // 읽을 수 없어 같은 오리진(/p/…) URL 을 다시 받아 변환한다. 클릭 시점에 fetch 를 await 하고
   // 나서 클립보드에 쓰면 Safari 가 사용자 제스처 밖이라고 거부하므로, 클릭 핸들러는 await 없이
-  // 준비된 문자열만 바로 쓴다.
-  const [markdown, setMarkdown] = useState<{ url: string; text?: string; error?: string } | null>(
-    null
-  )
+  // 준비된 내용만 바로 쓴다. 서식 복사는 원본 HTML 을 사용해 기호·코드·줄바꿈을 보존한다.
+  const [markdown, setMarkdown] = useState<{
+    url: string
+    text?: string
+    content?: ClipboardContent
+    error?: string
+  } | null>(null)
   const [mdRetry, setMdRetry] = useState(0)
   const pageUrl = page?.url
   useEffect(() => {
@@ -174,10 +182,11 @@ export default function MeetingPagePanel({
     const ctrl = new AbortController()
     setMarkdown({ url: pageUrl })
     fetchPageHtml(pageUrl, ctrl.signal)
-      .then((html) => htmlToMarkdown(html))
-      .then((text) => {
+      .then((html) => {
+        if (ctrl.signal.aborted) return
+        const text = htmlToMarkdown(html)
         if (!text.trim()) throw new Error('페이지 내용이 비어 있습니다')
-        setMarkdown({ url: pageUrl, text })
+        setMarkdown({ url: pageUrl, text, content: createPageClipboardContent(html, pageUrl) })
       })
       .catch((err: unknown) => {
         if (ctrl.signal.aborted) return
@@ -187,34 +196,8 @@ export default function MeetingPagePanel({
     return () => ctrl.abort()
   }, [pageUrl, mdRetry])
 
-  const handleCopyMarkdown = () => {
-    if (!markdown) return
-    if (markdown.error) {
-      setMdRetry((n) => n + 1) // 불러오기 실패 → 다시 시도
-      return
-    }
-    if (!markdown.text) return
-    copyText(markdown.text)
-      .then(() => setMdState('done'))
-      .catch((err: unknown) => {
-        console.error('Failed to copy page as markdown:', err)
-        setMdError(err instanceof Error ? `${err.name}: ${err.message}` : String(err))
-        setMdState('error')
-      })
-      .finally(() => setTimeout(() => setMdState('idle'), 2500))
-  }
-
-  const mdLoading = !!markdown && !markdown.text && !markdown.error
-  const mdLabel = markdown?.error
-    ? '불러오기 실패 · 재시도'
-    : mdLoading
-      ? '준비 중…'
-      : { idle: '마크다운 복사', busy: '복사 중…', done: '복사됨', error: '복사 실패' }[mdState]
-  const mdTitle = markdown?.error
-    ? `페이지를 불러오지 못했습니다: ${markdown.error}`
-    : mdState === 'error' && mdError
-      ? `클립보드에 쓰지 못했습니다: ${mdError}`
-      : '페이지 내용을 마크다운 텍스트로 복사'
+  const currentMarkdown = markdown?.url === pageUrl ? markdown : null
+  const mdLoading = !currentMarkdown?.text && !currentMarkdown?.error
 
   const canGenerate = hasMessages && wsConnected && !generating
 
@@ -233,16 +216,30 @@ export default function MeetingPagePanel({
                 <Icon name={copied ? 'check' : 'send'} className="h-3.5 w-3.5" />
                 {copied ? '링크 복사됨' : '공유'}
               </button>
-              <button
-                type="button"
-                onClick={handleCopyMarkdown}
-                disabled={mdLoading}
-                title={mdTitle}
-                className={`ui-button gap-1.5 px-2 ${mdState === 'error' || markdown?.error ? 'text-red-600 dark:text-red-400' : ''}`}
-              >
-                <Icon name="copy" className="h-3.5 w-3.5" />
-                {mdLabel}
-              </button>
+              {currentMarkdown?.text ? (
+                <MarkdownCopyButtons
+                  key={pageUrl}
+                  markdown={currentMarkdown.text}
+                  content={currentMarkdown.content}
+                  compact
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setMdRetry((n) => n + 1)}
+                  disabled={mdLoading}
+                  aria-busy={mdLoading}
+                  title={
+                    currentMarkdown?.error
+                      ? `페이지를 불러오지 못했습니다: ${currentMarkdown.error}`
+                      : '복사할 내용 준비 중'
+                  }
+                  className={`ui-button gap-1.5 px-2 ${currentMarkdown?.error ? 'text-red-600 dark:text-red-400' : ''}`}
+                >
+                  <Icon name="copy" className="h-3.5 w-3.5" />
+                  {currentMarkdown?.error ? '불러오기 실패 · 재시도' : '준비 중…'}
+                </button>
+              )}
               <a
                 href={page.url}
                 target="_blank"
@@ -296,7 +293,7 @@ export default function MeetingPagePanel({
             </p>
             <button
               type="button"
-              onClick={onGenerate}
+              onClick={() => onGenerate(style)}
               disabled={!canGenerate}
               className={`${btnPrimary} mt-2`}
             >
@@ -318,9 +315,14 @@ export default function MeetingPagePanel({
                   ? '서버 연결을 기다리고 있습니다'
                   : '대화와 결정 사항을 한 페이지로 정리합니다'}
             </p>
+            {hasMessages && (
+              <div className="mt-3 flex w-full justify-center">
+                <PageStylePicker value={style} onChange={setStyle} disabled={!canGenerate} />
+              </div>
+            )}
             <button
               type="button"
-              onClick={onGenerate}
+              onClick={() => onGenerate(style)}
               disabled={!canGenerate}
               className={`${btnPrimary} mt-3`}
             >
@@ -350,6 +352,7 @@ export default function MeetingPagePanel({
               )}
               {confirmRegen || confirmUnpublish ? (
                 <div className="space-y-2">
+                  {confirmRegen && <PageStylePicker value={style} onChange={setStyle} />}
                   <p className="text-xs leading-relaxed text-amber-700 dark:text-amber-300">
                     {confirmRegen
                       ? '다시 만들면 기존 공유 링크는 만료됩니다.'
@@ -371,7 +374,7 @@ export default function MeetingPagePanel({
                         type="button"
                         onClick={() => {
                           setConfirmRegen(false)
-                          onGenerate()
+                          onGenerate(style)
                         }}
                         disabled={!canGenerate}
                         className={btnPrimary}

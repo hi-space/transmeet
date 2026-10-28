@@ -1,4 +1,5 @@
 import type { MeetingPage } from '@/types/meeting'
+import type { SummaryStyle } from '@/lib/summaryStyles'
 
 export type WsStatus = 'disconnected' | 'connecting' | 'connected' | 'error'
 
@@ -21,6 +22,7 @@ export interface SubtitleStreamServerMessage {
   partialTranslation?: string
   translatedText?: string
   detectedLanguage?: 'ko' | 'en'
+  targetLanguage?: 'ko' | 'en'
 }
 
 export interface TtsStreamServerMessage {
@@ -35,7 +37,10 @@ export interface TtsStreamServerMessage {
 
 export interface SummaryStreamServerMessage {
   type: 'summary_stream'
+  meetingId?: string
   phase: 'delta' | 'done' | 'error'
+  summaryStyle?: SummaryStyle
+  summaryLabel?: string // 내 양식 이름(custom 일 때만)
   text?: string
   summary?: string
   title?: string

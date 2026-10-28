@@ -372,27 +372,49 @@ export default function MeetingSidebar({
             )
           : groups.map((group) => {
               const collapsed = !query && collapsedKeys.has(group.key)
+              const groupDate =
+                group.key === 'today' || group.key === 'yesterday'
+                  ? formatDate(group.meetings[0].startedAt)
+                  : null
               return (
-                <div key={group.key} className="mb-3">
-                  <button
-                    type="button"
-                    onClick={() => toggleGroup(group.key)}
-                    aria-expanded={!collapsed}
-                    className="flex min-h-9 w-full items-center gap-1.5 px-2 text-left text-[0.6875rem] font-medium text-muted"
-                  >
-                    <Icon
-                      name="chevronDown"
-                      className={`h-3 w-3 transition-transform ${collapsed ? '-rotate-90' : ''}`}
-                    />
-                    {group.label}
-                    <span className="ml-auto tabular-nums">{group.meetings.length}</span>
-                  </button>
+                <div
+                  key={group.key}
+                  className="mb-3 border-t border-subtle pt-3 first:border-t-0 first:pt-0 last:mb-0"
+                >
+                  <h3 className="mb-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(group.key)}
+                      aria-expanded={!collapsed}
+                      className="flex min-h-11 w-full items-center gap-1.5 rounded-lg border border-subtle bg-[rgb(var(--surface-hover))] px-2 text-left text-xs font-semibold text-ink transition-colors hover:border-slate-300 dark:hover:border-slate-600"
+                    >
+                      <Icon
+                        name="chevronDown"
+                        className={`h-3 w-3 shrink-0 text-muted transition-transform ${collapsed ? '-rotate-90' : ''}`}
+                      />
+                      <span
+                        className={`shrink-0 ${group.key === 'today' ? 'text-accent-700 dark:text-accent-300' : ''}`}
+                      >
+                        {group.label}
+                      </span>
+                      {groupDate && (
+                        <span className="min-w-0 truncate text-[0.6875rem] font-normal text-muted">
+                          {groupDate}
+                        </span>
+                      )}
+                      <span className="ml-auto shrink-0 rounded-full bg-panel px-1.5 py-0.5 text-[0.6875rem] tabular-nums text-muted">
+                        {group.meetings.length}
+                        <span className="sr-only">개 회의</span>
+                      </span>
+                    </button>
+                  </h3>
                   {!collapsed &&
                     group.meetings.map((meeting) => {
                       const active = meeting.id === activeMeetingId
                       const count = Math.max(meeting.messageCount ?? 0, meeting.messages.length)
                       const date = formatDate(meeting.startedAt)
                       const time = formatTime(meeting.startedAt)
+                      const brief = meeting.brief?.trim()
                       return (
                         <div
                           key={meeting.id}
@@ -477,7 +499,7 @@ export default function MeetingSidebar({
                                   onClose()
                                 }}
                                 aria-current={active ? 'page' : undefined}
-                                className="w-full rounded-lg px-3 py-3 text-left"
+                                className="group/meeting w-full rounded-lg px-3 py-2.5 text-left"
                               >
                                 <div className="flex min-w-0 items-center gap-2 pr-7">
                                   <span
@@ -490,6 +512,14 @@ export default function MeetingSidebar({
                                     {meeting.title}
                                   </span>
                                 </div>
+                                {brief && (
+                                  <span
+                                    className="mt-1 block truncate pl-3.5 text-[0.6875rem] leading-4 text-muted group-focus-visible/meeting:whitespace-normal group-focus-visible/meeting:[overflow-wrap:anywhere]"
+                                    title={brief}
+                                  >
+                                    {brief}
+                                  </span>
+                                )}
                                 <div className="mt-1.5 flex items-center gap-1.5 pl-3.5 text-[0.6875rem] text-muted">
                                   <span>{date ?? '날짜 없음'}</span>
                                   {time && (

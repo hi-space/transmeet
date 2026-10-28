@@ -1,6 +1,14 @@
 import type { Meeting, MeetingBrief, MeetingPage, Message } from '@/types/meeting'
 import { getIdToken } from '@/lib/cognito'
 import { normalizeSpeaker } from '@/lib/speakers'
+import {
+  normalizeSummaryStyle,
+  parseSummaryCustom,
+  type SummaryCustom,
+  type SummaryStyle,
+  type SummaryTemplate,
+  type SummaryTemplateKind,
+} from '@/lib/summaryStyles'
 
 // ─── Server-side types ──────────────────────────────────────────────────────
 
@@ -10,6 +18,7 @@ interface ApiMessage {
   originalText: string
   translatedText: string
   detectedLanguage?: 'ko' | 'en'
+  targetLanguage?: 'ko' | 'en'
   timestamp: string
 }
 
@@ -24,8 +33,18 @@ export interface ApiMeeting extends Partial<MeetingBrief> {
   /** 녹음이 저장된 미팅 — 발언이 0개여도 빈 미팅으로 정리하지 않는다 */
   hasAudio?: boolean
   summary?: string
+  summaryStyle?: SummaryStyle
+  summaryGeneratedStyle?: SummaryStyle
+  summaryGeneratedLabel?: string
+  summaryCustom?: unknown
   summarizedAt?: string
   page?: MeetingPage
+}
+
+export interface SummaryTemplateInput {
+  name: string
+  kind: SummaryTemplateKind
+  body: string
 }
 
 /** 미팅 종료 메일 수신 주소(로그인 계정)의 SES 인증 상태 */
@@ -54,7 +73,12 @@ function mergeLoadedMessages(messages: Message[]): Message[] {
     const last = acc[acc.length - 1]
     if (!last) return [msg]
     const silenceMs = new Date(msg.timestamp).getTime() - new Date(last.timestamp).getTime()
-    if (last.speaker === msg.speaker && silenceMs < MERGE_TIMEOUT_MS) {
+    if (
+      last.speaker === msg.speaker &&
+      last.detectedLanguage === msg.detectedLanguage &&
+      last.targetLanguage === msg.targetLanguage &&
+      silenceMs < MERGE_TIMEOUT_MS
+    ) {
       acc[acc.length - 1] = {
         ...last,
         original: [last.original, msg.original].filter(Boolean).join(' '),
@@ -75,6 +99,7 @@ export function toMeeting(m: ApiMeeting): Meeting {
       original: msg.originalText,
       translation: msg.translatedText,
       detectedLanguage: msg.detectedLanguage,
+      targetLanguage: msg.targetLanguage,
       timestamp: msg.timestamp,
     })
   )
@@ -105,6 +130,11 @@ export function toMeeting(m: ApiMeeting): Meeting {
     messageCount: m.messageCount,
     hasAudio: m.hasAudio,
     summary: m.summary ? parseSummary(m.summary) : undefined,
+    summaryStyle: normalizeSummaryStyle(m.summaryStyle),
+    summaryGeneratedStyle: m.summary ? normalizeSummaryStyle(m.summaryGeneratedStyle) : undefined,
+    summaryGeneratedLabel:
+      m.summary && m.summaryGeneratedStyle === 'custom' ? m.summaryGeneratedLabel : undefined,
+    summaryCustom: parseSummaryCustom(m.summaryCustom) ?? undefined,
     brief: m.brief,
     briefUpdatedAt: m.briefUpdatedAt,
     briefMessageCount,
@@ -150,11 +180,25 @@ export const api = {
         body: JSON.stringify({ title }),
       }),
     delete: (id: string) => apiFetch<void>(`/meetings/${id}`, { method: 'DELETE' }),
-    summarize: (id: string) =>
-      apiFetch<{ summary: string; meetingId: string; title?: string }>(
-        `/meetings/${id}/summarize`,
+    summarize: (id: string, summaryStyle?: SummaryStyle) =>
+      apiFetch<{
+        summary: string
+        meetingId: string
+        title?: string
+        summaryGeneratedStyle?: SummaryStyle
+        summaryGeneratedLabel?: string
+      }>(`/meetings/${id}/summarize`, {
+        method: 'POST',
+        body: JSON.stringify({ summaryStyle }),
+      }),
+    // 내 양식(custom)은 templateId 만 보낸다 — 사본은 서버가 양식 테이블에서 읽어 만든다
+    updateSummaryStyle: (id: string, summaryStyle: SummaryStyle, templateId?: string) =>
+      apiFetch<{ meetingId: string; summaryStyle: SummaryStyle; summaryCustom?: SummaryCustom }>(
+        `/meetings/${id}/summary-style`,
         {
-          method: 'POST',
+          method: 'PUT',
+          body: JSON.stringify({ summaryStyle, ...(templateId ? { templateId } : {}) }),
+          signal: AbortSignal.timeout(15_000),
         }
       ),
     brief: (id: string, messages: Pick<Message, 'id' | 'original'>[]) =>
@@ -172,6 +216,22 @@ export const api = {
         method: 'PUT',
         body: JSON.stringify({ title }),
       }),
+  },
+  summaryTemplates: {
+    list: () =>
+      apiFetch<{ templates: SummaryTemplate[] }>('/me/summary-templates').then((r) => r.templates),
+    create: (input: SummaryTemplateInput) =>
+      apiFetch<SummaryTemplate>('/me/summary-templates', {
+        method: 'POST',
+        body: JSON.stringify(input),
+      }),
+    update: (templateId: string, input: SummaryTemplateInput) =>
+      apiFetch<SummaryTemplate>(`/me/summary-templates/${templateId}`, {
+        method: 'PUT',
+        body: JSON.stringify(input),
+      }),
+    remove: (templateId: string) =>
+      apiFetch<void>(`/me/summary-templates/${templateId}`, { method: 'DELETE' }),
   },
   email: {
     status: () => apiFetch<EmailStatus>('/me/email'),

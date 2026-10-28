@@ -5,6 +5,9 @@ import type { Settings } from '@/hooks/useSettings'
 import { supportsSystemAudio } from '@/lib/platform'
 import ThemeSettings from '@/components/ThemeSettings'
 import EmailNotifySetting from '@/components/EmailNotifySetting'
+import SummaryTemplateSettings from '@/components/SummaryTemplateSettings'
+import type { SummaryTemplateInput } from '@/lib/api'
+import type { SummaryTemplate } from '@/lib/summaryStyles'
 import { TRANSLATION_MODELS } from '@/lib/translationModels'
 import {
   STT_CHUNK_SECONDS,
@@ -28,6 +31,22 @@ interface Props {
   sttConnected?: boolean
   onSttSelect?: (provider: SttProvider) => void
   onPrepareStt?: () => void
+  initialTab?: SettingsTab
+  // 내 양식 — 주지 않으면(로컬 전용 모드) 요약 양식 탭을 숨긴다
+  summaryTemplates?: {
+    templates: SummaryTemplate[]
+    error?: string
+    save: (input: SummaryTemplateInput, templateId?: string) => Promise<unknown>
+    remove: (templateId: string) => Promise<unknown>
+  }
+}
+
+export type SettingsTab = 'general' | 'theme' | 'summary'
+
+const TAB_LABELS: Record<SettingsTab, string> = {
+  general: '음성 · 번역',
+  theme: '테마',
+  summary: '요약 양식',
 }
 
 const VOICES: Record<'en' | 'ko', { id: string; label: string; engines: string[] }[]> = {
@@ -87,8 +106,12 @@ export default function SettingsPanel({
   sttConnected = false,
   onSttSelect,
   onPrepareStt,
+  initialTab = 'general',
+  summaryTemplates,
 }: Props) {
-  const [activeTab, setActiveTab] = useState<'general' | 'theme'>('general')
+  const [activeTab, setActiveTab] = useState<SettingsTab>(
+    initialTab === 'summary' && !summaryTemplates ? 'general' : initialTab
+  )
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canUseSystemAudio, setCanUseSystemAudio] = useState(true)
 
@@ -151,8 +174,11 @@ export default function SettingsPanel({
           onChange={setActiveTab}
           panelId="settings-content"
           items={[
-            { value: 'general', label: '음성 · 번역', icon: 'waveform' },
-            { value: 'theme', label: '테마', icon: 'sun' },
+            { value: 'general', label: TAB_LABELS.general, icon: 'waveform' },
+            { value: 'theme', label: TAB_LABELS.theme, icon: 'sun' },
+            ...(summaryTemplates
+              ? [{ value: 'summary' as const, label: TAB_LABELS.summary, icon: 'summary' as const }]
+              : []),
           ]}
         />
       </div>
@@ -160,11 +186,18 @@ export default function SettingsPanel({
         ref={scrollRef}
         id="settings-content"
         role="tabpanel"
-        aria-label={activeTab === 'theme' ? '테마' : '음성 · 번역'}
+        aria-label={TAB_LABELS[activeTab]}
         className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-subtle px-5 py-5"
         style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}
       >
-        {activeTab === 'theme' ? (
+        {activeTab === 'summary' && summaryTemplates ? (
+          <SummaryTemplateSettings
+            templates={summaryTemplates.templates}
+            error={summaryTemplates.error}
+            onSave={summaryTemplates.save}
+            onRemove={summaryTemplates.remove}
+          />
+        ) : activeTab === 'theme' ? (
           <ThemeSettings
             voiceFontSize={settings.voiceFontSize}
             onVoiceFontSizeChange={(voiceFontSize) => onUpdate({ voiceFontSize })}
@@ -274,7 +307,9 @@ export default function SettingsPanel({
                   hint={
                     settings.sttProvider === 'transcribe'
                       ? '발화 중에도 인식 결과를 표시합니다.'
-                      : `음성을 약 ${sttChunkDuration(settings.sttProvider, settings.sttChunkSeconds) / 1000}초씩 모아 인식하므로 첫 결과까지 시간이 걸릴 수 있습니다.`
+                      : settings.sttProvider === 'qwen3-asr'
+                        ? '입력 언어는 자동으로 감지합니다. 번역 대상은 상단에서 따로 선택하세요.'
+                        : `음성을 약 ${sttChunkDuration(settings.sttProvider, settings.sttChunkSeconds) / 1000}초씩 모아 인식하므로 첫 결과까지 시간이 걸릴 수 있습니다.`
                   }
                 />
                 {isManagedStt(settings.sttProvider) && (

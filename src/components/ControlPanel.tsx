@@ -24,6 +24,7 @@ interface Props {
   meetingActions?: ReactNode
   status?: ReactNode
   avoidElementRef?: RefObject<HTMLElement>
+  anchorElementRef?: RefObject<HTMLElement>
 }
 
 export default function ControlPanel({
@@ -39,9 +40,11 @@ export default function ControlPanel({
   meetingActions,
   status,
   avoidElementRef,
+  anchorElementRef,
 }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [bottomInset, setBottomInset] = useState(0)
+  const [anchorInset, setAnchorInset] = useState({ right: 0, bottom: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const menuButtonRef = useRef<HTMLButtonElement>(null)
@@ -52,8 +55,29 @@ export default function ControlPanel({
   const hasActions = !!(onEndMeeting || meetingActions)
   const preparing = !isRecording && recordingLabel === '엔진 준비 중'
 
-  // Keep floating controls above an editor or page toolbar, including font-size
-  // and viewport changes. Desktop tools live in the other column.
+  // The recording controls follow the conversation panel, not the viewport.
+  useEffect(() => {
+    const anchor = anchorElementRef?.current
+    const parent = containerRef.current?.offsetParent
+    if (!anchor || !(parent instanceof HTMLElement)) return
+    const update = () => {
+      const panel = anchor.getBoundingClientRect()
+      if (!panel.width || !panel.height) return
+      const bounds = parent.getBoundingClientRect()
+      setAnchorInset({
+        right: Math.max(0, bounds.right - panel.right),
+        bottom: Math.max(0, bounds.bottom - panel.bottom),
+      })
+    }
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(anchor)
+    observer.observe(parent)
+    return () => observer.disconnect()
+  }, [anchorElementRef])
+
+  // Keep floating controls above the visible editor or page toolbar, including
+  // font-size, panel-width, and viewport changes.
   useEffect(() => {
     const element = avoidElementRef?.current
     if (!element) {
@@ -98,8 +122,11 @@ export default function ControlPanel({
   return (
     <div
       ref={containerRef}
-      className="pointer-events-none absolute left-7 z-30 flex flex-col items-start gap-2 sm:left-9"
-      style={{ bottom: `calc(max(2rem, env(safe-area-inset-bottom)) + ${bottomInset}px)` }}
+      className="pointer-events-none absolute z-30 flex flex-col items-end gap-2"
+      style={{
+        right: `calc(max(1rem, env(safe-area-inset-right)) + ${anchorInset.right}px)`,
+        bottom: `calc(max(1rem, env(safe-area-inset-bottom)) + ${anchorInset.bottom + bottomInset}px)`,
+      }}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget)) closeMenu(false)
       }}
@@ -112,8 +139,10 @@ export default function ControlPanel({
           role="group"
           aria-label="녹음 작업"
           tabIndex={-1}
-          className="ui-surface pointer-events-auto absolute bottom-full left-0 mb-2 w-52 overflow-y-auto p-1.5 shadow-xl"
-          style={{ maxHeight: `calc(100dvh - ${bottomInset}px - 8rem)` }}
+          className="ui-surface pointer-events-auto absolute bottom-full right-0 mb-2 w-52 overflow-y-auto p-1.5 shadow-xl"
+          style={{
+            maxHeight: `calc(100dvh - ${bottomInset + anchorInset.bottom}px - 8rem)`,
+          }}
         >
           <div className="flex items-center gap-2 px-3 py-2 text-xs text-muted">
             <Icon name="mic" className="h-3.5 w-3.5" />
@@ -149,7 +178,7 @@ export default function ControlPanel({
       <div
         role="group"
         aria-label="녹음 조작"
-        className="pointer-events-auto flex items-center gap-2"
+        className="pointer-events-auto flex flex-row-reverse items-center gap-2"
       >
         <button
           type="button"

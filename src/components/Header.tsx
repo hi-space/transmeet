@@ -1,11 +1,14 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import type { WsStatus } from '@/lib/websocket'
 import { useTheme } from '@/components/ThemeProvider'
 import BrandLogo from '@/components/BrandLogo'
+import Dialog from '@/components/ui/Dialog'
 import Icon from '@/components/ui/Icon'
-
-type SourceLanguage = 'en' | 'ko' | 'auto'
+import SpeechLanguageControls from '@/components/SpeechLanguageControls'
+import type { SourceLanguage, TranslationTarget } from '@/lib/speechLanguages'
+import type { SttProvider } from '@/lib/sttProviders'
 
 interface Props {
   isRecording: boolean
@@ -17,42 +20,12 @@ interface Props {
   onToggleSettings: () => void
   settingsOpen?: boolean
   onLogout?: () => void
+  sttProvider: SttProvider
   sourceLang: SourceLanguage
-  onChangeLangDirection: (source: SourceLanguage) => void
+  translationTarget: TranslationTarget
+  onChangeSourceLang: (source: SourceLanguage) => void
+  onChangeTranslationTarget: (target: TranslationTarget) => void
   detectedLang?: 'en' | 'ko' | null
-}
-
-export function LanguageDirection({
-  sourceLang,
-  onChange,
-  detectedLang,
-  compact = false,
-}: {
-  sourceLang: SourceLanguage
-  onChange: (source: SourceLanguage) => void
-  detectedLang?: 'en' | 'ko' | null
-  compact?: boolean
-}) {
-  return (
-    <label className="flex min-w-0 items-center gap-2 text-xs font-medium text-muted">
-      {!compact && <Icon name="languages" className="hidden h-4 w-4 sm:block" />}
-      <select
-        aria-label="번역 방향"
-        value={sourceLang}
-        onChange={(event) => onChange(event.target.value as SourceLanguage)}
-        className={`min-h-9 max-w-full cursor-pointer rounded-lg border border-subtle bg-subtle py-1.5 pr-5 text-xs text-ink sm:border-transparent sm:bg-transparent ${compact ? 'w-[6rem] pl-1.5' : 'pl-2.5'}`}
-      >
-        <option value="en">{compact ? 'EN → 한' : 'English → 한국어'}</option>
-        <option value="ko">{compact ? '한 → EN' : '한국어 → English'}</option>
-        <option value="auto">{compact ? '자동' : '언어 자동 감지'}</option>
-      </select>
-      {!compact && sourceLang === 'auto' && detectedLang && (
-        <span className="ui-badge hidden sm:inline-flex" title="현재 감지된 언어">
-          {detectedLang === 'ko' ? '한국어' : 'English'}
-        </span>
-      )}
-    </label>
-  )
 }
 
 export default function Header({
@@ -65,11 +38,27 @@ export default function Header({
   onToggleSettings,
   settingsOpen,
   onLogout,
+  sttProvider,
   sourceLang,
-  onChangeLangDirection,
+  translationTarget,
+  onChangeSourceLang,
+  onChangeTranslationTarget,
   detectedLang,
 }: Props) {
   const { isDark, updateTheme } = useTheme()
+  const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false)
+
+  useEffect(() => {
+    if (!mobileSettingsOpen) return
+    const desktop = window.matchMedia('(min-width: 1024px)')
+    const closeOnDesktop = () => {
+      if (desktop.matches) setMobileSettingsOpen(false)
+    }
+    closeOnDesktop()
+    desktop.addEventListener('change', closeOnDesktop)
+    return () => desktop.removeEventListener('change', closeOnDesktop)
+  }, [mobileSettingsOpen])
+
   const status = isRecording
     ? { label: '녹음 중', color: 'bg-red-500', pulse: true }
     : wsStatus === 'connected'
@@ -81,7 +70,7 @@ export default function Header({
           : null
 
   return (
-    <header className="relative z-20 flex h-14 shrink-0 items-center border-b border-subtle bg-panel px-3 sm:px-4">
+    <header className="relative z-20 flex h-12 shrink-0 items-center border-b border-subtle bg-panel px-2 lg:h-14 lg:px-4">
       <div className="flex min-w-0 items-center gap-2 lg:w-[14rem] lg:shrink-0">
         <button
           type="button"
@@ -95,10 +84,13 @@ export default function Header({
         <BrandLogo />
       </div>
 
-      <div className="ml-4 hidden sm:block">
-        <LanguageDirection
+      <div className="ml-4 hidden lg:block">
+        <SpeechLanguageControls
+          provider={sttProvider}
           sourceLang={sourceLang}
-          onChange={onChangeLangDirection}
+          translationTarget={translationTarget}
+          onChangeSourceLang={onChangeSourceLang}
+          onChangeTranslationTarget={onChangeTranslationTarget}
           detectedLang={detectedLang}
         />
       </div>
@@ -133,7 +125,7 @@ export default function Header({
           onClick={() => updateTheme({ mode: isDark ? 'light' : 'dark' })}
           aria-label={isDark ? '밝은 화면으로 전환' : '어두운 화면으로 전환'}
           title={isDark ? '밝은 화면으로 전환' : '어두운 화면으로 전환'}
-          className="ui-icon-button"
+          className="ui-icon-button hidden lg:inline-flex"
         >
           <Icon name={isDark ? 'sun' : 'moon'} className="h-[18px] w-[18px]" />
         </button>
@@ -144,7 +136,7 @@ export default function Header({
           aria-haspopup="dialog"
           aria-expanded={settingsOpen}
           title="설정"
-          className="ui-icon-button"
+          className="ui-icon-button hidden lg:inline-flex"
         >
           <Icon name="settings" className="h-[18px] w-[18px]" />
         </button>
@@ -154,12 +146,88 @@ export default function Header({
             onClick={onLogout}
             aria-label="로그아웃"
             title="로그아웃"
-            className="ui-icon-button"
+            className="ui-icon-button hidden lg:inline-flex"
           >
             <Icon name="logout" />
           </button>
         )}
+        <button
+          type="button"
+          onClick={() => setMobileSettingsOpen(true)}
+          aria-label="설정"
+          aria-haspopup="dialog"
+          aria-expanded={mobileSettingsOpen}
+          title="언어 및 화면 설정"
+          className="ui-icon-button lg:hidden"
+        >
+          <Icon name="settings" className="h-[18px] w-[18px]" />
+        </button>
       </div>
+      {mobileSettingsOpen && (
+        <Dialog labelledBy="mobile-settings-title" onClose={() => setMobileSettingsOpen(false)}>
+          <div className="ui-panel-header">
+            <h2 id="mobile-settings-title" className="text-sm font-semibold text-ink">
+              빠른 설정
+            </h2>
+            <button
+              type="button"
+              onClick={() => setMobileSettingsOpen(false)}
+              aria-label="빠른 설정 닫기"
+              className="ui-icon-button"
+            >
+              <Icon name="close" />
+            </button>
+          </div>
+          <div className="min-h-0 space-y-4 overflow-y-auto p-4">
+            <div className="space-y-2">
+              <h3 className="text-xs font-semibold text-ink">음성 및 번역 언어</h3>
+              <SpeechLanguageControls
+                compact
+                provider={sttProvider}
+                sourceLang={sourceLang}
+                translationTarget={translationTarget}
+                onChangeSourceLang={onChangeSourceLang}
+                onChangeTranslationTarget={onChangeTranslationTarget}
+                detectedLang={detectedLang}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <button
+                type="button"
+                onClick={() => updateTheme({ mode: isDark ? 'light' : 'dark' })}
+                className="ui-button min-h-11 justify-start"
+              >
+                <Icon name={isDark ? 'sun' : 'moon'} />
+                {isDark ? '밝은 화면으로 전환' : '어두운 화면으로 전환'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileSettingsOpen(false)
+                  onToggleSettings()
+                }}
+                className="ui-button min-h-11 justify-start"
+              >
+                <Icon name="settings" />
+                전체 설정
+              </button>
+              {onLogout && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileSettingsOpen(false)
+                    onLogout()
+                  }}
+                  className="ui-button min-h-11 justify-start"
+                >
+                  <Icon name="logout" />
+                  로그아웃
+                </button>
+              )}
+            </div>
+          </div>
+        </Dialog>
+      )}
     </header>
   )
 }

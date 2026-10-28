@@ -2,6 +2,9 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import ts from 'typescript'
+import { loadTypeScript } from './helpers/loadTypeScript.mjs'
+
+const { normalizeSummaryStyle } = loadTypeScript('src/lib/summaryStyles.ts')
 
 const source = ts.createSourceFile(
   'page.tsx',
@@ -25,7 +28,7 @@ const { outputText } = ts.transpileModule(`const handler = ${handler.getText(sou
   compilerOptions: { target: ts.ScriptTarget.ES2022 },
 })
 
-function setup({ connected = true, confirmed = true, recording = true } = {}) {
+function setup({ connected = true, confirmed = true, recording = true, summaryStyle } = {}) {
   const sent = []
   const endStates = []
   let pendingAudio = recording ? 'final-buffered-wav' : null
@@ -34,6 +37,8 @@ function setup({ connected = true, confirmed = true, recording = true } = {}) {
   let flushes = 0
   const scope = {
     activeMeetingId: 'meeting-1',
+    activeMeetingLoadState: undefined,
+    summaryStyleSavingRef: { current: new Map() },
     isRecording: recording,
     window: {
       confirm: () => {
@@ -41,16 +46,19 @@ function setup({ connected = true, confirmed = true, recording = true } = {}) {
         return confirmed
       },
     },
-    meetingsRef: { current: [{ id: 'meeting-1', messages: [] }] },
+    meetingsRef: { current: [{ id: 'meeting-1', messages: [], summaryStyle }] },
+    normalizeSummaryStyle,
+    summaryRequestRef: { current: null },
+    summaryStreamsRef: { current: new Set() },
     settings: { emailOnEnd: true },
     flushAudio: () => {
       flushes++
       if (pendingAudio && connected) sent.push({ action: 'sendAudio', audioData: pendingAudio })
       pendingAudio = null
     },
-    sendEndMeeting: (meetingId, emailOnEnd, messages) => {
+    sendEndMeeting: (meetingId, emailOnEnd, messages, summaryStyle) => {
       if (!connected) return false
-      sent.push({ action: 'endMeeting', meetingId, emailOnEnd, messages })
+      sent.push({ action: 'endMeeting', meetingId, emailOnEnd, messages, summaryStyle })
       return true
     },
     resetLocalRecording: () => {
@@ -83,7 +91,7 @@ test('ending a recording sends its final audio before the server closes audio in
 
   assert.deepEqual(session.sent, [
     { action: 'sendAudio', audioData: 'final-buffered-wav' },
-    { action: 'endMeeting', meetingId: 'meeting-1', emailOnEnd: true, messages: [] },
+    { action: 'endMeeting', meetingId: 'meeting-1', emailOnEnd: true, messages: [], summaryStyle: 'detailed' },
   ])
   assert.equal(session.isCapturing(), false)
   assert.deepEqual(session.endStates, [{ meetingId: 'meeting-1', phase: 'audio' }])
@@ -117,6 +125,12 @@ test('an already stopped recording can end without another audio flush or confir
   assert.equal(session.confirmations(), 0)
   assert.equal(session.flushes(), 0)
   assert.deepEqual(session.sent, [
-    { action: 'endMeeting', meetingId: 'meeting-1', emailOnEnd: true, messages: [] },
+    { action: 'endMeeting', meetingId: 'meeting-1', emailOnEnd: true, messages: [], summaryStyle: 'detailed' },
   ])
+})
+
+test('meeting end uses the meeting selection for its summary and email', () => {
+  const session = setup({ recording: false, summaryStyle: 'report' })
+  session.endMeeting()
+  assert.equal(session.sent[0].summaryStyle, 'report')
 })

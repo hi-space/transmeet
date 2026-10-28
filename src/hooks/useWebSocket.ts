@@ -2,8 +2,11 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import type { WsStatus, WsServerMessage } from '@/lib/websocket'
-import { getIdToken } from '@/lib/cognito'
+import { AUTH_SESSION_REFRESHED_EVENT, getIdToken } from '@/lib/cognito'
 import type { SttProvider } from '@/lib/sttProviders'
+import type { SourceLanguage, TranslationTarget } from '@/lib/speechLanguages'
+import type { PageStyle } from '@/lib/pageStyles'
+import type { SummaryStyle } from '@/lib/summaryStyles'
 
 const RECONNECT_DELAY_MS = 2000
 const MAX_RECONNECT_ATTEMPTS = 50
@@ -32,6 +35,24 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
   const connectedMeetingIdRef = useRef<string | undefined>(undefined)
   // connect 가 토큰을 기다리는 사이 다른 connect/disconnect 가 오면 먼저 시작한 시도를 버린다
   const connectSeqRef = useRef(0)
+  const authRevisionRef = useRef(0)
+  const refreshedTokenRef = useRef('')
+  const authenticatedSocketRef = useRef<WebSocket | null>(null)
+
+  useEffect(() => {
+    const refreshAuth = (event: Event) => {
+      const token = (event as CustomEvent<string>).detail
+      if (typeof token !== 'string' || !token) return
+      refreshedTokenRef.current = token
+      authRevisionRef.current++
+      const ws = wsRef.current
+      if (ws?.readyState === WebSocket.OPEN && authenticatedSocketRef.current === ws) {
+        ws.send(JSON.stringify({ action: 'refreshAuth', token }))
+      }
+    }
+    window.addEventListener(AUTH_SESSION_REFRESHED_EVENT, refreshAuth)
+    return () => window.removeEventListener(AUTH_SESSION_REFRESHED_EVENT, refreshAuth)
+  }, [])
 
   useEffect(() => {
     onMessageRef.current = onMessage
@@ -80,6 +101,7 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
       ? `${endpoint}?meetingId=${encodeURIComponent(targetMeetingId)}`
       : endpoint
     const seq = ++connectSeqRef.current
+    const authRevision = authRevisionRef.current
 
     setStatus('connecting')
     getIdToken().then((token) => {
@@ -90,7 +112,10 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
       ws.onopen = () => {
         // 첫 메시지는 인증 — 서버는 이걸 확인한 뒤에야 다른 메시지를 읽는다.
         // 토큰을 URL 에 싣지 않는 건 접속 로그에 남지 않게 하려는 것이다.
-        ws.send(JSON.stringify({ action: 'auth', token }))
+        const currentToken =
+          authRevisionRef.current === authRevision ? token : refreshedTokenRef.current
+        ws.send(JSON.stringify({ action: 'auth', token: currentToken }))
+        authenticatedSocketRef.current = ws
         // Reset counter only on successful connection (preserves backoff on reconnect)
         reconnectCountRef.current = 0
         setStatus('connected')
@@ -201,8 +226,8 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     (
       audioBase64: string,
       speaker: string = 'speaker1',
-      sourceLang?: string,
-      targetLang?: string,
+      sourceLang?: SourceLanguage,
+      translationTarget?: TranslationTarget,
       modelId?: string
     ): boolean => {
       const ws = wsRef.current
@@ -218,8 +243,8 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
           audioData: audioBase64,
           meetingId: meetingIdRef.current,
           speaker,
-          ...(sourceLang && sourceLang !== 'auto' && { sourceLang }),
-          ...(targetLang && { targetLang }),
+          ...(sourceLang && { sourceLang }),
+          ...(translationTarget && { translationTarget }),
           ...(modelId && { modelId }),
         })
       )
@@ -231,8 +256,8 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
   const startRecording = useCallback(
     (opts: {
       sttProvider: string
-      sourceLang?: string
-      targetLang?: string
+      sourceLang?: SourceLanguage
+      translationTarget?: TranslationTarget
       modelId?: string
       speaker?: string
       translationTiming?: string
@@ -278,7 +303,8 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
   const sendSummarize = useCallback(
     (
       meetingId: string,
-      messages?: { speaker: string; original: string; timestamp?: string }[]
+      messages?: { speaker: string; original: string; timestamp?: string }[],
+      summaryStyle?: SummaryStyle
     ): boolean => {
       const ws = wsRef.current
       if (!ws || ws.readyState !== WebSocket.OPEN) return false
@@ -286,6 +312,7 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
         JSON.stringify({
           action: 'summarize',
           meetingId,
+          ...(summaryStyle && { summaryStyle }),
           ...(messages && { messages }),
         })
       )
@@ -304,7 +331,8 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
         translation?: string
         timestamp?: string
         detectedLanguage?: string
-      }[]
+      }[],
+      pageStyle?: PageStyle
     ): boolean => {
       const ws = wsRef.current
       if (!ws || ws.readyState !== WebSocket.OPEN) return false
@@ -312,6 +340,7 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
         JSON.stringify({
           action: 'generate_page',
           meetingId,
+          ...(pageStyle && { pageStyle }),
           ...(messages && { messages }),
         })
       )
@@ -339,7 +368,8 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
         translation?: string
         timestamp?: string
         detectedLanguage?: string
-      }[]
+      }[],
+      summaryStyle?: SummaryStyle
     ): boolean => {
       const ws = wsRef.current
       if (!ws || ws.readyState !== WebSocket.OPEN) return false
@@ -348,6 +378,7 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
           action: 'endMeeting',
           meetingId,
           emailOnEnd,
+          ...(summaryStyle && { summaryStyle }),
           ...(messages && { messages }),
         })
       )

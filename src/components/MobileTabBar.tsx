@@ -18,7 +18,7 @@ export default function MobileTabBar({
   hasNewPage,
 }: Props) {
   return (
-    <div className="shrink-0 px-3 pb-3 lg:hidden">
+    <div className="shrink-0 bg-panel px-2 lg:hidden">
       <Tabs
         label="회의 화면"
         value={activeTab}
@@ -47,7 +47,7 @@ export default function MobileTabBar({
             panelId: 'meeting-utility-panel',
           },
         ]}
-        className="[&_.ui-tab]:gap-1 [&_.ui-tab]:px-1.5 [&_.ui-tab_svg]:hidden min-[380px]:[&_.ui-tab_svg]:block"
+        className="[&_.ui-tab]:min-h-11 [&_.ui-tab]:gap-1 [&_.ui-tab]:px-1.5 [&_.ui-tab_svg]:hidden min-[380px]:[&_.ui-tab_svg]:block"
       />
     </div>
   )
