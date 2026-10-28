@@ -1,0 +1,89 @@
+"""회의 대화 저장소 — `transmeet-messages` 테이블 읽기·쓰기.
+
+메시지는 회의 항목의 `messages` 리스트가 아니라 별도 테이블에 한 건씩 저장한다.
+파티션 키 `meetingId`, 정렬 키 `sk` = `{timestamp}#{id}`.
+`ddb`는 aiobotocore 저수준 클라이언트이므로 속성은 `{"S": ...}` 형식으로 직접 쓴다.
+"""
+from typing import Dict, List, Optional
+
+from botocore.exceptions import ClientError
+
+from .config import config
+
+MESSAGE_FIELDS = ("id", "speaker", "originalText", "translatedText", "detectedLanguage", "timestamp")
+
+
+def sort_key(timestamp: str, message_id: str) -> str:
+    """정렬 키. 같은 timestamp 의 메시지가 덮어쓰이지 않도록 id 를 붙인다."""
+    return f"{timestamp}#{message_id}"
+
+
+async def append_message(ddb, meeting_id: str, message: Dict[str, str], *, updated_at: str) -> None:
+    """메시지 저장과 회의 항목의 messageCount·updatedAt 갱신을 한 트랜잭션으로 처리한다.
+
+    회의 항목이 없으면 트랜잭션이 취소된다(is_missing_meeting 으로 판별). 예외는 그대로 던진다.
+    """
+    item = {field: {"S": message.get(field) or ""} for field in MESSAGE_FIELDS}
+    item["meetingId"] = {"S": meeting_id}
+    item["sk"] = {"S": sort_key(message["timestamp"], message["id"])}
+    await ddb.transact_write_items(
+        TransactItems=[
+            {"Put": {"TableName": config.MESSAGES_TABLE, "Item": item}},
+            {
+                "Update": {
+                    "TableName": config.MEETINGS_TABLE,
+                    "Key": {"meetingId": {"S": meeting_id}},
+                    "UpdateExpression": "SET #updatedAt = :ts ADD messageCount :one",
+                    "ConditionExpression": "attribute_exists(meetingId)",
+                    "ExpressionAttributeNames": {"#updatedAt": "updatedAt"},
+                    "ExpressionAttributeValues": {
+                        ":ts": {"S": updated_at},
+                        ":one": {"N": "1"},
+                    },
+                }
+            },
+        ]
+    )
+
+
+def is_missing_meeting(err: ClientError) -> bool:
+    """트랜잭션이 '회의 항목 없음'(조건 실패)으로 취소됐는지."""
+    error = err.response.get("Error", {})
+    if error.get("Code") != "TransactionCanceledException":
+        return False
+    reasons = err.response.get("CancellationReasons") or []
+    return any(r.get("Code") == "ConditionalCheckFailed" for r in reasons)
+
+
+async def load_messages(
+    ddb,
+    meeting_id: str,
+    *,
+    limit: Optional[int] = None,
+    table: Optional[str] = None,
+) -> List[Dict[str, str]]:
+    """회의의 메시지를 정렬 키 오름차순으로 읽는다(강한 일관성, 페이지 끝까지).
+
+    limit 이 있으면 앞에서부터 그 개수까지만 읽고, 채우면 더 요청하지 않는다.
+    """
+    messages: List[Dict[str, str]] = []
+    start_key = None
+    while True:
+        params = {
+            "TableName": table or config.MESSAGES_TABLE,
+            "KeyConditionExpression": "meetingId = :m",
+            "ExpressionAttributeValues": {":m": {"S": meeting_id}},
+            "ConsistentRead": True,
+        }
+        if limit is not None:
+            params["Limit"] = limit - len(messages)
+        if start_key:
+            params["ExclusiveStartKey"] = start_key
+        resp = await ddb.query(**params)
+        for item in resp.get("Items", []):
+            messages.append({f: item.get(f, {}).get("S", "") for f in MESSAGE_FIELDS})
+            if limit is not None and len(messages) >= limit:
+                return messages
+        start_key = resp.get("LastEvaluatedKey")
+        if not start_key:
+            return messages
