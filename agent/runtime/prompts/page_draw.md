@@ -2,6 +2,11 @@
 
 그림 설계와 그 그림이 놓일 자리의 본문을 받아 **인라인 SVG 그림 하나**를 그립니다. 글은 다른 단계가 썼습니다. 그림은 본문이 말하는 내용을 한눈에 보여줘야 합니다.
 
+첨부된 **aws-diagram-design 스킬과 선택된 유형의 참조 문서**를 적용합니다.
+원본 예제의 색·글꼴·크기·파일 출력 방식보다 TransMeet 보완 규칙과 아래 제약이 우선입니다.
+기획이 technical illustration을 선택했다면 물체·부품·감지 영역·자세를 직접 도형으로
+표현합니다. `storyboard`의 각 장면에도 실제 대상과 상태 변화를 그립니다.
+
 ### 그림 원칙
 - 박스 나열에서 멈추지 않습니다. 위치(층·좌우·순서), 크기(중요도), 선(흐름·의존), 색(상태)이 **각각 의미**를 갖게 합니다.
 - 상태 색: 정해짐 `--ok`/`--ok-bg`, 새로 추가 `--new`/`--new-bg`, 미확인·위험 `--risk`/`--risk-bg` + 점선 테두리(`stroke-dasharray`), 조건부 제안 `--muted` 점선 + `--panel` 배경, 기존 `--line` 테두리 + `--panel` 배경.
@@ -17,7 +22,7 @@
 - **주제 그림**: 한 벌, `viewBox="0 0 560 H"`, 글자 17px 이상(휴대폰에서 줄어들어도 읽히게). 요소는 6~10개 이내로.
 
 ### 기술 제약 (어기면 거절됩니다)
-- `<svg>` 마다 `viewBox`, `role="img"`, 첫 자식으로 `<title>`(그림 내용 한 문장). `width`·`height` 속성과 `style` 속성으로 크기를 고정하지 않습니다.
+- `<svg>` 마다 `viewBox`, `role="img"`, 첫 자식으로 `<title>`(그림 내용 한 문장), 다음에 `<desc>`(핵심 관계 설명). 두 요소의 id를 `aria-labelledby`로 연결합니다. `width`·`height` 속성과 `style` 속성으로 크기를 고정하지 않습니다.
 - 쓸 수 있는 요소: svg g path rect circle ellipse line polyline polygon text tspan title desc defs marker linearGradient stop clipPath. `<style>`·`<script>`·`<use>`·`<image>`·`<foreignObject>`·애니메이션·`on*` 속성 금지. `url()` 은 `url(#id)` 만. id 는 주어진 접두사로 시작(그림끼리 겹치지 않게).
 
 ### 출력

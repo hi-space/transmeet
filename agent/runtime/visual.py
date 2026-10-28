@@ -25,10 +25,11 @@ from typing import Any, Callable, Dict, List, Optional
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-from . import events
+from . import diagram_design, events
 from .model import astream_with_retry
 from .stage import message_text
 from .validator import validate_html
+from .workspace import DEFAULT_SKILLS_DIR
 
 logger = logging.getLogger(__name__)
 
@@ -71,8 +72,10 @@ def _prompt(name: str) -> str:
     return (PROMPTS_DIR / f"{name}.md").read_text(encoding="utf-8")
 
 
-def system(*names: str) -> str:
-    return "\n\n".join(_prompt(n) for n in ("page_base", *names))
+def system(*names: str, design_context: str = "") -> str:
+    return "\n\n".join(filter(None, [
+        _prompt("page_base"), design_context, *(_prompt(n) for n in names),
+    ]))
 
 
 @dataclass
@@ -83,6 +86,7 @@ class VisualInputs:
     terms_block: str
     research_html: str = ""
     insights_html: str = ""
+    skills_dir: Path = DEFAULT_SKILLS_DIR
 
 
 @dataclass
@@ -151,7 +155,8 @@ async def plan_page(llm, inp: VisualInputs, usage: Dict[str, int]) -> Dict[str, 
     user = (f"{_head(inp)}\n\n### 분석 요약·주제 (analysis.json)\n```json\n{_dump({'summary': a.get('summary'), 'topics': a.get('topics')})}\n```\n\n"
             f"### 리서치 결과\n```html\n{inp.research_html or '(없음)'}\n```\n\n### 인사이트\n```html\n{inp.insights_html or '(없음)'}\n```\n\n"
             f"{_transcript(inp)}")
-    return await _call_json(llm, system("page_plan"), user, usage)
+    design = diagram_design.planning_context(inp.skills_dir)
+    return await _call_json(llm, system("page_plan", design_context=design), user, usage)
 
 
 async def write_page(llm, inp: VisualInputs, plan: Dict[str, Any], usage: Dict[str, int]) -> Dict[str, Any]:
@@ -164,14 +169,14 @@ def figure_jobs(plan: Dict[str, Any]) -> List[Dict[str, str]]:
     points = "\n".join(f"{circled(p.get('n'))} {p.get('target', '')}: {'; '.join(p.get('facts') or [])}"
                        for p in ov.get("points") or [] if isinstance(p, dict))
     brief = f"개요 그림 ({ov.get('kind', '')})\n설계: {ov.get('design', '')}\n번호 지점:\n{points}"
-    jobs = [{"key": "overview-wide", "kind": "overview-wide", "brief": brief},
-            {"key": "overview-tall", "kind": "overview-tall", "brief": brief}] if ov else []
+    jobs = [{"key": "overview-wide", "kind": "overview-wide", "figure_kind": ov.get("kind", ""), "brief": brief},
+            {"key": "overview-tall", "kind": "overview-tall", "figure_kind": ov.get("kind", ""), "brief": brief}] if ov else []
     for t in plan.get("topics") or []:
         if not isinstance(t, dict) or not t.get("id"):
             continue
         fig = t.get("figure") or {}
         facts = "\n".join(f"- {f}" for f in t.get("facts") or [])
-        jobs.append({"key": str(t["id"]), "kind": "topic",
+        jobs.append({"key": str(t["id"]), "kind": "topic", "figure_kind": fig.get("kind", ""),
                      "brief": f"주제 그림 ({fig.get('kind', '')}) — 주제: {t.get('title_hint', '')}\n설계: {fig.get('design', '')}\n이 주제의 사실:\n{facts}"})
     return jobs
 
@@ -187,7 +192,8 @@ def svg_errors(svg: str) -> List[str]:
 async def draw_one(llm, inp: VisualInputs, job: Dict[str, str], usage: Dict[str, int]) -> str:
     """그림 하나. 검증에 두 번 떨어지면 빈 문자열 — 페이지는 그 그림 없이 나간다."""
     user = f"{_head(inp)}\n\n### 그릴 그림: {DRAW_LABEL[job['kind']]}\nid 접두사: `{job['key']}-`\n\n{job['brief']}"
-    msgs = [SystemMessage(content=system("page_draw")), HumanMessage(content=user)]
+    design = diagram_design.drawing_context(inp.skills_dir, job.get("figure_kind"))
+    msgs = [SystemMessage(content=system("page_draw", design_context=design)), HumanMessage(content=user)]
     for attempt in range(2):
         ai = await astream_with_retry(llm, msgs)
         _add_usage(usage, ai)

@@ -452,7 +452,7 @@ def build_graph(deps: GraphDeps):
         analysis = state.get("analysis") or {}
         inp = visual.VisualInputs(meta=state["meta"], analysis=analysis, transcript=ws.read_text("transcript.txt"),
                                   terms_block=_terms_block(analysis), research_html=state.get("research_html") or "",
-                                  insights_html=state.get("insights_html") or "")
+                                  insights_html=state.get("insights_html") or "", skills_dir=ws.skills_dir)
         css = ws.read_text(f"{ASSETS_REL}/{_style(state).template}").strip()
         usage: Dict[str, int] = {}
         if attempts == 0 or not ws.exists("visual/final.json"):

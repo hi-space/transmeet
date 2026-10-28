@@ -1,4 +1,5 @@
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -374,6 +375,25 @@ async def test_visual_style_retry_rerenders_without_figures(tmp_path, monkeypatc
     payload = {**PAYLOAD, "meeting": {**PAYLOAD["meeting"], "style": "visual"}}
     await run(make_deps(tmp_path, visual_models(), publisher=pub), payload)
     assert len(pub.calls) == 1 and "<svg" not in pub.calls[0][1] and "파이프라인 마무리" in pub.calls[0][1]
+
+
+async def test_visual_style_loads_the_workspace_design_skill(tmp_path):
+    custom_skills = tmp_path / "deployed-skills"
+    shutil.copytree(SKILLS, custom_skills)
+    adapter = custom_skills / "aws-diagram-design/references/transmeet.md"
+    adapter.write_text(adapter.read_text() + "\nWORKSPACE_DESIGN_ADAPTER\n")
+    models = visual_models()
+    deps = make_deps(tmp_path / "runs", models)
+    deps.skills_dir = custom_skills
+    payload = {**PAYLOAD, "meeting": {**PAYLOAD["meeting"], "style": "visual"}}
+
+    await run(deps, payload)
+
+    for stage in ("plan", "draw"):
+        assert models[stage].calls
+        assert all("WORKSPACE_DESIGN_ADAPTER" in call[0].content for call in models[stage].calls)
+    for stage in ("write", "review"):
+        assert all("WORKSPACE_DESIGN_ADAPTER" not in call[0].content for call in models[stage].calls)
 
 
 def test_default_style_is_visual(tmp_path):
