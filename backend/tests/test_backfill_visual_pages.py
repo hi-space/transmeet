@@ -26,14 +26,22 @@ def encode(item):
 def meeting(mid="m1", **extra):
     return {
         "meetingId": mid, "userId": "u1", "createdAt": "2026-10-20T00:00:00Z",
-        "title": "Weekly sync", "messages": [{"originalText": "Ship on Friday."}],
+        "title": "Weekly sync",
         **extra,
     }
+
+
+def stored(text, mid="a"):
+    """메시지 테이블 항목(회의 항목이 아니라 별도 테이블에 한 건씩 있다)."""
+    return {"meetingId": "m1", "sk": f"2026-10-20T00:01:00Z#{mid}", "id": mid, "speaker": "them",
+            "originalText": text, "translatedText": "", "detectedLanguage": "en",
+            "timestamp": "2026-10-20T00:01:00Z"}
 
 
 @pytest.fixture
 def env():
     records = {"m1": meeting()}
+    messages = {"m1": [stored("Ship on Friday.")]}
     pages = {}
     objects = {}
     payloads = []
@@ -55,6 +63,11 @@ def env():
             mid = kwargs["Key"]["meetingId"]["S"]
             source = records if kwargs["TableName"] == "meetings" else pages
             return {"Item": encode(copy.deepcopy(source[mid]))} if mid in source else {}
+
+        async def query(self, **kwargs):
+            assert kwargs["TableName"] == "messages"
+            mid = kwargs["ExpressionAttributeValues"][":m"]["S"]
+            return {"Items": [encode(row) for row in messages.get(mid, [])]}
 
     class Body(io.BytesIO):
         async def read(self):
@@ -98,9 +111,10 @@ def env():
     deps = PageAgentDeps(
         ddb_client=ddb_client, s3_client=s3_client, agentcore_client=agentcore_client,
         runtime_arn="test-runtime", bucket="pages", table="meetings", pages_table="pages",
+        messages_table="messages",
     )
     return SimpleNamespace(
-        deps=deps, records=records, pages=pages, objects=objects, payloads=payloads,
+        deps=deps, records=records, messages=messages, pages=pages, objects=objects, payloads=payloads,
         scan_pages=scan_pages, scan_calls=scan_calls,
     )
 
@@ -159,13 +173,18 @@ async def test_generates_a_missing_page_and_can_be_rerun_without_regeneration(en
     assert len(env.payloads) == 1
 
 
-@pytest.mark.parametrize(("changes", "expected"), [
-    ({"messages": []}, "empty"),
-    ({"messages": [{"originalText": "  "}]}, "empty"),
-    ({"userId": "u2"}, "outside_scope"),
+@pytest.mark.parametrize(("changes", "stored_messages", "expected"), [
+    ({}, [], "empty"),
+    ({}, [stored("  ")], "empty"),
+    # 회의 항목에 남은 옛 messages 속성은 보지 않는다 — 메시지 테이블이 비면 빈 회의다
+    ({"messages": [{"originalText": "Ship on Friday."}]}, [], "empty"),
+    ({"userId": "u2"}, [stored("Ship on Friday.")], "outside_scope"),
 ])
-async def test_skips_empty_meetings_and_rechecks_owner_before_writes(env, tmp_path, changes, expected):
+async def test_skips_empty_meetings_and_rechecks_owner_before_writes(
+    env, tmp_path, changes, stored_messages, expected,
+):
     env.records["m1"].update(changes)
+    env.messages["m1"] = stored_messages
     result = await backfill.backfill_meeting(
         "m1", deps=env.deps, user_id="u1", apply=True, output_dir=tmp_path,
     )

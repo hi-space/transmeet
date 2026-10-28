@@ -29,6 +29,7 @@ from app.page_agent import (  # noqa: E402
     PageAgentDeps, check_meeting_id, ddb_item_to_dict, load_page, merge_messages,
     page_key, run_page_generation,
 )
+from app.message_store import load_messages  # noqa: E402
 
 
 def parse_time(value: str) -> datetime:
@@ -114,7 +115,9 @@ async def backfill_meeting(meeting_id: str, *, deps: PageAgentDeps, user_id: str
             result["title"] = item.get("title", "")
             if not item or (user_id is not None and item.get("userId") != user_id):
                 return {**result, "status": "outside_scope"}
-            if not merge_messages(item.get("messages") or []):
+            # 대화는 회의 항목이 아니라 메시지 테이블에 있다(이전 중 남은 옛 messages 속성은 보지 않는다).
+            messages = await load_messages(ddb, meeting_id, table=deps.messages_table)
+            if not merge_messages(messages):
                 return {**result, "status": "empty"}
             before = await load_page(ddb, deps.pages_table, meeting_id)
             html = await read_html(s3, deps.bucket, meeting_id, before)
