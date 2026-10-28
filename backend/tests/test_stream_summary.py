@@ -41,12 +41,16 @@ class FakeBedrock:
 
 
 class FakeDDB:
-    def __init__(self, title="주간 1:1"):
+    def __init__(self, title="주간 1:1", summary_style=None):
         self.title = title
+        self.summary_style = summary_style
         self.updates = []
 
     async def get_item(self, **kwargs):
-        return {"Item": {"title": {"S": self.title}}}
+        item = {"title": {"S": self.title}}
+        if self.summary_style is not None:
+            item["summaryStyle"] = {"S": self.summary_style}
+        return {"Item": item}
 
     async def update_item(self, **kwargs):
         self.updates.append(kwargs)
@@ -108,6 +112,36 @@ async def test_summary_request_uses_low_effort(monkeypatch):
     await ws_handler._stream_summary(ws_handler._meeting_broadcaster("m1"), "m1", "x", inline_messages=MESSAGES)
 
     assert bedrock.calls[0]["additionalModelRequestFields"] == {"output_config": {"effort": "low"}}
+
+
+@pytest.mark.parametrize(("saved", "requested", "expected", "heading"), [
+    (None, None, "detailed", "## 논의 흐름"),
+    ("report", None, "report", "## 배경"),
+    ("report", "detailed", "detailed", "## 논의 흐름"),
+    ("detailed", "report", "report", "## 향후 일정"),
+    ("amazon", None, "amazon", "## 고객 요구 (Customer Asks)"),
+    ("report", "decisions", "decisions", "## 보류된 결정"),
+    ("concise", None, "detailed", "## 논의 흐름"),  # 삭제된 방식은 기본값으로
+    ("unknown", None, "detailed", "## 논의 흐름"),
+])
+async def test_stream_uses_requested_or_saved_style_and_reports_generated_style(
+    monkeypatch, saved, requested, expected, heading,
+):
+    bedrock, ddb = FakeBedrock(["선택한 요약"]), FakeDDB(summary_style=saved)
+    install(monkeypatch, bedrock, ddb)
+    ws = FakeWS()
+    await ws_handler._stream_summary(
+        ws.send_json, "m1", "x", inline_messages=MESSAGES, summary_style=requested,
+    )
+    prompt = bedrock.calls[0]["messages"][0]["content"][0]["text"]
+    assert heading in prompt
+    assert prompt.endswith("\n---\n금요일까지 끝냅니다.")
+    assert all(event["summaryStyle"] == expected for event in ws.sent)
+    assert all(event["meetingId"] == "m1" for event in ws.sent)
+    update = ddb.updates[0]
+    assert "summaryGeneratedStyle" in update["UpdateExpression"]
+    assert update["ExpressionAttributeValues"][":style"] == {"S": expected}
+    assert "summaryStyle =" not in update["UpdateExpression"]
 
 
 @pytest.mark.parametrize(("title", "expected_title"), [
@@ -254,3 +288,80 @@ async def test_stream_broken_after_partial_text_is_not_retried(monkeypatch):
 
     assert len(bedrock.calls) == 1
     assert [m["phase"] for m in ws.sent] == ["delta", "error"]
+
+
+# ─── 내 양식(커스텀): 회의 레코드의 사본으로만 만든다 ────────────────────────────────
+
+# 사본 테이블(meetingId 키)의 항목. 회의 항목에는 두지 않는다(400 KB 한도).
+SNAPSHOT = {"meetingId": {"S": "m1"}, "userId": {"S": "u1"}, "templateId": {"S": "tpl-1"}, "name": {"S": "주간 회의"},
+            "kind": {"S": "instruction"}, "body": {"S": "섹션은 이슈 / 원인 / 조치"},
+            "templateUpdatedAt": {"S": "2026-10-28T01:00:00Z"}}
+
+
+class CustomDDB(FakeDDB):
+    """회의·사본 테이블만 읽을 수 있다 — 양식 테이블을 읽으면 실패해서, 양식을 지워도 동작함을 고정한다."""
+
+    def __init__(self, custom=None, stored_messages=False, **kwargs):
+        super().__init__(**kwargs)
+        self.custom = custom
+        self.stored_messages = stored_messages
+        self.gets = []
+
+    async def get_item(self, **kwargs):
+        table = kwargs["TableName"]
+        assert table in (ws_handler.config.MEETINGS_TABLE, ws_handler.config.SUMMARY_SNAPSHOTS_TABLE), table
+        self.gets.append(kwargs)
+        if table == ws_handler.config.SUMMARY_SNAPSHOTS_TABLE:
+            return {"Item": self.custom} if self.custom is not None else {}
+        item = (await super().get_item(**kwargs))["Item"]
+        if self.stored_messages:
+            item["messages"] = {"L": [{"M": {"originalText": {"S": "금요일까지 끝냅니다."}}}]}
+        return {"Item": item}
+
+
+@pytest.mark.parametrize("inline", [True, False])
+async def test_custom_snapshot_drives_prompt_and_label(monkeypatch, inline):
+    bedrock = FakeBedrock(["내 양식 요약"])
+    ddb = CustomDDB(custom=SNAPSHOT, stored_messages=not inline, summary_style="custom")
+    install(monkeypatch, bedrock, ddb)
+    ws = FakeWS()
+    await ws_handler._stream_summary(
+        ws.send_json, "m1", "x", inline_messages=MESSAGES if inline else None, summary_style="custom",
+    )
+    prompt = bedrock.calls[0]["messages"][0]["content"][0]["text"]
+    assert "<사용자_양식>\n섹션은 이슈 / 원인 / 조치\n</사용자_양식>" in prompt
+    assert all(e["summaryStyle"] == "custom" and e["summaryLabel"] == "주간 회의" for e in ws.sent)
+    assert [g["TableName"] for g in ddb.gets] == [ws_handler.config.MEETINGS_TABLE, ws_handler.config.SUMMARY_SNAPSHOTS_TABLE]
+    update = ddb.updates[0]
+    assert "summaryGeneratedLabel = :label" in update["UpdateExpression"]
+    assert update["ExpressionAttributeValues"][":label"] == {"S": "주간 회의"}
+    assert update["ExpressionAttributeValues"][":style"] == {"S": "custom"}
+
+
+async def test_custom_requested_without_snapshot_generates_detailed_and_removes_label(monkeypatch):
+    bedrock, ddb = FakeBedrock(["요약"]), CustomDDB(summary_style="custom")
+    install(monkeypatch, bedrock, ddb)
+    ws = FakeWS()
+    await ws_handler._stream_summary(ws.send_json, "m1", "x", inline_messages=MESSAGES, summary_style="custom")
+    assert "## 논의 흐름" in bedrock.calls[0]["messages"][0]["content"][0]["text"]
+    assert all(e["summaryStyle"] == "detailed" and "summaryLabel" not in e for e in ws.sent)
+    update = ddb.updates[0]
+    assert "REMOVE summaryGeneratedLabel" in update["UpdateExpression"]
+    assert ":label" not in update["ExpressionAttributeValues"]
+
+
+async def test_builtin_style_on_a_meeting_with_a_snapshot_ignores_it(monkeypatch):
+    bedrock, ddb = FakeBedrock(["요약"]), CustomDDB(custom=SNAPSHOT, summary_style="custom")
+    install(monkeypatch, bedrock, ddb)
+    ws = FakeWS()
+    await ws_handler._stream_summary(ws.send_json, "m1", "x", inline_messages=MESSAGES, summary_style="report")
+    prompt = bedrock.calls[0]["messages"][0]["content"][0]["text"]
+    assert "<사용자_양식>" not in prompt and "## 배경" in prompt
+    assert "REMOVE summaryGeneratedLabel" in ddb.updates[0]["UpdateExpression"]
+
+
+async def test_builtin_style_does_not_read_the_snapshot_table(monkeypatch):
+    bedrock, ddb = FakeBedrock(["요약"]), CustomDDB(custom=SNAPSHOT, summary_style="report")
+    install(monkeypatch, bedrock, ddb)
+    await ws_handler._stream_summary(FakeWS().send_json, "m1", "x", inline_messages=MESSAGES)
+    assert [g["TableName"] for g in ddb.gets] == [ws_handler.config.MEETINGS_TABLE]
