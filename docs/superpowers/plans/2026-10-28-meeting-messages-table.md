@@ -190,11 +190,12 @@
 
 **Files:** 없음(운영 작업). 결과는 사용자에게 보고한다
 
-- [ ] **Step 1: 병합 확인.** 브랜치를 main 에 병합하기 전에 사용자에게 확인한다. main 이 다른 세션의 배포된 작업을 모두 담고 있는지, 병합해도 되는지
-- [ ] **Step 2: 배포 1 — 테이블만.** Task 1 커밋만 담은 상태(또는 Task 1 까지 병합한 main)에서 `cd infra && npx cdk deploy TransmeetStack`. `aws dynamodb describe-table --table-name transmeet-messages` → `TableStatus: ACTIVE`, `describe-continuous-backups` → PITR `ENABLED`
+- [ ] **Step 1: 병합 확인.** 이 단계에서는 브랜치 전체를 병합하지 않는다. 배포 1 은 "지금 main + `72d6ef0`(Task 1, 테이블 추가)만 cherry-pick" 한 상태에서 한다. 브랜치 전체는 배포 2(Step 4) 바로 전에 병합한다 — 그 전에 병합하면 옛 코드가 도는 동안 새 코드가 섞여 배포될 수 있다. 병합 전 사용자에게 main 이 다른 세션의 배포된 작업을 모두 담고 있는지, 병합해도 되는지 확인한다
+- [ ] **Step 2: 배포 1 — 테이블만.** 먼저 지금 돌고 있는 WS 이미지 태그를 찾는다: `aws ecs describe-services` 로 서비스의 `taskDefinition` 을 얻고 `aws ecs describe-task-definition` 의 `containerDefinitions[].image` 에서 태그를 읽는다. 그다음 main + `72d6ef0` cherry-pick 상태에서 `cd infra && npx cdk deploy TransmeetStack -c wsImageTag=<지금 배포된 태그>`. **`-c wsImageTag` 를 절대 빼지 않는다** — 기본값이 `latest` 라 빼면 의도하지 않은 이미지로 바뀔 수 있다. 확인: `aws dynamodb describe-table --table-name transmeet-messages` → `TableStatus: ACTIVE`, `describe-continuous-backups` → PITR `ENABLED`, ECS 태스크 정의 이미지 태그가 배포 전과 같음
 - [ ] **Step 3: 복사(1차).** `python -m scripts.migrate_messages copy`(드라이런)으로 회의 수·메시지 수가 125·33,008 근처인지 보고 → 사용자 확인 → `--execute`
-- [ ] **Step 4: 배포 2 — 코드 전환.** 녹음 중인 회의가 없는지 사용자에게 확인한다. 고유 태그로 백엔드 이미지를 푸시하고 `cdk deploy -c wsImageTag=<태그>`. `aws ecs describe-services` → `deployments` 1개, `runningCount == desiredCount`, 태스크 정의가 새 리비전
-- [ ] **Step 5: 복사(2차) + 검증.** `copy --execute` 다시, 그다음 `verify` → 불일치 0. 불일치가 있으면 멈추고 보고한다
+- [ ] **Step 4: 배포 2 — 코드 전환.** 이때 브랜치 전체를 main 에 병합한다(Step 1 의 사용자 확인 뒤). 녹음 중인 회의가 없는지 사용자에게 확인한다. 고유 태그로 백엔드 이미지를 푸시하고 `cdk deploy -c wsImageTag=<태그>`. `aws ecs describe-services` → `deployments` 1개, `runningCount == desiredCount`, 태스크 정의가 새 리비전
+- [ ] **Step 5: 복사(2차) + 검증 + 고아 확인.** `copy --execute` 다시, 그다음 `verify` → 불일치 0. 불일치가 있으면 멈추고 보고한다. 이어서 `orphans`(드라이런)로 회의 항목 없이 남은 메시지(1차 복사 뒤 옛 Lambda 로 지운 회의)를 회의별 개수로 본다 → 사용자 확인 → `orphans --execute`
 - [ ] **Step 6: 실제 확인.** 앱에서 긴 회의(메시지 1,156개) 하나를 열어 대화가 끝까지 보이는지, 새 회의에서 두세 마디 녹음 후 다시 열었을 때 보이는지 확인한다
-- [ ] **Step 7: 원본 제거.** `remove`(드라이런) → 사용자 확인 → `remove --execute`. 조건 실패 회의가 있으면 그 회의만 `copy`→`verify`→`remove`를 다시 한다
+- [ ] **Step 7: 원본 제거.** `remove`(드라이런) → 사용자 확인 → `remove --execute`. 조건 실패 회의가 있으면 그 회의만 `copy`→`verify`→`remove`를 다시 한다. 끝나면 `orphans`(드라이런)를 한 번 더 돌려 삭제·저장 경합으로 남은 고아가 있는지 보고, 있으면 사용자 확인 뒤 `orphans --execute`
+  - **되돌리기 한계:** 옛 코드로의 롤백은 이 단계(원본 제거) 전까지만 안전하다. 제거 뒤에는 회의 항목에 `messages` 가 없으므로 옛 코드로 돌아가면 모든 회의의 대화가 빈 채로 보인다
 - [ ] **Step 8: 효과 측정과 보고.** `GET /meetings` Lambda 실행 시간(p50·p95)과 BatchGet RCU 를 전환 전 값(1.3–1.85초, 약 1,800 RCU)과 비교해 보고한다. 목록용 GSI(방법 A)가 아직 필요한지 판단할 근거로 쓴다
