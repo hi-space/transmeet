@@ -5,7 +5,7 @@ Usage (from agent/, using the venv):
   .venv/bin/python scripts/invoke_batch.py [--workers 12] [--min-messages 10] [--include-existing]
                                            [--only id,id,...] [--out /tmp/batch.jsonl]
 
-Reads every meeting from the meetings table, skips `sample-*` items, meetings with fewer than
+Reads every meeting from the meetings table (utterances from the messages table), skips `sample-*` items, meetings with fewer than
 --min-messages raw utterances and (unless --include-existing) meetings that already have a page.
 Each meeting runs as its own Runtime session; a transient failure is retried once with a new
 session. Results are appended to --out as JSON lines and summarised at the end.
@@ -28,7 +28,7 @@ from botocore.config import Config
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import invoke_local as il  # noqa: E402
 
-TABLE = os.environ.get("MEETINGS_TABLE", "transmeet-meetings")
+TABLE = il.MEETINGS_TABLE
 PAGES_TABLE = os.environ.get("PAGES_TABLE", "transmeet-pages")
 _print_lock = threading.Lock()
 
@@ -39,6 +39,7 @@ def log(msg: str) -> None:
 
 
 def list_meetings() -> list:
+    """회의 항목을 모두 읽고, 각 회의의 대화를 메시지 테이블에서 읽어 item["messages"] 에 붙인다."""
     from runtime.publish import ddb_item_to_dict  # noqa: E402
     ddb = boto3.client("dynamodb", region_name=il.REGION)
     items, token = [], None
@@ -49,6 +50,8 @@ def list_meetings() -> list:
         token = res.get("LastEvaluatedKey")
         if not token:
             break
+    for item in items:
+        item["messages"] = il.load_messages(item["meetingId"], ddb)
     return items
 
 

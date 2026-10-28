@@ -30,6 +30,8 @@ sys.path.insert(0, str(AGENT))
 
 OUTPUTS = ROOT / "infra" / "outputs.json"
 REGION = os.environ.get("REGION", "us-east-1")
+MEETINGS_TABLE = os.environ.get("MEETINGS_TABLE", "transmeet-meetings")
+MESSAGES_TABLE = os.environ.get("MESSAGES_TABLE", "transmeet-messages")
 
 
 def load_outputs() -> dict:
@@ -113,21 +115,42 @@ def payload_from_sample(path: Path) -> dict:
     payload = build_payload(item, sample["messages"], sample["meeting"].get("modelId") or "global.anthropic.claude-opus-5-5")
     # 샘플 미팅은 DynamoDB 에 없으므로 발행(조건부 UpdateItem)이 통과하도록 아이템을 넣어 둔다
     ddb = boto3.client("dynamodb", region_name=REGION)
-    ddb.put_item(TableName=os.environ.get("MEETINGS_TABLE", "transmeet-meetings"), Item={
+    ddb.put_item(TableName=MEETINGS_TABLE, Item={
         "meetingId": {"S": item["meetingId"]}, "title": {"S": item["title"]},
         "createdAt": {"S": item["createdAt"]}, "status": {"S": "sample"}, "messages": {"L": []},
     })
     return payload
 
 
+def load_messages(meeting_id: str, ddb=None) -> list:
+    """회의 대화를 메시지 테이블에서 읽는다(강한 일관성, 페이지 끝까지, sk 오름차순).
+
+    대화는 회의 항목의 messages 가 아니라 transmeet-messages 테이블(meetingId, sk)에 있다.
+    """
+    from runtime.publish import ddb_item_to_dict  # noqa: E402
+    ddb = ddb or boto3.client("dynamodb", region_name=REGION)
+    rows, start_key = [], None
+    while True:
+        kw = {"TableName": MESSAGES_TABLE, "KeyConditionExpression": "meetingId = :m",
+              "ExpressionAttributeValues": {":m": {"S": meeting_id}}, "ConsistentRead": True,
+              **({"ExclusiveStartKey": start_key} if start_key else {})}
+        res = ddb.query(**kw)
+        rows.extend(res.get("Items", []))
+        start_key = res.get("LastEvaluatedKey")
+        if not start_key:
+            break
+    rows.sort(key=lambda r: r.get("sk", {}).get("S", ""))
+    return [ddb_item_to_dict(r) for r in rows]
+
+
 def payload_from_meeting(meeting_id: str) -> dict:
     from runtime.publish import ddb_item_to_dict  # noqa: E402
     ddb = boto3.client("dynamodb", region_name=REGION)
-    res = ddb.get_item(TableName=os.environ.get("MEETINGS_TABLE", "transmeet-meetings"), Key={"meetingId": {"S": meeting_id}})
+    res = ddb.get_item(TableName=MEETINGS_TABLE, Key={"meetingId": {"S": meeting_id}})
     if "Item" not in res:
         raise SystemExit(f"meeting not found: {meeting_id}")
     item = ddb_item_to_dict(res["Item"])
-    return build_payload(item, item.get("messages") or [], "global.anthropic.claude-opus-5-5")
+    return build_payload(item, load_messages(meeting_id, ddb), "global.anthropic.claude-opus-5-5")
 
 
 def print_event(event: dict) -> None:
