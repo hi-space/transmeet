@@ -13,12 +13,15 @@ export interface AudioPrepState {
 }
 
 interface Props {
-  isRecording: boolean
   wsConnected: boolean
   endState: MeetingEndState | null
   audioPrep: AudioPrepState | null
   onDownloadAudio: () => void
-  onEndMeeting: () => void
+}
+
+/** 서버가 아직 종료를 처리하는 중인지 (녹음 버튼 옆 "미팅 종료" 버튼이 쓴다) */
+export function isEnding(s: MeetingEndState | null): boolean {
+  return s !== null && (s.phase === 'audio' || s.phase === 'summary')
 }
 
 const EMAIL_STATUS_TEXT: Record<NonNullable<MeetingEndServerMessage['status']>, string> = {
@@ -44,16 +47,13 @@ function endStatusText(s: MeetingEndState): string {
   }
 }
 
-/** 녹음 파일 다운로드 + 미팅 종료. 녹음 버튼 줄(ControlPanel) 바로 위에 붙는다. */
+/** 녹음 파일 다운로드 + 미팅 종료 진행 상태. 녹음 버튼 줄(ControlPanel) 바로 위에 붙는다. */
 export default function MeetingActions({
-  isRecording,
   wsConnected,
   endState,
   audioPrep,
   onDownloadAudio,
-  onEndMeeting,
 }: Props) {
-  const ending = endState !== null && (endState.phase === 'audio' || endState.phase === 'summary')
   const preparing = audioPrep?.pending ?? false
   const message = audioPrep?.error ?? (endState ? endStatusText(endState) : null)
   const isError =
@@ -96,13 +96,6 @@ export default function MeetingActions({
           <path d="M5 21h14" />
         </svg>
         {preparing ? '준비 중…' : '녹음 파일'}
-      </button>
-      <button
-        onClick={onEndMeeting}
-        disabled={!wsConnected || ending}
-        className={`${btn} bg-slate-900 dark:bg-slate-100 border-transparent text-white dark:text-slate-900 hover:opacity-90`}
-      >
-        {ending ? '종료 중…' : isRecording ? '녹음 멈추고 미팅 종료' : '미팅 종료'}
       </button>
     </div>
   )

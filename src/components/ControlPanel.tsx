@@ -13,6 +13,10 @@ interface Props {
   audioLevel?: number // 0–1, real-time mic amplitude
   isTtsPending?: boolean
   activeTab?: 'voice' | 'notes' | 'summary' | 'page'
+  /** 미팅 종료 — 녹음을 멈추고 요약·메일까지 서버가 마무리한다. 없으면 버튼을 그리지 않는다 (목업 모드) */
+  onEndMeeting?: () => void
+  isEndingMeeting?: boolean
+  endMeetingDisabled?: boolean
 }
 
 export default function ControlPanel({
@@ -25,6 +29,9 @@ export default function ControlPanel({
   audioLevel = 0,
   isTtsPending = false,
   activeTab = 'voice',
+  onEndMeeting,
+  isEndingMeeting = false,
+  endMeetingDisabled = false,
 }: Props) {
   return (
     <div className="glass-footer relative z-20 px-4 pt-2 pb-4 flex-shrink-0">
@@ -98,6 +105,17 @@ export default function ControlPanel({
               )}
             </button>
           </div>
+
+          {/* 미팅 종료 — 녹음과 같은 흐름의 마지막 단계라 녹음 버튼 옆에 둔다 */}
+          {onEndMeeting && (
+            <button
+              onClick={onEndMeeting}
+              disabled={endMeetingDisabled || isEndingMeeting}
+              className="h-9 px-3 rounded-full text-xs font-medium border border-slate-200 dark:border-slate-700 bg-white/70 dark:bg-slate-900/60 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-800 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap"
+            >
+              {isEndingMeeting ? '종료 중…' : '미팅 종료'}
+            </button>
+          )}
         </div>
 
         {/* 데스크톱 전용 구분선 */}

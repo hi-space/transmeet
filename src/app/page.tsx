@@ -15,6 +15,7 @@ import NotesArea from '@/components/NotesArea'
 import VoiceArea, { VoiceFontSizeControl } from '@/components/VoiceArea'
 import EditableTitle from '@/components/EditableTitle'
 import MeetingActions, {
+  isEnding,
   type AudioPrepState,
   type MeetingEndState,
 } from '@/components/MeetingActions'
@@ -2222,12 +2223,10 @@ export default function Home() {
 
       {HAS_API && activeMeetingId && (
         <MeetingActions
-          isRecording={isRecording}
           wsConnected={wsStatus === 'connected'}
           endState={meetingEnd?.meetingId === activeMeetingId ? meetingEnd : null}
           audioPrep={audioPrep?.meetingId === activeMeetingId ? audioPrep : null}
           onDownloadAudio={handleDownloadAudio}
-          onEndMeeting={handleEndMeeting}
         />
       )}
 
@@ -2241,6 +2240,9 @@ export default function Home() {
         audioLevel={audioLevel}
         isTtsPending={isTtsPending}
         activeTab={activeTab}
+        onEndMeeting={HAS_API && activeMeetingId ? handleEndMeeting : undefined}
+        isEndingMeeting={isEnding(meetingEnd?.meetingId === activeMeetingId ? meetingEnd : null)}
+        endMeetingDisabled={wsStatus !== 'connected'}
       />
 
       {settingsOpen && (
