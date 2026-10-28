@@ -7,9 +7,11 @@
           messageCount 가 테이블 개수와 다르면 경고만 한다(막지 않음)
   remove  회의마다 다시 검증하고, 일치한 회의만 원본 messages 를 지운다(조건 size(messages) = 검증한 개수).
           messageCount 는 앱이 트랜잭션 ADD 로 올리므로 건드리지 않는다
+  orphans 메시지 테이블 키만 스캔해 회의 항목이 없는 meetingId(고아)를 회의별 개수로 보고한다.
+          --execute 면 그 메시지를 지운다(BatchWrite 25개씩)
 
 기본은 드라이런이다(할 일만 출력, 쓰기 0회). 실제로 쓰려면 --execute 를 붙인다.
-backend/ 에서 실행: python -m scripts.migrate_messages {copy,verify,remove} [--execute] [--meeting-id ID]
+backend/ 에서 실행: python -m scripts.migrate_messages {copy,verify,remove,orphans} [--execute] [--meeting-id ID]
 """
 import argparse
 import random
@@ -56,7 +58,7 @@ def _to_item(meeting_id: str, message: Dict) -> Dict:
 
 
 def _batch_put(ddb, requests: List[Dict]) -> None:
-    """25개 이하 PutRequest 를 쓰고, 미처리분은 간격을 늘려 가며 다시 보낸다. 끝내 남으면 예외."""
+    """25개 이하 Put/DeleteRequest 를 쓰고, 미처리분은 간격을 늘려 가며 다시 보낸다. 끝내 남으면 예외."""
     pending = requests
     for attempt in range(MAX_ATTEMPTS):
         if attempt:
@@ -265,13 +267,94 @@ def run(
     return summary
 
 
+def _scan_message_keys(ddb) -> Dict[str, List[str]]:
+    """메시지 테이블의 키(meetingId, sk)만 페이지 끝까지 읽어 회의별 sk 목록으로 묶는다."""
+    keys: Dict[str, List[str]] = {}
+    start_key = None
+    while True:
+        params = {
+            "TableName": config.MESSAGES_TABLE,
+            "ProjectionExpression": "meetingId, sk",
+            "ConsistentRead": True,
+        }
+        if start_key:
+            params["ExclusiveStartKey"] = start_key
+        resp = ddb.scan(**params)
+        for item in resp.get("Items", []):
+            keys.setdefault(item["meetingId"]["S"], []).append(item["sk"]["S"])
+        start_key = resp.get("LastEvaluatedKey")
+        if not start_key:
+            return keys
+
+
+def _meeting_exists(ddb, meeting_id: str) -> bool:
+    resp = ddb.get_item(
+        TableName=config.MEETINGS_TABLE,
+        Key={"meetingId": {"S": meeting_id}},
+        ProjectionExpression="meetingId",
+        ConsistentRead=True,
+    )
+    return "Item" in resp
+
+
+def delete_messages(ddb, meeting_id: str, sks: List[str]) -> int:
+    """회의의 메시지를 25개씩 BatchWrite 로 지운다. 지운 개수를 돌려준다."""
+    for start in range(0, len(sks), BATCH_SIZE):
+        chunk = sks[start:start + BATCH_SIZE]
+        _batch_put(ddb, [
+            {"DeleteRequest": {"Key": {"meetingId": {"S": meeting_id}, "sk": {"S": sk}}}}
+            for sk in chunk
+        ])
+    return len(sks)
+
+
+def run_orphans(
+    ddb,
+    *,
+    execute: bool = False,
+    meeting_id: Optional[str] = None,
+    out: Callable[..., None] = print,
+) -> Dict:
+    """회의 항목이 없는 메시지(고아)를 찾는다. --execute 면 지운다.
+
+    옛 삭제 Lambda 는 회의 항목만 지웠으므로, 첫 copy 와 두 번째 배포 사이에 지운 회의의
+    메시지가 테이블에 주인 없이 남는다. 발언 저장은 회의 항목 존재를 조건으로 하므로
+    회의 항목이 없는 meetingId 의 메시지는 다시 주인을 얻지 않는다.
+    """
+    mode = "실행" if execute else "드라이런"
+    keys = _scan_message_keys(ddb)
+    if meeting_id:
+        keys = {meeting_id: keys[meeting_id]} if meeting_id in keys else {}
+    orphans: Dict[str, int] = {}
+    deleted = 0
+    for mid in sorted(keys):
+        if _meeting_exists(ddb, mid):
+            continue
+        orphans[mid] = len(keys[mid])
+        if execute:
+            deleted += delete_messages(ddb, mid, keys[mid])
+            out(f"[{mode}] {mid}: 회의 없음 — 메시지 {len(keys[mid])}건 삭제")
+        else:
+            out(f"[{mode}] {mid}: 회의 없음 — 메시지 {len(keys[mid])}건 삭제 예정")
+    out(
+        f"\n요약(orphans, {mode}): 메시지가 있는 회의 {len(keys)}개 · 고아 회의 {len(orphans)}개"
+        f" · 고아 메시지 {sum(orphans.values())}건 · 삭제 {deleted}"
+    )
+    if orphans and not execute:
+        out("드라이런이라 아무것도 쓰지 않았다. 실제로 지우려면 --execute 를 붙인다.")
+    return {"command": "orphans", "execute": execute, "orphans": orphans, "deleted": deleted}
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("command", choices=["copy", "verify", "remove"])
+    parser.add_argument("command", choices=["copy", "verify", "remove", "orphans"])
     parser.add_argument("--execute", action="store_true", help="실제로 쓴다(없으면 드라이런)")
     parser.add_argument("--meeting-id", help="이 회의 하나만 처리")
     args = parser.parse_args(argv)
     ddb = boto3.client("dynamodb", region_name=config.REGION)
+    if args.command == "orphans":
+        run_orphans(ddb, execute=args.execute, meeting_id=args.meeting_id)
+        return 0
     summary = run(ddb, args.command, execute=args.execute, meeting_id=args.meeting_id)
     # 불일치·조건 실패가 있으면 0 이 아닌 코드로 끝내 다음 단계로 넘어가지 않게 한다
     return 1 if summary["mismatched_ids"] or summary["condition_failed_ids"] else 0

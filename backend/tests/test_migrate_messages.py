@@ -46,6 +46,8 @@ class FakeDdb:
 
     def scan(self, **kw):
         self._log("scan", kw)
+        if kw["TableName"] == config.MESSAGES_TABLE:
+            return self._scan_messages(kw)
         assert kw["TableName"] == config.MEETINGS_TABLE
         assert kw["ProjectionExpression"] == mm.PROJECTION
         ids = sorted(self.meetings)
@@ -54,6 +56,21 @@ class FakeDdb:
         resp = {"Items": [self._project(self.meetings[i]) for i in chunk]}
         if start + self.page < len(ids):
             resp["LastEvaluatedKey"] = {"meetingId": {"S": chunk[-1]}}
+        return resp
+
+    def _scan_messages(self, kw):
+        assert kw["ProjectionExpression"] == "meetingId, sk"
+        rows = [
+            {"meetingId": {"S": mid}, "sk": {"S": sk}}
+            for mid in sorted(self.messages) for sk in sorted(self.messages[mid])
+        ]
+        start = 0
+        if "ExclusiveStartKey" in kw:
+            start = rows.index(kw["ExclusiveStartKey"]) + 1
+        chunk = rows[start:start + self.page]
+        resp = {"Items": chunk}
+        if start + self.page < len(rows):
+            resp["LastEvaluatedKey"] = chunk[-1]
         return resp
 
     @staticmethod
@@ -92,6 +109,14 @@ class FakeDdb:
         else:
             done, rest = reqs, []
         for r in done:
+            if "DeleteRequest" in r:
+                key = r["DeleteRequest"]["Key"]
+                assert set(key) == {"meetingId", "sk"}
+                rows = self.messages.get(key["meetingId"]["S"], {})
+                rows.pop(key["sk"]["S"], None)
+                if not rows:
+                    self.messages.pop(key["meetingId"]["S"], None)
+                continue
             item = r["PutRequest"]["Item"]
             self.messages.setdefault(item["meetingId"]["S"], {})[item["sk"]["S"]] = item
         return {"UnprocessedItems": {config.MESSAGES_TABLE: rest} if rest else {}}
@@ -339,3 +364,68 @@ def test_remove_raises_after_four_conflict_retries(monkeypatch):
     assert ddb.update_attempts == 5
     assert len(delays) == 4
     assert len(ddb.meetings["a"]["messages"]["L"]) == 2
+
+
+def _orphan_setup():
+    """회의 live 는 남아 있고, gone 은 회의 항목만 지워져 메시지 30건이 고아로 남았다."""
+    live, gone = _meeting("live", 3), _meeting("gone", 30)
+    ddb = FakeDdb([live, gone], page=4)
+    mm.copy_meeting(ddb, live)
+    mm.copy_meeting(ddb, gone)
+    del ddb.meetings["gone"]  # 옛 삭제 Lambda 는 회의 항목만 지웠다
+    ddb.calls.clear()
+    return ddb
+
+
+def test_orphans_dry_run_reports_and_writes_nothing():
+    ddb = _orphan_setup()
+    lines = []
+    summary = mm.run_orphans(ddb, execute=False, out=lambda *a: lines.append(" ".join(map(str, a))))
+    assert summary["orphans"] == {"gone": 30}
+    assert summary["deleted"] == 0
+    assert ddb.writes() == []
+    assert len(ddb.messages["gone"]) == 30
+    assert any("gone" in line and "30" in line for line in lines)
+    # 메시지 테이블 스캔은 키만, 페이지를 끝까지 따라간다
+    scans = [kw for op, kw in ddb.calls if op == "scan"]
+    assert all(kw["TableName"] == config.MESSAGES_TABLE for kw in scans)
+    assert len(scans) == 9  # 33건 / 4
+    # 회의 존재 확인은 강한 일관성
+    gets = [kw for op, kw in ddb.calls if op == "get_item"]
+    assert gets and all(kw["ConsistentRead"] is True for kw in gets)
+
+
+def test_orphans_execute_deletes_only_orphans():
+    ddb = _orphan_setup()
+    summary = mm.run_orphans(ddb, execute=True, out=lambda *a: None)
+    assert summary["orphans"] == {"gone": 30}
+    assert summary["deleted"] == 30
+    assert "gone" not in ddb.messages
+    assert len(ddb.messages["live"]) == 3
+    sizes = [len(kw["RequestItems"][config.MESSAGES_TABLE]) for op, kw in ddb.writes()]
+    assert sizes == [25, 5]
+    # 다시 돌리면 고아가 없다
+    assert mm.run_orphans(ddb, execute=False, out=lambda *a: None)["orphans"] == {}
+
+
+def test_orphans_execute_retries_unprocessed_and_raises_on_leftovers():
+    ddb = _orphan_setup()
+    ddb.unprocessed_rounds = 2
+    assert mm.run_orphans(ddb, execute=True, out=lambda *a: None)["deleted"] == 30
+    assert "gone" not in ddb.messages
+
+    ddb = _orphan_setup()
+    ddb.unprocessed_rounds = 10**6
+    with pytest.raises(RuntimeError):
+        mm.run_orphans(ddb, execute=True, out=lambda *a: None)
+    assert len(ddb.messages["live"]) == 3
+
+
+def test_orphans_cli_dispatch(monkeypatch):
+    ddb = _orphan_setup()
+    monkeypatch.setattr(mm.boto3, "client", lambda *a, **kw: ddb)
+    monkeypatch.setattr("builtins.print", lambda *a, **kw: None)
+    assert mm.main(["orphans"]) == 0
+    assert ddb.writes() == []
+    assert mm.main(["orphans", "--execute"]) == 0
+    assert "gone" not in ddb.messages and len(ddb.messages["live"]) == 3
