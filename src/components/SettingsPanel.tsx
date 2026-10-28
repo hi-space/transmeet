@@ -5,6 +5,7 @@ import type { Settings } from '@/hooks/useSettings'
 import { supportsSystemAudio } from '@/lib/platform'
 import ThemeSettings from '@/components/ThemeSettings'
 import EmailNotifySetting from '@/components/EmailNotifySetting'
+import { TRANSLATION_MODELS } from '@/lib/translationModels'
 
 interface Props {
   settings: Settings
@@ -26,7 +27,7 @@ const VOICES: Record<'en' | 'ko', { id: string; label: string; engines: string[]
 // ─── Style helpers ───────────────────────────────────────────────────────────
 
 const pill = (active: boolean) =>
-  `px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
+  `w-full min-w-0 min-h-10 px-2 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer [@media(pointer:coarse)]:min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600 dark:focus-visible:outline-accent-400 ${
     active
       ? 'bg-primary text-primary-foreground'
       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
@@ -136,11 +137,11 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="settings-title"
-        className="relative z-10 w-full min-w-0 sm:max-w-md glass-panel sm:rounded-xl rounded-t-xl shadow-xl shadow-black/20 slide-up-fade flex flex-col overflow-hidden"
+        className="relative z-10 w-full min-w-0 sm:max-w-lg glass-panel sm:rounded-xl rounded-t-xl shadow-xl shadow-black/20 slide-up-fade flex flex-col overflow-hidden"
         style={{ maxHeight: 'min(88dvh, 52rem)' }}
       >
         {/* Header */}
-        <div className="flex shrink-0 items-center justify-between px-4 pt-2 pb-1">
+        <div className="flex shrink-0 items-center justify-between px-5 pt-3 pb-2">
           <div className="flex items-center gap-2">
             <svg
               viewBox="0 0 24 24"
@@ -155,7 +156,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
             </svg>
             <h2
               id="settings-title"
-              className="text-sm font-semibold text-slate-700 dark:text-slate-200"
+              className="text-base font-semibold text-slate-700 dark:text-slate-200"
             >
               설정
             </h2>
@@ -165,7 +166,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
             type="button"
             onClick={onClose}
             aria-label="설정 닫기"
-            className="min-w-8 min-h-8 [@media(pointer:coarse)]:min-w-[44px] [@media(pointer:coarse)]:min-h-[44px] flex items-center justify-center rounded-md text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-600 dark:focus-visible:outline-accent-400"
+            className="min-w-10 min-h-10 [@media(pointer:coarse)]:min-w-[44px] [@media(pointer:coarse)]:min-h-[44px] flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-600 dark:focus-visible:outline-accent-400"
           >
             <svg
               viewBox="0 0 24 24"
@@ -183,7 +184,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
         <div
           role="tablist"
           aria-label="설정 분류"
-          className="mx-4 mb-1 grid shrink-0 grid-cols-2 gap-1 rounded-lg bg-slate-100 p-0.5 dark:bg-slate-800/70"
+          className="mx-5 mb-1 grid shrink-0 grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 dark:bg-slate-800/70"
         >
           {(
             [
@@ -214,7 +215,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
                 setActiveTab(next)
                 document.getElementById(`settings-tab-${next}`)?.focus()
               }}
-              className={`min-h-8 [@media(pointer:coarse)]:min-h-[44px] rounded-md px-3 py-1 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-600 dark:focus-visible:outline-accent-400 ${
+              className={`min-h-10 [@media(pointer:coarse)]:min-h-[44px] rounded-md px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-600 dark:focus-visible:outline-accent-400 ${
                 activeTab === value
                   ? 'bg-white text-accent-700 shadow-sm dark:bg-slate-700 dark:text-accent-300'
                   : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
@@ -228,8 +229,8 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
         {/* The title and tabs stay available while the settings scroll. */}
         <div
           ref={scrollRef}
-          className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pt-3"
-          style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 pt-4"
+          style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}
         >
           <div
             id="settings-panel-theme"
@@ -253,7 +254,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
               <p className="text-[0.6875rem] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                 오디오 소스
               </p>
-              <div className="flex gap-1.5">
+              <div className="grid grid-flow-col auto-cols-fr gap-2">
                 {(
                   [
                     ['mic', '마이크'],
@@ -300,7 +301,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
               <p className="text-[0.6875rem] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                 STT 엔진
               </p>
-              <div className="flex gap-1.5">
+              <div className="grid grid-flow-col auto-cols-fr gap-2">
                 {(
                   [
                     ['transcribe', 'AWS Transcribe'],
@@ -333,7 +334,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
               <p className="text-[0.6875rem] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                 번역 타이밍
               </p>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="grid grid-flow-col auto-cols-fr gap-2">
                 {(
                   [
                     ['sentence', '문장 완료 시'],
@@ -367,7 +368,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
               <p className="text-[0.6875rem] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                 자동 요약
               </p>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="grid grid-flow-col auto-cols-fr gap-2">
                 {(
                   [
                     [0, '비활성화'],
@@ -400,7 +401,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
               <p className="text-[0.6875rem] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                 Partial 번역 모드
               </p>
-              <div className="flex gap-1.5">
+              <div className="grid grid-flow-col auto-cols-fr gap-2">
                 {(
                   [
                     ['sentence', '문장 경계'],
@@ -425,7 +426,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
               {settings.partialTranslationMode === 'realtime' && (
                 <div className="mt-2">
                   <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">번역 간격</p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="grid grid-flow-col auto-cols-fr gap-2">
                     {(
                       [
                         [500, '0.5초'],
@@ -456,7 +457,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
               <p className="text-[0.6875rem] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                 말풍선 분리 기준
               </p>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="grid grid-flow-col auto-cols-fr gap-2">
                 {(
                   [
                     [3000, '3초'],
@@ -487,7 +488,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
               <p className="text-[0.6875rem] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                 말풍선당 최대 문장 수
               </p>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="grid grid-flow-col auto-cols-fr gap-2">
                 {(
                   [
                     [1, '문장마다'],
@@ -525,18 +526,13 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
               <p className="text-[0.6875rem] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                 번역 모델
               </p>
-              <div className="flex flex-wrap gap-1.5">
-                {(
-                  [
-                    ['us.amazon.nova-micro-v1:0', 'Nova Micro'],
-                    ['global.amazon.nova-2-lite-v1:0', 'Nova 2 Lite'],
-                    ['global.anthropic.claude-haiku-5-5', 'Haiku 5.5'],
-                  ] as const
-                ).map(([val, label]) => (
+              <div className="grid grid-flow-col auto-cols-fr gap-2">
+                {TRANSLATION_MODELS.map(({ id, label }) => (
                   <button
-                    key={val}
-                    onClick={() => handleUpdate({ translationModel: val })}
-                    className={pill(settings.translationModel === val)}
+                    key={id}
+                    onClick={() => handleUpdate({ translationModel: id })}
+                    aria-pressed={settings.translationModel === id}
+                    className={pill(settings.translationModel === id)}
                   >
                     {label}
                   </button>
@@ -573,7 +569,7 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
               {/* Voice selection */}
               <div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">목소리</p>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="grid grid-flow-col auto-cols-fr gap-2">
                   {availableVoices.map((v) => (
                     <button
                       key={v.id}

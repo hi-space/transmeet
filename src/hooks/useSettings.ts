@@ -1,6 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import {
+  DEFAULT_TRANSLATION_MODEL_ID,
+  normalizeTranslationModel,
+  type TranslationModelId,
+} from '@/lib/translationModels'
 
 export interface Settings {
   /**
@@ -16,7 +21,7 @@ export interface Settings {
   ttsAutoPlay: boolean
   pollyEngine: 'generative' | 'neural' | 'standard'
   pollyVoiceId: string
-  translationModel: string
+  translationModel: TranslationModelId
   translationTiming: 'sentence' | 'realtime' | 'manual'
   partialTranslationMode: 'realtime' | 'sentence'
   partialThrottleMs: 500 | 1000 | 1500 | 2000 | 3000
@@ -49,7 +54,7 @@ const DEFAULT: Settings = {
   ttsAutoPlay: true,
   pollyEngine: 'generative',
   pollyVoiceId: 'Ruth',
-  translationModel: 'global.anthropic.claude-haiku-5-5',
+  translationModel: DEFAULT_TRANSLATION_MODEL_ID,
   translationTiming: 'realtime',
   partialTranslationMode: 'sentence',
   partialThrottleMs: 1500,
@@ -62,8 +67,6 @@ const DEFAULT: Settings = {
 
 const STORAGE_KEY = 'transmeet-settings'
 
-const LEGACY_MODEL_IDS = new Set(['global.anthropic.claude-haiku-4-5-20251001-v1:0'])
-
 export function useSettings() {
   const [settings, setSettings] = useState<Settings>(DEFAULT)
 
@@ -72,9 +75,8 @@ export function useSettings() {
       const raw = localStorage.getItem(STORAGE_KEY)
       if (raw) {
         const loaded = { ...DEFAULT, ...(JSON.parse(raw) as Partial<Settings>) }
-        // 이전 세대 모델 ID 가 저장돼 있으면 최신 세대로 올린다 (선택지에서 사라진 값이 남지 않게)
-        if (LEGACY_MODEL_IDS.has(loaded.translationModel))
-          loaded.translationModel = DEFAULT.translationModel
+        // 이전 모델 선택도 현재 제공하는 글로벌 추론 프로필로 정리한다.
+        loaded.translationModel = normalizeTranslationModel(loaded.translationModel)
         // engine이 sourceLang을 지원하지 않으면 기본값으로 자동 수정
         const ttsLang = loaded.sourceLang === 'auto' ? 'en' : loaded.sourceLang
         const supportedEngines = LANG_VOICE_ENGINES[ttsLang]
@@ -94,6 +96,7 @@ export function useSettings() {
   const updateSettings = (patch: Partial<Settings>) => {
     setSettings((prev) => {
       const next = { ...prev, ...patch }
+      next.translationModel = normalizeTranslationModel(next.translationModel)
 
       // sourceLang 이 바뀌면 TTS 목소리/엔진을 해당 언어 기본값으로 되돌린다.
       // (ko 는 Seoyeon/neural 만 지원하므로 en 설정이 그대로 남으면 재생이 실패한다)

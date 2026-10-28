@@ -64,7 +64,7 @@ export default function EmailNotifySetting({ settings, onUpdate }: Props) {
           aria-label="미팅 종료 시 메일로 받기 토글"
           aria-pressed={settings.emailOnEnd}
           className={`relative shrink-0 w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none ${
-            settings.emailOnEnd ? 'bg-cyan-600' : 'bg-slate-200 dark:bg-slate-700'
+            settings.emailOnEnd ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-700'
           }`}
         >
           <span
@@ -93,7 +93,7 @@ export default function EmailNotifySetting({ settings, onUpdate }: Props) {
             <button
               onClick={requestVerification}
               disabled={busy}
-              className="text-[0.6875rem] text-cyan-600 dark:text-cyan-400 hover:underline disabled:opacity-50"
+              className="text-[0.6875rem] text-accent-700 dark:text-accent-400 hover:underline disabled:opacity-50"
             >
               {busy
                 ? '보내는 중…'

@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:theme": "node --experimental-strip-types --experimental-default-type=module --test tests/theme.test.mjs",
+    "test:settings": "node --experimental-strip-types --experimental-default-type=module --test tests/theme.test.mjs tests/translationModels.test.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

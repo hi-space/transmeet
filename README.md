@@ -17,7 +17,7 @@ TransMeet은 **실시간 음성 번역 웹앱**입니다. 영어 화자의 발�
 
 - **실시간 STT** — 영어 음성 → 텍스트 (Whisper large-v3-turbo / Amazon Transcribe 선택 가능)
 - **Transcribe 언어 토글** — 영어/한글 전환 가능 (Transcribe 모드)
-- **실시간 번역** — 영어 ↔ 한글 양방향 번역 (Bedrock Claude Haiku / Sonnet)
+- **실시간 번역** — 영어 ↔ 한글 양방향 번역 (Bedrock Haiku 5.5 / GPT-6 Luna 선택)
 - **스트리밍 번역** — 번역 진행 중 부분 텍스트 실시간 표시
 - **화자 구분** — Speaker Diarization으로 화자별 메시지 분리
 - **대화 요약** — 자동/수동 요약 생성 (Bedrock Claude Sonnet) + 글자 크기 조절
@@ -67,7 +67,16 @@ npm run format
 
 변경사항은 즉시 적용되며 브라우저에 저장됩니다. 헤더의 라이트/다크 전환도 같은 설정을 사용합니다. **테마 초기화**는 화면 관련 설정만 되돌리며 음성·번역 설정은 유지합니다.
 
-테마 저장값 검증과 초기 화면 적용 테스트는 Node.js 22.6 이상에서 `npm run test:theme`로 실행합니다.
+테마·번역 모델 저장값 검증과 초기 화면 적용 테스트는 Node.js 22.6 이상에서 `npm run test:settings`로 실행합니다.
+
+### 번역 모델
+
+**설정 → 음성 · 번역**에서 두 모델을 선택할 수 있습니다. 기본값은 Haiku 5.5입니다.
+
+- **Haiku 5.5:** `global.anthropic.claude-haiku-5-5`
+- **GPT-6 Luna:** `global.openai.gpt-6-luna`
+
+두 모델 모두 Bedrock 글로벌 추론 프로필을 사용합니다. 이전 Nova 모델 선택은 Haiku 5.5로 정리됩니다. 프로필·호출 검증 기록은 [번역 모델 검증](docs/translation-models.md)을 참고하세요.
 
 ## Project Structure
 

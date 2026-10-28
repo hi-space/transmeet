@@ -14,21 +14,34 @@ const ACCENTS: { value: ThemePreferences['accent']; label: string; color: string
   { value: 'rose', label: '로즈', color: '#a25670' },
 ]
 
-const FONTS: { value: ThemePreferences['font']; label: string; family: string }[] = [
+const FONTS: {
+  value: ThemePreferences['font']
+  label: string
+  shortLabel: string
+  family: string
+}[] = [
   {
     value: 'default',
     label: '기본 · Inter',
+    shortLabel: 'Inter',
     family: 'var(--font-geist-sans), system-ui, sans-serif',
   },
-  { value: 'sans', label: '고딕 · Noto Sans', family: 'var(--font-noto-sans), sans-serif' },
+  {
+    value: 'sans',
+    label: '고딕 · Noto Sans',
+    shortLabel: 'Noto',
+    family: 'var(--font-noto-sans), sans-serif',
+  },
   {
     value: 'plex',
     label: 'IBM Plex Sans KR',
+    shortLabel: 'Plex',
     family: 'var(--font-ibm-plex), system-ui, sans-serif',
   },
   {
     value: 'mono',
     label: '고정폭 · JetBrains',
+    shortLabel: 'Mono',
     family: 'var(--font-geist-mono), var(--font-noto-sans), monospace',
   },
 ]
@@ -65,30 +78,43 @@ function Choice({
     <button
       type="button"
       aria-label={label}
+      title={label}
       aria-pressed={selected}
       onClick={onClick}
-      className={`inline-flex min-h-8 min-w-8 items-center justify-center whitespace-nowrap rounded-md border px-1.5 py-1 text-xs font-medium transition-colors motion-reduce:transition-none [@media(pointer:coarse)]:min-h-[44px] [@media(pointer:coarse)]:min-w-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600 dark:focus-visible:outline-accent-400 ${
+      className={`flex min-h-10 min-w-0 w-full items-center justify-center rounded-lg border px-1.5 py-1.5 text-xs font-medium transition-colors motion-reduce:transition-none [@media(pointer:coarse)]:min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600 dark:focus-visible:outline-accent-400 ${
         selected
           ? 'border-accent-600 bg-accent-50 text-accent-700 dark:border-accent-400 dark:bg-accent-500/10 dark:text-accent-300'
           : 'border-slate-200 bg-white/70 text-slate-600 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:border-slate-500'
       }`}
     >
       {children ?? (
-        <span className="flex items-center justify-center gap-1">
+        <span className="flex min-w-0 items-center justify-center gap-1">
           {selected && <CheckMark className="h-3 w-3 shrink-0" />}
-          {label}
+          <span>{label}</span>
         </span>
       )}
     </button>
   )
 }
 
-function SettingRow({ id, label, children }: { id: string; label: string; children: ReactNode }) {
+function SettingRow({
+  id,
+  label,
+  children,
+  stacked = false,
+}: {
+  id: string
+  label: string
+  children: ReactNode
+  stacked?: boolean
+}) {
   return (
-    <div className="grid gap-1.5 min-[360px]:grid-cols-[4.5rem_minmax(0,1fr)] min-[360px]:gap-2 sm:grid-cols-[5.5rem_minmax(0,1fr)] sm:gap-3">
+    <div className={`grid gap-2 ${stacked ? '' : 'sm:grid-cols-[6rem_minmax(0,1fr)] sm:gap-4'}`}>
       <p
         id={`${id}-label`}
-        className="text-xs font-medium leading-5 text-slate-600 dark:text-slate-300 min-[360px]:pt-1.5"
+        className={`text-[0.8125rem] font-medium leading-5 text-slate-700 dark:text-slate-200 ${
+          stacked ? '' : 'sm:pt-2.5'
+        }`}
       >
         {label}
       </p>
@@ -115,7 +141,7 @@ export default function ThemeSettings({ voiceFontSize, onVoiceFontSizeChange }: 
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <p role="status" className="text-[0.6875rem] leading-4 text-slate-500 dark:text-slate-400">
         {storageUnavailable
           ? '저장할 수 없어 이번 방문에만 적용됩니다.'
@@ -123,7 +149,7 @@ export default function ThemeSettings({ voiceFontSize, onVoiceFontSizeChange }: 
       </p>
 
       <SettingRow id="theme-mode" label="화면 모드">
-        <div className="flex flex-wrap gap-1">
+        <div className="grid grid-cols-3 gap-2">
           {(
             [
               ['system', '시스템'],
@@ -142,7 +168,7 @@ export default function ThemeSettings({ voiceFontSize, onVoiceFontSizeChange }: 
       </SettingRow>
 
       <SettingRow id="theme-accent" label="포인트 색상">
-        <div className="flex max-w-[14rem] flex-wrap gap-1">
+        <div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3">
           {ACCENTS.map(({ value, label, color }) => (
             <Choice
               key={value}
@@ -150,7 +176,7 @@ export default function ThemeSettings({ voiceFontSize, onVoiceFontSizeChange }: 
               selected={theme.accent === value}
               onClick={() => update({ accent: value })}
             >
-              <span className="flex items-center gap-1">
+              <span className="flex items-center gap-1.5">
                 <span
                   className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-black/10"
                   style={{ backgroundColor: color }}
@@ -167,24 +193,39 @@ export default function ThemeSettings({ voiceFontSize, onVoiceFontSizeChange }: 
         </div>
       </SettingRow>
 
-      <SettingRow id="theme-font" label="글꼴">
-        <select
-          aria-labelledby="theme-font-label"
-          value={theme.font}
-          onChange={(event) => update({ font: event.target.value as ThemePreferences['font'] })}
-          style={{ fontFamily: FONTS.find(({ value }) => value === theme.font)?.family }}
-          className="min-h-8 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 [@media(pointer:coarse)]:min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:focus-visible:outline-accent-400"
-        >
-          {FONTS.map(({ value, label }) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
+      <SettingRow id="theme-font" label="글꼴" stacked>
+        <div className="grid grid-cols-4 gap-2">
+          {FONTS.map(({ value, label, shortLabel, family }) => (
+            <Choice
+              key={value}
+              label={label}
+              selected={theme.font === value}
+              onClick={() => update({ font: value })}
+            >
+              <span className="flex w-full min-w-0 flex-col items-center gap-1.5 py-1">
+                <span
+                  style={{ fontFamily: family }}
+                  className="whitespace-nowrap text-sm font-normal leading-6 sm:text-lg"
+                  aria-hidden="true"
+                >
+                  <span className="sm:hidden">가Aa</span>
+                  <span className="hidden sm:inline">한글 Aa</span>
+                </span>
+                <span
+                  className={`whitespace-nowrap text-[0.6875rem] leading-4 ${
+                    theme.font === value ? 'underline underline-offset-4' : ''
+                  }`}
+                >
+                  {shortLabel}
+                </span>
+              </span>
+            </Choice>
           ))}
-        </select>
+        </div>
       </SettingRow>
 
       <SettingRow id="theme-scale" label="화면 크기">
-        <div className="flex flex-wrap gap-1">
+        <div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-4">
           {([90, 100, 110, 120] as const).map((scale) => (
             <Choice
               key={scale}
@@ -197,7 +238,7 @@ export default function ThemeSettings({ voiceFontSize, onVoiceFontSizeChange }: 
       </SettingRow>
 
       <SettingRow id="theme-voice-size" label="말풍선 크기">
-        <div className="flex flex-wrap gap-1">
+        <div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-4">
           {(
             [
               ['compact', '작게'],
@@ -220,7 +261,7 @@ export default function ThemeSettings({ voiceFontSize, onVoiceFontSizeChange }: 
       </SettingRow>
 
       <SettingRow id="theme-spacing" label="줄 간격">
-        <div className="flex flex-wrap gap-1">
+        <div className="grid grid-cols-3 gap-2">
           {(
             [
               ['compact', '촘촘하게'],
@@ -238,14 +279,14 @@ export default function ThemeSettings({ voiceFontSize, onVoiceFontSizeChange }: 
         </div>
       </SettingRow>
 
-      <div className="border-t border-slate-200 pt-2 dark:border-slate-800">
-        <div className="flex items-center justify-between gap-2">
+      <div className="border-t border-slate-200 pt-3 dark:border-slate-800">
+        <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
             aria-expanded={previewOpen}
             aria-controls="theme-preview"
             onClick={() => setPreviewOpen((open) => !open)}
-            className="flex min-h-8 items-center gap-1 rounded-md px-1 text-xs font-medium text-slate-600 [@media(pointer:coarse)]:min-h-[44px] hover:text-accent-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-600 dark:text-slate-300 dark:hover:text-accent-300"
+            className="flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 [@media(pointer:coarse)]:min-h-[44px] hover:bg-slate-50 hover:text-accent-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-accent-300"
           >
             <svg
               viewBox="0 0 24 24"
@@ -268,7 +309,7 @@ export default function ThemeSettings({ voiceFontSize, onVoiceFontSizeChange }: 
               onVoiceFontSizeChange('compact')
               setResetComplete(true)
             }}
-            className="min-h-8 rounded-md px-2 py-1 text-xs font-medium text-slate-500 [@media(pointer:coarse)]:min-h-[44px] hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-600 dark:text-slate-400 dark:hover:bg-slate-800"
+            className="min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 [@media(pointer:coarse)]:min-h-[44px] hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
           >
             테마 초기화
           </button>
