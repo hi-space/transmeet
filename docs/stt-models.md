@@ -59,6 +59,14 @@ Qwen의 라이선스는 Apache-2.0, Nemotron은 OpenMDW License Agreement로 카
 
 배포용 환경에는 SageMaker Python SDK v2가 필요하다. 이 작업에서는 `2.257.1`을 사용했다. 백엔드 런타임에는 SDK를 추가로 설치하지 않아도 된다.
 
+Qwen 모델은 `transmeet-qwen3-asr-model-offline` 이름으로 생성하며 네트워크 격리를 유지한다. 모델 아티팩트의 `requirements.txt`는 함께 제공되는 wheel 3개의 절대 경로를 가리키고, 전이 의존성은 기본 서빙 이미지에 이미 포함되어 있다. 두 배포 도구는 아래 환경변수로 패키지 인덱스 조회와 추가 의존성 설치를 막는다. 서빙 프로세스가 `pip install`을 앞에 붙이므로 값에 `install`을 넣지 않는다.
+
+```text
+STANDARD_PIP_ARGS=--no-deps --no-index -r /opt/ml/model/requirements.txt
+```
+
+JumpStart SDK는 지정한 환경변수를 우선하고 나머지 카탈로그 기본값을 추가한다. 계획 출력에서 모델 이름과 환경변수 재정의를 확인할 수 있다. 기존 SageMaker 모델의 환경변수는 변경할 수 없으므로, 재사용할 Qwen 모델에 위 설정이 없거나 다르면 배포 전에 중단한다. 올바른 설정으로 생성한 별도 모델은 `--model-name`으로 선택할 수 있다. Nemotron에는 이 재정의를 적용하지 않는다.
+
 먼저 계획을 조회한다. `--apply`가 없는 명령은 리소스를 만들지 않는다.
 
 ```bash

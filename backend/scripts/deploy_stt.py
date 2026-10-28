@@ -20,6 +20,10 @@ MODELS = {
         "endpoint": "transmeet-qwen3-asr",
         "setting": "QWEN_ASR_ENDPOINT",
         "component": "transmeet-qwen3-asr-ic-v2",
+        "model_name": "transmeet-qwen3-asr-model-offline",
+        "model_env": {
+            "STANDARD_PIP_ARGS": "--no-deps --no-index -r /opt/ml/model/requirements.txt",
+        },
     },
     "nemotron": {
         "model_id": "huggingface-asr-nvidia-nemotron-3-5-asr-streaming-0-6b",
@@ -79,6 +83,7 @@ def main():
     model = JumpStartModel(
         model_id=spec["model_id"], model_version=spec["version"],
         instance_type=spec["instance_type"], role=args.role,
+        name=spec.get("model_name"), env=dict(spec.get("model_env", {})),
         sagemaker_session=Session(boto_session=session),
     )
     model.deploy(

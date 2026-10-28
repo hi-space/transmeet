@@ -129,7 +129,8 @@ def main():
     spec = MODELS[args.provider]
     endpoint = args.endpoint or spec["endpoint"]
     component = args.component or spec["component"]
-    model_name = args.model_name or f"{spec['endpoint']}-model"
+    model_name = args.model_name or spec.get("model_name") or f"{spec['endpoint']}-model"
+    model_env = dict(spec.get("model_env", {}))
     config_name = f"{endpoint}-zero-v3"
     session = boto3.Session(region_name=args.region)
     client = session.client("sagemaker")
@@ -196,6 +197,7 @@ def main():
     validate_parameters(inference_component, client.meta.service_model.operation_model("CreateInferenceComponent").input_shape)
     print(json.dumps({
         "mode": "apply" if args.apply else "plan",
+        "model": {"name": model_name, "environment": model_env},
         "endpoint_config": endpoint_config, "inference_component": inference_component,
         "environment": {
             spec["setting"]: endpoint,
@@ -210,6 +212,13 @@ def main():
         source = json.dumps(model.get("PrimaryContainer", {}))
         if spec["model_id"] not in source:
             parser.error("Existing model does not reference the requested JumpStart artifact.")
+        existing_env = model.get("PrimaryContainer", {}).get("Environment") or {}
+        mismatched = [key for key, value in model_env.items() if existing_env.get(key) != value]
+        if mismatched:
+            parser.error(
+                f"Existing model {model_name!r} is immutable and has incompatible startup "
+                f"environment: {', '.join(mismatched)}. Select a compatible model with --model-name."
+            )
     except ClientError as exc:
         if not missing(exc):
             raise
@@ -220,6 +229,8 @@ def main():
         model = JumpStartModel(
             model_id=spec["model_id"], model_version=spec["version"],
             name=model_name, instance_type=instances[0], role=args.role,
+            # JumpStart merges catalog defaults into this dictionary in place.
+            env=dict(model_env),
             sagemaker_session=Session(boto_session=session),
         )
         model.create(instance_type=instances[0], tags=[
