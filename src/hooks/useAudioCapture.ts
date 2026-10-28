@@ -269,6 +269,7 @@ export function useAudioCapture({
           document.removeEventListener('visibilitychange', onStateChange)
         }
       }
+      return true
     } catch (err) {
       // getDisplayMedia 취소(NotAllowedError)와 명시적 에러 메시지 구분
       const msg =
@@ -282,6 +283,11 @@ export function useAudioCapture({
               ? err.message
               : '오디오를 시작할 수 없습니다.'
       setError(msg)
+      setIsRecording(false)
+      workerRef.current?.terminate()
+      workerRef.current = null
+      if (levelAnimRef.current) cancelAnimationFrame(levelAnimRef.current)
+      levelAnimRef.current = null
       // 부분적으로 획득한 리소스 정리
       resumeHandlerRef.current?.()
       resumeHandlerRef.current = null
@@ -295,6 +301,7 @@ export function useAudioCapture({
       streamRef.current = null
       sysStreamRef.current?.getTracks().forEach((t) => t.stop())
       sysStreamRef.current = null
+      return false
     }
   }, [audioSource, chunkDurationMs, flushChunk, updateLevel])
 

@@ -19,6 +19,24 @@ async def sagemaker_client():
         yield client
 
 
+@asynccontextmanager
+async def sagemaker_control_client():
+    async with _session.create_client(
+        "sagemaker", region_name=config.REGION,
+        config=AioConfig(connect_timeout=5, read_timeout=15, retries={"max_attempts": 1}),
+    ) as client:
+        yield client
+
+
+@asynccontextmanager
+async def stt_metrics_client():
+    async with _session.create_client(
+        "cloudwatch", region_name=config.REGION,
+        config=AioConfig(connect_timeout=5, read_timeout=10, retries={"max_attempts": 1}),
+    ) as client:
+        yield client
+
+
 # 요약 스트림용. Opus 5.5 는 thinking 이 항상 켜져 있고 기본 표시가 omitted 라 생각하는 동안 스트림에
 # 바이트가 전혀 오지 않는다. 긴 트랜스크립트(78줄)에서 그 침묵이 기본 읽기 타임아웃 60초를 넘겨
 # SocketTimeoutError 로 끊겼다(2026-10-09). 프런트 안전 타임아웃(5분)보다 길게 둔다.

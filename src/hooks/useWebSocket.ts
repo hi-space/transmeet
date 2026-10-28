@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import type { WsStatus, WsServerMessage } from '@/lib/websocket'
 import { getIdToken } from '@/lib/cognito'
+import type { SttProvider } from '@/lib/sttProviders'
 
 const RECONNECT_DELAY_MS = 2000
 const MAX_RECONNECT_ATTEMPTS = 50
@@ -255,6 +256,25 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     ws.send(JSON.stringify({ action: 'stopRecording', meetingId: meetingIdRef.current }))
   }, [])
 
+  const sendSttRequest = useCallback(
+    (action: 'prepareStt' | 'sttStatus', provider: SttProvider) => {
+      const ws = wsRef.current
+      if (!ws || ws.readyState !== WebSocket.OPEN) return false
+      ws.send(JSON.stringify({ action, sttProvider: provider }))
+      return true
+    },
+    []
+  )
+
+  const prepareStt = useCallback(
+    (provider: SttProvider) => sendSttRequest('prepareStt', provider),
+    [sendSttRequest]
+  )
+  const requestSttStatus = useCallback(
+    (provider: SttProvider) => sendSttRequest('sttStatus', provider),
+    [sendSttRequest]
+  )
+
   const sendSummarize = useCallback(
     (
       meetingId: string,
@@ -442,6 +462,8 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     sendAudio,
     startRecording,
     stopRecording,
+    prepareStt,
+    requestSttStatus,
     sendSummarize,
     sendTranslate,
     sendTtsRequest,

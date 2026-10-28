@@ -91,6 +91,7 @@ export interface PongServerMessage {
 }
 
 export type WsServerMessage =
+  | SttStatusServerMessage
   | SubtitleServerMessage
   | SubtitleStreamServerMessage
   | TtsStreamServerMessage
@@ -101,3 +102,8 @@ export type WsServerMessage =
   | AudioReadyServerMessage
   | ErrorServerMessage
   | PongServerMessage
+import type { SttStatus } from '@/lib/sttProviders'
+
+export interface SttStatusServerMessage extends SttStatus {
+  type: 'stt_status'
+}

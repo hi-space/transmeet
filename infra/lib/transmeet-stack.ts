@@ -44,6 +44,13 @@ export class TransmeetStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    const qwenAsrEndpoint = this.node.tryGetContext('qwenAsrEndpoint') || process.env.QWEN_ASR_ENDPOINT || 'transmeet-qwen3-asr';
+    const nemotronAsrEndpoint = this.node.tryGetContext('nemotronAsrEndpoint') || process.env.NEMOTRON_ASR_ENDPOINT || 'transmeet-nemotron-asr';
+    const qwenAsrComponent = this.node.tryGetContext('qwenAsrComponent') || process.env.QWEN_ASR_INFERENCE_COMPONENT || 'transmeet-qwen3-asr-ic';
+    const nemotronAsrComponent = this.node.tryGetContext('nemotronAsrComponent') || process.env.NEMOTRON_ASR_INFERENCE_COMPONENT || 'transmeet-nemotron-asr-ic';
+    const wsImageTag = this.node.tryGetContext('wsImageTag') || 'latest';
+    const speechEndpoints = [WHISPER_ENDPOINT, qwenAsrEndpoint, nemotronAsrEndpoint].filter(Boolean);
+
     // ─── DynamoDB Tables ───────────────────────────────────────────────────────
 
     const meetingsTable = new dynamodb.Table(this, 'MeetingsTable', {
@@ -422,10 +429,28 @@ export class TransmeetStack extends cdk.Stack {
 
     wsTaskRole.addToPolicy(
       new iam.PolicyStatement({
-        actions: ['sagemaker:InvokeEndpoint'],
-        resources: [
-          `arn:aws:sagemaker:${REGION}:*:endpoint/${WHISPER_ENDPOINT}`,
+        actions: ['sagemaker:InvokeEndpoint', 'sagemaker:DescribeEndpoint'],
+        resources: speechEndpoints.map(
+          (endpoint) => `arn:aws:sagemaker:${REGION}:${this.account}:endpoint/${endpoint}`
+        ),
+      })
+    );
+    wsTaskRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: [
+          'sagemaker:DescribeInferenceComponent',
+          'sagemaker:UpdateInferenceComponentRuntimeConfig',
         ],
+        resources: [qwenAsrComponent, nemotronAsrComponent].map(
+          (component) => `arn:aws:sagemaker:${REGION}:${this.account}:inference-component/${component}`
+        ),
+      })
+    );
+    wsTaskRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['cloudwatch:PutMetricData'],
+        resources: ['*'],
+        conditions: { StringEquals: { 'cloudwatch:namespace': 'TransMeet/STT' } },
       })
     );
 
@@ -645,13 +670,17 @@ export class TransmeetStack extends cdk.Stack {
     });
 
     taskDef.addContainer('ws-backend', {
-      image: ecs.ContainerImage.fromEcrRepository(ecrRepo, 'latest'),
+      image: ecs.ContainerImage.fromEcrRepository(ecrRepo, wsImageTag),
       portMappings: [{ containerPort: 8000 }],
       environment: {
         REGION,
         MEETINGS_TABLE,
         PAGES_TABLE,
         WHISPER_ENDPOINT,
+        QWEN_ASR_ENDPOINT: qwenAsrEndpoint,
+        NEMOTRON_ASR_ENDPOINT: nemotronAsrEndpoint,
+        QWEN_ASR_INFERENCE_COMPONENT: qwenAsrComponent,
+        NEMOTRON_ASR_INFERENCE_COMPONENT: nemotronAsrComponent,
         BEDROCK_MODEL_ID,
         PAGE_AGENT_RUNTIME_ARN: runtimeArn,
         PAGE_AGENT_MODEL_ID,

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type Ref } from 'react'
 import { htmlToMarkdown } from '@/lib/htmlToMarkdown'
 import type { MeetingPage } from '@/types/meeting'
 import Icon from '@/components/ui/Icon'
@@ -27,6 +27,7 @@ interface Props {
   onGenerate: () => void
   onUnpublish: () => void
   onClose?: () => void
+  footerRef?: Ref<HTMLDivElement>
 }
 
 function useElapsed(startedAt?: number, active?: boolean) {
@@ -121,6 +122,7 @@ export default function MeetingPagePanel({
   onGenerate,
   onUnpublish,
   onClose,
+  footerRef,
 }: Props) {
   const [copied, setCopied] = useState(false)
   const [mdState, setMdState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle')
@@ -335,15 +337,17 @@ export default function MeetingPagePanel({
               sandbox=""
               className="min-h-0 w-full flex-1 border-0 bg-white"
             />
-            {unpublishError && (
-              <p
-                role="alert"
-                className="border-t border-subtle px-3 pt-2 text-xs text-red-600 dark:text-red-400"
-              >
-                {unpublishError}
-              </p>
-            )}
-            <div className="shrink-0 border-t border-subtle p-3">
+            <div
+              ref={footerRef}
+              role="group"
+              aria-label="회의 페이지 작업"
+              className="shrink-0 border-t border-subtle p-3"
+            >
+              {unpublishError && (
+                <p role="alert" className="mb-2 text-xs text-red-600 dark:text-red-400">
+                  {unpublishError}
+                </p>
+              )}
               {confirmRegen || confirmUnpublish ? (
                 <div className="space-y-2">
                   <p className="text-xs leading-relaxed text-amber-700 dark:text-amber-300">

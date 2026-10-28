@@ -126,6 +126,7 @@ async def test_happy_path_relays_events_and_emits_done():
     assert page == PAGE
     phases = [e["phase"] for e in send.events]
     assert phases[0] == "status" and "delta" in phases and phases[-1] == "done"
+    assert send.events[0].get("started") is True
     assert send.events[-1]["page"]["url"] == PAGE["url"] and all(e["meetingId"] == "m1" for e in send.events)
     assert any(e["phase"] == "status" and e["text"] == "미팅 기록을 준비합니다" for e in send.events)
     call = ac.calls[0]
@@ -297,7 +298,8 @@ async def test_second_generate_for_same_meeting_is_rejected(monkeypatch):
     release = asyncio.Event()
     started = []
 
-    async def fake_run(send, meeting_id, *, inline_messages=None, deps=None):
+    async def fake_run(send, meeting_id, *, inline_messages=None, deps=None, reuse_existing=False,
+                       prefer_stored_messages=False):
         started.append(meeting_id)
         await release.wait()
 
@@ -364,7 +366,9 @@ async def test_page_status_reports_active_generation(monkeypatch):
     monkeypatch.setattr(PageAgentDeps, "from_config", classmethod(lambda cls: deps_for(SlowAC(), FakeS3(), FakeDDB(ITEM))))
     task = start_page_generation(Collector(), "m-active")
     await asyncio.sleep(0)
-    assert page_status_event("m-active") == {"type": "page_stream", "meetingId": "m-active", "phase": "status"}
+    assert page_status_event("m-active") == {
+        "type": "page_stream", "meetingId": "m-active", "phase": "status", "started": True,
+    }
     gate.set()
     page = await task
     assert page is not None and page_status_event("m-active")["phase"] == "done"
@@ -387,6 +391,11 @@ def test_page_status_unknown_meeting_is_error():
     assert ev["phase"] == "error" and "중단" in ev["error"]
 
 
+def test_page_discovery_without_generation_does_not_report_error():
+    page_agent._LAST_PAGE_RESULTS.clear()
+    assert page_status_event("m-unknown", discover=True) is None
+
+
 async def test_page_status_forgets_old_results(monkeypatch):
     page_agent._LAST_PAGE_RESULTS.clear()
     now = [1000.0]
@@ -402,3 +411,14 @@ async def test_unpublish_results_are_not_remembered_as_page_status():
     item = {**ITEM, "page": {"M": {"pageId": {"S": "old"}}}}
     await run_unpublish(Collector(), "m-unpub", deps=deps_for(FakeAgentCore([]), FakeS3(), FakeDDB(item)))
     assert page_status_event("m-unpub")["phase"] == "error"
+
+
+async def test_discovery_does_not_restore_unpublished_page():
+    page_agent._LAST_PAGE_RESULTS.clear()
+    deps = deps_for(FakeAgentCore([ok_stream()]), FakeS3(), FakeDDB(ITEM, page=OLD_PAGE))
+    await run_page_generation(Collector(), "m1", deps=deps)
+    assert page_status_event("m1", discover=True)["phase"] == "done"
+
+    await run_unpublish(Collector(), "m1", deps=deps)
+
+    assert page_status_event("m1", discover=True) is None

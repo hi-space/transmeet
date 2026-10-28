@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { CognitoUser } from 'amazon-cognito-identity-js'
 import { signIn, completeNewPassword } from '@/lib/cognito'
+import BrandLogo from '@/components/BrandLogo'
 import Icon from '@/components/ui/Icon'
 
 interface Props {
@@ -59,11 +60,8 @@ export default function AuthScreen({ onAuth }: Props) {
   return (
     <div className="h-dvh overflow-y-auto bg-canvas px-5 py-10">
       <div className="mx-auto flex min-h-full w-full max-w-sm flex-col justify-center">
-        <div className="mb-7 flex items-center justify-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Icon name="waveform" className="h-5 w-5" />
-          </div>
-          <span className="text-xl font-semibold tracking-tight text-ink">TransMeet</span>
+        <div className="mb-7 flex justify-center">
+          <BrandLogo size="auth" />
         </div>
         <section className="ui-surface p-6 sm:p-7">
           <h1 className="mb-6 text-lg font-semibold text-ink">

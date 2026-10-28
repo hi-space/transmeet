@@ -49,6 +49,7 @@ __pycache__/
 
 # Tooling
 .omc/
+.playwright-mcp/
 
 # Sample
 sample/**/.venv/

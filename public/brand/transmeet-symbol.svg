@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 64 64" role="img" aria-labelledby="transmeet-title">
+  <title id="transmeet-title">TransMeet</title>
+  <path d="M20 7h15c10 0 17 7 17 17v7H41v-7c0-4-2-6-6-6H21c-4 0-6 2-6 6v15L4 48V24C4 14 11 7 20 7Z" fill="#176B62"/>
+  <path d="M44 57H29c-10 0-17-7-17-17v-7h11v7c0 4 2 6 6 6h14c4 0 6-2 6-6V25l11-9v24c0 10-7 17-16 17Z" fill="#51BCA2"/>
+</svg>

@@ -8,6 +8,11 @@ class Config(BaseSettings):
     # 400 KB 한도에 닿을 수 있으므로 페이지 기록은 별도 테이블에 둔다.
     PAGES_TABLE: str = "transmeet-pages"
     WHISPER_ENDPOINT: str = "whisper-large"
+    QWEN_ASR_ENDPOINT: str = ""
+    NEMOTRON_ASR_ENDPOINT: str = ""
+    QWEN_ASR_INFERENCE_COMPONENT: str = ""
+    NEMOTRON_ASR_INFERENCE_COMPONENT: str = ""
+    STT_IDLE_SECONDS: int = 300
     BEDROCK_MODEL_ID: str = "global.anthropic.claude-haiku-5-5"
     QA_MODEL_ID: str = "global.anthropic.claude-sonnet-5-5"
     # 요약 패널(WebSocket summarize). 실시간 번역 모델과 분리 — 페이지 수준의 디테일을 내야 해서 큰 모델을 쓴다.

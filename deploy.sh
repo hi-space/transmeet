@@ -76,7 +76,7 @@ invalidate_cloudfront() {
   local invalidation_id
   invalidation_id=$(aws cloudfront create-invalidation \
     --distribution-id "$cf_id" \
-    --paths "/" "/index.html" "/404.html" "/404/*" "/index.txt" "/sw.js" "/manifest.json" "/icons/*" "/workbox-*.js" "/swe-worker-*.js" \
+    --paths "/" "/index.html" "/404.html" "/404/*" "/index.txt" "/sw.js" "/manifest.json" "/icons/*" "/brand/*" "/workbox-*" "/swe-worker-*" \
     --query 'Invalidation.Id' --output text)
 
   info "Waiting for invalidation $invalidation_id to complete..."

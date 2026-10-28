@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import type { MeetingEndServerMessage } from '@/lib/websocket'
 import Icon from '@/components/ui/Icon'
 
@@ -55,23 +56,35 @@ function endStatusText(s: MeetingEndState): string {
 /** Render feedback within the recording controls only when there is something to report. */
 export function MeetingStatus({ endState, audioPrep }: StatusProps) {
   const message = audioPrep?.error ?? (endState ? endStatusText(endState) : null)
+  const [dismissed, setDismissed] = useState(false)
+  useEffect(() => setDismissed(false), [message])
   const isError =
     !!audioPrep?.error ||
     endState?.phase === 'error' ||
     (endState?.status !== undefined &&
       !['sent', 'skipped', 'already_sent'].includes(endState.status))
 
-  if (!message) return null
+  if (!message || dismissed) return null
 
   return (
-    <p
-      role={isError ? 'alert' : 'status'}
-      className={`mt-2 min-w-0 break-words border-t border-subtle px-1 pt-2 text-xs leading-relaxed ${
-        isError ? 'text-amber-700 dark:text-amber-400' : 'text-muted'
-      }`}
-    >
-      {message}
-    </p>
+    <div className="ui-surface pointer-events-auto flex max-w-[min(24rem,calc(100vw-4rem))] items-start gap-2 p-3 shadow-lg">
+      <p
+        role={isError ? 'alert' : 'status'}
+        className={`min-w-0 break-words text-xs leading-relaxed ${
+          isError ? 'text-amber-700 dark:text-amber-400' : 'text-muted'
+        }`}
+      >
+        {message}
+      </p>
+      <button
+        type="button"
+        aria-label="녹음 알림 닫기"
+        onClick={() => setDismissed(true)}
+        className="ui-icon-button -my-1 -mr-1 h-7 w-7 min-h-7 p-1"
+      >
+        <Icon name="close" className="h-3.5 w-3.5" />
+      </button>
+    </div>
   )
 }
 
@@ -87,13 +100,13 @@ export default function MeetingActions({ wsConnected, audioPrep, onDownloadAudio
       aria-label="녹음 다운로드"
       aria-busy={preparing}
       title={preparing ? '녹음 파일 준비 중' : '녹음 다운로드'}
-      className="ui-button ui-button-secondary min-h-11 min-w-11 gap-1.5 px-2.5"
+      className="ui-button min-h-11 w-full justify-start gap-2"
     >
       <Icon
         name={preparing ? 'loader' : 'download'}
         className={`h-4 w-4 ${preparing ? 'animate-spin' : ''}`}
       />
-      <span className="hidden sm:inline">{preparing ? '준비 중…' : '다운로드'}</span>
+      <span>{preparing ? '파일 준비 중…' : '녹음 다운로드'}</span>
     </button>
   )
 }

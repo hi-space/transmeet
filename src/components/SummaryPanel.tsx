@@ -146,6 +146,7 @@ export default function SummaryPanel({
               <span className="ml-0.5 inline-block h-3 w-0.5 animate-pulse rounded-sm bg-accent-500" />
             )}
           </div>
+          <div aria-hidden="true" className="h-24 lg:hidden" />
         </div>
       ) : isSummarizing ? (
         <div className="ui-empty" role="status">

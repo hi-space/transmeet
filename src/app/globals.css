@@ -214,6 +214,11 @@
 }
 
 @layer components {
+  .meeting-heading:has(form) .meeting-metadata,
+  .meeting-heading:has(form) .meeting-language {
+    display: none;
+  }
+
   .ui-surface {
     background: rgb(var(--surface-panel));
     border: 1px solid rgb(var(--border));

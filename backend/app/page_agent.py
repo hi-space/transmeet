@@ -25,7 +25,6 @@ from .config import config
 
 logger = logging.getLogger(__name__)
 
-SPEAKER_LABELS = {"speaker1": "Speaker 1", "speaker2": "Speaker 2", "me": "Me"}
 # 프런트 mergeLoadedMessages 와 동일: 10초 이내 같은 화자 연속 발언은 한 턴으로 본다.
 MERGE_WINDOW_SECONDS = 10
 
@@ -92,7 +91,9 @@ def build_meeting_payload(
     speakers: List[str] = []
     languages: List[str] = []
     for m in messages:
-        label = SPEAKER_LABELS.get(m["speaker"], m["speaker"])
+        speaker = m["speaker"]
+        match = re.fullmatch(r"speaker([1-9][0-9]*)", speaker)
+        label = f"Speaker {match[1]}" if match else ("Me" if speaker == "me" else speaker)
         if label not in speakers:
             speakers.append(label)
         if m["detectedLanguage"] and m["detectedLanguage"] not in languages:
@@ -144,7 +145,9 @@ async def unpublish_page(meeting_id: str, *, s3, ddb, bucket: str, pages_table: 
 
 async def load_page(ddb, pages_table: str, meeting_id: str) -> Optional[Dict[str, Any]]:
     """The meeting's page record from the pages table, or None."""
-    res = await ddb.get_item(TableName=pages_table, Key={"meetingId": {"S": meeting_id}})
+    res = await ddb.get_item(
+        TableName=pages_table, Key={"meetingId": {"S": meeting_id}}, ConsistentRead=True,
+    )
     item = ddb_item_to_dict(res.get("Item") or {})
     return item if item.get("pageId") else None
 
@@ -254,18 +257,20 @@ def _remember_result(meeting_id: str, payload: Dict[str, Any]) -> None:
     _LAST_PAGE_RESULTS[meeting_id] = (now, payload)
 
 
-def page_status_event(meeting_id: str) -> Dict[str, Any]:
+def page_status_event(meeting_id: str, *, discover: bool = False) -> Optional[Dict[str, Any]]:
     """클라이언트가 '아직 생성 중인가?' 라고 물을 때의 응답.
 
-    돌고 있으면 text 없는 status(클라이언트는 무시), 끝났으면 놓쳤을 done/error 를 그대로 재전송,
-    기록이 없으면(프로세스 재시작 등) 오류로 알려 타임아웃을 기다리지 않게 한다.
+    돌고 있으면 시작 신호도 보내 놓친 자동 생성을 발견하게 한다. 끝났으면 done/error 를 재전송한다.
+    discover 는 생성 여부를 모르는 조회라 기록이 없어도 오류를 만들지 않는다.
     """
     running = _ACTIVE_PAGE_TASKS.get(meeting_id)
     if running is not None and not running.done():
-        return {"type": "page_stream", "meetingId": meeting_id, "phase": "status"}
+        return {"type": "page_stream", "meetingId": meeting_id, "phase": "status", "started": True}
     remembered = _LAST_PAGE_RESULTS.get(meeting_id)
     if remembered and time.monotonic() - remembered[0] <= PAGE_RESULT_TTL_S:
         return dict(remembered[1])
+    if discover:
+        return None
     return {"type": "page_stream", "meetingId": meeting_id, "phase": "error",
             "error": "생성이 중단되었습니다. 다시 시도하세요"}
 
@@ -288,7 +293,9 @@ def _emitter(send: Sender, meeting_id: str, **tags: Any):
 
 async def _load_meeting(deps: PageAgentDeps, meeting_id: str) -> Dict[str, Any]:
     async with deps.ddb_client() as ddb:
-        res = await ddb.get_item(TableName=deps.table, Key={"meetingId": {"S": meeting_id}})
+        res = await ddb.get_item(
+            TableName=deps.table, Key={"meetingId": {"S": meeting_id}}, ConsistentRead=True,
+        )
     return ddb_item_to_dict(res.get("Item") or {})
 
 
@@ -381,6 +388,8 @@ async def run_page_generation(
     *,
     inline_messages: Optional[List[Dict[str, Any]]] = None,
     deps: Optional[PageAgentDeps] = None,
+    reuse_existing: bool = False,
+    prefer_stored_messages: bool = False,
 ) -> Optional[Dict[str, Any]]:
     deps = deps or PageAgentDeps.from_config()
     emit = _emitter(send, meeting_id)
@@ -388,11 +397,22 @@ async def run_page_generation(
     since_iso = (datetime.now(timezone.utc) - timedelta(seconds=60)).isoformat()
 
     try:
-        await emit("status", text="미팅 기록을 불러오는 중")
+        await emit("status", text="미팅 기록을 불러오는 중", started=True)
         item = await _load_meeting(deps, meeting_id)
         if not item:
             await emit("error", error="미팅을 찾을 수 없습니다")
             return None
+        if reuse_existing:
+            async with deps.ddb_client() as ddb:
+                existing = await load_page(ddb, deps.pages_table, meeting_id)
+            if existing and existing.get("url"):
+                page = {k: v for k, v in existing.items() if k not in ("meetingId", "updatedAt")}
+                await emit("done", page=page)
+                return page
+        # 종료 시에는 _stop_recording이 확정·저장한 마지막 발언까지 포함한다.
+        # 화면 말풍선은 여러 발언을 합칠 수 있어 두 기록을 단순 연결하면 중복된다.
+        if prefer_stored_messages and item.get("messages"):
+            inline_messages = None
         payload = build_meeting_payload(item, inline_messages=inline_messages, model_id=deps.model_id)
         if not payload["messages"]:
             await emit("error", error="기록이 없습니다")
@@ -459,14 +479,21 @@ def start_page_generation(
     meeting_id: Any,
     *,
     inline_messages: Any = None,
+    reuse_existing: bool = False,
+    prefer_stored_messages: bool = False,
 ) -> "asyncio.Task[Optional[Dict[str, Any]]]":
-    """요청을 검증하고 생성 태스크를 시작한다. 잘못된 요청·중복 요청은 PageRequestError."""
+    """자동 생성은 진행 중·발행된 페이지를 재사용하고, 수동 생성의 중복 요청은 거절한다."""
     check_meeting_id(meeting_id)
     check_inline_messages(inline_messages)
     running = _ACTIVE_PAGE_TASKS.get(meeting_id)
     if running is not None and not running.done():
+        if reuse_existing:
+            return running
         raise PageRequestError("이미 생성 중입니다")
-    task = asyncio.create_task(run_page_generation(send, meeting_id, inline_messages=inline_messages))
+    task = asyncio.create_task(run_page_generation(
+        send, meeting_id, inline_messages=inline_messages, reuse_existing=reuse_existing,
+        prefer_stored_messages=prefer_stored_messages,
+    ))
     _ACTIVE_PAGE_TASKS[meeting_id] = task
 
     def _release(t: "asyncio.Task[Optional[Dict[str, Any]]]") -> None:
@@ -484,10 +511,12 @@ async def run_unpublish(send: Sender, meeting_id: str, *, deps: Optional[PageAge
         async with deps.ddb_client() as ddb:
             page = await load_page(ddb, deps.pages_table, meeting_id)
         if not page:
+            _LAST_PAGE_RESULTS.pop(meeting_id, None)
             await emit("unpublished")
             return
         async with deps.s3_client() as s3, deps.ddb_client() as ddb:
             await unpublish_page(meeting_id, s3=s3, ddb=ddb, bucket=deps.bucket, pages_table=deps.pages_table, page_id=page["pageId"])
+        _LAST_PAGE_RESULTS.pop(meeting_id, None)
         await emit("unpublished")
     except Exception:
         logger.exception("[page] unpublish failed meeting=%s", meeting_id)

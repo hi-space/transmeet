@@ -160,6 +160,7 @@ export default function NotesArea({
           </article>
         )
       })}
+      <div aria-hidden="true" className="h-24 lg:hidden" />
     </div>
   )
 }

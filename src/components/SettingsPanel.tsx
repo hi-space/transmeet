@@ -6,7 +6,8 @@ import { supportsSystemAudio } from '@/lib/platform'
 import ThemeSettings from '@/components/ThemeSettings'
 import EmailNotifySetting from '@/components/EmailNotifySetting'
 import { TRANSLATION_MODELS } from '@/lib/translationModels'
-import { STT_PROVIDERS } from '@/lib/sttProviders'
+import { STT_PROVIDERS, isManagedStt, type SttProvider, type SttStatus } from '@/lib/sttProviders'
+import SttStatusPanel from '@/components/SttStatusPanel'
 import Dialog from '@/components/ui/Dialog'
 import Icon from '@/components/ui/Icon'
 import Tabs from '@/components/ui/Tabs'
@@ -16,6 +17,10 @@ interface Props {
   settings: Settings
   onUpdate: (patch: Partial<Settings>) => void
   onClose: () => void
+  sttStatus?: SttStatus
+  sttConnected?: boolean
+  onSttSelect?: (provider: SttProvider) => void
+  onPrepareStt?: () => void
 }
 
 const VOICES: Record<'en' | 'ko', { id: string; label: string; engines: string[] }[]> = {
@@ -67,7 +72,15 @@ function Choices<T extends string | number>({
   )
 }
 
-export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
+export default function SettingsPanel({
+  settings,
+  onUpdate,
+  onClose,
+  sttStatus,
+  sttConnected = false,
+  onSttSelect,
+  onPrepareStt,
+}: Props) {
   const [activeTab, setActiveTab] = useState<'general' | 'theme'>('general')
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canUseSystemAudio, setCanUseSystemAudio] = useState(true)
@@ -248,13 +261,22 @@ export default function SettingsPanel({ settings, onUpdate, onClose }: Props) {
                   value={settings.sttProvider}
                   options={STT_PROVIDERS.map(({ id, label }) => ({ value: id, label }))}
                   columns={2}
-                  onChange={(sttProvider) => handleUpdate({ sttProvider })}
+                  onChange={(sttProvider) =>
+                    onSttSelect ? onSttSelect(sttProvider) : handleUpdate({ sttProvider })
+                  }
                   hint={
                     settings.sttProvider === 'transcribe'
                       ? '발화 중에도 인식 결과를 표시합니다.'
                       : '짧은 발화 구간을 모아 인식합니다. 결과가 나오기까지 잠시 걸릴 수 있습니다.'
                   }
                 />
+                {isManagedStt(settings.sttProvider) && (
+                  <SttStatusPanel
+                    state={sttStatus}
+                    connected={sttConnected}
+                    onPrepare={onPrepareStt}
+                  />
+                )}
                 <Choices
                   label="발화 중 번역"
                   value={settings.partialTranslationMode}

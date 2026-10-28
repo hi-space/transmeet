@@ -32,7 +32,15 @@ import { useAuth } from '@/context/AuthContext'
 import type { WsServerMessage } from '@/lib/websocket'
 import { api, toMeeting, parseSummary } from '@/lib/api'
 import { getVisibleUtilityTab } from '@/lib/workspace'
-import { sttChunkDuration } from '@/lib/sttProviders'
+import {
+  sttChunkDuration,
+  sttRecordingAction,
+  isManagedStt,
+  shouldStopSttRecording,
+  type SttProvider,
+  type SttStatus,
+} from '@/lib/sttProviders'
+import SttStatusPanel from '@/components/SttStatusPanel'
 
 const HAS_COGNITO = !!process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID
 
@@ -183,6 +191,8 @@ function isPrunable(m: Meeting): boolean {
 export default function Home() {
   const { user, isLoading: authLoading, setUser, logout } = useAuth()
   const { settings, updateSettings } = useSettings()
+  const [sttStatuses, setSttStatuses] = useState<Partial<Record<SttProvider, SttStatus>>>({})
+  const selectedSttStatus = sttStatuses[settings.sttProvider]
   const {
     width: summaryWidth,
     handlePointerDown: handleSummaryResize,
@@ -236,6 +246,8 @@ export default function Home() {
     phase: 'translating' | 'done'
   } | null>(null)
 
+  const notesComposerRef = useRef<HTMLFormElement>(null)
+  const pageFooterRef = useRef<HTMLDivElement>(null)
   const ttsAudioRef = useRef<HTMLAudioElement | null>(null)
   const msgAudioRef = useRef<HTMLAudioElement | null>(null)
   const meetingsRef = useRef(meetings)
@@ -571,6 +583,10 @@ export default function Home() {
 
   const handleWsMessage = useCallback(
     (msg: WsServerMessage) => {
+      if (msg.type === 'stt_status') {
+        setSttStatuses((previous) => ({ ...previous, [msg.provider]: msg }))
+        return
+      }
       if (msg.type === 'meeting_end') {
         // 서버는 그 미팅을 보고 있는 연결 전부에 보낸다 — 다른 미팅 이벤트도 상태엔 남겨 두고 표시만 거른다
         if (msg.meetingId)
@@ -1199,6 +1215,8 @@ export default function Home() {
     sendAudio,
     startRecording,
     stopRecording,
+    prepareStt,
+    requestSttStatus,
     sendSummarize,
     sendTranslate,
     sendTtsRequest,
@@ -1249,6 +1267,31 @@ export default function Home() {
     chunkDurationMs: sttChunkDuration(settings.sttProvider),
     audioSource: settings.audioSource,
   })
+
+  const recordingAction = sttRecordingAction(settings.sttProvider, selectedSttStatus, isRecording)
+  const prepareSelectedStt = useCallback(
+    (provider: SttProvider = settings.sttProvider) => {
+      const sent = prepareStt(provider)
+      setSttStatuses((previous) => ({
+        ...previous,
+        [provider]: {
+          provider,
+          status: sent ? 'starting' : 'error',
+          message: sent
+            ? '음성 인식 엔진을 준비하고 있습니다. 몇 분 걸릴 수 있습니다.'
+            : '서버에 연결한 뒤 다시 준비해 주세요.',
+        },
+      }))
+    },
+    [prepareStt, settings.sttProvider]
+  )
+
+  useEffect(() => {
+    if (wsStatus !== 'connected' || !isManagedStt(settings.sttProvider)) return
+    requestSttStatus(settings.sttProvider)
+    const timer = setInterval(() => requestSttStatus(settings.sttProvider), 5000)
+    return () => clearInterval(timer)
+  }, [wsStatus, settings.sttProvider, requestSttStatus])
 
   useEffect(() => {
     if (audioError) alert(audioError)
@@ -1386,8 +1429,40 @@ export default function Home() {
     translationTimeoutsRef.current.clear()
   }, [stopAudio])
 
+  useEffect(() => {
+    if (isRecording && shouldStopSttRecording(settings.sttProvider, selectedSttStatus)) {
+      resetLocalRecording()
+      stopRecording()
+    }
+  }, [isRecording, settings.sttProvider, selectedSttStatus, resetLocalRecording, stopRecording])
+
+  const handleSttSelect = useCallback(
+    (provider: SttProvider) => {
+      if (isRecording && provider === settings.sttProvider) return
+      if (isRecording) {
+        resetLocalRecording()
+        stopRecording()
+      }
+      updateSettings({ sttProvider: provider })
+      if (isManagedStt(provider)) prepareSelectedStt(provider)
+    },
+    [
+      isRecording,
+      settings.sttProvider,
+      resetLocalRecording,
+      stopRecording,
+      updateSettings,
+      prepareSelectedStt,
+    ]
+  )
+
   const handleToggleRecording = useCallback(async () => {
     if (HAS_API && !activeMeetingId && !isRecording) return
+    if (recordingAction === 'prepare') {
+      prepareSelectedStt()
+      return
+    }
+    if (recordingAction === 'wait') return
     if (isRecording) {
       resetLocalRecording()
       stopRecording()
@@ -1396,7 +1471,7 @@ export default function Home() {
         handleSummarizeRef.current()
       }
     } else {
-      await startAudio()
+      if (!(await startAudio())) return
       startRecording({
         sttProvider: settings.sttProvider,
         sourceLang: settings.sourceLang,
@@ -1419,6 +1494,8 @@ export default function Home() {
     settings.translationModel,
     settings.translationTiming,
     settings.autoSummarizeMessageCount,
+    recordingAction,
+    prepareSelectedStt,
   ])
 
   // ─── Task #8: Summarize ─────────────────────────────────────────────────────
@@ -1534,6 +1611,8 @@ export default function Home() {
         timestamp: m.timestamp,
         detectedLanguage: m.detectedLanguage,
       }))
+    // endMeeting closes server-side audio intake, so enqueue the buffered tail first.
+    if (isRecording) flushAudio()
     if (!sendEndMeeting(activeMeetingId, settings.emailOnEnd, wsMessages)) {
       setMeetingEnd({
         meetingId: activeMeetingId,
@@ -1565,7 +1644,14 @@ export default function Home() {
       setRightPanel('summary')
       setSummaryOpen(true)
     }
-  }, [activeMeetingId, isRecording, sendEndMeeting, settings.emailOnEnd, resetLocalRecording])
+  }, [
+    activeMeetingId,
+    isRecording,
+    flushAudio,
+    sendEndMeeting,
+    settings.emailOnEnd,
+    resetLocalRecording,
+  ])
 
   const handleDownloadAudio = useCallback(() => {
     if (!activeMeetingId) return
@@ -2017,6 +2103,13 @@ export default function Home() {
   const visibleUtilityTab = getVisibleUtilityTab(desktopLayout, activeTab, rightPanel)
   const activeMeetingEnd = meetingEnd?.meetingId === activeMeetingId ? meetingEnd : null
   const activeAudioPrep = audioPrep?.meetingId === activeMeetingId ? audioPrep : null
+  const floatingAvoidRef = desktopLayout
+    ? undefined
+    : activeTab === 'notes'
+      ? notesComposerRef
+      : activeTab === 'page' && activeMeeting?.page && pageGen.status === 'idle'
+        ? pageFooterRef
+        : undefined
 
   return (
     <div className="flex h-dvh flex-col overflow-hidden bg-canvas font-sans">
@@ -2040,34 +2133,59 @@ export default function Home() {
           <MeetingSidebar {...sidebarProps} headingId="desktop-meeting-list-title" />
         </aside>
 
-        <main className="flex min-w-0 flex-1 flex-col">
-          <div className="flex min-h-[4.5rem] shrink-0 items-center justify-between gap-3 px-4 py-3 sm:px-5">
-            <div className="min-w-0 flex-1">
-              {activeMeeting ? (
-                <EditableTitle
-                  key={activeMeeting.id}
-                  title={activeMeeting.title}
-                  onSave={(newTitle) => handleUpdateTitle(activeMeeting.id, newTitle)}
-                  className="min-w-0 text-base font-semibold tracking-tight text-ink sm:text-lg"
-                />
-              ) : (
-                <h1 className="text-lg font-semibold text-ink">새 회의</h1>
-              )}
-              <div className="mt-1 flex items-center gap-2 text-[0.6875rem] text-muted">
-                {meetingDate && <span>{meetingDate}</span>}
-                {meetingDate && <span aria-hidden="true">·</span>}
-                <span>대화 {activeMeeting?.messages.length ?? 0}개</span>
+        <main className="relative flex min-w-0 flex-1 flex-col">
+          <div className="meeting-heading flex h-12 shrink-0 items-center gap-2 px-4 sm:px-5">
+            <div className="flex min-w-0 flex-1 items-center gap-2.5">
+              <div className="min-w-0 flex-1">
+                {activeMeeting ? (
+                  <EditableTitle
+                    key={activeMeeting.id}
+                    title={activeMeeting.title}
+                    onSave={(newTitle) => handleUpdateTitle(activeMeeting.id, newTitle)}
+                    className="min-w-0 text-sm font-semibold tracking-tight text-ink"
+                  />
+                ) : (
+                  <h1 className="truncate text-sm font-semibold text-ink">새 회의</h1>
+                )}
               </div>
-              {!activeMeeting && (
-                <p role="status" className="mt-1 text-xs text-muted">
-                  {isLoadingMeetings || isCreatingMeeting
-                    ? '회의 준비 중…'
-                    : '새 회의를 만들어 시작하세요'}
-                </p>
-              )}
+              <div className="meeting-metadata flex shrink-0 items-center gap-2 whitespace-nowrap text-[0.6875rem] text-muted">
+                {activeMeeting ? (
+                  <>
+                    {meetingDate && (
+                      <time dateTime={activeMeeting.startedAt} title={meetingDate}>
+                        <span className="sm:hidden">
+                          {new Date(activeMeeting.startedAt)
+                            .toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })
+                            .replace(/\s/g, '')
+                            .replace(/\.$/, '')}
+                        </span>
+                        <span className="hidden sm:inline">{meetingDate}</span>
+                      </time>
+                    )}
+                    <span
+                      className="flex items-center gap-1"
+                      aria-label={`대화 ${activeMeeting.messages.length}개`}
+                      title={`대화 ${activeMeeting.messages.length}개`}
+                    >
+                      <Icon name="message" className="h-3 w-3" />
+                      {activeMeeting.messages.length}
+                    </span>
+                  </>
+                ) : (
+                  <span role="status">
+                    {isLoadingMeetings || isCreatingMeeting
+                      ? '회의 준비 중…'
+                      : '새 회의를 만들어 시작하세요'}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="max-w-[48%] shrink-0 sm:hidden">
-              <LanguageDirection sourceLang={settings.sourceLang} onChange={changeDirection} />
+            <div className="meeting-language w-[6rem] shrink-0 sm:hidden">
+              <LanguageDirection
+                compact
+                sourceLang={settings.sourceLang}
+                onChange={changeDirection}
+              />
             </div>
             <div className="hidden items-center gap-2 lg:flex">
               {!summaryOpen && (
@@ -2092,7 +2210,7 @@ export default function Home() {
             hasNewPage={hasNewPage}
           />
 
-          <div className="flex min-h-0 flex-1 gap-3 px-3 sm:px-5">
+          <div className="flex min-h-0 flex-1 gap-3 px-3 pb-3 sm:px-5 sm:pb-5">
             <section
               id="meeting-voice-panel"
               role="tabpanel"
@@ -2194,6 +2312,7 @@ export default function Home() {
                           onTranslateMessage={handleTranslateMessage}
                         />
                         <NotesComposer
+                          formRef={notesComposerRef}
                           value={ttsInput}
                           onChange={setTtsInput}
                           onSend={handleSend}
@@ -2214,6 +2333,7 @@ export default function Home() {
                     ) : (
                       <MeetingPagePanel
                         key={activeMeetingId}
+                        footerRef={pageFooterRef}
                         page={activeMeeting?.page}
                         gen={pageGen}
                         hasMessages={(activeMeeting?.messages?.length ?? 0) > 0}
@@ -2239,9 +2359,18 @@ export default function Home() {
           </div>
 
           <ControlPanel
+            key={activeMeetingId}
+            avoidElementRef={floatingAvoidRef}
             isRecording={isRecording}
             onToggleRecording={handleToggleRecording}
-            recordingDisabled={HAS_API && !activeMeetingId}
+            recordingDisabled={(HAS_API && !activeMeetingId) || recordingAction === 'wait'}
+            recordingLabel={
+              recordingAction === 'prepare'
+                ? '엔진 준비'
+                : recordingAction === 'wait'
+                  ? '엔진 준비 중'
+                  : undefined
+            }
             audioLevel={audioLevel}
             audioSource={settings.audioSource}
             onEndMeeting={HAS_API && activeMeetingId ? handleEndMeeting : undefined}
@@ -2257,9 +2386,20 @@ export default function Home() {
               ) : undefined
             }
             status={
-              HAS_API && activeMeetingId ? (
-                <MeetingStatus endState={activeMeetingEnd} audioPrep={activeAudioPrep} />
-              ) : undefined
+              <>
+                {isManagedStt(settings.sttProvider) && (
+                  <div className="ui-surface pointer-events-auto max-w-[min(24rem,calc(100vw-4rem))] px-3 pb-3 pt-1 shadow-lg">
+                    <SttStatusPanel
+                      state={selectedSttStatus}
+                      connected={wsStatus === 'connected'}
+                      compact
+                    />
+                  </div>
+                )}
+                {HAS_API && activeMeetingId && (
+                  <MeetingStatus endState={activeMeetingEnd} audioPrep={activeAudioPrep} />
+                )}
+              </>
             }
           />
         </main>
@@ -2278,6 +2418,10 @@ export default function Home() {
         <SettingsPanel
           settings={settings}
           onUpdate={updateSettings}
+          sttStatus={selectedSttStatus}
+          sttConnected={wsStatus === 'connected'}
+          onSttSelect={handleSttSelect}
+          onPrepareStt={() => prepareSelectedStt()}
           onClose={() => setSettingsOpen(false)}
         />
       )}

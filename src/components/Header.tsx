@@ -2,6 +2,7 @@
 
 import type { WsStatus } from '@/lib/websocket'
 import { useTheme } from '@/components/ThemeProvider'
+import BrandLogo from '@/components/BrandLogo'
 import Icon from '@/components/ui/Icon'
 
 type SourceLanguage = 'en' | 'ko' | 'auto'
@@ -25,25 +26,27 @@ export function LanguageDirection({
   sourceLang,
   onChange,
   detectedLang,
+  compact = false,
 }: {
   sourceLang: SourceLanguage
   onChange: (source: SourceLanguage) => void
   detectedLang?: 'en' | 'ko' | null
+  compact?: boolean
 }) {
   return (
     <label className="flex min-w-0 items-center gap-2 text-xs font-medium text-muted">
-      <Icon name="languages" className="hidden h-4 w-4 sm:block" />
+      {!compact && <Icon name="languages" className="hidden h-4 w-4 sm:block" />}
       <select
         aria-label="번역 방향"
         value={sourceLang}
         onChange={(event) => onChange(event.target.value as SourceLanguage)}
-        className="min-h-9 max-w-full cursor-pointer rounded-lg border border-subtle bg-subtle py-1.5 pl-2.5 pr-6 text-xs text-ink sm:border-transparent sm:bg-transparent"
+        className={`min-h-9 max-w-full cursor-pointer rounded-lg border border-subtle bg-subtle py-1.5 pr-5 text-xs text-ink sm:border-transparent sm:bg-transparent ${compact ? 'w-[6rem] pl-1.5' : 'pl-2.5'}`}
       >
-        <option value="en">English → 한국어</option>
-        <option value="ko">한국어 → English</option>
-        <option value="auto">언어 자동 감지</option>
+        <option value="en">{compact ? 'EN → 한' : 'English → 한국어'}</option>
+        <option value="ko">{compact ? '한 → EN' : '한국어 → English'}</option>
+        <option value="auto">{compact ? '자동' : '언어 자동 감지'}</option>
       </select>
-      {sourceLang === 'auto' && detectedLang && (
+      {!compact && sourceLang === 'auto' && detectedLang && (
         <span className="ui-badge hidden sm:inline-flex" title="현재 감지된 언어">
           {detectedLang === 'ko' ? '한국어' : 'English'}
         </span>
@@ -89,14 +92,7 @@ export default function Header({
         >
           <Icon name="panelLeft" className="h-[18px] w-[18px]" />
         </button>
-        <div className="flex min-w-0 items-center gap-2.5">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-primary text-primary-foreground">
-            <Icon name="waveform" className="h-[19px] w-[19px]" />
-          </div>
-          <span className="truncate text-[0.9375rem] font-semibold tracking-tight text-ink">
-            TransMeet
-          </span>
-        </div>
+        <BrandLogo />
       </div>
 
       <div className="ml-4 hidden sm:block">

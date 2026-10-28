@@ -15,7 +15,7 @@ TransMeet은 **실시간 음성 번역 웹앱**입니다. 영어 화자의 발�
 
 ## Features
 
-- **실시간 STT** — 영어 음성 → 텍스트 (Whisper large-v3-turbo / Amazon Transcribe 선택 가능)
+- **STT 엔진 선택** — Whisper large-v3-turbo / Amazon Transcribe / Qwen3-ASR / Nemotron 3.5 ([한국어 비교·설정 가이드](docs/stt-models.md))
 - **Transcribe 언어 토글** — 영어/한글 전환 가능 (Transcribe 모드)
 - **실시간 번역** — 영어 ↔ 한글 양방향 번역 (Bedrock Haiku 5.5 / GPT-6 Luna 선택)
 - **스트리밍 번역** — 번역 진행 중 부분 텍스트 실시간 표시
@@ -32,7 +32,7 @@ TransMeet은 **실시간 음성 번역 웹앱**입니다. 영어 화자의 발�
 ## Tech Stack
 
 - **Frontend:** Next.js 14 (App Router, Static Export, PWA)
-- **STT:** AWS SageMaker (Whisper large-v3-turbo) / Amazon Transcribe
+- **STT:** AWS SageMaker (Whisper large-v3-turbo, Qwen3-ASR-1.7B, Nemotron 3.5 ASR 0.6B) / Amazon Transcribe
 - **Translation/Summary:** AWS Bedrock (Claude Haiku — 번역, Claude Sonnet — 요약)
 - **TTS:** AWS Polly (Generative / Neural / Standard)
 - **WebSocket:** ECS Fargate + ALB + CloudFront
@@ -89,9 +89,10 @@ src/
   components/
     Header.tsx                  # 상단바 (녹음 상태, 테마 토글, 빠른 번역/요약 토글)
     VoiceArea.tsx               # 음성 입력 메시지 표시 (화자별 트랜스크립트 카드)
-    NotesArea.tsx               # 메모/내 발화 영역 (접기/펼치기 지원)
+    NotesArea.tsx               # 내 메모 및 번역 결과 목록
+    NotesComposer.tsx           # 내 메모 패널 하단 입력·전송
     ChatArea.tsx                # 채팅 뷰
-    ControlPanel.tsx            # 녹음/TTS 입력 컨트롤
+    ControlPanel.tsx            # 플로팅 녹음 버튼 및 종료·다운로드 메뉴
     MeetingSidebar.tsx          # 회의 목록 & 생성
     SummaryPanel.tsx            # 요약 표시 (Markdown 렌더링 + 복사 + 글자 크기 조절)
     QuickTranslatePopup.tsx     # 글로벌 빠른 번역 팝업 (스트리밍 + 히스토리)
@@ -107,6 +108,7 @@ src/
     useSettings.ts              # localStorage 기반 설정 관리
     useQuickTranslateHistory.ts # 빠른 번역 히스토리 관리
     useSummaryResize.ts         # 요약 패널 리사이즈 핸들러
+    usePanelResize.ts           # 좌우 패널 드래그·키보드 너비 조절 및 저장
     useInterval.ts              # 유틸리티 훅
   lib/
     api.ts                      # REST API 클라이언트
@@ -138,7 +140,8 @@ public/
 
 - **구성**: Amazon Bedrock AgentCore Harness · Claude Opus 5.5 · 스킬 4개(`agent/skills/`) · Code Interpreter · Web Search(AgentCore Gateway 커넥터)
 - **발행**: 에이전트가 `publish_page`를 호출하면 백엔드가 검증 후 S3에 올리고 `https://transmeet.hi-yoo.com/p/<meetingId>/<pageId>.html`로 공개
-- **UI**: 우측 패널 `미팅 페이지` 탭 → 생성 · 미리보기 · 공유 · 재생성 · 공유 해제
+- **UI**: 우측 패널 `회의 페이지` 탭 → 생성 · 미리보기 · 공유 · 재생성 · 공유 해제
+- **자동 생성**: `회의 종료`를 누르면 요약 후 미팅 페이지를 자동으로 생성하고 페이지 패널에 진행 상황과 결과를 표시합니다. 메일 발송 설정과 무관하게 동작하며, 이미 생성 중이거나 발행된 페이지는 재사용합니다. 내용을 갱신하려면 `다시 만들기`를 누르세요.
 
 ```
 agent/
@@ -151,16 +154,17 @@ agent/
 ### 배포 순서
 
 ```bash
-./deploy.sh infra      # 하네스·Gateway·버킷 생성
-./deploy.sh skills     # agent/skills → S3 (스킬만 바꿀 때는 이것만)
+./deploy.sh infra      # AgentCore 이미지·Gateway·버킷 반영 (agent/skills 포함)
 # 백엔드 이미지 (deploy.sh 범위 밖)
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <WsBackendEcrUri 호스트>
-docker build -t <WsBackendEcrUri>:latest backend && docker push <WsBackendEcrUri>:latest
+docker build --platform linux/amd64 -t <WsBackendEcrUri>:latest backend && docker push <WsBackendEcrUri>:latest
 aws ecs update-service --cluster transmeet-ws-cluster --service <서비스명> --force-new-deployment --region us-east-1
 ./deploy.sh frontend
 ```
 
-통합 확인: `cd backend && python3 ../agent/scripts/invoke_local.py --sample ../agent/samples/short-1on1.json` — 로컬 자격증명으로 하네스를 직접 호출해 페이지 URL을 받는다. 스킬만 바꿨으면 `./deploy.sh skills` 후 다시 실행한다.
+통합 확인: `cd backend && python3 ../agent/scripts/invoke_local.py --sample ../agent/samples/short-1on1.json` — 로컬 자격증명으로 에이전트를 직접 호출해 페이지 URL을 받는다. 스킬만 바꿨더라도 `./deploy.sh infra`로 AgentCore 이미지를 반영한 뒤 다시 실행한다.
+
+운영 릴리스에서는 백엔드 이미지를 커밋별 태그로 푸시하고, `cd infra && npx cdk deploy -c wsImageTag=<태그> --require-approval never --outputs-file outputs.json`으로 해당 버전을 지정할 수 있다. 이 경우 ECS 태스크 정의의 이미지가 변경되어 새 버전으로 교체된다.
 
 ## Architecture
 
@@ -327,7 +331,7 @@ cd infra && npx cdk bootstrap
 # 프론트엔드만 배포
 ./deploy.sh frontend
 
-# 전체 배포
+# 인프라·프론트엔드 배포 (백엔드 이미지 빌드·푸시는 위 순서 참고)
 ./deploy.sh all
 
 # 변경사항 미리 보기
@@ -360,11 +364,11 @@ Python FastAPI 기반 WebSocket 서버로, ECS Fargate에서 실행됩니다.
 
 ### 주요 기능
 
-- **듀얼 STT** — Whisper (SageMaker) 또는 Amazon Transcribe 선택
-- **화자 분리** — Transcribe의 Speaker Diarization (en-US 등 지원)
+- **4가지 STT** — Whisper, Qwen3-ASR, Nemotron (SageMaker) 또는 Amazon Transcribe 선택
+- **화자 분리** — Transcribe의 Speaker Diarization (영어·한국어·자동 감지, 3명 이상 화자 표시 지원)
 - **스트리밍 번역** — Bedrock Claude 스트리밍으로 부분 번역 실시간 전달
 - **Hallucination 필터링** — 비언어적 소리, 구독 유도 문구 등 자동 제거
-- **오디오 버퍼링** — WAV 청크 결합, 600ms 무음 감지 (Whisper 모드)
+- **오디오 버퍼링** — WAV 청크 결합과 수신 후 600ms 지연 전송 (SageMaker 모드)
 - **발화 병합** — 같은 화자의 연속 발화를 하나로 합치기 (2초 딜레이)
 
 ### Python Dependencies
@@ -386,7 +390,10 @@ AWS_ACCESS_KEY_ID=your_access_key_id
 AWS_SECRET_ACCESS_KEY=your_secret_access_key
 
 # SageMaker Whisper
-WHISPER_ENDPOINT=whisper-large-v3-turbo-004709
+WHISPER_ENDPOINT=whisper-large
+# 선택형 JumpStart STT 엔드포인트 (배포 후 설정)
+QWEN_ASR_ENDPOINT=
+NEMOTRON_ASR_ENDPOINT=
 
 # Bedrock
 BEDROCK_MODEL_ID=global.anthropic.claude-haiku-5-5

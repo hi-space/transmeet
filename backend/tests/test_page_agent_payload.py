@@ -78,3 +78,19 @@ def test_inline_messages_override_stored_messages():
     assert [m["original"] for m in p["messages"]] == ["live one no ts"]
     assert p["messages"][0]["timestamp"] == "2026-10-06T10:01:00+09:00"
 
+
+def test_payload_preserves_additional_speakers():
+    item = {
+        "meetingId": "m1",
+        "title": "Team meeting",
+        "messages": [
+            msg("2026-10-06T10:00:00+09:00", "speaker3", "Third speaker"),
+            msg("2026-10-06T10:00:01+09:00", "speaker11", "Eleventh speaker"),
+        ],
+    }
+
+    payload = build_meeting_payload(item, model_id=MODEL)
+
+    assert payload["meeting"]["speakers"] == ["Speaker 3", "Speaker 11"]
+    assert [m["speaker"] for m in payload["messages"]] == ["speaker3", "speaker11"]
+

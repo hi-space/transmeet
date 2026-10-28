@@ -1,5 +1,6 @@
 'use client'
 
+import type { Ref } from 'react'
 import Icon from '@/components/ui/Icon'
 
 interface Props {
@@ -9,6 +10,7 @@ interface Props {
   onStop: () => void
   isPending?: boolean
   disabled?: boolean
+  formRef?: Ref<HTMLFormElement>
 }
 
 export default function NotesComposer({
@@ -18,9 +20,11 @@ export default function NotesComposer({
   onStop,
   isPending = false,
   disabled = false,
+  formRef,
 }: Props) {
   return (
     <form
+      ref={formRef}
       aria-label="내 메모 작성"
       className="shrink-0 border-t border-subtle bg-panel p-3"
       onSubmit={(event) => {
