@@ -72,6 +72,8 @@ async def scenario(browser, name, *, order='list', linked=None, select=None, lis
             }]}
         elif method == 'POST' and path == '/tts':
             result = {'audioData': '', 'translatedText': 'Keep this note.', 'format': 'mp3'}
+        elif method == 'GET' and path == '/me/summary-templates':
+            result = {'templates': []}
         elif method == 'DELETE':
             deletions.append(path.split('/')[-1])
             await route.fulfill(status=204, headers=headers)
@@ -127,16 +129,16 @@ async def scenario(browser, name, *, order='list', linked=None, select=None, lis
             await expect(nav).to_have_attribute('aria-busy', 'true')
             if record_before_delete:
                 await record_button.click()
-                await expect(page.get_by_role('button', name='녹음 중지', exact=True)).to_have_attribute('aria-pressed', 'true')
+                await expect(page.get_by_role('button', name='녹음 일시정지', exact=True)).to_have_attribute('aria-pressed', 'true')
             if delete_created:
                 await nav.get_by_role('button', name=f'{CREATED["title"]} 작업', exact=True).click()
                 await nav.get_by_role('button', name='회의 삭제', exact=True).click()
                 await nav.get_by_role('group', name='회의 삭제 확인').get_by_role('button', name='삭제', exact=True).click()
                 await expect(nav.get_by_text(CREATED['title'], exact=True)).to_have_count(0)
                 if record_before_delete:
-                    stop_button = page.get_by_role('button', name='녹음 중지', exact=True)
-                    await expect(stop_button).to_be_enabled()
-                    await stop_button.click()
+                    pause_button = page.get_by_role('button', name='녹음 일시정지', exact=True)
+                    await expect(pause_button).to_be_enabled()
+                    await pause_button.click()
                 await expect(record_button).to_be_disabled()
             list_gate.set()
 

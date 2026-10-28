@@ -66,6 +66,7 @@ function setup({ connected = true, confirmed = true, recording = true, summarySt
       capturing = false
     },
     setMeetingEnd: (state) => endStates.push(state),
+    setPausedMeetings: () => {},
     setTimeout: () => {},
     lastSummarizedCountRef: { current: {} },
     setMeetings: () => {},

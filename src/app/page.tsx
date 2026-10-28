@@ -224,6 +224,7 @@ export default function Home() {
   // 미팅 종료(오디오 → 요약 → 페이지 생성·메일) 진행과 녹음 파일 준비 상태
   const [meetingEnd, setMeetingEnd] = useState<MeetingEndState | null>(null)
   const [audioPrep, setAudioPrep] = useState<AudioPrepState | null>(null)
+  const [pausedMeetings, setPausedMeetings] = useState<Record<string, boolean>>({})
   const [hasNewNotes, setHasNewNotes] = useState(false)
   const [ttsInput, setTtsInput] = useState('')
   const [isSummarizing, setIsSummarizing] = useState(false)
@@ -1594,12 +1595,14 @@ export default function Home() {
     if (isRecording) {
       resetLocalRecording()
       stopRecording()
+      setPausedMeetings((previous) => ({ ...previous, [activeMeetingId]: true }))
       // 녹음 종료 시 자동 요약 (autoSummarizeMessageCount > 0 일 때)
       if (settings.autoSummarizeMessageCount > 0) {
         handleSummarizeRef.current()
       }
     } else {
       if (!(await startAudio())) return
+      setPausedMeetings((previous) => ({ ...previous, [activeMeetingId]: false }))
       startRecording({
         sttProvider: settings.sttProvider,
         sourceLang: speechSourceLang,
@@ -1818,6 +1821,7 @@ export default function Home() {
       return
     }
     if (isRecording) resetLocalRecording()
+    setPausedMeetings((previous) => ({ ...previous, [activeMeetingId]: false }))
     const meetingId = activeMeetingId
     summaryRequestRef.current = { meetingId, style: summaryStyle }
     summaryStreamsRef.current.delete(meetingId)
@@ -2640,6 +2644,7 @@ export default function Home() {
             anchorElementRef={floatingAnchorRef}
             avoidElementRef={floatingAvoidRef}
             isRecording={isRecording}
+            isRecordingPaused={!!activeMeetingId && !!pausedMeetings[activeMeetingId]}
             onToggleRecording={handleToggleRecording}
             recordingDisabled={(HAS_API && !activeMeetingId) || recordingAction === 'wait'}
             recordingLabel={

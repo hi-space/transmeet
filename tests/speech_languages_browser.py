@@ -166,12 +166,12 @@ async def main():
             assert requests[starts[-1]]["translationTarget"] == "ko"
             assert any(r["action"] == "sendAudio" and r.get("audioData")
                        for r in requests[starts[-2] + 1:starts[-1]])
-            await page.get_by_role("button", name="녹음 중지", exact=True).click()
+            await page.get_by_role("button", name="녹음 일시정지", exact=True).click()
             print("PASS: changing target during recording flushes audio before restarting")
 
             await target.select_option("auto")
             await select_provider("Transcribe")
-            await page.get_by_role("button", name="녹음 시작", exact=True).click()
+            await page.get_by_role("button", name="녹음 재개", exact=True).click()
             for language, destination, text in [
                 ("ko", "en", "첫 번째 부분 발언을 번역합니다."),
                 ("en", "ko", "The next partial sentence is English."),
@@ -208,7 +208,7 @@ async def main():
             })""")
             await page.evaluate("() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))")
             await expect(page.get_by_text("STALE_TARGET_RESPONSE", exact=True)).to_have_count(0)
-            await page.get_by_role("button", name="녹음 중지", exact=True).click()
+            await page.get_by_role("button", name="녹음 일시정지", exact=True).click()
             await target.select_option("auto")
             print("PASS: partial translation follows detected speech and ignores an old target response")
 
@@ -252,7 +252,7 @@ async def main():
             print("PASS: manually changing a bubbles target cannot merge a different target into it")
 
             await target.select_option("auto")
-            await page.get_by_role("button", name="녹음 시작", exact=True).click()
+            await page.get_by_role("button", name="녹음 재개", exact=True).click()
             await page.evaluate("""() => {
               window.__finishSpeechTranslations = false;
               const socket = window.__speechSockets.findLast(s => s.readyState === 1);
@@ -281,7 +281,7 @@ async def main():
             }""")
             await expect(page.get_by_text("현재 영어 부분 발언의 번역입니다.", exact=True)).to_be_visible()
             await expect(page.locator('[aria-label="현재 감지 언어"]:visible')).to_contain_text("English")
-            await page.get_by_role("button", name="녹음 중지", exact=True).click()
+            await page.get_by_role("button", name="녹음 일시정지", exact=True).click()
             print("PASS: an older final completion cannot discard the current partial translation")
 
             for width in (390, 768, 1024, 1280):

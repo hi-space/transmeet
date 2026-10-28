@@ -365,7 +365,10 @@ export default function VoiceArea({
             {isProcessing ? '번역 중…' : '음성을 듣고 있습니다'}
           </div>
         )}
-        <div aria-hidden="true" className="h-24" />
+        <div
+          aria-hidden="true"
+          className="h-[calc(var(--recording-controls-height,4rem)+2rem)] min-h-24"
+        />
       </div>
     </div>
   )
