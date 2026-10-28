@@ -41,17 +41,20 @@ deploy_frontend() {
   fi
 
   BUCKET=$(jq -r '.TransmeetStack.FrontendBucketName' "$OUTPUTS_FILE")
-  CF_URL=$(jq -r '.TransmeetStack.CloudFrontUrl' "$OUTPUTS_FILE")
+  CF_URL=$(jq -r '.TransmeetStack.CustomDomainUrl // .TransmeetStack.CloudFrontUrl' "$OUTPUTS_FILE")
   CF_ID=$(jq -r '.TransmeetStack.CloudFrontDistributionId // empty' "$OUTPUTS_FILE")
 
   info "Uploading to S3 bucket: $BUCKET"
-  aws s3 sync "$APP_DIR/out" "s3://$BUCKET" --delete \
+  # Keep previous hashed assets available to browsers using the previous release.
+  aws s3 sync "$APP_DIR/out" "s3://$BUCKET" \
     --cache-control "public, max-age=31536000, immutable" \
-    --exclude "*.html"
+    --exclude "*" --include "_next/static/*" --only-show-errors
 
-  aws s3 sync "$APP_DIR/out" "s3://$BUCKET" --delete \
+  # Copy mutable files on every deployment so unchanged service workers and
+  # manifests also receive the intended cache metadata.
+  aws s3 cp "$APP_DIR/out" "s3://$BUCKET" --recursive \
     --cache-control "no-cache" \
-    --include "*.html"
+    --exclude "_next/static/*" --only-show-errors
 
   invalidate_cloudfront "$CF_ID"
 
@@ -73,7 +76,7 @@ invalidate_cloudfront() {
   local invalidation_id
   invalidation_id=$(aws cloudfront create-invalidation \
     --distribution-id "$cf_id" \
-    --paths "/" "/index.html" "/404.html" "/index.txt" "/sw.js" "/manifest.json" \
+    --paths "/" "/index.html" "/404.html" "/404/*" "/index.txt" "/sw.js" "/manifest.json" "/icons/*" "/workbox-*.js" "/swe-worker-*.js" \
     --query 'Invalidation.Id' --output text)
 
   info "Waiting for invalidation $invalidation_id to complete..."

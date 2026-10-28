@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useId, type CSSProperties } from 'react'
 import { Meeting } from '@/types/meeting'
+import Icon from '@/components/ui/Icon'
+import { usePanelResize } from '@/hooks/usePanelResize'
 
 interface Props {
   meetings: Meeting[]
@@ -14,6 +16,9 @@ interface Props {
   onGenerateTitle: (id: string) => void
   generatingTitleId: string | null
   isCreating?: boolean
+  isLoading?: boolean
+  loadError?: string | null
+  headingId?: string
 }
 
 const COLLAPSE_KEY = 'transmeet.sidebarCollapsed'
@@ -117,39 +122,6 @@ function buildGroups(meetings: Meeting[]): MeetingGroup[] {
   return groups
 }
 
-function CalendarIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
-  )
-}
-
-function ChatIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5Z" />
-    </svg>
-  )
-}
-
 export default function MeetingSidebar({
   meetings,
   activeMeetingId,
@@ -161,17 +133,35 @@ export default function MeetingSidebar({
   onGenerateTitle,
   generatingTitleId,
   isCreating,
+  isLoading = false,
+  loadError,
+  headingId = 'meeting-list-title',
 }: Props) {
+  const instanceId = useId()
+  const { width, minWidth, maxWidth, handlePointerDown, handleKeyDown } = usePanelResize({
+    storageKey: 'transmeet-sidebar-width',
+    defaultWidth: 240,
+    minWidth: 200,
+    maxWidth: 420,
+    edge: 'right',
+  })
+  const [query, setQuery] = useState('')
+  const [menuId, setMenuId] = useState<string | null>(null)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [collapsedKeys, setCollapsedKeys] = useState<Set<string>>(new Set())
   const [collapsedPref, setCollapsedPref] = useState(false)
-  // 데스크톱에서만 레일로 접는다. 모바일은 드로어이므로 항상 펼친 상태로 보여준다.
   const [isDesktop, setIsDesktop] = useState(false)
   const editInputRef = useRef<HTMLInputElement>(null)
-
-  const groups = useMemo(() => buildGroups(meetings), [meetings])
+  const filtered = useMemo(
+    () =>
+      meetings.filter((meeting) =>
+        meeting.title.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase())
+      ),
+    [meetings, query]
+  )
+  const groups = useMemo(() => buildGroups(filtered), [filtered])
   const isRail = collapsedPref && isDesktop
 
   useEffect(() => {
@@ -179,41 +169,50 @@ export default function MeetingSidebar({
     const sync = () => setIsDesktop(mq.matches)
     sync()
     mq.addEventListener('change', sync)
-    setCollapsedPref(window.localStorage.getItem(COLLAPSE_KEY) === '1')
+    try {
+      setCollapsedPref(window.localStorage.getItem(COLLAPSE_KEY) === '1')
+    } catch {
+      /* Storage is optional. */
+    }
     return () => mq.removeEventListener('change', sync)
   }, [])
 
   useEffect(() => {
-    if (editingId && editInputRef.current) {
-      editInputRef.current.focus()
-      editInputRef.current.select()
+    if (editingId) {
+      editInputRef.current?.focus()
+      editInputRef.current?.select()
     }
   }, [editingId])
 
+  useEffect(() => {
+    if (!menuId) return
+    const dismiss = (event: PointerEvent) => {
+      if (event.target instanceof Element && !event.target.closest('[data-meeting-actions]'))
+        setMenuId(null)
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setMenuId(null)
+      document.getElementById(`${instanceId}-meeting-menu-${menuId}`)?.focus()
+    }
+    document.addEventListener('pointerdown', dismiss)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', dismiss)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [menuId, instanceId])
+
   function toggleRail() {
     setCollapsedPref((prev) => {
-      const next = !prev
-      window.localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0')
-      return next
+      try {
+        window.localStorage.setItem(COLLAPSE_KEY, prev ? '0' : '1')
+      } catch {
+        /* Storage is optional. */
+      }
+      return !prev
     })
-  }
-
-  function startEditing(meeting: Meeting) {
-    setConfirmId(null)
-    setEditingId(meeting.id)
-    setEditTitle(meeting.title)
-  }
-
-  function commitEdit(meeting: Meeting) {
-    const trimmed = editTitle.trim()
-    setEditingId(null)
-    if (trimmed && trimmed !== meeting.title) {
-      onUpdateTitle(meeting.id, trimmed)
-    }
-  }
-
-  function cancelEdit() {
-    setEditingId(null)
   }
 
   function toggleGroup(key: string) {
@@ -225,438 +224,360 @@ export default function MeetingSidebar({
     })
   }
 
-  // ---- 접힌 레일 ----
   if (isRail) {
     return (
-      <div className="flex flex-col h-full w-14 glass-sidebar border-r border-slate-200/60 dark:border-accent-500/10">
-        <div className="h-12 flex items-center justify-center flex-shrink-0 border-b border-slate-100 dark:border-slate-800">
-          <button
-            onClick={toggleRail}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-accent-600 dark:hover:text-accent-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
-            aria-label="회의 목록 펼치기"
-            title="회의 목록 펼치기"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-4 h-4"
-            >
-              <path d="M4 6h16M4 12h16M4 18h10" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="pt-2 flex-shrink-0 flex justify-center">
-          <button
-            onClick={onNewMeeting}
-            disabled={isCreating}
-            className="w-9 h-9 flex items-center justify-center rounded-lg text-accent-600 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-500/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            aria-label="새 회의"
-            title="새 회의"
-          >
-            {isCreating ? (
-              <svg
-                className="w-4 h-4 animate-spin"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-              </svg>
-            ) : (
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="w-4 h-4"
-              >
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-            )}
-          </button>
-        </div>
-
-        {/* 접힌 상태에서는 목록을 노출하지 않는다. 세로 라벨만 두어 무엇을 접었는지 알린다. */}
+      <div className="flex h-full w-16 flex-col items-center gap-3 border-r border-subtle bg-subtle py-4">
         <button
+          type="button"
           onClick={toggleRail}
-          className="flex-1 w-full flex items-center justify-center group"
+          className="ui-icon-button"
           aria-label="회의 목록 펼치기"
           title="회의 목록 펼치기"
         >
-          <span
-            className="text-[0.6875rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-600 group-hover:text-accent-600 dark:group-hover:text-accent-400 transition-colors select-none"
-            style={{ writingMode: 'vertical-rl' }}
-          >
-            회의 목록
-          </span>
+          <Icon name="panelLeft" className="h-[18px] w-[18px]" />
         </button>
+        <button
+          type="button"
+          onClick={onNewMeeting}
+          disabled={isCreating}
+          className="ui-icon-button ui-button-primary"
+          aria-label="새 회의"
+          title="새 회의"
+        >
+          <Icon
+            name={isCreating ? 'loader' : 'plus'}
+            className={`h-[18px] w-[18px] ${isCreating ? 'animate-spin' : ''}`}
+          />
+        </button>
+        <span className="mt-1 text-[0.6875rem] tabular-nums text-muted">{meetings.length}</span>
       </div>
     )
   }
 
-  // ---- 펼친 목록 ----
   return (
-    <div className="flex flex-col h-full w-[19rem] max-w-[calc(100vw-1rem)] glass-sidebar border-r border-slate-200/60 dark:border-accent-500/10">
-      {/* Header */}
-      <div className="px-3 h-12 flex items-center justify-between flex-shrink-0 border-b border-slate-100 dark:border-slate-800">
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-bold tracking-tight text-slate-700 dark:text-slate-200">
+    <div
+      className="relative flex h-full w-[17rem] max-w-full flex-col border-r border-subtle bg-subtle lg:w-[var(--sidebar-width)]"
+      data-sidebar-width={width}
+      style={{ '--sidebar-width': `${width}px` } as CSSProperties}
+    >
+      <div
+        role="separator"
+        aria-label="회의 목록 너비 조절"
+        aria-orientation="vertical"
+        aria-valuemin={minWidth}
+        aria-valuemax={maxWidth}
+        aria-valuenow={width}
+        tabIndex={0}
+        title="드래그하여 회의 목록 너비 조절"
+        onPointerDown={handlePointerDown}
+        onKeyDown={handleKeyDown}
+        className="absolute -right-1 bottom-0 top-0 z-20 hidden w-2 cursor-col-resize touch-none transition-colors hover:bg-accent-300/50 focus-visible:bg-accent-300/50 lg:block"
+      />
+      <div className="flex h-16 shrink-0 items-center justify-between gap-2 px-4">
+        <div className="flex items-center gap-2">
+          <h2 id={headingId} className="text-xs font-semibold text-ink">
             회의 목록
-          </span>
-          <span className="px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[0.625rem] font-semibold text-slate-500 dark:text-slate-400 tabular-nums">
-            {meetings.length}
-          </span>
+          </h2>
+          <span className="text-[0.6875rem] tabular-nums text-muted">{meetings.length}</span>
         </div>
-        <div className="flex items-center gap-0.5">
-          {/* 새 회의 — 목록 하단이 아니라 헤더에 둔다 (스크롤과 무관하게 항상 보임) */}
-          <button
-            onClick={onNewMeeting}
-            disabled={isCreating}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-accent-600 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-500/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-            aria-label="새 회의"
-            title="새 회의"
-          >
-            {isCreating ? (
-              <svg
-                className="w-4 h-4 animate-spin"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-              </svg>
-            ) : (
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="w-4 h-4"
-              >
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-            )}
-          </button>
-          {/* 데스크톱: 레일로 접기 */}
-          <button
-            onClick={toggleRail}
-            className="hidden lg:flex w-7 h-7 items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
-            aria-label="회의 목록 접기"
-            title="회의 목록 접기"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-4 h-4"
+        <button
+          type="button"
+          onClick={toggleRail}
+          className="ui-icon-button hidden lg:inline-flex"
+          aria-label="회의 목록 접기"
+          title="회의 목록 접기"
+        >
+          <Icon name="panelLeft" />
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="ui-icon-button lg:hidden"
+          aria-label="회의 목록 닫기"
+        >
+          <Icon name="close" />
+        </button>
+      </div>
+
+      <div className="shrink-0 space-y-3 px-3 pb-3">
+        <button
+          type="button"
+          onClick={() => {
+            setQuery('')
+            onNewMeeting()
+            onClose()
+          }}
+          disabled={isCreating}
+          className="ui-button ui-button-secondary w-full justify-start gap-2.5 px-3 text-xs"
+        >
+          <Icon
+            name={isCreating ? 'loader' : 'plus'}
+            className={`h-4 w-4 ${isCreating ? 'animate-spin' : ''}`}
+          />
+          {isCreating ? '회의 만드는 중…' : '새 회의'}
+        </button>
+        <div className="relative">
+          <Icon
+            name="search"
+            className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted"
+          />
+          <input
+            aria-label="회의 검색"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="회의 검색"
+            className="ui-input min-h-9 bg-transparent py-2 pl-9 pr-8 text-xs"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery('')}
+              aria-label="검색 지우기"
+              className="ui-icon-button absolute right-0 top-1/2 -translate-y-1/2"
             >
-              <path d="m11 17-5-5 5-5M18 17l-5-5 5-5" />
-            </svg>
-          </button>
-          {/* 모바일: 드로어 닫기 */}
-          <button
-            onClick={onClose}
-            className="lg:hidden w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors"
-            aria-label="닫기"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              className="w-4 h-4"
-            >
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
-          </button>
+              <Icon name="close" className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Meeting list */}
-      <div className="flex-1 overflow-y-auto scrollbar-thin pb-2">
-        {meetings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full gap-2 px-6 text-center select-none">
-            <CalendarIcon className="w-6 h-6 text-slate-300 dark:text-slate-700" />
-            <span className="text-xs text-slate-400 dark:text-slate-500">아직 회의가 없습니다</span>
+      <nav
+        aria-label="회의 기록"
+        aria-busy={isLoading}
+        className="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-2 pb-4"
+      >
+        {isLoading && (
+          <div role="status" className="flex items-center gap-2 px-3 py-4 text-xs text-muted">
+            <Icon name="loader" className="h-3.5 w-3.5 animate-spin" />
+            회의 목록 불러오는 중…
           </div>
-        ) : (
-          groups.map((groupItem) => {
-            const isCollapsed = collapsedKeys.has(groupItem.key)
-            const hasActive = groupItem.meetings.some((m) => m.id === activeMeetingId)
-            return (
-              <div key={groupItem.key} className="mb-0.5">
-                {/* Group header */}
-                <button
-                  onClick={() => toggleGroup(groupItem.key)}
-                  className="sticky top-0 z-10 w-full flex items-center gap-1.5 px-3 py-2 bg-slate-100/90 dark:bg-slate-900/95 backdrop-blur-md border-y border-slate-200/70 dark:border-slate-800 text-left hover:bg-slate-200/80 dark:hover:bg-slate-800/95 transition-colors"
-                >
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className={`w-3 h-3 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${
-                      isCollapsed ? '-rotate-90' : ''
-                    }`}
+        )}
+        {loadError && (
+          <p role="alert" className="px-3 py-4 text-xs text-red-600 dark:text-red-400">
+            {loadError}
+          </p>
+        )}
+        {groups.length === 0
+          ? !isLoading &&
+            !loadError && (
+              <div className="ui-empty min-h-32 py-8 text-xs" role="status">
+                <Icon name={query ? 'search' : 'calendar'} className="mb-1 h-6 w-6 opacity-60" />
+                {query ? '검색 결과가 없습니다' : '아직 회의가 없습니다'}
+                {query && (
+                  <button type="button" onClick={() => setQuery('')} className="ui-button">
+                    전체 회의 보기
+                  </button>
+                )}
+              </div>
+            )
+          : groups.map((group) => {
+              const collapsed = !query && collapsedKeys.has(group.key)
+              return (
+                <div key={group.key} className="mb-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.key)}
+                    aria-expanded={!collapsed}
+                    className="flex min-h-9 w-full items-center gap-1.5 px-2 text-left text-[0.6875rem] font-medium text-muted"
                   >
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
-                  <span className="text-[0.6875rem] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                    {groupItem.label}
-                  </span>
-                  <span className="text-[0.625rem] font-semibold text-slate-400 dark:text-slate-500 tabular-nums">
-                    {groupItem.meetings.length}
-                  </span>
-                  {isCollapsed && hasActive && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-accent-500" aria-hidden />
-                  )}
-                </button>
-
-                {!isCollapsed && (
-                  <div>
-                    {groupItem.meetings.map((meeting) => {
-                      const isActive = meeting.id === activeMeetingId
-                      const isConfirming = confirmId === meeting.id
-                      const isEditing = editingId === meeting.id
+                    <Icon
+                      name="chevronDown"
+                      className={`h-3 w-3 transition-transform ${collapsed ? '-rotate-90' : ''}`}
+                    />
+                    {group.label}
+                    <span className="ml-auto tabular-nums">{group.meetings.length}</span>
+                  </button>
+                  {!collapsed &&
+                    group.meetings.map((meeting) => {
+                      const active = meeting.id === activeMeetingId
+                      const count = Math.max(meeting.messageCount ?? 0, meeting.messages.length)
                       const date = formatDate(meeting.startedAt)
                       const time = formatTime(meeting.startedAt)
-                      // messageCount: 목록 API 값(messages 미포함), messages.length: 로드/실시간 값.
-                      // 둘 중 큰 값을 쓴다 — 녹음 중에는 후자가, 목록만 불러온 상태에선 전자가 크다.
-                      const count = Math.max(meeting.messageCount ?? 0, meeting.messages.length)
                       return (
                         <div
                           key={meeting.id}
-                          className={`group relative border-b border-slate-100 dark:border-slate-800/70 transition-colors ${
-                            isActive
-                              ? 'bg-accent-50/70 dark:bg-accent-500/10'
-                              : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
-                          }`}
+                          className={`group relative mb-1 rounded-lg border transition-colors ${active ? 'border-accent-200/70 bg-accent-50 dark:border-accent-500/25 dark:bg-accent-500/10' : 'border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/60'}`}
                         >
-                          <button
-                            onClick={() => {
-                              if (isConfirming || isEditing) return
-                              onSelect(meeting.id)
-                              onClose()
-                            }}
-                            className="w-full text-left px-4 py-4"
-                          >
-                            {/* 1행: 제목 */}
-                            {isEditing ? (
+                          {editingId === meeting.id ? (
+                            <form
+                              className="space-y-2 p-2"
+                              onSubmit={(event) => {
+                                event.preventDefault()
+                                const title = editTitle.trim()
+                                if (title && title !== meeting.title)
+                                  onUpdateTitle(meeting.id, title)
+                                setEditingId(null)
+                              }}
+                            >
                               <input
                                 ref={editInputRef}
+                                aria-label="회의 제목"
                                 value={editTitle}
-                                onChange={(e) => setEditTitle(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === 'Enter') {
-                                    e.preventDefault()
-                                    commitEdit(meeting)
-                                  } else if (e.key === 'Escape') {
-                                    cancelEdit()
+                                onChange={(event) => setEditTitle(event.target.value)}
+                                onKeyDown={(event) => {
+                                  if (
+                                    event.key === 'Enter' &&
+                                    (event.nativeEvent.isComposing || event.keyCode === 229)
+                                  )
+                                    event.preventDefault()
+                                  if (event.key === 'Escape') {
+                                    event.preventDefault()
+                                    setEditingId(null)
                                   }
                                 }}
-                                onBlur={() => commitEdit(meeting)}
-                                onClick={(e) => e.stopPropagation()}
-                                className="w-full text-sm font-semibold bg-white dark:bg-slate-900 border border-accent-300 dark:border-accent-500/40 rounded-md px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-accent-400 text-slate-800 dark:text-slate-100"
+                                className="ui-input py-2 text-xs"
                               />
-                            ) : (
-                              <div
-                                onDoubleClick={(e) => {
-                                  e.stopPropagation()
-                                  startEditing(meeting)
-                                }}
-                                className={`text-sm font-semibold leading-snug truncate pr-16 ${
-                                  isActive
-                                    ? 'text-accent-900 dark:text-accent-100'
-                                    : 'text-slate-800 dark:text-slate-100'
-                                }`}
-                                title={meeting.title}
-                              >
-                                {meeting.title}
-                              </div>
-                            )}
-
-                            {/* 2행: 날짜 / 시간 / 메시지 수 — 얇은 구분선으로 항목을 나눈다 */}
-                            <div className="mt-1.5 flex items-center gap-2 text-xs tabular-nums">
-                              <span
-                                className={`font-medium ${
-                                  isActive
-                                    ? 'text-accent-700 dark:text-accent-300'
-                                    : 'text-slate-500 dark:text-slate-400'
-                                }`}
-                              >
-                                {date ?? '날짜 없음'}
-                              </span>
-                              {time && (
-                                <>
-                                  <span
-                                    className="w-px h-2.5 bg-slate-300 dark:bg-slate-700"
-                                    aria-hidden
-                                  />
-                                  <span
-                                    className={`font-semibold ${
-                                      isActive
-                                        ? 'text-accent-700 dark:text-accent-300'
-                                        : 'text-slate-600 dark:text-slate-300'
-                                    }`}
-                                  >
-                                    {time}
-                                  </span>
-                                </>
-                              )}
-                              <span className="ml-auto inline-flex items-center gap-1 text-slate-400 dark:text-slate-500">
-                                <ChatIcon className="w-3 h-3" />
-                                {count}
-                              </span>
-                            </div>
-                          </button>
-
-                          {/* Action buttons (hover) */}
-                          {!isConfirming && !isEditing && (
-                            <div className="absolute right-1.5 top-3 opacity-0 group-hover:opacity-100 focus-within:opacity-100 flex items-center gap-0.5 transition-opacity">
-                              {/* Edit title button */}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  startEditing(meeting)
-                                }}
-                                className="w-6 h-6 flex items-center justify-center rounded-md bg-white/80 dark:bg-slate-900/80 text-slate-400 hover:text-accent-600 dark:hover:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-500/10 transition-colors"
-                                aria-label="제목 편집"
-                                title="제목 편집"
-                              >
-                                <svg
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="w-3 h-3"
-                                >
-                                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                                  <path d="m15 5 4 4" />
-                                </svg>
-                              </button>
-                              {/* Generate title button */}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  onGenerateTitle(meeting.id)
-                                }}
-                                disabled={generatingTitleId === meeting.id}
-                                className="w-6 h-6 flex items-center justify-center rounded-md bg-white/80 dark:bg-slate-900/80 text-slate-400 hover:text-accent-600 dark:hover:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                                aria-label="제목 생성"
-                                title="AI로 제목 생성"
-                              >
-                                {generatingTitleId === meeting.id ? (
-                                  <svg
-                                    className="w-3 h-3 animate-spin"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                  >
-                                    <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                                  </svg>
-                                ) : (
-                                  <svg
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    className="w-3 h-3"
-                                  >
-                                    <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 1 7.92 12.446A5 5 0 1 1 10 19H5a4 4 0 0 1-.608-7.95A6 6 0 0 1 12 3z" />
-                                    <path d="m10 13 2 2 4-4" />
-                                  </svg>
-                                )}
-                              </button>
-                              {/* Delete button */}
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setEditingId(null)
-                                  setConfirmId(meeting.id)
-                                }}
-                                className="w-6 h-6 flex items-center justify-center rounded-md bg-white/80 dark:bg-slate-900/80 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
-                                aria-label="삭제"
-                                title="삭제"
-                              >
-                                <svg
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  className="w-3.5 h-3.5"
-                                >
-                                  <polyline points="3 6 5 6 21 6" />
-                                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                                  <path d="M10 11v6M14 11v6" />
-                                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                                </svg>
-                              </button>
-                            </div>
-                          )}
-
-                          {/* Inline confirm */}
-                          {isConfirming && (
-                            <div className="absolute inset-0 flex items-center justify-between px-3 bg-red-50 dark:bg-red-950">
-                              <span className="text-xs text-red-600 dark:text-red-400 font-medium">
-                                삭제하시겠습니까?
-                              </span>
-                              <div className="flex gap-1">
+                              <div className="flex justify-end gap-1">
                                 <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setConfirmId(null)
-                                    onDelete(meeting.id)
-                                  }}
-                                  className="px-2 py-1 rounded text-xs font-semibold bg-red-500 text-white hover:bg-red-600 transition-colors"
-                                >
-                                  삭제
-                                </button>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setConfirmId(null)
-                                  }}
-                                  className="px-2 py-1 rounded text-xs font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"
+                                  type="button"
+                                  onClick={() => setEditingId(null)}
+                                  className="ui-button"
                                 >
                                   취소
                                 </button>
+                                <button
+                                  type="submit"
+                                  className="ui-button ui-button-primary"
+                                  disabled={!editTitle.trim()}
+                                >
+                                  저장
+                                </button>
+                              </div>
+                            </form>
+                          ) : confirmId === meeting.id ? (
+                            <div className="p-3" role="group" aria-label="회의 삭제 확인">
+                              <p className="text-xs font-medium text-ink">이 회의를 삭제할까요?</p>
+                              <p className="mt-1 truncate text-xs text-muted">{meeting.title}</p>
+                              <div className="mt-2 flex justify-end gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmId(null)}
+                                  className="ui-button"
+                                >
+                                  취소
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setConfirmId(null)
+                                    onDelete(meeting.id)
+                                  }}
+                                  className="ui-button bg-red-600 text-white hover:!bg-red-700 hover:!text-white"
+                                >
+                                  삭제
+                                </button>
                               </div>
                             </div>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  onSelect(meeting.id)
+                                  onClose()
+                                }}
+                                aria-current={active ? 'page' : undefined}
+                                className="w-full rounded-lg px-3 py-3 text-left"
+                              >
+                                <div className="flex min-w-0 items-center gap-2 pr-7">
+                                  <span
+                                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${active ? 'bg-accent-600 dark:bg-accent-400' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                  />
+                                  <span
+                                    className={`truncate text-[0.8125rem] font-medium ${active ? 'text-accent-900 dark:text-accent-100' : 'text-ink'}`}
+                                    title={meeting.title}
+                                  >
+                                    {meeting.title}
+                                  </span>
+                                </div>
+                                <div className="mt-1.5 flex items-center gap-1.5 pl-3.5 text-[0.6875rem] text-muted">
+                                  <span>{date ?? '날짜 없음'}</span>
+                                  {time && (
+                                    <>
+                                      <span aria-hidden="true">·</span>
+                                      <span className="tabular-nums">{time}</span>
+                                    </>
+                                  )}
+                                  <span
+                                    className="ml-auto flex items-center gap-1 tabular-nums"
+                                    aria-label={`대화 ${count}개`}
+                                  >
+                                    <Icon name="message" className="h-3 w-3" />
+                                    {count}
+                                  </span>
+                                </div>
+                              </button>
+                              <div className="absolute right-1 top-1.5" data-meeting-actions>
+                                <button
+                                  id={`${instanceId}-meeting-menu-${meeting.id}`}
+                                  type="button"
+                                  onClick={() =>
+                                    setMenuId(menuId === meeting.id ? null : meeting.id)
+                                  }
+                                  aria-label={`${meeting.title} 작업`}
+                                  aria-expanded={menuId === meeting.id}
+                                  className="ui-icon-button h-8 w-8 min-h-8"
+                                  title="회의 작업"
+                                >
+                                  <Icon name="more" className="h-4 w-4" />
+                                </button>
+                                {menuId === meeting.id && (
+                                  <div
+                                    className="ui-surface absolute right-0 top-full z-20 mt-1 flex w-40 flex-col p-1 shadow-lg"
+                                    role="group"
+                                    aria-label="회의 작업"
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setMenuId(null)
+                                        setEditingId(meeting.id)
+                                        setEditTitle(meeting.title)
+                                      }}
+                                      className="ui-button justify-start"
+                                    >
+                                      <Icon name="notes" />
+                                      제목 편집
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setMenuId(null)
+                                        onGenerateTitle(meeting.id)
+                                      }}
+                                      disabled={generatingTitleId === meeting.id}
+                                      className="ui-button justify-start"
+                                    >
+                                      <Icon
+                                        name={
+                                          generatingTitleId === meeting.id ? 'loader' : 'sparkles'
+                                        }
+                                      />
+                                      제목 자동 생성
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setMenuId(null)
+                                        setConfirmId(meeting.id)
+                                      }}
+                                      className="ui-button justify-start text-red-600 dark:text-red-400"
+                                    >
+                                      <Icon name="trash" />
+                                      회의 삭제
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            </>
                           )}
                         </div>
                       )
                     })}
-                  </div>
-                )}
-              </div>
-            )
-          })
-        )}
-      </div>
+                </div>
+              )
+            })}
+      </nav>
     </div>
   )
 }

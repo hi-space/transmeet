@@ -3,8 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { isIOS, supportsSystemAudio } from '@/lib/platform'
 
-// Default: 700ms for Transcribe streaming (feed continuously); 2000ms for Whisper (better context)
-// CloudFront→ALB→Fargate supports large frames, so 2000ms chunks are safe for Whisper
+// Transcribe streams 700ms chunks; the SageMaker providers use 2000ms for context.
 const CHUNK_DURATION_MS = 700
 const SCRIPT_PROCESSOR_BUFFER_SIZE = 4096
 
@@ -95,6 +94,11 @@ export function useAudioCapture({
   useEffect(() => {
     onChunkRef.current = onChunk
   }, [onChunk])
+
+  useEffect(() => {
+    // The worker restarts its interval when the user switches speech engines.
+    workerRef.current?.postMessage({ type: 'start', interval: chunkDurationMs })
+  }, [chunkDurationMs])
 
   const flushChunk = useCallback(() => {
     if (samplesRef.current.length === 0) return
@@ -348,5 +352,5 @@ export function useAudioCapture({
     }
   }, [])
 
-  return { isRecording, audioLevel, error, start, stop }
+  return { isRecording, audioLevel, error, start, stop, flush: flushChunk }
 }

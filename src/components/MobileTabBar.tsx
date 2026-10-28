@@ -1,20 +1,13 @@
 'use client'
 
+import Tabs from '@/components/ui/Tabs'
+
 interface Props {
   activeTab: 'voice' | 'notes' | 'summary' | 'page'
   onTabChange: (tab: 'voice' | 'notes' | 'summary' | 'page') => void
   hasNewVoice?: boolean
   hasNewNotes?: boolean
   hasNewPage?: boolean
-  /** 음성 탭에서만 노출되는 글자 크기 선택기 */
-  fontSizeControl?: React.ReactNode
-}
-
-const TAB_LABELS: Record<string, string> = {
-  voice: '음성 입력',
-  notes: '내 메모',
-  summary: '요약',
-  page: '페이지',
 }
 
 export default function MobileTabBar({
@@ -23,44 +16,39 @@ export default function MobileTabBar({
   hasNewVoice,
   hasNewNotes,
   hasNewPage,
-  fontSizeControl,
 }: Props) {
   return (
-    <div className="lg:hidden flex items-center flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-      {(['voice', 'notes', 'summary', 'page'] as const).map((tab) => {
-        const isActive = activeTab === tab
-        const label = TAB_LABELS[tab]
-        const hasBadge =
-          tab === 'voice'
-            ? hasNewVoice
-            : tab === 'notes'
-              ? hasNewNotes
-              : tab === 'page'
-                ? hasNewPage
-                : false
-        return (
-          <button
-            key={tab}
-            onClick={() => onTabChange(tab)}
-            className={`flex-1 relative flex items-center justify-center gap-1.5 px-4 py-2.5 text-sm font-medium transition-colors ${
-              isActive
-                ? 'text-accent-600 dark:text-accent-500'
-                : 'text-slate-500 dark:text-slate-400 hover:text-accent-600 dark:hover:text-accent-500'
-            }`}
-          >
-            {label}
-            {hasBadge && !isActive && (
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
-            )}
-            {isActive && (
-              <span className="absolute bottom-0 left-1/4 right-1/4 h-[2px] rounded-full bg-accent-500" />
-            )}
-          </button>
-        )
-      })}
-      {activeTab === 'voice' && fontSizeControl && (
-        <div className="flex-shrink-0 pr-3 pl-1">{fontSizeControl}</div>
-      )}
+    <div className="shrink-0 px-3 pb-3 lg:hidden">
+      <Tabs
+        label="회의 화면"
+        value={activeTab}
+        onChange={onTabChange}
+        items={[
+          {
+            value: 'voice',
+            label: '대화',
+            icon: 'waveform',
+            badge: hasNewVoice,
+            panelId: 'meeting-voice-panel',
+          },
+          {
+            value: 'notes',
+            label: '내 메모',
+            icon: 'notes',
+            badge: hasNewNotes,
+            panelId: 'meeting-utility-panel',
+          },
+          { value: 'summary', label: '요약', icon: 'summary', panelId: 'meeting-utility-panel' },
+          {
+            value: 'page',
+            label: '회의 페이지',
+            icon: 'page',
+            badge: hasNewPage,
+            panelId: 'meeting-utility-panel',
+          },
+        ]}
+        className="[&_.ui-tab]:gap-1 [&_.ui-tab]:px-1.5 [&_.ui-tab_svg]:hidden min-[380px]:[&_.ui-tab_svg]:block"
+      />
     </div>
   )
 }

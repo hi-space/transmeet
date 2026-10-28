@@ -2,31 +2,19 @@
 
 import { useEffect, useRef } from 'react'
 import { Message } from '@/types/meeting'
+import Icon from '@/components/ui/Icon'
+import { getSpeakerLabel, isVoiceSpeaker, normalizeSpeaker } from '@/lib/speakers'
 
-const SPEAKER_CONFIG: Record<
-  'speaker1' | 'speaker2',
+const SPEAKER_COLORS = [
   {
-    label: string
-    nameColor: string
-    cardBg: string
-    translationColor: string
-  }
-> = {
-  speaker1: {
-    label: 'Speaker 1',
-    nameColor: 'text-accent-600 dark:text-accent-400',
-    cardBg:
-      'bg-white/60 dark:bg-slate-800/60 glass border border-slate-200/50 dark:border-slate-700/50',
-    translationColor: 'text-slate-500 dark:text-slate-400',
+    color: 'text-accent-700 dark:text-accent-300',
+    dot: 'bg-accent-500',
   },
-  speaker2: {
-    label: 'Speaker 2',
-    nameColor: 'text-amber-600 dark:text-amber-400',
-    cardBg:
-      'bg-white/60 dark:bg-slate-800/60 glass border border-slate-200/50 dark:border-slate-700/50',
-    translationColor: 'text-slate-500 dark:text-slate-400',
-  },
-}
+  { color: 'text-amber-700 dark:text-amber-300', dot: 'bg-amber-500' },
+  { color: 'text-violet-700 dark:text-violet-300', dot: 'bg-violet-500' },
+  { color: 'text-emerald-700 dark:text-emerald-300', dot: 'bg-emerald-500' },
+  { color: 'text-rose-700 dark:text-rose-300', dot: 'bg-rose-500' },
+]
 
 // ─── 글자 크기 단계 ───────────────────────────────────────────────────────────
 // compact: 회의 흐름을 훑는 기본 크기
@@ -58,11 +46,11 @@ const SIZE_TOKENS: Record<VoiceFontSize, StyleTokens> = {
     inner: 'px-4 py-3',
     header: 'mb-1.5',
     label: 'text-xs',
-    time: 'text-[0.625rem]',
+    time: 'text-[0.6875rem]',
     original: 'text-sm leading-reading',
-    translation: 'mt-1.5 text-sm leading-reading',
-    btn: 'w-5 h-5',
-    btnIcon: 'w-2.5 h-2.5',
+    translation: 'mt-2 text-sm leading-reading font-medium',
+    btn: 'w-7 h-7',
+    btnIcon: 'w-3.5 h-3.5',
     btnStop: 'w-2 h-2',
     caret: 'w-[2px] h-[0.7em] ml-[2px]',
     autoScrollThreshold: 200,
@@ -114,25 +102,13 @@ const SIZE_TOKENS: Record<VoiceFontSize, StyleTokens> = {
   },
 }
 
-const FONT_SIZE_ORDER: VoiceFontSize[] = ['compact', 'md', 'lg', 'xl']
-const FONT_SIZE_TITLE: Record<VoiceFontSize, string> = {
-  compact: '작게 — 회의 흐름 훑어보기',
+const FONT_SIZE_LABELS: Record<VoiceFontSize, string> = {
+  compact: '작게',
   md: '보통',
-  lg: '크게 — 화면 공유용',
-  xl: '아주 크게 — 화면 공유용',
-}
-// 버튼 자체의 글자 크기로 단계를 직관적으로 보여준다
-const FONT_SIZE_BTN_TEXT: Record<VoiceFontSize, string> = {
-  compact: 'text-[0.5625rem]',
-  md: 'text-[0.6875rem]',
-  lg: 'text-[0.8125rem]',
-  xl: 'text-[0.9375rem]',
+  lg: '크게',
+  xl: '아주 크게',
 }
 
-/**
- * 말풍선 글자 크기 선택기 — 음성 입력 헤더(내 메모 / 요약 버튼 옆)에 배치한다.
- * 발표 중 현장에서 바로 조절하는 값이라 설정 패널에 숨기지 않는다.
- */
 export function VoiceFontSizeControl({
   fontSize,
   onChange,
@@ -141,31 +117,23 @@ export function VoiceFontSizeControl({
   onChange: (size: VoiceFontSize) => void
 }) {
   return (
-    <div
-      className="flex items-center p-0.5 rounded-md bg-slate-100 dark:bg-slate-800/80"
-      role="group"
-      aria-label="말풍선 글자 크기"
-    >
-      {FONT_SIZE_ORDER.map((size) => {
-        const active = fontSize === size
-        return (
-          <button
-            key={size}
-            onClick={() => onChange(size)}
-            title={FONT_SIZE_TITLE[size]}
-            aria-label={FONT_SIZE_TITLE[size]}
-            aria-pressed={active}
-            className={`w-5 h-5 flex items-center justify-center rounded font-bold leading-none transition-colors ${FONT_SIZE_BTN_TEXT[size]} ${
-              active
-                ? 'bg-white dark:bg-slate-700 text-accent-700 dark:text-accent-300 shadow-sm'
-                : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
-            }`}
-          >
-            A
-          </button>
-        )
-      })}
-    </div>
+    <label className="flex items-center gap-1.5 text-xs text-muted">
+      <span aria-hidden="true" className="font-medium tracking-tighter">
+        Aa
+      </span>
+      <select
+        aria-label="대화 글자 크기"
+        value={fontSize}
+        onChange={(event) => onChange(event.target.value as VoiceFontSize)}
+        className="min-h-8 cursor-pointer rounded-md border border-transparent bg-transparent py-1 pl-1 pr-5 text-xs text-muted hover:bg-slate-100 dark:hover:bg-slate-800"
+      >
+        {Object.entries(FONT_SIZE_LABELS).map(([value, label]) => (
+          <option key={value} value={value}>
+            {label}
+          </option>
+        ))}
+      </select>
+    </label>
   )
 }
 
@@ -179,6 +147,7 @@ function formatTime(iso: string) {
 
 interface Props {
   messages: Message[]
+  isVisible?: boolean
   isRecording: boolean
   isProcessing?: boolean
   playingMessageId?: string | null
@@ -202,6 +171,7 @@ interface Props {
 
 export default function VoiceArea({
   messages,
+  isVisible = true,
   isRecording,
   isProcessing,
   playingMessageId,
@@ -213,242 +183,188 @@ export default function VoiceArea({
   fontSize = 'compact',
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
-
+  const followLatest = useRef(true)
   const t = SIZE_TOKENS[fontSize] ?? SIZE_TOKENS.compact
-
-  const voiceMessages = messages.filter(
-    (m): m is Message & { speaker: 'speaker1' | 'speaker2' } =>
-      m.speaker === 'speaker1' || m.speaker === 'speaker2'
-  )
-
+  const voiceMessages = messages.filter((message) => isVoiceSpeaker(message.speaker))
   const showPending =
-    isRecording &&
-    pendingTranscript &&
-    pendingTranscript.text &&
-    (pendingTranscript.speaker === 'speaker1' || pendingTranscript.speaker === 'speaker2')
-
-  // 맨 아래 말풍선이 "지금 말하는 내용" — 강조해서 눈이 갈 곳을 하나로 만든다.
-  // pending 버블이 떠 있으면 그쪽이 최신이므로 강조를 넘긴다.
-  const latestId = showPending ? undefined : voiceMessages.at(-1)?.id
+    isRecording && pendingTranscript?.text && isVoiceSpeaker(pendingTranscript.speaker)
+  const latest = voiceMessages.at(-1)
 
   useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    requestAnimationFrame(() => {
-      const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
-      if (distFromBottom < t.autoScrollThreshold) {
-        el.scrollTop = el.scrollHeight
-      }
+    if (!isVisible) return
+    const frame = requestAnimationFrame(() => {
+      if (containerRef.current && followLatest.current)
+        containerRef.current.scrollTop = containerRef.current.scrollHeight
     })
-  }, [voiceMessages.length, pendingTranscript, t.autoScrollThreshold])
+    return () => cancelAnimationFrame(frame)
+  }, [
+    isVisible,
+    voiceMessages.length,
+    latest?.original,
+    latest?.translation,
+    pendingTranscript,
+    fontSize,
+  ])
 
   if (voiceMessages.length === 0 && !showPending) {
     return (
-      <div className="flex-1 min-h-0 flex flex-col">
-        <div className="flex flex-col items-center justify-center flex-1 min-h-0 text-center px-8 select-none">
-          <div
-            className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-colors ${
-              isRecording
-                ? 'bg-red-100/80 dark:bg-red-900/30 text-red-500'
-                : 'bg-slate-100/80 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500'
-            }`}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-7 h-7"
-            >
-              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-              <line x1="12" x2="12" y1="19" y2="22" />
-            </svg>
-          </div>
-          <p className="text-sm text-slate-400 dark:text-slate-500 leading-relaxed whitespace-pre-line">
-            {isRecording
-              ? '음성을 인식하고 있습니다...'
-              : '녹음을 시작하면\n대화 내용이 여기에 표시됩니다'}
-          </p>
+      <div className="ui-empty" role="status">
+        <div
+          className={`ui-empty-icon ${isRecording ? '!bg-red-50 !text-red-500 dark:!bg-red-500/10' : ''}`}
+        >
+          <Icon name={isRecording ? 'waveform' : 'mic'} className="h-6 w-6" />
         </div>
+        <p className="text-sm font-medium text-ink">
+          {isRecording ? '음성을 듣고 있습니다' : '대화를 시작해 보세요'}
+        </p>
+        <p className="text-xs">
+          {isRecording ? '인식한 내용이 여기에 표시됩니다' : '녹음 시작을 누르면 대화가 번역됩니다'}
+        </p>
       </div>
     )
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col">
-      <div ref={containerRef} className="flex-1 min-h-0 overflow-y-auto scrollbar-thin">
-        <div className={t.container}>
-          {voiceMessages.map((msg) => {
-            const cfg = SPEAKER_CONFIG[msg.speaker]
-            const isPlaying = playingMessageId === msg.id
-            const isTranslating = msg.streamPhase === 'translating' || msg.streamPhase === 'stt'
-            const isLatest = msg.id === latestId
-
-            return (
-              <div
-                key={msg.id}
-                onClick={() =>
-                  onTranslateMessage?.(msg.id, msg.original, msg.speaker, msg.detectedLanguage)
-                }
-                className={`group relative cursor-pointer transition-all hover:opacity-100 active:opacity-70 ${t.card} ${cfg.cardBg} ${
-                  isLatest ? 'ring-2 ring-accent-400/50 dark:ring-accent-500/40' : 'opacity-75'
-                }`}
-              >
-                <div className={t.inner}>
-                  {/* 헤더: 화자명 · 시간 */}
-                  <div className={`flex items-center justify-between ${t.header}`}>
-                    <div className="flex items-center gap-1.5">
-                      <span className={`font-semibold ${t.label} ${cfg.nameColor}`}>
-                        {cfg.label}
+    <div
+      ref={containerRef}
+      className="scrollbar-thin min-h-0 flex-1 overflow-y-auto bg-subtle"
+      onScroll={(event) => {
+        const element = event.currentTarget
+        followLatest.current =
+          element.scrollHeight - element.scrollTop - element.clientHeight < t.autoScrollThreshold
+      }}
+    >
+      <div className={t.container}>
+        {voiceMessages.map((message) => {
+          const speaker = {
+            ...SPEAKER_COLORS[(Number(message.speaker.slice(7)) - 1) % SPEAKER_COLORS.length],
+            label: getSpeakerLabel(message.speaker),
+          }
+          const playing = playingMessageId === message.id
+          const translating = message.streamPhase === 'translating' || message.streamPhase === 'stt'
+          const latestActive = isRecording && !showPending && message.id === latest?.id
+          return (
+            <article
+              key={message.id}
+              className={`border bg-panel ${t.card} ${latestActive ? 'border-accent-300 dark:border-accent-600' : 'border-subtle'}`}
+            >
+              <div className={t.inner}>
+                <div className={`flex items-center justify-between gap-2 ${t.header}`}>
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${speaker.dot}`} />
+                    <span className={`font-semibold ${t.label} ${speaker.color}`}>
+                      {speaker.label}
+                    </span>
+                    <time
+                      className={`${t.time} tabular-nums text-muted`}
+                      dateTime={message.timestamp}
+                    >
+                      {formatTime(message.timestamp)}
+                    </time>
+                    {latestActive && (
+                      <span className="text-[0.6875rem] text-accent-600 dark:text-accent-400">
+                        실시간
                       </span>
-                      <span className={`${t.time} text-slate-300 dark:text-slate-600 select-none`}>
-                        ·
-                      </span>
-                      <span className={`${t.time} text-slate-400 dark:text-slate-500 tabular-nums`}>
-                        {formatTime(msg.timestamp)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {/* TTS 재생 버튼 — 화면 공유 중에도 찾기 쉽도록 항상 보인다 */}
-                      {msg.original && !isTranslating && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            isPlaying ? onStopMessage?.() : onPlayMessage?.(msg.id, msg.original)
-                          }}
-                          title={
-                            isPlaying
-                              ? isMessageLoading
-                                ? '로딩 중...'
-                                : '재생 중지'
-                              : '번역 음성 재생'
-                          }
-                          className={`flex items-center justify-center rounded-full transition-all ${t.btn} ${
-                            isPlaying
-                              ? 'bg-red-100 dark:bg-red-900/30 text-red-500'
-                              : 'bg-slate-100/80 dark:bg-white/8 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-white/12 hover:text-slate-600 dark:hover:text-slate-300'
-                          }`}
-                        >
-                          {isPlaying ? (
-                            isMessageLoading ? (
-                              <svg
-                                className={`${t.btnIcon} animate-spin`}
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                              >
-                                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                              </svg>
-                            ) : (
-                              <svg viewBox="0 0 24 24" fill="currentColor" className={t.btnStop}>
-                                <rect x="6" y="6" width="12" height="12" rx="1" />
-                              </svg>
-                            )
-                          ) : (
-                            <svg
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              className={t.btnIcon}
-                            >
-                              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                              <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                            </svg>
-                          )}
-                        </button>
-                      )}
-                    </div>
+                    )}
                   </div>
-
-                  {/* 원문 */}
-                  <p className={`${t.original} break-words text-slate-700 dark:text-slate-200`}>
-                    {msg.original}
-                    {isTranslating && !msg.translation && (
+                  <div className="flex shrink-0 items-center gap-0.5">
+                    {onTranslateMessage && message.original && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onTranslateMessage(
+                            message.id,
+                            message.original,
+                            message.speaker,
+                            message.detectedLanguage
+                          )
+                        }
+                        disabled={translating}
+                        aria-label={`${speaker.label} ${formatTime(message.timestamp)} ${message.translation ? '다시 번역' : '번역'}`}
+                        title={message.translation ? '다시 번역' : '번역'}
+                        className="ui-icon-button h-7 w-7 min-h-7 p-1"
+                      >
+                        <Icon
+                          name={translating ? 'loader' : 'languages'}
+                          className={`h-3.5 w-3.5 ${translating ? 'animate-spin' : ''}`}
+                        />
+                      </button>
+                    )}
+                    {message.original && !translating && onPlayMessage && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          playing ? onStopMessage?.() : onPlayMessage(message.id, message.original)
+                        }
+                        aria-label={
+                          playing
+                            ? '음성 재생 중지'
+                            : `${speaker.label} ${formatTime(message.timestamp)} 원문 음성 재생`
+                        }
+                        title={playing ? '음성 재생 중지' : '원문 음성 재생'}
+                        className={`ui-icon-button min-h-7 p-1 ${t.btn} ${playing ? 'text-red-500' : ''}`}
+                      >
+                        <Icon
+                          name={playing ? (isMessageLoading ? 'loader' : 'stop') : 'volume'}
+                          className={`${t.btnIcon} ${playing && isMessageLoading ? 'animate-spin' : ''}`}
+                        />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p className={`${t.original} break-words text-muted`}>
+                  {message.original}
+                  {translating && !message.translation && (
+                    <span
+                      className={`inline-block animate-pulse bg-current align-middle ${t.caret}`}
+                    />
+                  )}
+                </p>
+                {(message.translation || translating) && (
+                  <p className={`${t.translation} break-words text-ink`}>
+                    {message.translation}
+                    {translating && (
                       <span
-                        className={`inline-block bg-current align-middle animate-pulse ${t.caret}`}
+                        className={`inline-block animate-pulse bg-accent-500 align-middle ${t.caret}`}
                       />
                     )}
                   </p>
-
-                  {/* 번역 */}
-                  {(msg.translation || isTranslating) && (
-                    <p className={`${t.translation} break-words ${cfg.translationColor}`}>
-                      {msg.translation}
-                      {isTranslating && (
-                        <span
-                          className={`inline-block bg-current align-middle animate-pulse ${t.caret}`}
-                        />
-                      )}
-                    </p>
-                  )}
-                </div>
+                )}
               </div>
-            )
-          })}
+            </article>
+          )
+        })}
 
-          {/* Pending 카드 — 실시간 부분 인식 */}
-          {showPending &&
-            (() => {
-              const sp = pendingTranscript!.speaker as 'speaker1' | 'speaker2'
-              const cfg = SPEAKER_CONFIG[sp] ?? SPEAKER_CONFIG.speaker1
-              return (
-                <div
-                  className={`relative border border-dashed border-slate-300 dark:border-slate-700 bg-white/40 dark:bg-slate-800/30 ring-2 ring-accent-400/30 dark:ring-accent-500/25 ${t.card}`}
-                >
-                  <div className={t.inner}>
-                    <div className={t.header}>
-                      <span className={`font-semibold ${t.label} ${cfg.nameColor} opacity-60`}>
-                        {cfg.label}
-                      </span>
-                    </div>
-                    <p
-                      className={`${t.original} break-words text-slate-500 dark:text-slate-400 italic`}
-                    >
-                      {pendingTranscript!.text}
-                      <span
-                        className={`inline-block bg-current align-middle animate-pulse ${t.caret}`}
-                      />
-                    </p>
-                    {pendingTranscript!.translation && (
-                      <p
-                        className={`${t.translation} break-words ${cfg.translationColor} opacity-80`}
-                      >
-                        {pendingTranscript!.translation}
-                        <span
-                          className={`inline-block bg-current align-middle animate-pulse ${t.caret}`}
-                        />
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )
-            })()}
-
-          {/* 녹음 인디케이터 */}
-          {isRecording && (
-            <div className="flex items-center gap-2 px-3 py-2 mx-1 rounded-xl bg-red-50/60 dark:bg-red-900/15 border border-red-100/60 dark:border-red-500/10 w-fit">
-              <span className="flex gap-[3px] items-end h-3">
-                {[0, 0.15, 0.3].map((d, i) => (
-                  <span
-                    key={i}
-                    className="w-[3px] rounded-full bg-red-400 dark:bg-red-500 animate-bounce"
-                    style={{ animationDelay: `${d}s`, height: i === 1 ? '12px' : '8px' }}
-                  />
-                ))}
-              </span>
-              <span className="text-[0.6875rem] text-red-500 dark:text-red-400 font-medium">
-                {isProcessing ? '번역 중...' : '음성 인식 중...'}
-              </span>
+        {showPending && pendingTranscript && (
+          <article
+            className={`border border-dashed border-accent-300 bg-panel dark:border-accent-700 ${t.card}`}
+          >
+            <div className={t.inner}>
+              <div className={`flex items-center gap-2 ${t.header}`}>
+                <span className="h-1.5 w-1.5 rounded-full bg-accent-500" />
+                <span className={`${t.label} font-semibold text-accent-700 dark:text-accent-300`}>
+                  {getSpeakerLabel(normalizeSpeaker(pendingTranscript.speaker))}
+                </span>
+                <span className="text-[0.6875rem] text-muted">듣는 중</span>
+              </div>
+              <p className={`${t.original} break-words text-muted`}>
+                {pendingTranscript.text}
+                <span className={`inline-block animate-pulse bg-current align-middle ${t.caret}`} />
+              </p>
+              {pendingTranscript.translation && (
+                <p className={`${t.translation} break-words text-ink`}>
+                  {pendingTranscript.translation}
+                </p>
+              )}
             </div>
-          )}
-        </div>
+          </article>
+        )}
+        {isRecording && (
+          <div role="status" className="flex items-center gap-2 px-1 py-2 text-xs text-muted">
+            <span className="blink-dot h-1.5 w-1.5 rounded-full bg-red-500" />
+            {isProcessing ? '번역 중…' : '음성을 듣고 있습니다'}
+          </div>
+        )}
       </div>
     </div>
   )

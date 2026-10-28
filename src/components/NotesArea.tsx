@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Message } from '@/types/meeting'
+import Icon from '@/components/ui/Icon'
 
 function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString('ko-KR', {
@@ -15,6 +16,7 @@ function formatTime(iso: string) {
 
 interface Props {
   messages: Message[]
+  isVisible?: boolean
   playingMessageId?: string | null
   isMessageLoading?: boolean
   onPlayMessage?: (id: string, text: string) => void
@@ -29,6 +31,7 @@ interface Props {
 
 export default function NotesArea({
   messages,
+  isVisible = true,
   playingMessageId,
   isMessageLoading,
   onPlayMessage,
@@ -36,46 +39,32 @@ export default function NotesArea({
   onTranslateMessage,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
-
-  const myMessages = messages.filter((m) => m.speaker === 'me')
-
-  const streamingQaLength = myMessages.find((m) => m.qaStreamPhase === 'streaming')?.qaResponse
-    ?.length
+  const followLatest = useRef(true)
+  const myMessages = messages.filter((message) => message.speaker === 'me')
+  const last = myMessages.at(-1)
+  const streamingQa = myMessages.find(
+    (message) => message.qaStreamPhase === 'streaming'
+  )?.qaResponse
 
   useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-    requestAnimationFrame(() => {
-      const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight
-      if (distFromBottom < 200) {
-        el.scrollTop = el.scrollHeight
-      }
+    if (!isVisible) return
+    const frame = requestAnimationFrame(() => {
+      if (containerRef.current && followLatest.current)
+        containerRef.current.scrollTop = containerRef.current.scrollHeight
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [myMessages.length, streamingQaLength])
+    return () => cancelAnimationFrame(frame)
+  }, [isVisible, myMessages.length, last?.original, last?.translation, streamingQa])
 
-  if (myMessages.length === 0) {
+  if (!myMessages.length) {
     return (
-      <div className="flex flex-col items-center justify-center flex-1 min-h-0 text-center px-8 select-none">
-        <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 bg-slate-100/80 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-7 h-7"
-          >
-            <path d="M12 20h9" />
-            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-          </svg>
+      <div className="scrollbar-thin flex min-h-0 flex-1 overflow-y-auto">
+        <div className="m-auto flex w-full shrink-0 flex-col items-center gap-2 p-5 text-center text-muted">
+          <div className="ui-empty-icon">
+            <Icon name="notes" className="h-6 w-6" />
+          </div>
+          <p className="text-sm font-medium text-ink">내가 입력한 내용</p>
+          <p className="text-xs">아래 입력창에서 메시지를 보내세요</p>
         </div>
-        <p className="text-sm text-slate-400 dark:text-slate-500 leading-relaxed">
-          한글로 입력하면
-          <br />
-          번역된 내용이 여기에 표시됩니다
-        </p>
       </div>
     )
   }
@@ -83,113 +72,92 @@ export default function NotesArea({
   return (
     <div
       ref={containerRef}
-      className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-4 py-3 space-y-3"
+      className="scrollbar-thin min-h-0 flex-1 space-y-3 overflow-y-auto bg-subtle p-3"
+      onScroll={(event) => {
+        const element = event.currentTarget
+        followLatest.current = element.scrollHeight - element.scrollTop - element.clientHeight < 200
+      }}
     >
-      {myMessages.map((msg) => {
-        const isPlaying = playingMessageId === msg.id
-        const isTranslating = msg.streamPhase === 'translating' || msg.streamPhase === 'stt'
-        const isQaStreaming = msg.qaStreamPhase === 'streaming'
-        const hasQa = !!msg.qaResponse
-
+      {myMessages.map((message) => {
+        const playing = playingMessageId === message.id
+        const translating = message.streamPhase === 'translating' || message.streamPhase === 'stt'
         return (
-          <div key={msg.id}>
-            {/* 타임스탬프 — 카드 바깥 상단 */}
-            <span className="block text-[0.625rem] text-slate-400 dark:text-slate-500 tabular-nums mb-1 px-1">
-              {formatTime(msg.timestamp)}
-            </span>
-
-            <div
-              className="group relative rounded-xl px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 cursor-pointer transition-colors hover:bg-slate-50/80 dark:hover:bg-slate-700 active:opacity-70"
-              onClick={() =>
-                onTranslateMessage?.(msg.id, msg.translation, msg.speaker, msg.detectedLanguage)
-              }
-              title="클릭하여 재번역"
-            >
-              {/* 한글 원문 */}
-              <p className="text-sm text-slate-700 dark:text-slate-200 leading-reading">
-                {msg.translation || (
-                  <span className="text-slate-400 dark:text-slate-500 italic text-xs">
-                    번역 중...
-                  </span>
-                )}
-              </p>
-
-              {/* 영어 번역 */}
-              <p className="mt-1.5 text-sm text-accent-700 dark:text-accent-400 leading-reading">
-                {msg.original}
-                {isTranslating && (
-                  <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
-                )}
-              </p>
-
-              {/* TTS 재생 버튼 */}
-              {msg.original && !isTranslating && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    isPlaying ? onStopMessage?.() : onPlayMessage?.(msg.id, msg.original)
-                  }}
-                  title={
-                    isPlaying ? (isMessageLoading ? '로딩 중...' : '재생 중지') : '영어로 읽기'
-                  }
-                  className={`absolute right-3 top-3 flex items-center justify-center w-6 h-6 rounded-full transition-all ${
-                    isPlaying
-                      ? 'bg-red-100 dark:bg-red-900/30 text-red-500'
-                      : 'opacity-0 group-hover:opacity-100 bg-slate-100/80 dark:bg-white/8 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-white/12 hover:text-slate-600 dark:hover:text-slate-300'
-                  }`}
+          <article key={message.id} className="rounded-xl border border-subtle bg-panel p-3.5">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-accent-700 dark:text-accent-300">
+                  나
+                </span>
+                <time
+                  dateTime={message.timestamp}
+                  className="text-[0.6875rem] tabular-nums text-muted"
                 >
-                  {isPlaying ? (
-                    isMessageLoading ? (
-                      <svg
-                        className="w-3 h-3 animate-spin"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                      >
-                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                      </svg>
-                    ) : (
-                      <svg viewBox="0 0 24 24" fill="currentColor" className="w-2.5 h-2.5">
-                        <rect x="6" y="6" width="12" height="12" rx="1" />
-                      </svg>
-                    )
-                  ) : (
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="w-3 h-3"
-                    >
-                      <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                    </svg>
-                  )}
-                </button>
-              )}
+                  {formatTime(message.timestamp)}
+                </time>
+              </div>
+              <div className="flex gap-0.5">
+                {onTranslateMessage && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onTranslateMessage(
+                        message.id,
+                        message.translation,
+                        message.speaker,
+                        message.detectedLanguage
+                      )
+                    }
+                    disabled={translating || !message.translation}
+                    aria-label="내 메시지 다시 번역"
+                    title="다시 번역"
+                    className="ui-icon-button h-7 w-7 min-h-7 p-1"
+                  >
+                    <Icon
+                      name={translating ? 'loader' : 'languages'}
+                      className={`h-3.5 w-3.5 ${translating ? 'animate-spin' : ''}`}
+                    />
+                  </button>
+                )}
+                {message.original && !translating && onPlayMessage && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      playing ? onStopMessage?.() : onPlayMessage(message.id, message.original)
+                    }
+                    aria-label={playing ? '음성 재생 중지' : '내 메시지 음성 재생'}
+                    title={playing ? '음성 재생 중지' : '번역 음성 재생'}
+                    className={`ui-icon-button h-7 w-7 min-h-7 p-1 ${playing ? 'text-red-500' : ''}`}
+                  >
+                    <Icon
+                      name={playing ? (isMessageLoading ? 'loader' : 'stop') : 'volume'}
+                      className={`h-3.5 w-3.5 ${playing && isMessageLoading ? 'animate-spin' : ''}`}
+                    />
+                  </button>
+                )}
+              </div>
             </div>
-
-            {/* Q&A 응답 */}
-            {hasQa && (
+            <p className="break-words text-sm leading-reading text-ink">
+              {message.translation || '번역 중…'}
+            </p>
+            <p className="mt-2 break-words text-sm leading-reading text-muted">
+              {message.original}
+              {translating && (
+                <span className="ml-0.5 inline-block h-3 w-0.5 animate-pulse bg-accent-500 align-middle" />
+              )}
+            </p>
+            {message.qaResponse && (
               <div
-                className={`mt-1.5 mx-1 rounded-lg px-3 py-2 text-xs leading-relaxed ${
-                  msg.qaStreamPhase === 'error'
-                    ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800'
-                    : 'bg-indigo-50 dark:bg-indigo-900/20 text-slate-700 dark:text-slate-300 border border-indigo-100 dark:border-indigo-800'
-                }`}
+                className={`mt-3 rounded-lg border p-3 ${message.qaStreamPhase === 'error' ? 'border-red-200 bg-red-50 text-red-600 dark:border-red-900 dark:bg-red-500/10 dark:text-red-400' : 'border-subtle bg-subtle'}`}
               >
-                <div className="prose text-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.qaResponse ?? ''}</ReactMarkdown>
-                  {isQaStreaming && (
-                    <span className="inline-block w-[2px] h-[0.7em] bg-indigo-500 ml-[2px] align-middle animate-pulse" />
+                <div className="prose max-w-none text-sm leading-reading dark:prose-invert [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.qaResponse}</ReactMarkdown>
+                  {message.qaStreamPhase === 'streaming' && (
+                    <span className="ml-0.5 inline-block h-3 w-0.5 animate-pulse bg-accent-500 align-middle" />
                   )}
                 </div>
               </div>
             )}
-          </div>
+          </article>
         )
       })}
     </div>

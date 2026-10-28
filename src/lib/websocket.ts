@@ -56,6 +56,7 @@ export interface PageStreamServerMessage {
   meetingId?: string
   op?: 'unpublish' // 공유 해제 요청에 대한 이벤트
   phase: 'status' | 'delta' | 'done' | 'error' | 'unpublished'
+  started?: boolean // 서버가 시작한 자동 생성도 진행 상태 추적을 시작한다
   text?: string
   page?: MeetingPage
   error?: string

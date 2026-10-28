@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { Message, SpeakerRole } from '@/types/meeting'
+import { getSpeakerLabel, isVoiceSpeaker, normalizeSpeaker } from '@/lib/speakers'
 
 function SpeakerIcon({ className }: { className?: string }) {
   return (
@@ -50,7 +51,7 @@ function LanguagesIcon({ className }: { className?: string }) {
 }
 
 const SPEAKER_CONFIG: Record<
-  SpeakerRole,
+  'speaker1' | 'speaker2' | 'me',
   {
     label: string
     abbr: string
@@ -98,6 +99,17 @@ const SPEAKER_CONFIG: Record<
   },
 }
 
+function getSpeakerConfig(speaker: string) {
+  const key = normalizeSpeaker(speaker)
+  if (key === 'me') return SPEAKER_CONFIG.me
+  const number = Number(key.slice(7))
+  return {
+    ...SPEAKER_CONFIG[number % 2 === 0 ? 'speaker2' : 'speaker1'],
+    label: getSpeakerLabel(key, 'en'),
+    abbr: `S${number}`,
+  }
+}
+
 function PendingBubble({
   speaker,
   text,
@@ -107,8 +119,7 @@ function PendingBubble({
   text: string
   translation?: string
 }) {
-  const speakerKey: SpeakerRole = speaker in SPEAKER_CONFIG ? (speaker as SpeakerRole) : 'speaker1'
-  const cfg = SPEAKER_CONFIG[speakerKey]
+  const cfg = getSpeakerConfig(speaker)
   const isRight = cfg.side === 'right'
   return (
     <div
@@ -197,10 +208,9 @@ export default function ChatArea({
     pendingTranscript.text &&
     (!filterSpeakers || filterSpeakers.includes(pendingTranscript.speaker as SpeakerRole))
 
-  // 녹음 인디케이터는 음성 영역(speaker1/speaker2)에만 표시
+  // 녹음 인디케이터는 음성 화자가 포함된 영역에만 표시
   const showRecordingIndicator =
-    isRecording &&
-    (!filterSpeakers || filterSpeakers.includes('speaker1') || filterSpeakers.includes('speaker2'))
+    isRecording && (!filterSpeakers || filterSpeakers.some(isVoiceSpeaker))
 
   useEffect(() => {
     const el = containerRef.current
@@ -254,7 +264,7 @@ export default function ChatArea({
       className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-4 py-4 space-y-2"
     >
       {filteredMessages.map((msg) => {
-        const cfg = SPEAKER_CONFIG[msg.speaker]
+        const cfg = getSpeakerConfig(msg.speaker)
         const isRight = cfg.side === 'right'
 
         return (

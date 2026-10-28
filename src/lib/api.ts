@@ -1,5 +1,6 @@
-import type { Meeting, MeetingPage, Message, SpeakerRole } from '@/types/meeting'
+import type { Meeting, MeetingPage, Message } from '@/types/meeting'
 import { getIdToken } from '@/lib/cognito'
+import { normalizeSpeaker } from '@/lib/speakers'
 
 // ─── Server-side types ──────────────────────────────────────────────────────
 
@@ -41,12 +42,6 @@ export interface TtsResponse {
 
 // ─── Mapping helpers ────────────────────────────────────────────────────────
 
-const VALID_SPEAKERS: Record<string, SpeakerRole> = {
-  speaker1: 'speaker1',
-  speaker2: 'speaker2',
-  me: 'me',
-}
-
 export function parseSummary(raw: string): string {
   return raw.trim()
 }
@@ -76,7 +71,7 @@ export function toMeeting(m: ApiMeeting): Meeting {
   const rawMessages = (m.messages ?? []).map(
     (msg): Message => ({
       id: msg.id,
-      speaker: VALID_SPEAKERS[msg.speaker] ?? 'speaker1',
+      speaker: normalizeSpeaker(msg.speaker),
       original: msg.originalText,
       translation: msg.translatedText,
       detectedLanguage: msg.detectedLanguage,

@@ -300,20 +300,26 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     []
   )
 
-  // 생성 중으로 알고 있는 미팅의 실제 상태를 서버에 묻는다 — 소켓이 바뀌어 done/error 를 놓쳤을 수 있다
-  const sendPageStatus = useCallback((meetingId: string): boolean => {
+  // discover는 시작 이벤트를 놓친 자동 생성도 찾는다. 생성 이력이 없어도 오류가 아니다.
+  const sendPageStatus = useCallback((meetingId: string, discover = false): boolean => {
     const ws = wsRef.current
     if (!ws || ws.readyState !== WebSocket.OPEN) return false
-    ws.send(JSON.stringify({ action: 'page_status', meetingId }))
+    ws.send(JSON.stringify({ action: 'page_status', meetingId, ...(discover && { discover }) }))
     return true
   }, [])
 
-  // 미팅 종료: 녹음을 멈추고 서버가 오디오 → 요약 → (켜져 있으면) 메일을 끝까지 처리한다
+  // 미팅 종료: 오디오 → 요약 → 페이지 자동 생성·(켜져 있으면) 메일
   const sendEndMeeting = useCallback(
     (
       meetingId: string,
       emailOnEnd: boolean,
-      messages?: { speaker: string; original: string; timestamp?: string }[]
+      messages?: {
+        speaker: string
+        original: string
+        translation?: string
+        timestamp?: string
+        detectedLanguage?: string
+      }[]
     ): boolean => {
       const ws = wsRef.current
       if (!ws || ws.readyState !== WebSocket.OPEN) return false

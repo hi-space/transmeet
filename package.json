@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "test:theme": "node --experimental-strip-types --experimental-default-type=module --test tests/theme.test.mjs",
-    "test:settings": "node --experimental-strip-types --experimental-default-type=module --test tests/theme.test.mjs tests/translationModels.test.mjs",
+    "test:settings": "node --experimental-strip-types --experimental-default-type=module --test tests/theme.test.mjs tests/translationModels.test.mjs tests/sttProviders.test.mjs",
+    "test:ui": "node --experimental-strip-types --experimental-default-type=module --test tests/theme.test.mjs tests/translationModels.test.mjs tests/sttProviders.test.mjs tests/workspace.test.mjs tests/speakers.test.mjs",
+    "test:speakers": "node --test tests/speakers.test.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

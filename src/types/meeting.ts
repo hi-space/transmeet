@@ -1,4 +1,4 @@
-export type SpeakerRole = 'speaker1' | 'speaker2' | 'me'
+export type SpeakerRole = `speaker${number}` | 'me'
 
 export interface Message {
   id: string

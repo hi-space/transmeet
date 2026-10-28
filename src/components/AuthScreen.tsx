@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import type { CognitoUser } from 'amazon-cognito-identity-js'
 import { signIn, completeNewPassword } from '@/lib/cognito'
+import Icon from '@/components/ui/Icon'
 
 interface Props {
   onAuth: (user: CognitoUser) => void
@@ -20,6 +21,7 @@ export default function AuthScreen({ onAuth }: Props) {
   const [confirmPassword, setConfirmPassword] = useState('')
 
   async function handleLogin() {
+    if (loading) return
     setError('')
     setLoading(true)
     try {
@@ -37,7 +39,7 @@ export default function AuthScreen({ onAuth }: Props) {
   }
 
   async function handleNewPassword() {
-    if (!pendingUser) return
+    if (!pendingUser || loading) return
     if (newPassword !== confirmPassword) {
       setError('비밀번호가 일치하지 않습니다.')
       return
@@ -54,104 +56,120 @@ export default function AuthScreen({ onAuth }: Props) {
     }
   }
 
-  const inputClass =
-    'w-full px-3 py-2.5 text-sm rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-accent-500'
-
-  const btnPrimary =
-    'w-full py-2.5 rounded-lg text-sm font-semibold bg-primary hover:bg-primary-hover text-primary-foreground shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed'
-
   return (
-    <div className="flex items-center justify-center h-screen bg-white dark:bg-slate-950">
-      {/* Background orbs */}
-      <div className="absolute top-[8%] left-[3%] w-72 h-72 rounded-full bg-accent-300/10 dark:bg-accent-600/8 blur-3xl pointer-events-none" />
-      <div className="absolute top-[35%] right-[5%] w-96 h-96 rounded-full bg-slate-300/5 dark:bg-slate-600/5 blur-3xl pointer-events-none" />
-
-      <div className="relative w-full max-w-sm mx-4">
-        {/* Logo */}
-        <div className="flex items-center justify-center gap-2.5 mb-8">
-          <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center shadow-lg">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-5 h-5"
-            >
-              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
-              <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-              <line x1="12" x2="12" y1="19" y2="22" />
-            </svg>
+    <div className="h-dvh overflow-y-auto bg-canvas px-5 py-10">
+      <div className="mx-auto flex min-h-full w-full max-w-sm flex-col justify-center">
+        <div className="mb-7 flex items-center justify-center gap-2.5">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+            <Icon name="waveform" className="h-5 w-5" />
           </div>
-          <span className="text-xl font-bold text-slate-900 dark:text-white">TransMeet</span>
+          <span className="text-xl font-semibold tracking-tight text-ink">TransMeet</span>
         </div>
-
-        {/* Card */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-xl shadow-slate-500/5">
-          {pendingUser ? (
-            <>
-              <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-1 text-center">
-                새 비밀번호 설정
-              </h2>
-              <p className="text-xs text-slate-400 dark:text-slate-500 text-center mb-5">
-                보안을 위해 새 비밀번호를 설정해 주세요.
+        <section className="ui-surface p-6 sm:p-7">
+          <h1 className="mb-6 text-lg font-semibold text-ink">
+            {pendingUser ? '새 비밀번호 설정' : '로그인'}
+          </h1>
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault()
+              if (pendingUser) void handleNewPassword()
+              else void handleLogin()
+            }}
+          >
+            {pendingUser ? (
+              <>
+                <label className="block text-xs font-medium text-ink" htmlFor="auth-new-password">
+                  새 비밀번호
+                  <input
+                    id="auth-new-password"
+                    name="newPassword"
+                    type="password"
+                    required
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                    className="ui-input mt-2"
+                    autoComplete="new-password"
+                    aria-describedby={error ? 'auth-error' : undefined}
+                  />
+                </label>
+                <label
+                  className="block text-xs font-medium text-ink"
+                  htmlFor="auth-confirm-password"
+                >
+                  새 비밀번호 확인
+                  <input
+                    id="auth-confirm-password"
+                    name="confirmPassword"
+                    type="password"
+                    required
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    className="ui-input mt-2"
+                    autoComplete="new-password"
+                    aria-describedby={error ? 'auth-error' : undefined}
+                  />
+                </label>
+              </>
+            ) : (
+              <>
+                <label className="block text-xs font-medium text-ink" htmlFor="auth-email">
+                  이메일
+                  <input
+                    id="auth-email"
+                    name="email"
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    className="ui-input mt-2"
+                    autoComplete="email"
+                    placeholder="name@example.com"
+                    spellCheck={false}
+                    aria-describedby={error ? 'auth-error' : undefined}
+                  />
+                </label>
+                <label className="block text-xs font-medium text-ink" htmlFor="auth-password">
+                  비밀번호
+                  <input
+                    id="auth-password"
+                    name="password"
+                    type="password"
+                    required
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    className="ui-input mt-2"
+                    autoComplete="current-password"
+                    aria-describedby={error ? 'auth-error' : undefined}
+                  />
+                </label>
+              </>
+            )}
+            {error && (
+              <p
+                id="auth-error"
+                role="alert"
+                className="rounded-lg bg-red-50 px-3 py-2 text-xs leading-relaxed text-red-600 dark:bg-red-500/10 dark:text-red-400"
+              >
+                {error}
               </p>
-              <div className="space-y-3">
-                <input
-                  type="password"
-                  placeholder="새 비밀번호"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  className={inputClass}
-                  autoComplete="new-password"
-                />
-                <input
-                  type="password"
-                  placeholder="새 비밀번호 확인"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleNewPassword()}
-                  className={inputClass}
-                  autoComplete="new-password"
-                />
-                {error && <p className="text-xs text-red-500">{error}</p>}
-                <button onClick={handleNewPassword} disabled={loading} className={btnPrimary}>
-                  {loading ? '설정 중...' : '비밀번호 설정'}
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <h2 className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-5 text-center">
-                로그인
-              </h2>
-              <div className="space-y-3">
-                <input
-                  type="email"
-                  placeholder="이메일"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className={inputClass}
-                  autoComplete="email"
-                />
-                <input
-                  type="password"
-                  placeholder="비밀번호"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-                  className={inputClass}
-                  autoComplete="current-password"
-                />
-                {error && <p className="text-xs text-red-500">{error}</p>}
-                <button onClick={handleLogin} disabled={loading} className={btnPrimary}>
-                  {loading ? '로그인 중...' : '로그인'}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="ui-button ui-button-primary min-h-11 w-full text-sm"
+            >
+              {loading && <Icon name="loader" className="h-4 w-4 animate-spin" />}
+              {pendingUser
+                ? loading
+                  ? '설정 중…'
+                  : '비밀번호 설정'
+                : loading
+                  ? '로그인 중…'
+                  : '로그인'}
+            </button>
+          </form>
+        </section>
       </div>
     </div>
   )

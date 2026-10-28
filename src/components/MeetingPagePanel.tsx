@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { htmlToMarkdown } from '@/lib/htmlToMarkdown'
 import type { MeetingPage } from '@/types/meeting'
+import Icon from '@/components/ui/Icon'
 
 export type PageGenStatus = 'idle' | 'generating' | 'error'
 
@@ -106,10 +107,9 @@ async function fetchPageHtml(url: string, signal: AbortSignal): Promise<string> 
   throw lastErr
 }
 
-const btn =
-  'flex items-center gap-1 px-2 py-1 rounded-lg text-[0.6875rem] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
-const btnNeutral = `${btn} bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600/50`
-const btnPrimary = `${btn} bg-primary text-primary-foreground hover:bg-primary-hover`
+const btn = 'ui-button'
+const btnNeutral = 'ui-button ui-button-secondary'
+const btnPrimary = 'ui-button ui-button-primary'
 
 export default function MeetingPagePanel({
   page,
@@ -133,7 +133,7 @@ export default function MeetingPagePanel({
   const handleShare = async () => {
     if (!page) return
     const data = {
-      title: page.title ?? '미팅 페이지',
+      title: page.title ?? '회의 페이지',
       text: page.shareSummary ?? '',
       url: page.url,
     }
@@ -217,37 +217,28 @@ export default function MeetingPagePanel({
   const canGenerate = hasMessages && wsConnected && !generating
 
   return (
-    <div className="flex flex-col h-full w-full glass-sidebar border-l border-slate-200/60 dark:border-accent-500/10">
-      {/* Header */}
-      <div className="px-4 h-12 flex items-center justify-between flex-shrink-0 border-b border-slate-200 dark:border-slate-800">
-        <div className="flex items-center gap-2">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            className="w-4 h-4 text-slate-500"
-          >
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <path d="M3 9h18M9 21V9" />
-          </svg>
-          <span className="text-[0.6875rem] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-            미팅 페이지
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
+    <div className="flex min-h-0 flex-1 flex-col bg-panel">
+      {(page || onClose) && (
+        <div className="flex min-h-12 shrink-0 flex-wrap items-center gap-1 border-b border-subtle px-2.5 py-1.5">
           {page && !generating && (
             <>
-              <button onClick={handleShare} title="공유 링크" className={btnPrimary}>
+              <button
+                type="button"
+                onClick={handleShare}
+                title="회의 페이지 공유"
+                className="ui-button ui-button-tinted gap-1.5 px-2"
+              >
+                <Icon name={copied ? 'check' : 'send'} className="h-3.5 w-3.5" />
                 {copied ? '링크 복사됨' : '공유'}
               </button>
               <button
+                type="button"
                 onClick={handleCopyMarkdown}
                 disabled={mdLoading}
                 title={mdTitle}
-                className={`${btnNeutral} ${mdState === 'error' || markdown?.error ? 'text-red-600 dark:text-red-400' : ''}`}
+                className={`ui-button gap-1.5 px-2 ${mdState === 'error' || markdown?.error ? 'text-red-600 dark:text-red-400' : ''}`}
               >
+                <Icon name="copy" className="h-3.5 w-3.5" />
                 {mdLabel}
               </button>
               <a
@@ -255,160 +246,174 @@ export default function MeetingPagePanel({
                 target="_blank"
                 rel="noopener noreferrer"
                 title="새 탭에서 열기"
-                className={btnNeutral}
+                className="ui-button ml-auto px-2"
               >
-                새 탭
+                새 탭<Icon name="arrowRight" className="h-3 w-3 -rotate-45" />
               </a>
             </>
           )}
           {onClose && (
             <button
+              type="button"
               onClick={onClose}
-              title="닫기"
-              aria-label="닫기"
-              className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+              aria-label="회의 페이지 닫기"
+              className="ui-icon-button"
             >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                className="w-4 h-4"
-              >
-                <path d="M18 6 6 18M6 6l12 12" />
-              </svg>
+              <Icon name="close" />
             </button>
           )}
         </div>
-      </div>
-
-      {/* Body */}
-      <div className="flex-1 min-h-0 flex flex-col">
+      )}
+      <div className="flex min-h-0 flex-1 flex-col">
         {generating && (
-          <div className="p-4 flex flex-col gap-3 overflow-y-auto">
-            <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-              <span className="w-2 h-2 rounded-full bg-accent-500 animate-pulse" />
-              페이지를 만들고 있습니다{' '}
-              {elapsed && <span className="font-mono text-xs text-slate-400">{elapsed}</span>}
+          <div className="scrollbar-thin flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+            <div role="status" className="flex items-center gap-2 text-sm text-ink">
+              <Icon
+                name="loader"
+                className="h-4 w-4 animate-spin text-accent-600 dark:text-accent-400"
+              />
+              페이지 생성 중
+              {elapsed && (
+                <span className="ml-auto text-xs tabular-nums text-muted">{elapsed}</span>
+              )}
             </div>
-            <ol className="text-xs text-slate-500 dark:text-slate-400 space-y-1">
-              {gen.log.slice(-12).map((line, i) => (
-                <li key={`${i}-${line}`} className="truncate">
+            <ol className="space-y-2 border-l border-subtle pl-3 text-xs leading-relaxed text-muted">
+              {gen.log.slice(-12).map((line, index) => (
+                <li key={`${index}-${line}`} className="break-words">
                   {line}
                 </li>
               ))}
             </ol>
-            <p className="text-[0.6875rem] text-slate-400">
-              보통 2~5분 걸립니다. 창을 닫아도 완료되면 저장됩니다.
-            </p>
+            <p className="text-xs text-muted">창을 닫아도 생성은 계속됩니다.</p>
           </div>
         )}
-
         {!generating && gen.status === 'error' && (
-          <div className="p-4 flex flex-col gap-3">
-            <p className="text-sm text-red-600 dark:text-red-400">
+          <div className="ui-empty">
+            <p role="alert" className="text-sm text-red-600 dark:text-red-400">
               {gen.error ?? '페이지 생성에 실패했습니다.'}
             </p>
-            <button onClick={onGenerate} disabled={!canGenerate} className={btnPrimary}>
+            <button
+              type="button"
+              onClick={onGenerate}
+              disabled={!canGenerate}
+              className={`${btnPrimary} mt-2`}
+            >
+              <Icon name="refresh" />
               다시 시도
             </button>
           </div>
         )}
-
         {!generating && gen.status !== 'error' && !page && (
-          <div className="p-4 flex flex-col gap-3">
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              대화 기록으로 공유용 미팅록 페이지를 만듭니다. 결정 사항, 액션 아이템, 논의 흐름, 관련
-              공식 자료, 인사이트가 한 페이지에 정리됩니다.
+          <div className="ui-empty">
+            <div className="ui-empty-icon">
+              <Icon name="page" className="h-6 w-6" />
+            </div>
+            <p className="text-sm font-medium text-ink">공유할 회의 페이지</p>
+            <p className="text-xs">
+              {!hasMessages
+                ? '대화가 쌓이면 만들 수 있습니다'
+                : !wsConnected
+                  ? '서버 연결을 기다리고 있습니다'
+                  : '대화와 결정 사항을 한 페이지로 정리합니다'}
             </p>
-            <button onClick={onGenerate} disabled={!canGenerate} className={btnPrimary}>
-              미팅 페이지 만들기
+            <button
+              type="button"
+              onClick={onGenerate}
+              disabled={!canGenerate}
+              className={`${btnPrimary} mt-3`}
+            >
+              <Icon name="plus" />
+              페이지 만들기
             </button>
-            {!hasMessages && (
-              <p className="text-[0.6875rem] text-slate-400">
-                대화 기록이 있어야 만들 수 있습니다.
-              </p>
-            )}
-            {hasMessages && !wsConnected && (
-              <p className="text-[0.6875rem] text-slate-400">서버 연결을 기다리고 있습니다.</p>
-            )}
           </div>
         )}
-
         {!generating && gen.status !== 'error' && page && (
           <>
             <iframe
-              title="미팅 페이지 미리보기"
+              title="회의 페이지 미리보기"
               src={page.url}
               sandbox=""
-              className="flex-1 w-full bg-white dark:bg-slate-950 border-0"
+              className="min-h-0 w-full flex-1 border-0 bg-white"
             />
             {unpublishError && (
-              <p className="px-4 pt-2 text-[0.6875rem] text-red-600 dark:text-red-400 border-t border-slate-200 dark:border-slate-800">
+              <p
+                role="alert"
+                className="border-t border-subtle px-3 pt-2 text-xs text-red-600 dark:text-red-400"
+              >
                 {unpublishError}
               </p>
             )}
-            <div className="px-4 py-2 flex items-center justify-between gap-2 border-t border-slate-200 dark:border-slate-800 text-[0.6875rem] text-slate-400">
-              <span className="truncate">
-                {new Date(page.generatedAt).toLocaleString('ko-KR')} 생성
-              </span>
-              <div className="flex items-center gap-1">
-                {confirmRegen ? (
-                  <>
-                    <span className="text-amber-600 dark:text-amber-400">
-                      기존 링크는 더 이상 열리지 않습니다.
-                    </span>
+            <div className="shrink-0 border-t border-subtle p-3">
+              {confirmRegen || confirmUnpublish ? (
+                <div className="space-y-2">
+                  <p className="text-xs leading-relaxed text-amber-700 dark:text-amber-300">
+                    {confirmRegen
+                      ? '다시 만들면 기존 공유 링크는 만료됩니다.'
+                      : '이 페이지의 공유 링크를 삭제할까요?'}
+                  </p>
+                  <div className="flex justify-end gap-1.5">
                     <button
+                      type="button"
                       onClick={() => {
                         setConfirmRegen(false)
-                        onGenerate()
-                      }}
-                      disabled={!canGenerate}
-                      className={btnPrimary}
-                    >
-                      재생성
-                    </button>
-                    <button onClick={() => setConfirmRegen(false)} className={btnNeutral}>
-                      취소
-                    </button>
-                  </>
-                ) : confirmUnpublish ? (
-                  <>
-                    <span className="text-amber-600 dark:text-amber-400">링크를 삭제할까요?</span>
-                    <button
-                      onClick={() => {
                         setConfirmUnpublish(false)
-                        onUnpublish()
                       }}
-                      disabled={unpublishing}
-                      className={`${btn} bg-red-600 text-white hover:bg-red-500`}
+                      className={btnNeutral}
                     >
-                      공유 해제
-                    </button>
-                    <button onClick={() => setConfirmUnpublish(false)} className={btnNeutral}>
                       취소
                     </button>
-                  </>
-                ) : (
-                  <>
+                    {confirmRegen ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConfirmRegen(false)
+                          onGenerate()
+                        }}
+                        disabled={!canGenerate}
+                        className={btnPrimary}
+                      >
+                        다시 만들기
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConfirmUnpublish(false)
+                          onUnpublish()
+                        }}
+                        disabled={unpublishing}
+                        className={`${btn} bg-red-600 text-white hover:!bg-red-700 hover:!text-white`}
+                      >
+                        공유 해제
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-[0.6875rem] text-muted">
+                    {new Date(page.generatedAt).toLocaleDateString('ko-KR')} 생성
+                  </span>
+                  <div className="ml-auto flex gap-1">
                     <button
+                      type="button"
                       onClick={() => setConfirmRegen(true)}
                       disabled={!canGenerate}
-                      className={btnNeutral}
+                      className="ui-button"
                     >
-                      재생성
+                      다시 만들기
                     </button>
                     <button
+                      type="button"
                       onClick={() => setConfirmUnpublish(true)}
                       disabled={unpublishing}
-                      className={btnNeutral}
+                      className="ui-button"
                     >
                       {unpublishing ? '해제 중…' : '공유 해제'}
                     </button>
-                  </>
-                )}
-              </div>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}

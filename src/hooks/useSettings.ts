@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { normalizeSttProvider, type SttProvider } from '@/lib/sttProviders'
 import {
   DEFAULT_TRANSLATION_MODEL_ID,
   normalizeTranslationModel,
@@ -11,13 +12,13 @@ export interface Settings {
   /**
    * 음성 입력 언어. 'auto' 면 발화마다 감지된 언어의 반대편으로 번역하며
    * targetLang 은 무시된다 (백엔드도 동일하게 동작 — ws_handler._auto_target_lang).
-   * AUTO 모드에서는 Transcribe 화자 구분을 쓸 수 없다.
+   * Transcribe 화자 구분은 AUTO 모드에서도 사용한다.
    */
   sourceLang: 'ko' | 'en' | 'auto'
   /** sourceLang 이 'ko' | 'en' 일 때만 유효 */
   targetLang: 'ko' | 'en'
   audioSource: 'mic' | 'system' | 'both'
-  sttProvider: 'whisper' | 'transcribe'
+  sttProvider: SttProvider
   ttsAutoPlay: boolean
   pollyEngine: 'generative' | 'neural' | 'standard'
   pollyVoiceId: string
@@ -77,6 +78,7 @@ export function useSettings() {
         const loaded = { ...DEFAULT, ...(JSON.parse(raw) as Partial<Settings>) }
         // 이전 모델 선택도 현재 제공하는 글로벌 추론 프로필로 정리한다.
         loaded.translationModel = normalizeTranslationModel(loaded.translationModel)
+        loaded.sttProvider = normalizeSttProvider(loaded.sttProvider)
         // engine이 sourceLang을 지원하지 않으면 기본값으로 자동 수정
         const ttsLang = loaded.sourceLang === 'auto' ? 'en' : loaded.sourceLang
         const supportedEngines = LANG_VOICE_ENGINES[ttsLang]
@@ -97,6 +99,7 @@ export function useSettings() {
     setSettings((prev) => {
       const next = { ...prev, ...patch }
       next.translationModel = normalizeTranslationModel(next.translationModel)
+      next.sttProvider = normalizeSttProvider(next.sttProvider)
 
       // sourceLang 이 바뀌면 TTS 목소리/엔진을 해당 언어 기본값으로 되돌린다.
       // (ko 는 Seoyeon/neural 만 지원하므로 en 설정이 그대로 남으면 재생이 실패한다)

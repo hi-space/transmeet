@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
-import Header from '@/components/Header'
+import { useState, useCallback, useEffect, useRef, type CSSProperties } from 'react'
+import Header, { LanguageDirection } from '@/components/Header'
 import MeetingSidebar from '@/components/MeetingSidebar'
-import ChatArea from '@/components/ChatArea'
 import SummaryPanel from '@/components/SummaryPanel'
 import ControlPanel from '@/components/ControlPanel'
 import SettingsPanel from '@/components/SettingsPanel'
@@ -12,10 +11,15 @@ import AuthScreen from '@/components/AuthScreen'
 import MobileTabBar from '@/components/MobileTabBar'
 import MeetingPagePanel, { PAGE_GEN_IDLE, type PageGenState } from '@/components/MeetingPagePanel'
 import NotesArea from '@/components/NotesArea'
+import NotesComposer from '@/components/NotesComposer'
 import VoiceArea, { VoiceFontSizeControl } from '@/components/VoiceArea'
 import EditableTitle from '@/components/EditableTitle'
+import Icon from '@/components/ui/Icon'
+import Tabs from '@/components/ui/Tabs'
+import Dialog from '@/components/ui/Dialog'
 import MeetingActions, {
   isEnding,
+  MeetingStatus,
   type AudioPrepState,
   type MeetingEndState,
 } from '@/components/MeetingActions'
@@ -27,6 +31,8 @@ import { useSummaryResize } from '@/hooks/useSummaryResize'
 import { useAuth } from '@/context/AuthContext'
 import type { WsServerMessage } from '@/lib/websocket'
 import { api, toMeeting, parseSummary } from '@/lib/api'
+import { getVisibleUtilityTab } from '@/lib/workspace'
+import { sttChunkDuration } from '@/lib/sttProviders'
 
 const HAS_COGNITO = !!process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID
 
@@ -177,16 +183,21 @@ function isPrunable(m: Meeting): boolean {
 export default function Home() {
   const { user, isLoading: authLoading, setUser, logout } = useAuth()
   const { settings, updateSettings } = useSettings()
-  const { width: summaryWidth, handleMouseDown: handleSummaryResize } = useSummaryResize(384)
+  const {
+    width: summaryWidth,
+    handlePointerDown: handleSummaryResize,
+    handleKeyDown: handleResizeKeyDown,
+  } = useSummaryResize(360)
 
   const [meetings, setMeetings] = useState<Meeting[]>(HAS_API ? [] : MOCK_MEETINGS)
   const [activeMeetingId, setActiveMeetingId] = useState(HAS_API ? '' : MOCK_MEETINGS[0].id)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [summaryOpen, setSummaryOpen] = useState(false)
+  const [desktopLayout, setDesktopLayout] = useState(false)
+  const [summaryOpen, setSummaryOpen] = useState(true)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [quickTranslateOpen, setQuickTranslateOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'voice' | 'notes' | 'summary' | 'page'>('voice')
-  const [rightPanel, setRightPanel] = useState<'summary' | 'page'>('summary')
+  const [rightPanel, setRightPanel] = useState<'notes' | 'summary' | 'page'>('summary')
   // pageGen 은 현재 미팅의 생성 상태, 원본은 미팅별 Map — 다른 미팅을 보다 돌아와도 "생성 중"이 이어진다
   const [pageGen, setPageGen] = useState<PageGenState>(PAGE_GEN_IDLE)
   const pageGenByMeetingRef = useRef<Map<string, PageGenState>>(new Map())
@@ -202,11 +213,10 @@ export default function Home() {
   } | null>(null)
   const unpublishingRef = useRef<Set<string>>(new Set())
   const [hasNewVoice, setHasNewVoice] = useState(false)
-  // 미팅 종료(오디오 → 요약 → 메일) 진행과 녹음 파일 준비 상태
+  // 미팅 종료(오디오 → 요약 → 페이지 생성·메일) 진행과 녹음 파일 준비 상태
   const [meetingEnd, setMeetingEnd] = useState<MeetingEndState | null>(null)
   const [audioPrep, setAudioPrep] = useState<AudioPrepState | null>(null)
   const [hasNewNotes, setHasNewNotes] = useState(false)
-  const [notesCollapsed, setNotesCollapsed] = useState(true)
   const [ttsInput, setTtsInput] = useState('')
   const [isSummarizing, setIsSummarizing] = useState(false)
   const [isTtsPending, setIsTtsPending] = useState(false)
@@ -217,7 +227,8 @@ export default function Home() {
     translation?: string
   } | null>(null)
   const [isLoadingMeetings, setIsLoadingMeetings] = useState(HAS_API)
-  const [isCreatingMeeting, setIsCreatingMeeting] = useState(false)
+  const [meetingListError, setMeetingListError] = useState<string | null>(null)
+  const [isCreatingMeeting, setIsCreatingMeeting] = useState(HAS_API)
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null)
   const [isMessageLoading, setIsMessageLoading] = useState(false)
   const [quickTranslateStream, setQuickTranslateStream] = useState<{
@@ -247,6 +258,36 @@ export default function Home() {
       if (meetingId === activeMeetingIdRef.current) setPageGen(value)
     },
     []
+  )
+
+  // 수동 요청과 서버의 자동 생성이 같은 타임아웃·재연결 확인 경로를 쓴다.
+  const startPageGenFor = useCallback(
+    (meetingId: string) => {
+      if (pageGenByMeetingRef.current.get(meetingId)?.status === 'generating') return
+      pageGenMeetingIdRef.current = meetingId
+      setUnpublishState((s) => (s?.meetingId === meetingId ? null : s))
+      const startedAt = Date.now()
+      setPageGenFor(meetingId, {
+        status: 'generating',
+        log: [],
+        startedAt,
+        prevPageId: meetingsRef.current.find((m) => m.id === meetingId)?.page?.pageId,
+      })
+      // 하네스 제한(30분)을 넘겨도 아무 이벤트가 없으면 오류로 바꾼다.
+      const prevTimer = pageGenTimersRef.current.get(meetingId)
+      if (prevTimer) clearTimeout(prevTimer)
+      pageGenTimersRef.current.set(
+        meetingId,
+        setTimeout(() => {
+          setPageGenFor(meetingId, (g) =>
+            g.status === 'generating' && g.startedAt === startedAt
+              ? { ...g, status: 'error', error: PAGE_GEN_TIMEOUT_MESSAGE }
+              : g
+          )
+        }, PAGE_GEN_TIMEOUT_MS)
+      )
+    },
+    [setPageGenFor]
   )
   // partial 번역 carry over: handleWsMessage가 memoize되어 pendingTranscript가 deps에 없으므로 ref로 동기화
   const pendingTranscriptRef = useRef<typeof pendingTranscript>(null)
@@ -297,8 +338,11 @@ export default function Home() {
   const mergeAliasRef = useRef<Map<string, string>>(new Map())
   // 마운트 초기화(새 회의 생성)를 한 번만 실행하기 위한 가드
   const didInitRef = useRef(false)
+  // 초기 요청이 끝나기 전에 사용하거나 삭제한 회의를 오래된 목록 응답으로 되돌리지 않는다.
+  const openedMeetingIdsRef = useRef(new Set<string>())
+  const deletedMeetingIdsRef = useRef(new Set<string>())
 
-  const activeMeeting = meetings.find((m) => m.id === activeMeetingId) ?? meetings[0]
+  const activeMeeting = meetings.find((m) => m.id === activeMeetingId)
 
   // 탭 배지: 비활성 탭에 새 메시지 도착 시 표시
   useEffect(() => {
@@ -322,6 +366,7 @@ export default function Home() {
   // ─── Task #10: Load meetings on mount ──────────────────────────────────────
 
   const loadMeetingMessages = useCallback(async (id: string) => {
+    openedMeetingIdsRef.current.add(id)
     try {
       const full = await api.meetings.get(id)
       const meeting = toMeeting(full)
@@ -338,56 +383,85 @@ export default function Home() {
 
   useEffect(() => {
     if (!HAS_API) return
-    // 목록은 사용자별이다 — 로그인 전에 부르면 401 로 목업에 빠지므로 로그인 뒤에 한 번 불러온다
+    // 목록은 사용자별이다 — 인증을 마친 뒤에 한 번 불러온다.
     if (HAS_COGNITO && !user) return
     // StrictMode 는 개발 중 effect 를 두 번 실행한다 — 회의가 두 개 생기지 않도록 막는다
     if (didInitRef.current) return
     didInitRef.current = true
 
     async function init() {
-      let list: Meeting[]
-      try {
-        list = (await api.meetings.list()).map(toMeeting)
-      } catch {
-        setMeetings(MOCK_MEETINGS)
-        setActiveMeetingId(MOCK_MEETINGS[0].id)
-        setIsLoadingMeetings(false)
-        return
-      }
+      const linked = new URLSearchParams(window.location.search).get('meeting')
+      if (linked) window.history.replaceState(null, '', window.location.pathname)
 
-      // 진입할 때마다 빈 회의를 새로 만든다 — 이전 회의에 이어 붙지 않게
-      let created: Meeting
-      try {
-        created = toMeeting(await api.meetings.create())
-      } catch {
-        // 생성 실패 시엔 기존 목록으로 동작. 정리도 건너뛴다 —
-        // 새 회의가 없으면 빈 회의라도 남겨야 녹음할 대상이 있다.
-        if (list.length > 0) {
-          setMeetings(list)
-          setActiveMeetingId(list[0].id)
-          setIsLoadingMeetings(false)
-          loadMeetingMessages(list[0].id)
-        } else {
-          setIsLoadingMeetings(false)
+      // 목록과 새 회의 생성은 서로 기다리지 않는다. 도착한 결과부터 화면에 반영한다.
+      const listRequest = api.meetings
+        .list()
+        .then((items) => {
+          const list = items.map(toMeeting).filter((m) => !deletedMeetingIdsRef.current.has(m.id))
+          setMeetings((prev) => {
+            const existingIds = new Set(prev.map((m) => m.id))
+            return [...prev, ...list.filter((m) => !existingIds.has(m.id))]
+          })
+          if (linked && list.some((m) => m.id === linked)) {
+            setActiveMeetingId((current) => current || linked)
+            loadMeetingMessages(linked)
+          }
+          return list
+        })
+        .catch((error: unknown) => {
+          setMeetingListError('회의 목록을 불러오지 못했습니다. 새로고침해 다시 시도해 주세요.')
+          throw error
+        })
+        .finally(() => setIsLoadingMeetings(false))
+
+      // 이전 회의에 이어 붙지 않도록 새 회의를 준비하되, 사용자가 고른 회의는 유지한다.
+      const createRequest = api.meetings
+        .create()
+        .then((item) => {
+          const created = toMeeting(item)
+          if (deletedMeetingIdsRef.current.has(created.id)) return created
+          setMeetings((prev) => [
+            prev.find((m) => m.id === created.id) ?? created,
+            ...prev.filter((m) => m.id !== created.id),
+          ])
+          if (!linked) setActiveMeetingId((current) => current || created.id)
+          return created
+        })
+        .finally(() => setIsCreatingMeeting(false))
+
+      const [listed, creation] = await Promise.allSettled([listRequest, createRequest])
+      const list =
+        listed.status === 'fulfilled'
+          ? listed.value.filter((m) => !deletedMeetingIdsRef.current.has(m.id))
+          : []
+      if (creation.status === 'rejected') {
+        // 생성 실패 시 기존 회의를 열고 정리는 건너뛴다.
+        const fallback = list.find((m) => m.id === linked) ?? list[0]
+        if (fallback && !activeMeetingIdRef.current) {
+          setActiveMeetingId((current) => current || fallback.id)
+          loadMeetingMessages(fallback.id)
         }
         return
       }
 
-      // 종료 메일의 "미팅 화면에서 보기" 링크(?meeting=<id>)로 들어오면 그 미팅을 연다 — 정리 대상에서도 뺀다
-      const linked = new URLSearchParams(window.location.search).get('meeting')
-      if (linked) window.history.replaceState(null, '', window.location.pathname)
-
-      // 이전에 만들어졌지만 아무 내용도 없는 회의는 정리한다
-      const stale = list.filter((m) => m.id !== linked && isPrunable(m))
-      const staleIds = new Set(stale.map((m) => m.id))
-      setMeetings([created, ...list.filter((m) => !staleIds.has(m.id))])
-      if (linked && list.some((m) => m.id === linked)) {
-        setActiveMeetingId(linked)
-        loadMeetingMessages(linked)
-      } else {
-        setActiveMeetingId(created.id)
+      const created = creation.value
+      const fallback = deletedMeetingIdsRef.current.has(created.id) ? list[0] : created
+      if (fallback && !activeMeetingIdRef.current) {
+        setActiveMeetingId((current) => current || fallback.id)
+        if (fallback.id !== created.id) loadMeetingMessages(fallback.id)
       }
-      setIsLoadingMeetings(false)
+
+      // 초기 목록 이후 사용한 회의는 다른 회의로 이동했더라도 정리하지 않는다.
+      const stale = list.filter(
+        (m) =>
+          m.id !== created.id &&
+          m.id !== linked &&
+          m.id !== activeMeetingIdRef.current &&
+          !openedMeetingIdsRef.current.has(m.id) &&
+          isPrunable(m)
+      )
+      const staleIds = new Set(stale.map((m) => m.id))
+      setMeetings((prev) => prev.filter((m) => !staleIds.has(m.id)))
 
       // 삭제는 화면을 그린 뒤 백그라운드로 — 실패해도 사용자 흐름을 막지 않는다
       for (const m of stale) {
@@ -422,6 +496,7 @@ export default function Home() {
     try {
       const m = await api.meetings.create()
       const meeting = toMeeting(m)
+      openedMeetingIdsRef.current.add(meeting.id)
       setMeetings((prev) => [meeting, ...prev])
       setActiveMeetingId(meeting.id)
       setSidebarOpen(false)
@@ -437,6 +512,7 @@ export default function Home() {
   const handleGenerateTitle = useCallback(
     async (id: string) => {
       if (!HAS_API || generatingTitleId) return
+      openedMeetingIdsRef.current.add(id)
       setGeneratingTitleId(id)
       try {
         const { title } = await api.meetings.generateTitle(id)
@@ -451,6 +527,7 @@ export default function Home() {
   )
 
   const handleUpdateTitle = useCallback(async (id: string, title: string) => {
+    openedMeetingIdsRef.current.add(id)
     if (!HAS_API) {
       setMeetings((prev) => prev.map((m) => (m.id === id ? { ...m, title } : m)))
       return
@@ -474,16 +551,20 @@ export default function Home() {
           return
         }
       }
+      deletedMeetingIdsRef.current.add(id)
       setMeetings((prev) => prev.filter((m) => m.id !== id))
-      if (activeMeetingId === id) {
-        const next = meetings.find((m) => m.id !== id)
+      if (activeMeetingIdRef.current === id) {
+        const next = meetingsRef.current.find(
+          (m) => m.id !== id && !deletedMeetingIdsRef.current.has(m.id)
+        )
+        activeMeetingIdRef.current = next?.id ?? ''
+        setActiveMeetingId(next?.id ?? '')
         if (next) {
-          setActiveMeetingId(next.id)
           if (HAS_API) loadMeetingMessages(next.id)
         }
       }
     },
-    [activeMeetingId, meetings, loadMeetingMessages]
+    [loadMeetingMessages]
   )
 
   // ─── Task #5: WebSocket subtitle handler ───────────────────────────────────
@@ -992,6 +1073,17 @@ export default function Home() {
             error: msg.error ?? '공유 해제에 실패했습니다',
           })
         } else if (msg.phase === 'status' || msg.phase === 'delta') {
+          if (msg.started) {
+            const alreadyTracking =
+              pageGenByMeetingRef.current.get(targetId)?.status === 'generating'
+            startPageGenFor(targetId)
+            if (!alreadyTracking && targetId === activeMeetingIdRef.current) {
+              setRightPanel('page')
+              setSummaryOpen(true)
+              setActiveTab('page')
+              setHasNewPage(false)
+            }
+          }
           const line = (msg.text ?? '').trim()
           if (line) {
             // 이미 끝난(idle/error·타임아웃) 생성의 늦은 이벤트는 무시한다
@@ -1008,10 +1100,12 @@ export default function Home() {
         } else if (msg.phase === 'done') {
           setPageGenFor(targetId, PAGE_GEN_IDLE)
           if (msg.page) {
+            const isNewPage =
+              meetingsRef.current.find((m) => m.id === targetId)?.page?.pageId !== msg.page.pageId
             setMeetings((prev) =>
               prev.map((m) => (m.id === targetId ? { ...m, page: msg.page } : m))
             )
-            if (activeTab !== 'page') setHasNewPage(true)
+            if (isNewPage && activeTab !== 'page') setHasNewPage(true)
           }
         } else if (msg.phase === 'error') {
           setPageGenFor(targetId, (g) => ({
@@ -1088,13 +1182,13 @@ export default function Home() {
       settings.silenceTimeout,
       settings.maxSentencesPerBubble,
       settings.ttsAutoPlay,
-      settings.translationTiming,
       settings.partialTranslationMode,
       settings.partialThrottleMs,
       settings.sourceLang,
       settings.targetLang,
       settings.translationModel,
       setPageGenFor,
+      startPageGenFor,
     ]
   )
 
@@ -1149,9 +1243,10 @@ export default function Home() {
     error: audioError,
     start: startAudio,
     stop: stopAudio,
+    flush: flushAudio,
   } = useAudioCapture({
     onChunk: handleChunk,
-    chunkDurationMs: settings.sttProvider === 'whisper' ? 2000 : 700,
+    chunkDurationMs: sttChunkDuration(settings.sttProvider),
     audioSource: settings.audioSource,
   })
 
@@ -1186,20 +1281,22 @@ export default function Home() {
     settings.translationTiming,
   ])
 
-  // 녹음 중 언어 방향 변경 감지 → STT 세션 재시작.
-  // Transcribe 는 startRecording 시점의 sourceLang 으로 language_code 를 고정하므로
-  // (backend/app/ws_handler.py: _run_transcribe_streaming), 재전송하지 않으면
-  // 헤더 토글을 눌러도 인식 언어가 그대로 남는다.
+  // 언어 또는 엔진을 변경하면 기존 발화를 마무리하고 새 설정으로 인식한다.
   const prevSourceLangRef = useRef(settings.sourceLang)
+  const prevSttProviderRef = useRef(settings.sttProvider)
   useEffect(() => {
     const prev = prevSourceLangRef.current
+    const prevProvider = prevSttProviderRef.current
     prevSourceLangRef.current = settings.sourceLang
-    if (prev === settings.sourceLang) return
+    prevSttProviderRef.current = settings.sttProvider
+    if (prev === settings.sourceLang && prevProvider === settings.sttProvider) return
     if (!isRecording || wsStatus !== 'connected') return
 
     console.warn(
-      '[WS] sourceLang changed during recording (%s → %s) — restarting STT session',
+      '[WS] speech settings changed during recording (%s/%s → %s/%s)',
+      prevProvider,
       prev,
+      settings.sttProvider,
       settings.sourceLang
     )
     // 이전 언어로 쌓인 partial 은 버린다 — 새 언어 결과와 섞이면 안 된다
@@ -1213,6 +1310,8 @@ export default function Home() {
       clearTimeout(partialThrottleRef.current)
       partialThrottleRef.current = null
     }
+    // WebSocket preserves send order: buffered audio belongs to the old session.
+    flushAudio()
     startRecording({
       sttProvider: settings.sttProvider,
       sourceLang: settings.sourceLang,
@@ -1226,6 +1325,7 @@ export default function Home() {
     isRecording,
     wsStatus,
     startRecording,
+    flushAudio,
     settings.sttProvider,
     settings.targetLang,
     settings.translationModel,
@@ -1287,6 +1387,7 @@ export default function Home() {
   }, [stopAudio])
 
   const handleToggleRecording = useCallback(async () => {
+    if (HAS_API && !activeMeetingId && !isRecording) return
     if (isRecording) {
       resetLocalRecording()
       stopRecording()
@@ -1306,6 +1407,7 @@ export default function Home() {
       })
     }
   }, [
+    activeMeetingId,
     isRecording,
     startAudio,
     resetLocalRecording,
@@ -1344,6 +1446,13 @@ export default function Home() {
 
       if (msgCount === 0) return
 
+      // Navigate when the user asks for a summary, not when an asynchronous
+      // result arrives: background updates must not interrupt writing notes.
+      if (force) {
+        setRightPanel('summary')
+        setSummaryOpen(true)
+      }
+
       isSummarizingRef.current = true
       setIsSummarizing(true)
 
@@ -1355,8 +1464,6 @@ export default function Home() {
               : m
           )
         )
-        setRightPanel('summary')
-        setSummaryOpen(true)
         isSummarizingRef.current = false
         setIsSummarizing(false)
         return
@@ -1372,8 +1479,6 @@ export default function Home() {
           setMeetings((prev) =>
             prev.map((m) => (m.id === activeMeetingId ? { ...m, summary: '' } : m))
           )
-          setRightPanel('summary')
-          setSummaryOpen(true)
           lastSummarizedCountRef.current[activeMeetingId] = msgCount
           // Safety: 5분 후 강제 리셋 (WS done/error 미수신 대비). 상세 요약은 긴 미팅에서 1~3분 걸린다.
           if (isSummarizingTimeoutRef.current) clearTimeout(isSummarizingTimeoutRef.current)
@@ -1397,8 +1502,6 @@ export default function Home() {
               : m
           )
         )
-        setRightPanel('summary')
-        setSummaryOpen(true)
       } catch {
         // Silent — user can retry via button
       } finally {
@@ -1416,15 +1519,21 @@ export default function Home() {
 
   // ─── 미팅 종료 · 녹음 파일 ─────────────────────────────────────────────────
 
-  // 서버가 녹음 정지 → 오디오 합치기 → 요약 → (설정이 켜져 있으면) 메일을 끝까지 처리한다
+  // 서버가 녹음 정지 → 오디오 합치기 → 요약 → 페이지 생성·메일을 끝까지 처리한다.
   const handleEndMeeting = useCallback(() => {
     if (!activeMeetingId) return
-    if (isRecording && !window.confirm('녹음을 멈추고 미팅을 종료할까요?')) return
+    if (isRecording && !window.confirm('녹음을 멈추고 회의를 종료할까요?')) return
     const currentMessages =
       meetingsRef.current.find((m) => m.id === activeMeetingId)?.messages ?? []
     const wsMessages = currentMessages
       .filter((m) => m.original)
-      .map((m) => ({ speaker: m.speaker, original: m.original, timestamp: m.timestamp }))
+      .map((m) => ({
+        speaker: m.speaker,
+        original: m.original,
+        translation: m.translation,
+        timestamp: m.timestamp,
+        detectedLanguage: m.detectedLanguage,
+      }))
     if (!sendEndMeeting(activeMeetingId, settings.emailOnEnd, wsMessages)) {
       setMeetingEnd({
         meetingId: activeMeetingId,
@@ -1510,31 +1619,11 @@ export default function Home() {
       })
       return
     }
-    pageGenMeetingIdRef.current = meetingId
-    setUnpublishState((s) => (s?.meetingId === meetingId ? null : s))
-    const startedAt = Date.now()
-    setPageGenFor(meetingId, {
-      status: 'generating',
-      log: [],
-      startedAt,
-      prevPageId: meeting?.page?.pageId,
-    })
-    // 안전장치: 하네스 제한(30분)을 넘겨도 아무 이벤트가 없으면 오류로 바꾼다
-    const prevTimer = pageGenTimersRef.current.get(meetingId)
-    if (prevTimer) clearTimeout(prevTimer)
-    pageGenTimersRef.current.set(
-      meetingId,
-      setTimeout(() => {
-        setPageGenFor(meetingId, (g) =>
-          g.status === 'generating' && g.startedAt === startedAt
-            ? { ...g, status: 'error', error: PAGE_GEN_TIMEOUT_MESSAGE }
-            : g
-        )
-      }, PAGE_GEN_TIMEOUT_MS)
-    )
+    startPageGenFor(meetingId)
     setRightPanel('page')
     setSummaryOpen(true)
-  }, [activeMeetingId, isRecording, sendGeneratePage, setPageGenFor])
+    setActiveTab('page')
+  }, [activeMeetingId, isRecording, sendGeneratePage, setPageGenFor, startPageGenFor])
 
   const handleUnpublishPage = useCallback(() => {
     const meetingId = activeMeetingId
@@ -1551,6 +1640,11 @@ export default function Home() {
 
   // 생성 중인 미팅의 실제 결과를 API 로 확인한다 — 소켓이 끊기면 done 이벤트를 못 받을 수 있다
   const reconcilePageGen = useCallback(async () => {
+    const currentId = activeMeetingIdRef.current
+    // 종료 후 요약을 기다리다 연결이 끊기면 시작 이벤트 자체를 놓칠 수 있다.
+    if (currentId && pageGenByMeetingRef.current.get(currentId)?.status !== 'generating') {
+      sendPageStatus(currentId, true)
+    }
     const pending = Array.from(pageGenByMeetingRef.current.entries()).filter(
       ([, g]) => g.status === 'generating'
     )
@@ -1722,9 +1816,13 @@ export default function Home() {
   )
 
   const handleSend = useCallback(async () => {
-    if (!ttsInput.trim() || isTtsPending) return
+    if (!ttsInput.trim() || isTtsPending || (HAS_API && !activeMeetingId)) return
     const text = ttsInput.trim()
     setTtsInput('')
+    setRightPanel('notes')
+    setSummaryOpen(true)
+    setActiveTab('notes')
+    setHasNewNotes(false)
 
     if (!HAS_API) return
 
@@ -1829,6 +1927,17 @@ export default function Home() {
     [loadMeetingMessages]
   )
 
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 1024px)')
+    const closeDrawer = () => {
+      setDesktopLayout(desktop.matches)
+      if (desktop.matches) setSidebarOpen(false)
+    }
+    closeDrawer()
+    desktop.addEventListener('change', closeDrawer)
+    return () => desktop.removeEventListener('change', closeDrawer)
+  }, [])
+
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   // Auth gate — show loading spinner while session is being restored
@@ -1855,278 +1964,157 @@ export default function Home() {
     return <AuthScreen onAuth={setUser} />
   }
 
-  if (isLoadingMeetings) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-white dark:bg-slate-950">
-        <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 text-sm">
-          <svg
-            className="w-4 h-4 animate-spin"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-          </svg>
-          <span>회의 목록 불러오는 중...</span>
-        </div>
-      </div>
+  const changeDirection = (source: 'en' | 'ko' | 'auto') => {
+    updateSettings(
+      source === 'auto'
+        ? { sourceLang: 'auto' }
+        : { sourceLang: source, targetLang: source === 'en' ? 'ko' : 'en' }
     )
   }
 
-  return (
-    <main className="relative flex flex-col overflow-hidden font-sans" style={{ height: '100dvh' }}>
-      {/* Background */}
-      <div className="absolute inset-0 -z-10 bg-white dark:bg-slate-950" />
+  const changeTab = (tab: 'voice' | 'notes' | 'summary' | 'page') => {
+    setActiveTab(tab)
+    if (tab === 'voice') setHasNewVoice(false)
+    else {
+      setRightPanel(tab)
+      setSummaryOpen(true)
+      if (tab === 'notes') setHasNewNotes(false)
+      if (tab === 'page') setHasNewPage(false)
+    }
+  }
 
+  const closeUtility = () => {
+    setSummaryOpen(false)
+    setActiveTab('voice')
+  }
+
+  const sidebarProps = {
+    meetings,
+    activeMeetingId,
+    onSelect: handleSelectMeeting,
+    onClose: () => setSidebarOpen(false),
+    onNewMeeting: handleNewMeeting,
+    onDelete: handleDeleteMeeting,
+    onUpdateTitle: handleUpdateTitle,
+    onGenerateTitle: handleGenerateTitle,
+    generatingTitleId,
+    isCreating: isCreatingMeeting,
+    isLoading: isLoadingMeetings,
+    loadError: meetingListError,
+  }
+
+  const meetingDate =
+    activeMeeting?.startedAt && !Number.isNaN(Date.parse(activeMeeting.startedAt))
+      ? new Date(activeMeeting.startedAt).toLocaleDateString('ko-KR', {
+          month: 'long',
+          day: 'numeric',
+          weekday: 'short',
+        })
+      : null
+  const voiceCount =
+    activeMeeting?.messages.filter((message) => message.speaker !== 'me').length ?? 0
+  const panelLabels = { notes: '내 메모', summary: '요약', page: '회의 페이지' }
+  const visibleUtilityTab = getVisibleUtilityTab(desktopLayout, activeTab, rightPanel)
+  const activeMeetingEnd = meetingEnd?.meetingId === activeMeetingId ? meetingEnd : null
+  const activeAudioPrep = audioPrep?.meetingId === activeMeetingId ? audioPrep : null
+
+  return (
+    <div className="flex h-dvh flex-col overflow-hidden bg-canvas font-sans">
       <Header
         isRecording={isRecording}
-        wsStatus={wsStatus}
-        onToggleSidebar={() => setSidebarOpen((v) => !v)}
-        onToggleQuickTranslate={() => setQuickTranslateOpen((v) => !v)}
+        wsStatus={HAS_API ? wsStatus : undefined}
+        onToggleSidebar={() => setSidebarOpen((value) => !value)}
+        sidebarOpen={sidebarOpen}
+        onToggleQuickTranslate={() => setQuickTranslateOpen((value) => !value)}
         quickTranslateOpen={quickTranslateOpen}
-        onToggleSettings={() => setSettingsOpen((v) => !v)}
+        onToggleSettings={() => setSettingsOpen((value) => !value)}
+        settingsOpen={settingsOpen}
         onLogout={HAS_COGNITO ? logout : undefined}
         sourceLang={settings.sourceLang}
         detectedLang={detectedLang}
-        onChangeLangDirection={(source) =>
-          // auto 는 방향을 발화마다 정하므로 targetLang 을 고정하지 않는다.
-          updateSettings(
-            source === 'auto'
-              ? { sourceLang: 'auto' }
-              : { sourceLang: source, targetLang: source === 'en' ? 'ko' : 'en' }
-          )
-        }
+        onChangeLangDirection={changeDirection}
       />
 
-      <div className="flex flex-1 overflow-hidden">
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-30 bg-black/40 backdrop-blur-[2px] lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-
-        <aside
-          className={`
-            fixed lg:relative top-20 sm:top-12 lg:top-auto bottom-0 left-0
-            z-40 lg:z-auto flex-shrink-0
-            transition-transform duration-300 ease-in-out
-            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-          `}
-        >
-          <MeetingSidebar
-            meetings={meetings}
-            activeMeetingId={activeMeetingId}
-            onSelect={handleSelectMeeting}
-            onClose={() => setSidebarOpen(false)}
-            onNewMeeting={handleNewMeeting}
-            onDelete={handleDeleteMeeting}
-            onUpdateTitle={handleUpdateTitle}
-            onGenerateTitle={handleGenerateTitle}
-            generatingTitleId={generatingTitleId}
-            isCreating={isCreatingMeeting}
-          />
+      <div className="flex min-h-0 flex-1">
+        <aside className="hidden shrink-0 lg:block" aria-label="회의 목록">
+          <MeetingSidebar {...sidebarProps} headingId="desktop-meeting-list-title" />
         </aside>
 
-        <div className="flex-1 overflow-hidden min-w-0 flex flex-col">
-          {/* 현재 회의 제목 */}
-          {activeMeeting && (
-            <div className="px-4 h-10 flex items-center gap-2 flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-              <span className="w-2 h-2 rounded-full bg-accent-400 flex-shrink-0" />
-              <EditableTitle
-                title={activeMeeting.title}
-                onSave={(newTitle) => handleUpdateTitle(activeMeeting.id, newTitle)}
-                className="text-sm font-semibold text-accent-700 dark:text-accent-300 truncate cursor-default"
-              />
+        <main className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-h-[4.5rem] shrink-0 items-center justify-between gap-3 px-4 py-3 sm:px-5">
+            <div className="min-w-0 flex-1">
+              {activeMeeting ? (
+                <EditableTitle
+                  key={activeMeeting.id}
+                  title={activeMeeting.title}
+                  onSave={(newTitle) => handleUpdateTitle(activeMeeting.id, newTitle)}
+                  className="min-w-0 text-base font-semibold tracking-tight text-ink sm:text-lg"
+                />
+              ) : (
+                <h1 className="text-lg font-semibold text-ink">새 회의</h1>
+              )}
+              <div className="mt-1 flex items-center gap-2 text-[0.6875rem] text-muted">
+                {meetingDate && <span>{meetingDate}</span>}
+                {meetingDate && <span aria-hidden="true">·</span>}
+                <span>대화 {activeMeeting?.messages.length ?? 0}개</span>
+              </div>
+              {!activeMeeting && (
+                <p role="status" className="mt-1 text-xs text-muted">
+                  {isLoadingMeetings || isCreatingMeeting
+                    ? '회의 준비 중…'
+                    : '새 회의를 만들어 시작하세요'}
+                </p>
+              )}
             </div>
-          )}
-          {/* 모바일 탭 바 */}
+            <div className="max-w-[48%] shrink-0 sm:hidden">
+              <LanguageDirection sourceLang={settings.sourceLang} onChange={changeDirection} />
+            </div>
+            <div className="hidden items-center gap-2 lg:flex">
+              {!summaryOpen && (
+                <button
+                  type="button"
+                  className="ui-button ui-button-secondary"
+                  onClick={() => setSummaryOpen(true)}
+                  aria-label="회의 도구 펼치기"
+                >
+                  <Icon name="panelRight" />
+                  메모 · 요약
+                </button>
+              )}
+            </div>
+          </div>
+
           <MobileTabBar
             activeTab={activeTab}
-            onTabChange={(tab) => {
-              setActiveTab(tab)
-              if (tab === 'voice') setHasNewVoice(false)
-              if (tab === 'notes') setHasNewNotes(false)
-              if (tab === 'page') setHasNewPage(false)
-            }}
+            onTabChange={changeTab}
             hasNewVoice={hasNewVoice}
             hasNewNotes={hasNewNotes}
             hasNewPage={hasNewPage}
-            fontSizeControl={
-              <VoiceFontSizeControl
-                fontSize={settings.voiceFontSize}
-                onChange={(size) => updateSettings({ voiceFontSize: size })}
-              />
-            }
           />
 
-          {/* 데스크톱: 좌우 분할 */}
-          <div className="hidden lg:flex flex-1 overflow-hidden min-w-0">
-            {/* 음성 입력 영역 */}
-            <div className="flex-1 flex flex-col border-r border-slate-200 dark:border-slate-800 min-w-0">
-              <div className="px-3 py-1.5 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 flex items-center justify-between">
-                <span className="text-[0.6875rem] font-medium text-slate-400 dark:text-slate-500 tracking-wide uppercase">
-                  음성 입력
-                </span>
-                <div className="flex items-center gap-1">
-                  <VoiceFontSizeControl
-                    fontSize={settings.voiceFontSize}
-                    onChange={(size) => updateSettings({ voiceFontSize: size })}
-                  />
-                  <span className="w-px h-3.5 bg-slate-200 dark:bg-slate-700 mx-0.5" />
-                  {notesCollapsed && (
-                    <button
-                      onClick={() => setNotesCollapsed(false)}
-                      title="내 메모 펼치기"
-                      className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[0.6875rem] font-medium text-slate-400 dark:text-slate-500 hover:text-accent-600 dark:hover:text-accent-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="w-3 h-3"
-                      >
-                        <path d="M12 20h9" />
-                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                      </svg>
-                      내 메모
-                    </button>
+          <div className="flex min-h-0 flex-1 gap-3 px-3 sm:px-5">
+            <section
+              id="meeting-voice-panel"
+              role="tabpanel"
+              aria-label="대화"
+              className={`ui-surface min-w-0 flex-1 flex-col overflow-hidden ${activeTab === 'voice' ? 'flex' : 'hidden lg:flex'}`}
+            >
+              <div className="ui-panel-header">
+                <div className="flex items-center gap-2">
+                  <Icon name="waveform" className="h-4 w-4 text-accent-600 dark:text-accent-400" />
+                  <h2 className="text-xs font-semibold text-ink">대화</h2>
+                  {voiceCount > 0 && (
+                    <span className="text-[0.6875rem] tabular-nums text-muted">{voiceCount}</span>
                   )}
-                  <button
-                    onClick={() => {
-                      if (summaryOpen && rightPanel === 'summary') setSummaryOpen(false)
-                      else {
-                        setRightPanel('summary')
-                        setSummaryOpen(true)
-                      }
-                    }}
-                    title="요약 보기"
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[0.6875rem] font-medium transition-colors ${
-                      summaryOpen && rightPanel === 'summary'
-                        ? 'text-accent-600 dark:text-accent-500 bg-accent-50 dark:bg-accent-500/10'
-                        : 'text-slate-400 dark:text-slate-500 hover:text-accent-600 dark:hover:text-accent-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                    }`}
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      className="w-3 h-3"
-                    >
-                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                      <polyline points="14 2 14 8 20 8" />
-                      <line x1="16" x2="8" y1="13" y2="13" />
-                      <line x1="16" x2="8" y1="17" y2="17" />
-                    </svg>
-                    요약
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (summaryOpen && rightPanel === 'page') setSummaryOpen(false)
-                      else {
-                        setRightPanel('page')
-                        setSummaryOpen(true)
-                      }
-                    }}
-                    title="미팅 페이지"
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[0.6875rem] font-medium transition-colors ${
-                      summaryOpen && rightPanel === 'page'
-                        ? 'text-accent-600 dark:text-accent-500 bg-accent-50 dark:bg-accent-500/10'
-                        : 'text-slate-400 dark:text-slate-500 hover:text-accent-600 dark:hover:text-accent-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'
-                    }`}
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      className="w-3 h-3"
-                    >
-                      <rect x="3" y="3" width="18" height="18" rx="2" />
-                      <path d="M3 9h18M9 21V9" />
-                    </svg>
-                    페이지
-                    {pageGen.status === 'generating' && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-accent-500 animate-pulse" />
-                    )}
-                  </button>
                 </div>
-              </div>
-              <VoiceArea
-                messages={activeMeeting?.messages ?? []}
-                isRecording={isRecording}
-                isProcessing={isTtsPending}
-                playingMessageId={playingMessageId}
-                isMessageLoading={isMessageLoading}
-                onPlayMessage={handlePlayMessage}
-                onStopMessage={handleStopAllAudio}
-                onTranslateMessage={handleTranslateMessage}
-                pendingTranscript={pendingTranscript}
-                fontSize={settings.voiceFontSize}
-              />
-            </div>
-            {/* 내 메모 영역 — 접기 가능 */}
-            {!notesCollapsed && (
-              <div className="w-80 flex-shrink-0 flex flex-col min-w-0">
-                <div className="px-4 h-12 flex items-center justify-between flex-shrink-0 border-b border-slate-200 dark:border-slate-800">
-                  <div className="flex items-center gap-2">
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="w-4 h-4 text-slate-500"
-                    >
-                      <path d="M12 20h9" />
-                      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-                    </svg>
-                    <span className="text-[0.6875rem] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                      내 메모
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setNotesCollapsed(true)}
-                    title="내 메모 닫기"
-                    aria-label="닫기"
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  >
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      className="w-4 h-4"
-                    >
-                      <path d="M18 6 6 18M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-                <NotesArea
-                  messages={activeMeeting?.messages ?? []}
-                  playingMessageId={playingMessageId}
-                  isMessageLoading={isMessageLoading}
-                  onPlayMessage={handlePlayMessage}
-                  onStopMessage={handleStopAllAudio}
-                  onTranslateMessage={handleTranslateMessage}
+                <VoiceFontSizeControl
+                  fontSize={settings.voiceFontSize}
+                  onChange={(voiceFontSize) => updateSettings({ voiceFontSize })}
                 />
               </div>
-            )}
-          </div>
-
-          {/* 모바일: 탭별 콘텐츠 */}
-          <div className="flex lg:hidden flex-1 overflow-hidden min-w-0">
-            {activeTab === 'voice' ? (
               <VoiceArea
+                key={activeMeetingId}
+                isVisible={desktopLayout || activeTab === 'voice'}
                 messages={activeMeeting?.messages ?? []}
                 isRecording={isRecording}
                 isProcessing={isTtsPending}
@@ -2138,113 +2126,154 @@ export default function Home() {
                 pendingTranscript={pendingTranscript}
                 fontSize={settings.voiceFontSize}
               />
-            ) : activeTab === 'notes' ? (
-              <NotesArea
-                messages={activeMeeting?.messages ?? []}
-                playingMessageId={playingMessageId}
-                isMessageLoading={isMessageLoading}
-                onPlayMessage={handlePlayMessage}
-                onStopMessage={handleStopAllAudio}
-                onTranslateMessage={handleTranslateMessage}
-              />
-            ) : activeTab === 'summary' ? (
-              <SummaryPanel
-                summary={activeMeeting?.summary}
-                messages={activeMeeting?.messages}
-                meetingTitle={activeMeeting?.title}
-                onSummarize={() => handleSummarize(true)}
-                isSummarizing={isSummarizing}
-              />
-            ) : (
-              <MeetingPagePanel
-                page={activeMeeting?.page}
-                gen={pageGen}
-                hasMessages={(activeMeeting?.messages?.length ?? 0) > 0}
-                wsConnected={wsStatus === 'connected'}
-                unpublishing={
-                  unpublishState?.meetingId === activeMeetingId &&
-                  unpublishState.status === 'pending'
-                }
-                unpublishError={
-                  unpublishState?.meetingId === activeMeetingId && unpublishState.status === 'error'
-                    ? unpublishState.error
-                    : undefined
-                }
-                onGenerate={handleGeneratePage}
-                onUnpublish={handleUnpublishPage}
-              />
-            )}
-          </div>
-        </div>
+            </section>
 
-        {summaryOpen && (
-          <div
-            className="hidden sm:flex flex-shrink-0 relative"
-            data-summary-width={summaryWidth}
-            style={{ width: summaryWidth }}
-          >
-            {/* 리사이즈 핸들 */}
-            <div
-              onMouseDown={handleSummaryResize}
-              className="absolute left-0 top-0 bottom-0 w-1 cursor-col-resize z-10 hover:bg-slate-300 dark:hover:bg-slate-600 active:bg-slate-400 dark:active:bg-slate-500 transition-colors"
-            />
-            {rightPanel === 'summary' ? (
-              <SummaryPanel
-                summary={activeMeeting?.summary}
-                messages={activeMeeting?.messages}
-                meetingTitle={activeMeeting?.title}
-                onClose={() => setSummaryOpen(false)}
-                onSummarize={() => handleSummarize(true)}
-                isSummarizing={isSummarizing}
-              />
-            ) : (
-              <MeetingPagePanel
-                page={activeMeeting?.page}
-                gen={pageGen}
-                hasMessages={(activeMeeting?.messages?.length ?? 0) > 0}
-                wsConnected={wsStatus === 'connected'}
-                unpublishing={
-                  unpublishState?.meetingId === activeMeetingId &&
-                  unpublishState.status === 'pending'
-                }
-                unpublishError={
-                  unpublishState?.meetingId === activeMeetingId && unpublishState.status === 'error'
-                    ? unpublishState.error
-                    : undefined
-                }
-                onGenerate={handleGeneratePage}
-                onUnpublish={handleUnpublishPage}
-                onClose={() => setSummaryOpen(false)}
-              />
+            {summaryOpen && (
+              <aside
+                aria-label="회의 도구"
+                className={`relative min-w-0 w-full shrink-0 flex-col lg:w-[var(--utility-width)] lg:max-w-[45%] ${activeTab === 'voice' ? 'hidden lg:flex' : 'flex'}`}
+                data-summary-width={summaryWidth}
+                style={{ '--utility-width': `${summaryWidth}px` } as CSSProperties}
+              >
+                <div
+                  role="separator"
+                  aria-label="회의 도구 너비 조절"
+                  aria-orientation="vertical"
+                  aria-valuemin={280}
+                  aria-valuemax={600}
+                  aria-valuenow={summaryWidth}
+                  tabIndex={0}
+                  onPointerDown={handleSummaryResize}
+                  onKeyDown={handleResizeKeyDown}
+                  className="absolute -left-2 top-3 bottom-3 z-10 hidden w-1.5 cursor-col-resize touch-none rounded-full transition-colors hover:bg-accent-300 focus-visible:bg-accent-300 lg:block"
+                />
+                <div className="ui-surface flex min-h-0 flex-1 flex-col overflow-hidden">
+                  <div className="hidden min-h-12 shrink-0 items-center gap-1 border-b border-subtle px-2 py-1.5 lg:flex">
+                    <Tabs
+                      label="회의 도구"
+                      panelId="meeting-utility-panel"
+                      value={rightPanel}
+                      onChange={changeTab}
+                      className="flex-1 bg-transparent [&_.ui-tab]:flex-auto [&_.ui-tab]:px-1.5"
+                      items={[
+                        { value: 'notes', label: '내 메모', badge: hasNewNotes },
+                        { value: 'summary', label: '요약' },
+                        {
+                          value: 'page',
+                          label: '회의 페이지',
+                          badge: hasNewPage || pageGen.status === 'generating',
+                        },
+                      ]}
+                    />
+                    <button
+                      type="button"
+                      onClick={closeUtility}
+                      className="ui-icon-button h-8 w-8 min-h-8"
+                      aria-label="회의 도구 접기"
+                      title="회의 도구 접기"
+                    >
+                      <Icon name="panelRight" className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                  <div
+                    id="meeting-utility-panel"
+                    role="tabpanel"
+                    aria-label={panelLabels[visibleUtilityTab]}
+                    className="flex min-h-0 flex-1 flex-col"
+                  >
+                    {visibleUtilityTab === 'notes' ? (
+                      <>
+                        <NotesArea
+                          key={activeMeetingId}
+                          isVisible={desktopLayout || activeTab === 'notes'}
+                          messages={activeMeeting?.messages ?? []}
+                          playingMessageId={playingMessageId}
+                          isMessageLoading={isMessageLoading}
+                          onPlayMessage={handlePlayMessage}
+                          onStopMessage={handleStopAllAudio}
+                          onTranslateMessage={handleTranslateMessage}
+                        />
+                        <NotesComposer
+                          value={ttsInput}
+                          onChange={setTtsInput}
+                          onSend={handleSend}
+                          onStop={handleStopAllAudio}
+                          isPending={isTtsPending}
+                          disabled={HAS_API && !activeMeetingId}
+                        />
+                      </>
+                    ) : visibleUtilityTab === 'summary' ? (
+                      <SummaryPanel
+                        key={activeMeetingId}
+                        summary={activeMeeting?.summary}
+                        messages={activeMeeting?.messages}
+                        meetingTitle={activeMeeting?.title}
+                        onSummarize={() => handleSummarize(true)}
+                        isSummarizing={isSummarizing}
+                      />
+                    ) : (
+                      <MeetingPagePanel
+                        key={activeMeetingId}
+                        page={activeMeeting?.page}
+                        gen={pageGen}
+                        hasMessages={(activeMeeting?.messages?.length ?? 0) > 0}
+                        wsConnected={wsStatus === 'connected'}
+                        unpublishing={
+                          unpublishState?.meetingId === activeMeetingId &&
+                          unpublishState.status === 'pending'
+                        }
+                        unpublishError={
+                          unpublishState?.meetingId === activeMeetingId &&
+                          unpublishState.status === 'error'
+                            ? unpublishState.error
+                            : undefined
+                        }
+                        onGenerate={handleGeneratePage}
+                        onUnpublish={handleUnpublishPage}
+                      />
+                    )}
+                  </div>
+                </div>
+              </aside>
             )}
           </div>
-        )}
+
+          <ControlPanel
+            isRecording={isRecording}
+            onToggleRecording={handleToggleRecording}
+            recordingDisabled={HAS_API && !activeMeetingId}
+            audioLevel={audioLevel}
+            audioSource={settings.audioSource}
+            onEndMeeting={HAS_API && activeMeetingId ? handleEndMeeting : undefined}
+            isEndingMeeting={isEnding(activeMeetingEnd)}
+            endMeetingDisabled={wsStatus !== 'connected'}
+            meetingActions={
+              HAS_API && activeMeetingId ? (
+                <MeetingActions
+                  wsConnected={wsStatus === 'connected'}
+                  audioPrep={activeAudioPrep}
+                  onDownloadAudio={handleDownloadAudio}
+                />
+              ) : undefined
+            }
+            status={
+              HAS_API && activeMeetingId ? (
+                <MeetingStatus endState={activeMeetingEnd} audioPrep={activeAudioPrep} />
+              ) : undefined
+            }
+          />
+        </main>
       </div>
 
-      {HAS_API && activeMeetingId && (
-        <MeetingActions
-          wsConnected={wsStatus === 'connected'}
-          endState={meetingEnd?.meetingId === activeMeetingId ? meetingEnd : null}
-          audioPrep={audioPrep?.meetingId === activeMeetingId ? audioPrep : null}
-          onDownloadAudio={handleDownloadAudio}
-        />
+      {sidebarOpen && (
+        <Dialog
+          labelledBy="meeting-list-title"
+          onClose={() => setSidebarOpen(false)}
+          className="ui-drawer"
+        >
+          <MeetingSidebar {...sidebarProps} />
+        </Dialog>
       )}
-
-      <ControlPanel
-        isRecording={isRecording}
-        onToggleRecording={handleToggleRecording}
-        ttsInput={ttsInput}
-        onTtsInputChange={setTtsInput}
-        onSend={handleSend}
-        onStopTts={handleStopAllAudio}
-        audioLevel={audioLevel}
-        isTtsPending={isTtsPending}
-        activeTab={activeTab}
-        onEndMeeting={HAS_API && activeMeetingId ? handleEndMeeting : undefined}
-        isEndingMeeting={isEnding(meetingEnd?.meetingId === activeMeetingId ? meetingEnd : null)}
-        endMeetingDisabled={wsStatus !== 'connected'}
-      />
-
       {settingsOpen && (
         <SettingsPanel
           settings={settings}
@@ -2252,7 +2281,6 @@ export default function Home() {
           onClose={() => setSettingsOpen(false)}
         />
       )}
-
       {quickTranslateOpen && (
         <QuickTranslatePopup
           settings={settings}
@@ -2263,6 +2291,6 @@ export default function Home() {
           onResetStream={() => setQuickTranslateStream(null)}
         />
       )}
-    </main>
+    </div>
   )
 }

@@ -142,11 +142,11 @@ export default function ThemeSettings({ voiceFontSize, onVoiceFontSizeChange }: 
 
   return (
     <div className="space-y-4">
-      <p role="status" className="text-[0.6875rem] leading-4 text-slate-500 dark:text-slate-400">
-        {storageUnavailable
-          ? '저장할 수 없어 이번 방문에만 적용됩니다.'
-          : '변경 즉시 적용 · 자동 저장'}
-      </p>
+      {storageUnavailable && (
+        <p role="status" className="ui-setting-hint">
+          저장할 수 없어 이번 방문에만 적용됩니다.
+        </p>
+      )}
 
       <SettingRow id="theme-mode" label="화면 모드">
         <div className="grid grid-cols-3 gap-2">
@@ -327,7 +327,7 @@ export default function ThemeSettings({ voiceFontSize, onVoiceFontSizeChange }: 
         >
           <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
             <p className="text-xs font-semibold text-accent-700 dark:text-accent-300">
-              Speaker 1 <span className="ml-1 font-normal text-slate-500">09:41</span>
+              화자 1 <span className="ml-1 font-normal text-slate-500">09:41</span>
             </p>
             <span className="rounded bg-primary px-1.5 py-0.5 text-[0.625rem] font-medium text-primary-foreground">
               번역 완료

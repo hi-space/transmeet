@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import type { Settings } from '@/hooks/useSettings'
 import { api, type EmailStatus } from '@/lib/api'
+import Switch from '@/components/ui/Switch'
 
 interface Props {
   settings: Settings
@@ -53,30 +54,15 @@ export default function EmailNotifySetting({ settings, onUpdate }: Props) {
   }
 
   return (
-    <div className="space-y-2">
-      <p className="text-[0.6875rem] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-        미팅 종료 메일
-      </p>
+    <div className="space-y-1">
       <div className="flex items-center justify-between gap-3">
-        <span className="text-sm text-slate-600 dark:text-slate-300">종료 시 메일로 받기</span>
-        <button
-          onClick={toggle}
-          aria-label="미팅 종료 시 메일로 받기 토글"
-          aria-pressed={settings.emailOnEnd}
-          className={`relative shrink-0 w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none ${
-            settings.emailOnEnd ? 'bg-primary' : 'bg-slate-200 dark:bg-slate-700'
-          }`}
-        >
-          <span
-            className="absolute top-[2px] w-4 h-4 bg-white rounded-full shadow-sm transition-all duration-200"
-            style={{ left: settings.emailOnEnd ? '22px' : '2px' }}
-          />
-        </button>
+        <span className="ui-setting-label">회의 종료 시 메일로 받기</span>
+        <Switch label="회의 종료 시 메일로 받기" checked={settings.emailOnEnd} onChange={toggle} />
       </div>
       {settings.emailOnEnd && (
         <div className="space-y-1">
           {info && (
-            <p className="text-[0.6875rem] text-slate-500 dark:text-slate-400 break-all">
+            <p className="break-all text-xs leading-relaxed text-muted">
               {info.email} ·{' '}
               <span
                 className={
@@ -93,7 +79,7 @@ export default function EmailNotifySetting({ settings, onUpdate }: Props) {
             <button
               onClick={requestVerification}
               disabled={busy}
-              className="text-[0.6875rem] text-accent-700 dark:text-accent-400 hover:underline disabled:opacity-50"
+              className="ui-button ui-button-tinted"
             >
               {busy
                 ? '보내는 중…'
@@ -102,12 +88,14 @@ export default function EmailNotifySetting({ settings, onUpdate }: Props) {
                   : '인증 메일 보내기'}
             </button>
           )}
-          {error && <p className="text-[0.6875rem] text-red-500">{error}</p>}
+          {error && (
+            <p role="alert" className="text-xs text-red-600 dark:text-red-400">
+              {error}
+            </p>
+          )}
+          <p className="ui-setting-hint">요약과 녹음 링크를 로그인 이메일로 보냅니다.</p>
         </div>
       )}
-      <p className="text-[0.625rem] text-slate-400 dark:text-slate-500">
-        &quot;미팅 종료&quot;를 누르면 요약과 녹음 파일 다운로드 링크를 로그인 이메일로 보냅니다
-      </p>
     </div>
   )
 }
