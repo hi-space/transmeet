@@ -135,3 +135,83 @@ def test_load_messages_returns_target_language_when_present():
     out = run(message_store.load_messages(ddb, "mtg"))
     assert out[0]["targetLanguage"] == "ko"
     assert "targetLanguage" not in out[1]
+
+
+class FlakyDdb(FakeDdb):
+    """앞의 몇 번은 정해 둔 예외로 실패하고, 그 뒤에는 성공한다."""
+
+    def __init__(self, errors):
+        super().__init__()
+        self.errors = list(errors)
+        self.attempts = 0
+
+    async def transact_write_items(self, **kwargs):
+        self.attempts += 1
+        if self.errors:
+            raise self.errors.pop(0)
+        return await super().transact_write_items(**kwargs)
+
+
+def _conflict():
+    return _err("TransactionCanceledException", [{"Code": "TransactionConflict"}, {"Code": "None"}])
+
+
+def _no_sleep(monkeypatch):
+    delays = []
+
+    async def fake_sleep(s):
+        delays.append(s)
+
+    monkeypatch.setattr(message_store, "_sleep", fake_sleep)
+    return delays
+
+
+def test_is_retryable_cancellation():
+    assert message_store.is_retryable_cancellation(_conflict())
+    assert message_store.is_retryable_cancellation(
+        _err("TransactionCanceledException", [{"Code": "None"}, {"Code": "ThrottlingError"}])
+    )
+    assert message_store.is_retryable_cancellation(_err("ThrottlingException"))
+    assert message_store.is_retryable_cancellation(_err("ProvisionedThroughputExceededException"))
+    assert not message_store.is_retryable_cancellation(
+        _err("TransactionCanceledException", [{"Code": "None"}, {"Code": "ConditionalCheckFailed"}])
+    )
+    assert not message_store.is_retryable_cancellation(_err("ValidationException"))
+
+
+def test_append_message_retries_conflict_then_succeeds(monkeypatch):
+    delays = _no_sleep(monkeypatch)
+    ddb = FlakyDdb([_conflict()])
+    run(message_store.append_message(ddb, "mtg", _msg(1), updated_at="t"))
+    assert ddb.attempts == 2
+    assert len(ddb.transactions) == 1  # 한 건만 써졌다
+    assert len(delays) == 1
+
+
+def test_append_message_gives_up_after_four_retries(monkeypatch):
+    delays = _no_sleep(monkeypatch)
+    ddb = FlakyDdb([_conflict() for _ in range(5)])
+    try:
+        run(message_store.append_message(ddb, "mtg", _msg(1), updated_at="t"))
+    except ClientError as err:
+        assert message_store.is_retryable_cancellation(err)
+    else:
+        raise AssertionError("재시도가 끝나면 예외를 던져야 한다")
+    assert ddb.attempts == 5
+    assert ddb.transactions == []
+    assert len(delays) == 4
+    # 간격은 시도마다 늘어난다(지터 포함해도 단조 증가하도록 상한을 둔다)
+    assert all(d > 0 for d in delays)
+
+
+def test_append_message_does_not_retry_missing_meeting(monkeypatch):
+    delays = _no_sleep(monkeypatch)
+    ddb = FlakyDdb([_err("TransactionCanceledException", [{"Code": "None"}, {"Code": "ConditionalCheckFailed"}])])
+    try:
+        run(message_store.append_message(ddb, "mtg", _msg(1), updated_at="t"))
+    except ClientError as err:
+        assert message_store.is_missing_meeting(err)
+    else:
+        raise AssertionError("회의 없음은 바로 던져야 한다")
+    assert ddb.attempts == 1
+    assert delays == []

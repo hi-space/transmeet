@@ -333,27 +333,23 @@ async def _persist_message(meeting_id: str, message: Dict[str, str], *, log_tag:
     """발언 한 건을 메시지 테이블에 저장한다. 예외는 밖으로 던지지 않고 로그만 남긴다.
 
     회의 항목이 삭제됐으면 저장하지 않는다(트랜잭션 조건 실패) — 유령 레코드 방지.
+    트랜잭션 충돌·스로틀링 재시도는 message_store.append_message 가 맡는다.
     """
     try:
         async with dynamodb_client() as ddb:
             await message_store.append_message(
                 ddb, meeting_id, message, updated_at=message["timestamp"],
             )
-    except ClientError as err:
-        if message_store.is_missing_meeting(err):
+    except Exception as err:
+        if isinstance(err, ClientError) and message_store.is_missing_meeting(err):
             logger.warning(
                 "[%s] Skipped save — meeting does not exist: meeting_id=%s",
                 log_tag, meeting_id,
             )
-        else:
-            logger.exception(
-                "[%s] DynamoDB save failed for message_id=%s meeting_id=%s",
-                log_tag, message["id"], meeting_id,
-            )
-    except Exception:
+            return
         logger.exception(
             "[%s] DynamoDB save failed for message_id=%s meeting_id=%s",
-            log_tag, message["id"], meeting_id,
+            log_tag, message.get("id"), meeting_id,
         )
 
 

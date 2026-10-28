@@ -12,6 +12,7 @@
 backend/ 에서 실행: python -m scripts.migrate_messages {copy,verify,remove} [--execute] [--meeting-id ID]
 """
 import argparse
+import random
 import sys
 import time
 from typing import Callable, Dict, Iterator, List, Optional, Tuple
@@ -25,6 +26,8 @@ from app.message_store import sort_key
 BATCH_SIZE = 25  # BatchWriteItem 한 번에 넣을 수 있는 최대 개수
 MAX_ATTEMPTS = 8  # 미처리분 재시도 횟수(첫 시도 포함)
 BASE_DELAY = 0.2  # 재시도 간격(초), 시도마다 두 배
+REMOVE_RETRIES = 4  # REMOVE 가 트랜잭션과 겹칠 때 재시도 횟수(첫 시도 제외)
+REMOVE_BASE_DELAY = 0.05  # REMOVE 재시도 간격(초), 시도마다 두 배 + 지터
 
 # 회의 스캔·GetItem 프로젝션
 PROJECTION = "meetingId, messages, messageCount"
@@ -118,20 +121,28 @@ def remove_meeting(ddb, meeting_id: str, verified_count: int) -> bool:
     """원본 messages 를 지운다. messageCount 는 앱이 트랜잭션 ADD 로 올리므로 덮어쓰지 않는다.
 
     그사이 리스트가 늘었으면(조건 size(messages) = :n 실패) 지우지 않고 False.
+    앱의 발언 저장 트랜잭션과 겹치면(TransactionConflictException) 간격을 늘려 가며
+    최대 REMOVE_RETRIES 번 다시 보낸다. 그래도 안 되면 예외.
     """
-    try:
-        ddb.update_item(
-            TableName=config.MEETINGS_TABLE,
-            Key={"meetingId": {"S": meeting_id}},
-            UpdateExpression="REMOVE messages",
-            ConditionExpression="size(messages) = :n",
-            ExpressionAttributeValues={":n": {"N": str(verified_count)}},
-        )
-    except ClientError as exc:
-        if exc.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
-            return False
-        raise
-    return True
+    for attempt in range(REMOVE_RETRIES + 1):
+        try:
+            ddb.update_item(
+                TableName=config.MEETINGS_TABLE,
+                Key={"meetingId": {"S": meeting_id}},
+                UpdateExpression="REMOVE messages",
+                ConditionExpression="size(messages) = :n",
+                ExpressionAttributeValues={":n": {"N": str(verified_count)}},
+            )
+            return True
+        except ClientError as exc:
+            code = exc.response.get("Error", {}).get("Code")
+            if code == "ConditionalCheckFailedException":
+                return False
+            if code != "TransactionConflictException" or attempt == REMOVE_RETRIES:
+                raise
+        delay = REMOVE_BASE_DELAY * (2 ** attempt)
+        _sleep(delay + random.uniform(0, delay))
+    raise AssertionError("unreachable")
 
 
 def iter_meetings(ddb, meeting_id: Optional[str] = None) -> Iterator[Dict]:

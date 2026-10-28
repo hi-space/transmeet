@@ -302,3 +302,40 @@ def test_run_remove_reports_condition_failure(monkeypatch):
     assert summary["condition_failed_ids"] == ["a"]
     assert summary["removed"] == 0
     assert len(ddb.meetings["a"]["messages"]["L"]) == 4
+
+
+class ConflictOnRemove(FakeDdb):
+    """REMOVE 가 진행 중인 트랜잭션과 겹쳐 처음 몇 번은 TransactionConflictException."""
+
+    def __init__(self, meetings, conflicts):
+        super().__init__(meetings)
+        self.conflicts = conflicts
+        self.update_attempts = 0
+
+    def update_item(self, **kw):
+        self.update_attempts += 1
+        if self.conflicts > 0:
+            self.conflicts -= 1
+            raise ClientError({"Error": {"Code": "TransactionConflictException"}}, "UpdateItem")
+        return super().update_item(**kw)
+
+
+def test_remove_retries_transaction_conflict(monkeypatch):
+    delays = []
+    monkeypatch.setattr(mm, "_sleep", delays.append)
+    ddb = ConflictOnRemove([_meeting("a", 2)], conflicts=2)
+    assert mm.remove_meeting(ddb, "a", 2) is True
+    assert ddb.update_attempts == 3
+    assert len(delays) == 2
+    assert "messages" not in ddb.meetings["a"]
+
+
+def test_remove_raises_after_four_conflict_retries(monkeypatch):
+    delays = []
+    monkeypatch.setattr(mm, "_sleep", delays.append)
+    ddb = ConflictOnRemove([_meeting("a", 2)], conflicts=5)
+    with pytest.raises(ClientError):
+        mm.remove_meeting(ddb, "a", 2)
+    assert ddb.update_attempts == 5
+    assert len(delays) == 4
+    assert len(ddb.meetings["a"]["messages"]["L"]) == 2
