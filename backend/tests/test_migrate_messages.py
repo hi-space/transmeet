@@ -47,7 +47,7 @@ class FakeDdb:
     def scan(self, **kw):
         self._log("scan", kw)
         assert kw["TableName"] == config.MEETINGS_TABLE
-        assert kw["ProjectionExpression"] == "meetingId, messages"
+        assert kw["ProjectionExpression"] == mm.PROJECTION
         ids = sorted(self.meetings)
         start = ids.index(kw["ExclusiveStartKey"]["meetingId"]["S"]) + 1 if "ExclusiveStartKey" in kw else 0
         chunk = ids[start:start + self.page]
@@ -58,7 +58,7 @@ class FakeDdb:
 
     @staticmethod
     def _project(item):
-        return {k: v for k, v in item.items() if k in ("meetingId", "messages")}
+        return {k: v for k, v in item.items() if k in ("meetingId", "messages", "messageCount")}
 
     def get_item(self, **kw):
         self._log("get_item", kw)
@@ -106,8 +106,8 @@ class FakeDdb:
             raise ClientError(
                 {"Error": {"Code": "ConditionalCheckFailedException", "Message": "failed"}}, "UpdateItem"
             )
+        assert kw["UpdateExpression"] == "REMOVE messages"
         del item["messages"]
-        item["messageCount"] = {"N": str(n)}
         return {}
 
 
@@ -157,6 +157,38 @@ def test_verify_detects_missing():
     mm.copy_meeting(ddb, meeting)
     ddb.messages["a"].pop(sorted(ddb.messages["a"])[1])
     assert mm.verify_meeting(ddb, meeting) == (False, 3, 2)
+    # 테이블에 다른 메시지가 더 있어도 원본 id 가 빠지면 불일치
+    extra = mm._to_item("a", _msg(7)["M"])
+    ddb.messages["a"][extra["sk"]["S"]] = extra
+    assert mm.verify_meeting(ddb, meeting) == (False, 3, 3)
+
+
+def test_verify_allows_extra_table_messages():
+    meeting = _meeting("a", 3)
+    ddb = FakeDdb([meeting])
+    mm.copy_meeting(ddb, meeting)
+    # 전환 뒤 새 코드는 테이블에만 쓴다
+    extra = mm._to_item("a", _msg(3)["M"])
+    ddb.messages["a"][extra["sk"]["S"]] = extra
+    assert mm.verify_meeting(ddb, meeting) == (True, 3, 4)
+
+
+def test_verify_warns_on_message_count_mismatch():
+    good = _meeting("good", 2, messageCount={"N": "2"})
+    off = _meeting("off", 2, messageCount={"N": "5"})
+    missing = _meeting("missing", 1)
+    ddb = FakeDdb([good, off, missing])
+    for m in (good, off, missing):
+        mm.copy_meeting(ddb, m)
+    lines = []
+    summary = mm.run(ddb, "verify", out=lambda *a: lines.append(" ".join(map(str, a))))
+    assert summary["message_count_mismatch_ids"] == ["missing", "off"]
+    assert summary["matched"] == 3 and summary["mismatched_ids"] == []
+    assert any("messageCount 불일치" in line for line in lines)
+    # 경고일 뿐 remove 를 막지 않는다
+    summary = mm.run(ddb, "remove", execute=True, out=lambda *a: None)
+    assert summary["removed"] == 3
+    assert summary["message_count_mismatch_ids"] == ["missing", "off"]
 
 
 def test_verify_matches_across_pages():
@@ -189,16 +221,17 @@ def test_remove_skips_when_list_grew():
     assert len(ddb.meetings["a"]["messages"]["L"]) == 4
 
 
-def test_remove_sets_message_count():
-    meeting = _meeting("a", 3)
+def test_remove_does_not_touch_message_count():
+    meeting = _meeting("a", 3, messageCount={"N": "4"})
     ddb = FakeDdb([meeting])
     assert mm.remove_meeting(ddb, "a", 3) is True
     (op, kw), = ddb.writes()
-    assert "REMOVE messages" in kw["UpdateExpression"]
-    assert "SET messageCount = :n" in kw["UpdateExpression"]
-    assert kw["ExpressionAttributeValues"][":n"] == {"N": "3"}
+    assert kw["UpdateExpression"] == "REMOVE messages"
+    assert "messageCount" not in kw["UpdateExpression"]
+    assert kw["ConditionExpression"] == "size(messages) = :n"
+    assert kw["ExpressionAttributeValues"] == {":n": {"N": "3"}}
     assert "messages" not in ddb.meetings["a"]
-    assert ddb.meetings["a"]["messageCount"] == {"N": "3"}
+    assert ddb.meetings["a"]["messageCount"] == {"N": "4"}
 
 
 def test_remove_raises_other_errors():
