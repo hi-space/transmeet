@@ -5,6 +5,10 @@ import {
   sttChunkDuration,
   sttRecordingAction,
   shouldStopSttRecording,
+  isManagedStt,
+  isStreamingStt,
+  shouldTranslateSttPartial,
+  matchesSttUtterance,
 } from '../src/lib/sttProviders.ts'
 
 test('all four saved speech engines remain selectable', () => {
@@ -46,6 +50,98 @@ test('enabled Nemotron streaming sends audio without waiting for the saved batch
   for (const seconds of [2, 4, 6, 8, 10, undefined]) {
     assert.equal(sttChunkDuration('nemotron', seconds, status), 160)
   }
+})
+
+test('advertised Qwen streaming uses short audio frames with every saved window', () => {
+  const status = { provider: 'qwen3-asr', status: 'ready', streaming: true }
+  assert.equal(isStreamingStt('qwen3-asr', status), true)
+  for (const seconds of [2, 4, 6, 8, 10, undefined]) {
+    assert.equal(sttChunkDuration('qwen3-asr', seconds, status), 160)
+  }
+})
+
+test('advertised Whisper streaming uses short frames and final-only translation', () => {
+  const status = { provider: 'whisper', status: 'ready', streaming: true }
+  assert.equal(isStreamingStt('whisper', status), true)
+  assert.equal(isManagedStt('whisper', status), true)
+  assert.equal(shouldTranslateSttPartial('whisper'), false)
+  for (const seconds of [2, 4, 6, 8, 10, undefined]) {
+    assert.equal(sttChunkDuration('whisper', seconds, status), 160)
+  }
+})
+
+test('Whisper waits for its first capability response before choosing audio capture', () => {
+  for (const status of [
+    undefined,
+    { provider: 'whisper', status: 'checking' },
+    { provider: 'nemotron', status: 'ready', streaming: true },
+  ]) {
+    assert.equal(sttRecordingAction('whisper', status, false), 'wait')
+    assert.equal(sttRecordingAction('whisper', status, true), 'stop')
+  }
+})
+
+test('old and disabled Whisper capabilities retain batch capture without preparation', () => {
+  for (const status of [
+    { provider: 'whisper', status: 'ready' },
+    { provider: 'whisper', status: 'ready', streaming: false },
+  ]) {
+    assert.equal(isManagedStt('whisper', status), false)
+    assert.equal(isStreamingStt('whisper', status), false)
+    assert.equal(sttChunkDuration('whisper', 8, status), 8000)
+    assert.equal(sttRecordingAction('whisper', status, false), 'start')
+    assert.equal(shouldStopSttRecording('whisper', status), false)
+  }
+  assert.equal(isManagedStt('whisper'), false)
+})
+
+test('advertised Whisper requires readiness and stops on a confirmed stream failure', () => {
+  const status = { provider: 'whisper', status: 'ready', streaming: true }
+  assert.equal(sttRecordingAction('whisper', status, false), 'start')
+  assert.equal(sttRecordingAction('whisper', { ...status, status: 'starting' }, false), 'wait')
+  assert.equal(sttRecordingAction('whisper', { ...status, status: 'error' }, false), 'prepare')
+  assert.equal(shouldStopSttRecording('whisper', { ...status, status: 'error' }), true)
+  assert.equal(shouldStopSttRecording('whisper', { ...status, status: 'unknown' }), false)
+  assert.equal(
+    shouldStopSttRecording('whisper', { ...status, status: 'unknown', recordingBlocked: true }),
+    true
+  )
+})
+
+test('a Whisper final cannot clear a newer utterance or another recording', () => {
+  const pending = { sttProvider: 'whisper', streamId: 'recording:1', utteranceId: 2 }
+  assert.equal(matchesSttUtterance({ ...pending }, pending), true)
+  assert.equal(matchesSttUtterance({ ...pending, utteranceId: 1 }, pending), false)
+  assert.equal(matchesSttUtterance({ ...pending, streamId: 'previous:1' }, pending), false)
+  assert.equal(matchesSttUtterance({ ...pending, sttProvider: 'qwen3-asr' }, pending), false)
+})
+
+test('old or disabled Qwen backends retain batch capture', () => {
+  for (const status of [
+    undefined,
+    { provider: 'qwen3-asr', status: 'ready' },
+    { provider: 'qwen3-asr', status: 'ready', streaming: false },
+    { provider: 'nemotron', status: 'ready', streaming: true },
+  ]) {
+    assert.equal(isStreamingStt('qwen3-asr', status), false)
+    assert.equal(sttChunkDuration('qwen3-asr', 8, status), 8000)
+  }
+})
+
+test('Qwen and Nemotron hypotheses are translated only after finalization', () => {
+  assert.equal(shouldTranslateSttPartial('qwen3-asr'), false)
+  assert.equal(shouldTranslateSttPartial('nemotron'), false)
+  assert.equal(shouldTranslateSttPartial('transcribe'), true)
+})
+
+test('an old Qwen final cannot clear the next utterance or another recording', () => {
+  const pending = { sttProvider: 'qwen3-asr', streamId: 'recording:1', utteranceId: 2 }
+  assert.equal(matchesSttUtterance({ ...pending }, pending), true)
+  assert.equal(matchesSttUtterance({ ...pending, utteranceId: 1 }, pending), false)
+  assert.equal(matchesSttUtterance({ ...pending, streamId: 'old:1' }, pending), false)
+  assert.equal(matchesSttUtterance({ ...pending, sttProvider: 'nemotron' }, pending), false)
+  // Transcribe and older servers do not attach per-utterance IDs.
+  assert.equal(matchesSttUtterance({}, null), true)
 })
 
 test('old or disabled Nemotron backends retain the selected batch window', () => {
@@ -95,7 +191,10 @@ test('only readiness for the selected engine permits microphone capture', () => 
     'start'
   )
   assert.equal(sttRecordingAction('transcribe', undefined, false), 'start')
-  assert.equal(sttRecordingAction('whisper', undefined, false), 'start')
+  assert.equal(
+    sttRecordingAction('whisper', { provider: 'whisper', status: 'ready' }, false),
+    'start'
+  )
 })
 
 test('recording can always be stopped even when the engine becomes unavailable', () => {

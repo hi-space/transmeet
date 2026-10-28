@@ -1,0 +1,9 @@
+{
+  "checked_at": "2026-10-28T20:38:23.317922+00:00",
+  "backend": "473 passed, 3 warnings in 8.59s",
+  "frontend_unit": "73 passed",
+  "frontend_types": "passed",
+  "frontend_production_build": "passed (lint, types and static export)",
+  "browser": "18 Qwen scenarios passed: capability fallback,16/44.1/48kHz capture and tail, language/engine switch, delayed finals, translation ordering",
+  "review": "Independent review fixes and language-selection regression passed"
+}

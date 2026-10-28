@@ -1,0 +1,24 @@
+[
+  {
+    "language": "ko",
+    "sample": "fleurs-ko-test-row-8",
+    "seconds": 18.9,
+    "response": {
+      "text": [
+        "지하철의 정규 안내 방송은 카탈로니아어로만 제공되나 계획이 없던 운행 중단 시에는 자동 시스템을 통해 스페인어 영어 프랑스어 아라비아어 일본어를 포함한 다양한 언어로 방송됩니다"
+      ],
+      "language": "Korean"
+    }
+  },
+  {
+    "language": "en",
+    "sample": "fleurs-en-test-row-0",
+    "seconds": 10.56,
+    "response": {
+      "text": [
+        "However, due to the slow communication channels, styles in the West could lag behind by 25 to 30 years."
+      ],
+      "language": "English"
+    }
+  }
+]

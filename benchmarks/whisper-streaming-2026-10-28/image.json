@@ -1,0 +1,10 @@
+{
+  "image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-whisper-streaming@sha256:365fd9234b8ad353937a45fd3660429cd6b354d8bd56192fb0f35312c31f35a5",
+  "tag": "20261028-9783cb573f19",
+  "source_sha256": "9783cb573f1990277e10163508b64a90732790292d814e5eaf57ea5ee96ec9d8",
+  "size_bytes": 9819678672,
+  "vad_package": "silero-vad==6.2.3",
+  "onnxruntime": "1.23.2",
+  "vad_model_sha256": "1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3",
+  "speech_threshold": 0.5
+}

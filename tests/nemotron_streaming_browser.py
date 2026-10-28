@@ -1,9 +1,10 @@
-"""Verify Nemotron capture and subtitles against the real app.
+"""Verify Qwen/Nemotron capture and subtitles against the real app.
 
 Use the same isolated dev server settings as speech_languages_browser.py:
 NEXT_PUBLIC_API_ENDPOINT=<base>/__ui_api, NEXT_PUBLIC_WS_ENDPOINT=ws://<host>/__ui_ws,
 and empty public Cognito settings.
 Run: TRANSMEET_TEST_URL=http://127.0.0.1:3196 python tests/nemotron_streaming_browser.py
+Set TRANSMEET_TEST_PROVIDER=qwen3-asr to exercise Qwen through the same scenarios.
 """
 import asyncio
 import base64
@@ -16,6 +17,9 @@ from urllib.parse import urlparse
 from playwright.async_api import async_playwright, expect
 
 BASE = os.environ.get("TRANSMEET_TEST_URL", "http://127.0.0.1:3196").rstrip("/")
+PROVIDER = os.environ.get("TRANSMEET_TEST_PROVIDER", "nemotron")
+if PROVIDER not in ("nemotron", "qwen3-asr"):
+    raise ValueError("TRANSMEET_TEST_PROVIDER must be nemotron or qwen3-asr")
 
 SOCKET = """
 window.__nemotronRequests = [];
@@ -93,11 +97,12 @@ async def new_page(browser, *, streaming=True, manual_audio=False, partial_mode=
         "window.__streamingCapability = " + json.dumps(streaming) + ";"
         "window.__manualAudio = " + json.dumps(manual_audio) + ";"
         "window.__inputSampleRate = " + json.dumps(sample_rate) + ";"
+        "window.__streamingProvider = " + json.dumps(PROVIDER) + ";"
     )
     await context.add_init_script(SOCKET)
     await context.add_init_script(AUDIO)
     settings = {
-        "sttProvider": "nemotron", "sttChunkSeconds": 10, "audioSource": "mic",
+        "sttProvider": PROVIDER, "sttChunkSeconds": 10, "audioSource": "mic",
         "sourceLang": "ko", "translationTarget": "en",
         "partialTranslationMode": partial_mode, "partialThrottleMs": 500,
         "autoSummarizeMessageCount": 0, "ttsAutoPlay": False,
@@ -303,13 +308,13 @@ async def provider_switch(browser):
         assert len(audio) == 1 and len(pcm(audio[0]["audioData"])) == 1600
         assert sent.index(audio[0]) < next(i for i, item in enumerate(sent) if item["action"] == "stopRecording")
         await page.evaluate("""() => window.__nemotronSockets.findLast(s => s.readyState === 1).emit({
-          type: 'subtitle_stream', phase: 'stt_partial', sttProvider: 'nemotron',
+          type: 'subtitle_stream', phase: 'stt_partial', sttProvider: window.__streamingProvider,
           streamId: 'old-recording', utteranceId: 1, messageId: 'partial',
           speaker: 'speaker1', originalText: '이전 엔진의 늦은 중간 결과입니다.',
           detectedLanguage: 'ko', timestamp: new Date().toISOString()
         })""")
         await page.wait_for_timeout(650)
-        assert not await requests(page, "translateMessage"), "A late Nemotron partial was translated after switching engine"
+        assert not await requests(page, "translateMessage"), "A late model partial was translated after switching engine"
         await page.get_by_role("button", name="녹음 시작", exact=True).click()
         await expect(page.get_by_role("button", name="녹음 일시정지", exact=True)).to_be_visible()
         await page.evaluate("""() => {
@@ -317,7 +322,7 @@ async def provider_switch(browser):
           socket.emit({type: 'subtitle_stream', phase: 'stt_partial', messageId: 'partial',
             speaker: 'speaker1', originalText: 'Current Transcribe speech.', detectedLanguage: 'en',
             timestamp: new Date().toISOString()});
-          socket.emit({type: 'subtitle_stream', phase: 'stt', sttProvider: 'nemotron',
+          socket.emit({type: 'subtitle_stream', phase: 'stt', sttProvider: window.__streamingProvider,
             streamId: 'old-recording', utteranceId: 1, messageId: 'previous-engine-final',
             speaker: 'speaker1', originalText: '이전 엔진의 확정 결과입니다.', detectedLanguage: 'ko',
             targetLanguage: 'en', timestamp: new Date().toISOString()});
@@ -327,7 +332,7 @@ async def provider_switch(browser):
         assert len(await requests(page, "translateMessage")) == 1, "Transcribe must retain partial translation"
         await expect(page.locator('[aria-label="현재 감지 언어"]:visible')).to_contain_text("English")
         assert not errors, errors
-        print("PASS: engine switching preserves the tail and ignores old Nemotron partials", flush=True)
+        print("PASS: engine switching preserves the tail and ignores old model partials", flush=True)
     finally:
         await context.close()
 
@@ -339,11 +344,11 @@ async def delayed_finals(browser):
         await expect(page.get_by_role("button", name="녹음 일시정지", exact=True)).to_be_visible()
         await page.evaluate("""() => {
           const socket = window.__nemotronSockets.findLast(s => s.readyState === 1);
-          socket.emit({type: 'subtitle_stream', phase: 'stt_partial', sttProvider: 'nemotron',
+          socket.emit({type: 'subtitle_stream', phase: 'stt_partial', sttProvider: window.__streamingProvider,
             streamId: 'new-recording', utteranceId: 2, messageId: 'partial',
             speaker: 'speaker1', originalText: 'Current English speech.', detectedLanguage: 'en',
             timestamp: new Date().toISOString()});
-          socket.emit({type: 'subtitle_stream', phase: 'stt', sttProvider: 'nemotron',
+          socket.emit({type: 'subtitle_stream', phase: 'stt', sttProvider: window.__streamingProvider,
             streamId: 'new-recording', utteranceId: 1, messageId: 'older-utterance',
             speaker: 'speaker1', originalText: '이전의 확정된 발언입니다.', detectedLanguage: 'ko',
             targetLanguage: 'en', timestamp: new Date().toISOString()});
@@ -353,13 +358,13 @@ async def delayed_finals(browser):
         await expect(page.locator('[aria-label="현재 감지 언어"]:visible')).to_contain_text("English")
         for stream_id, utterance_id in (("old-recording", 2), ("new-recording", 1)):
             await page.evaluate("""data => window.__nemotronSockets.findLast(s => s.readyState === 1).emit({
-              type: 'subtitle_stream', phase: 'stt_partial', sttProvider: 'nemotron',
+              type: 'subtitle_stream', phase: 'stt_partial', sttProvider: window.__streamingProvider,
               streamId: data.stream, utteranceId: data.utterance, messageId: 'partial',
               speaker: 'speaker1', originalText: '', timestamp: new Date().toISOString()
             })""", {"stream": stream_id, "utterance": utterance_id})
             await expect(page.get_by_text("Current English speech.", exact=True)).to_be_visible()
         await page.evaluate("""() => window.__nemotronSockets.findLast(s => s.readyState === 1).emit({
-          type: 'subtitle_stream', phase: 'stt_partial', sttProvider: 'nemotron',
+          type: 'subtitle_stream', phase: 'stt_partial', sttProvider: window.__streamingProvider,
           streamId: 'new-recording', utteranceId: 2, messageId: 'partial',
           speaker: 'speaker1', originalText: '', timestamp: new Date().toISOString()
         })""")
@@ -377,7 +382,7 @@ async def concurrent_translations(browser, completion_order, *, expire_display_t
 
     async def emit(utterance, phase):
         await page.evaluate("""data => window.__nemotronSockets.findLast(s => s.readyState === 1).emit({
-          type: 'subtitle_stream', phase: data.phase, sttProvider: 'nemotron',
+          type: 'subtitle_stream', phase: data.phase, sttProvider: window.__streamingProvider,
           streamId: 'concurrent-translations', utteranceId: data.utterance === 'a' ? 1 : 2,
           messageId: 'concurrent-' + data.utterance, speaker: 'speaker1',
           originalText: data.original, translatedText: data.translation,
@@ -416,7 +421,7 @@ async def completed_translations_merge(browser):
             (2, "그 뒤에 이어진 발언", "The next completed translation."),
         ):
             event = {
-                "type": "subtitle_stream", "sttProvider": "nemotron",
+                "type": "subtitle_stream", "sttProvider": PROVIDER,
                 "streamId": "completed-translations", "utteranceId": index,
                 "messageId": f"completed-{index}", "speaker": "speaker1",
                 "originalText": original, "detectedLanguage": "ko", "targetLanguage": "en",
@@ -450,7 +455,7 @@ async def immediate_merged_translation(browser, *, same_language=False):
     try:
         await page.get_by_role("combobox", name="번역 대상", exact=True).select_option(target)
         initial = {
-            "type": "subtitle_stream", "sttProvider": "nemotron", "streamId": "immediate",
+            "type": "subtitle_stream", "sttProvider": PROVIDER, "streamId": "immediate",
             "utteranceId": 1, "messageId": "completed-history", "speaker": "speaker1",
             "originalText": first, "detectedLanguage": "ko", "targetLanguage": target,
             "timestamp": "2026-10-28T10:00:00Z",

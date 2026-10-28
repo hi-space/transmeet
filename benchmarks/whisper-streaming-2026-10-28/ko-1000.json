@@ -1,0 +1,1336 @@
+{
+  "created_at": "2026-10-28T22:25:29.300838+00:00",
+  "model_id": "openai/whisper-large-v3-turbo",
+  "jumpstart_artifact_version": "1.0.0",
+  "endpoint": "transmeet-whisper-streaming",
+  "region": "us-east-1",
+  "manifest": "/home/ubuntu/workspace/transmeet/benchmarks/stt-ko-en-2026-10-28/manifest-ko.json",
+  "manifest_sha256": "5d61914cdf01e27d3e266557bd3295624023efb6396b2b0a2f37e9c5b5606ee0",
+  "source": {
+    "dataset": "google/fleurs",
+    "config": "ko_kr",
+    "split": "test",
+    "rows": "0-9",
+    "url": "https://huggingface.co/datasets/google/fleurs"
+  },
+  "license": "CC-BY-4.0",
+  "planned_samples": 10,
+  "status": "complete",
+  "conditions": {
+    "mode": "realtime_streaming",
+    "model_chunk_ms": 1000,
+    "capture_frame_ms": 160,
+    "language_mode": "manifest",
+    "input": "SHA-256 verified 16 kHz mono PCM16 WAV; no trimming or augmentation",
+    "pacing": "await ready, then send every frame at its audio end time",
+    "startup": "stream start to first ready; excluded from audio-relative latency",
+    "final_lag": "last unique nonempty final minus audio end; trailing silence can make this negative",
+    "end_to_end": "audio capture start through stream close, including audio duration",
+    "event_elapsed_origin": "stream start; audio_elapsed_seconds starts after ready",
+    "cer_normalization": "benchmark_stt.score_transcript: NFKC, casefold, alphanumeric characters",
+    "wer_normalization": "English only: NFKC, casefold, remove straight/curly apostrophes, Unicode alphanumeric words",
+    "model_identity": "expected pinned artifact; endpoint deployment provenance is checked separately",
+    "ready_timeout_seconds": 45,
+    "close_timeout_seconds": 20
+  },
+  "results": [
+    {
+      "sample_id": "fleurs-ko-test-row-0",
+      "language": "ko",
+      "requested_language": "ko-KR",
+      "reference": "다리 밑 수직 간격은 15미터이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년 3월까지이다",
+      "audio_seconds": 12.48,
+      "text": "다리 및 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년 3월까지이다.",
+      "detected_languages": [
+        "Korean"
+      ],
+      "startup_seconds": 1.074777,
+      "first_partial_seconds": 2.717541,
+      "final_lag_seconds": -0.603048,
+      "end_to_end_seconds": 12.816733,
+      "audio_send_seconds": 12.480986,
+      "total_seconds": 13.891568,
+      "partial_count": 8,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 1.074777,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다리미 수직간격",
+          "language": "Korean",
+          "elapsed_seconds": 3.792376,
+          "audio_elapsed_seconds": 2.717541
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다리미 수직 간격은 15m이며",
+          "language": "Korean",
+          "elapsed_seconds": 4.871918,
+          "audio_elapsed_seconds": 3.797082
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 15m이며 공사는 2017년에",
+          "language": "Korean",
+          "elapsed_seconds": 5.996633,
+          "audio_elapsed_seconds": 4.921797
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다리미 수직 간격은 15m이며 공사는 2011년 8월에 마무리하였는데요.",
+          "language": "Korean",
+          "elapsed_seconds": 7.251099,
+          "audio_elapsed_seconds": 6.176263
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다리미 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며",
+          "language": "Korean",
+          "elapsed_seconds": 8.29744,
+          "audio_elapsed_seconds": 7.222604
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다리 및 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행 간격은",
+          "language": "Korean",
+          "elapsed_seconds": 9.44384,
+          "audio_elapsed_seconds": 8.369004
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다리 및 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년입니다.",
+          "language": "Korean",
+          "elapsed_seconds": 10.571856,
+          "audio_elapsed_seconds": 9.49702
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다리 및 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년 3월까지이다.",
+          "language": "Korean",
+          "elapsed_seconds": 11.844947,
+          "audio_elapsed_seconds": 10.770111
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다리 및 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년 3월까지이다.",
+          "language": "Korean",
+          "elapsed_seconds": 12.951788,
+          "audio_elapsed_seconds": 11.876952
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "",
+          "language": "Korean",
+          "elapsed_seconds": 13.830458,
+          "audio_elapsed_seconds": 12.755622
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 13.830517,
+          "audio_elapsed_seconds": 12.755681
+        }
+      ],
+      "errors": 3,
+      "reference_chars": 53,
+      "cer": 0.05660377358490566,
+      "audio": "audio/ko-00.wav",
+      "sha256": "692ead3d5546b300c37b0bb6b5eae299f1023d1452651ba4ae0e93173e6d9067",
+      "sha256_verified": true
+    },
+    {
+      "sample_id": "fleurs-ko-test-row-1",
+      "language": "ko",
+      "requested_language": "ko-KR",
+      "reference": "델 포트로가 2세트에서 먼저 어드밴티지를 얻었지만 6 대 6이 된 후 다시 타이 브레이크가 필요했다",
+      "audio_seconds": 10.8,
+      "text": "델포트로가 2세트에서 먼저 어드벤티즈를 얻었지만 6대6이 된 후 다시 타이 브레이크가 필요했다.",
+      "detected_languages": [
+        "Korean"
+      ],
+      "startup_seconds": 1.086405,
+      "first_partial_seconds": 2.234643,
+      "final_lag_seconds": -0.644649,
+      "end_to_end_seconds": 11.086814,
+      "audio_send_seconds": 10.800412,
+      "total_seconds": 12.173273,
+      "partial_count": 7,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 1.086405,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "",
+          "language": "Korean",
+          "elapsed_seconds": 2.31893,
+          "audio_elapsed_seconds": 1.232471
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "테일포트",
+          "language": "Korean",
+          "elapsed_seconds": 3.321102,
+          "audio_elapsed_seconds": 2.234643
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "델포트로가 이 세트에",
+          "language": "Korean",
+          "elapsed_seconds": 4.593661,
+          "audio_elapsed_seconds": 3.507202
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "델포트로가 이 세트에서 먼저 어드벤치니스입니다.",
+          "language": "Korean",
+          "elapsed_seconds": 5.708664,
+          "audio_elapsed_seconds": 4.622205
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "델포트로가 이 세트에서 먼저 어드밴티지를 얻었지만",
+          "language": "Korean",
+          "elapsed_seconds": 6.774664,
+          "audio_elapsed_seconds": 5.688205
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "델포트로가 2세트에서 먼저 어드벤티즈를 얻었지만 6대6이 된",
+          "language": "Korean",
+          "elapsed_seconds": 8.049443,
+          "audio_elapsed_seconds": 6.962984
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "델포트로가 2세트에서 먼저 어드벤티즈를 얻었지만 6대 6이 된 후 다시 타입을",
+          "language": "Korean",
+          "elapsed_seconds": 9.187399,
+          "audio_elapsed_seconds": 8.10094
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "델포트로가 2세트에서 먼저 어드벤티즈를 얻었지만 6대6이 된 후 다시 타이 브레이크가 필요했다.",
+          "language": "Korean",
+          "elapsed_seconds": 10.286676,
+          "audio_elapsed_seconds": 9.200217
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "델포트로가 2세트에서 먼저 어드벤티즈를 얻었지만 6대6이 된 후 다시 타이 브레이크가 필요했다.",
+          "language": "Korean",
+          "elapsed_seconds": 11.24181,
+          "audio_elapsed_seconds": 10.155351
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 3,
+          "text": "",
+          "language": "Korean",
+          "elapsed_seconds": 12.113214,
+          "audio_elapsed_seconds": 11.026755
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 12.113266,
+          "audio_elapsed_seconds": 11.026807
+        }
+      ],
+      "errors": 2,
+      "reference_chars": 41,
+      "cer": 0.04878048780487805,
+      "audio": "audio/ko-01.wav",
+      "sha256": "8dff9bb3597dcc33c4b98c916cfb91ba682f51019144630530de5deb72481c1f",
+      "sha256_verified": true
+    },
+    {
+      "sample_id": "fleurs-ko-test-row-2",
+      "language": "ko",
+      "requested_language": "ko-KR",
+      "reference": "염소 사육은 대략 일만 년 전에 이란의 자그로스산맥에서 시작한 것으로 보입니다",
+      "audio_seconds": 8.94,
+      "text": "염소사육은 대략 1만 년 전에 이란의 자그로스 산맥에서 시작한 것으로 보입니다.",
+      "detected_languages": [
+        "Korean"
+      ],
+      "startup_seconds": 1.071822,
+      "first_partial_seconds": 2.731743,
+      "final_lag_seconds": -0.941514,
+      "end_to_end_seconds": 9.342374,
+      "audio_send_seconds": 8.94101,
+      "total_seconds": 10.414244,
+      "partial_count": 5,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 1.071822,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소사육은 대리적입니다.",
+          "language": "Korean",
+          "elapsed_seconds": 3.803613,
+          "audio_elapsed_seconds": 2.731743
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소사육은 대략 1만 년 전에",
+          "language": "Korean",
+          "elapsed_seconds": 4.857845,
+          "audio_elapsed_seconds": 3.785976
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소사육은 대략 1만 년 전에 이란의 자그로스",
+          "language": "Korean",
+          "elapsed_seconds": 6.097738,
+          "audio_elapsed_seconds": 5.025869
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소사육은 대략 1만 년 전에 이란의 자그로스 산맥에서 시작한 것입니다.",
+          "language": "Korean",
+          "elapsed_seconds": 7.177451,
+          "audio_elapsed_seconds": 6.105582
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소사육은 대략 1만 년 전에 이란의 자그로스 산맥에서 시작한 것으로 보입니다.",
+          "language": "Korean",
+          "elapsed_seconds": 8.339949,
+          "audio_elapsed_seconds": 7.268079
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "염소사육은 대략 1만 년 전에 이란의 자그로스 산맥에서 시작한 것으로 보입니다.",
+          "language": "Korean",
+          "elapsed_seconds": 9.070355,
+          "audio_elapsed_seconds": 7.998486
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "",
+          "language": "Korean",
+          "elapsed_seconds": 10.354125,
+          "audio_elapsed_seconds": 9.282256
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 10.354197,
+          "audio_elapsed_seconds": 9.282328
+        }
+      ],
+      "errors": 1,
+      "reference_chars": 33,
+      "cer": 0.030303030303030304,
+      "audio": "audio/ko-02.wav",
+      "sha256": "27d54da0d7627cfd223c3028f773fe83cff4d3e102b40aeed771035198a18e36",
+      "sha256_verified": true
+    },
+    {
+      "sample_id": "fleurs-ko-test-row-3",
+      "language": "ko",
+      "requested_language": "ko-KR",
+      "reference": "겨울에 북발트해를 건널 경우에는 빙판을 통과하면서 꽤 끔찍한 소음이 발생하기 때문에 객실의 위치를 확인하는 것이 좋다",
+      "audio_seconds": 12.54,
+      "text": "겨울에 북발트해를 건널 경우에는 빙판을 통과하면서 꽤 끔찍한 소음이 발생하기 때문에 객실의 위치를 확인하는 것이 좋다",
+      "detected_languages": [
+        "Korean"
+      ],
+      "startup_seconds": 1.06819,
+      "first_partial_seconds": 2.544312,
+      "final_lag_seconds": 0.790222,
+      "end_to_end_seconds": 13.390121,
+      "audio_send_seconds": 12.540373,
+      "total_seconds": 14.458364,
+      "partial_count": 9,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 1.06819,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "저는",
+          "language": "Korean",
+          "elapsed_seconds": 3.612555,
+          "audio_elapsed_seconds": 2.544312
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울에 북팔트를 건너뛰",
+          "language": "Korean",
+          "elapsed_seconds": 4.879002,
+          "audio_elapsed_seconds": 3.810759
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울에 북바이트해를 건널 경우에는",
+          "language": "Korean",
+          "elapsed_seconds": 5.930038,
+          "audio_elapsed_seconds": 4.861795
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울에 북바이트해를 건널 경우에는 빙판을 통과하면서",
+          "language": "Korean",
+          "elapsed_seconds": 7.220835,
+          "audio_elapsed_seconds": 6.152593
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울에 북바이트해를 건널 경우에는 빙판을 통과하면서 꽤 끔찍",
+          "language": "Korean",
+          "elapsed_seconds": 8.349453,
+          "audio_elapsed_seconds": 7.28121
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울에 북바이트해를 건널 경우에는 빙판을 통과하면서 꽤 끔찍한 소음이 발생하기",
+          "language": "Korean",
+          "elapsed_seconds": 9.431508,
+          "audio_elapsed_seconds": 8.363265
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울에 북바이트해를 건널 경우에는 빙판을 통과하면서 꽤 끔찍한 소음이 발생하기 때문에",
+          "language": "Korean",
+          "elapsed_seconds": 10.523459,
+          "audio_elapsed_seconds": 9.455217
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울에 북발트해를 건널 경우에는 빙판을 통과하면서 꽤 끔찍한 소음이 발생하기 때문에 객실의 위치를 확인하여",
+          "language": "Korean",
+          "elapsed_seconds": 11.780565,
+          "audio_elapsed_seconds": 10.712322
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울에 북발트해를 건널 경우에는 빙판을 통과하면서 꽤 끔찍한 소음이 발생하기 때문에 객실의 위치를 확인하는 것이 좋다",
+          "language": "Korean",
+          "elapsed_seconds": 12.833293,
+          "audio_elapsed_seconds": 11.76505
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "겨울에 북발트해를 건널 경우에는 빙판을 통과하면서 꽤 끔찍한 소음이 발생하기 때문에 객실의 위치를 확인하는 것이 좋다",
+          "language": "Korean",
+          "elapsed_seconds": 14.398465,
+          "audio_elapsed_seconds": 13.330222
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 14.398521,
+          "audio_elapsed_seconds": 13.330278
+        }
+      ],
+      "errors": 0,
+      "reference_chars": 50,
+      "cer": 0.0,
+      "audio": "audio/ko-03.wav",
+      "sha256": "8214291abc74551abca9612b7504ae1b2988ecd29d4c3b8f4e1e42a389b56527",
+      "sha256_verified": true
+    },
+    {
+      "sample_id": "fleurs-ko-test-row-4",
+      "language": "ko",
+      "requested_language": "ko-KR",
+      "reference": "홍콩의 스카이라인을 이루는 빌딩 행렬은 빅토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대그래프에 비유된다",
+      "audio_seconds": 12.12,
+      "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 빅토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대 그래프에 비유된다.",
+      "detected_languages": [
+        "Korean"
+      ],
+      "startup_seconds": 1.097155,
+      "first_partial_seconds": 2.626931,
+      "final_lag_seconds": -0.700788,
+      "end_to_end_seconds": 12.540026,
+      "audio_send_seconds": 12.120436,
+      "total_seconds": 13.637241,
+      "partial_count": 8,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 1.097155,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라이너",
+          "language": "Korean",
+          "elapsed_seconds": 3.724145,
+          "audio_elapsed_seconds": 2.626931
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행동입니다.",
+          "language": "Korean",
+          "elapsed_seconds": 4.937874,
+          "audio_elapsed_seconds": 3.84066
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은",
+          "language": "Korean",
+          "elapsed_seconds": 6.004435,
+          "audio_elapsed_seconds": 4.907221
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 빅토리아 항구의 수면에",
+          "language": "Korean",
+          "elapsed_seconds": 7.298723,
+          "audio_elapsed_seconds": 6.201508
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 빅토리아 항구의 수면에 선명히 비치는 모습이었습니다.",
+          "language": "Korean",
+          "elapsed_seconds": 8.415535,
+          "audio_elapsed_seconds": 7.318321
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 빅토리아 항구의 수면에 선명히 비치는 모습 때문에",
+          "language": "Korean",
+          "elapsed_seconds": 9.496581,
+          "audio_elapsed_seconds": 8.399367
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 빅토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대 그래프",
+          "language": "Korean",
+          "elapsed_seconds": 10.651774,
+          "audio_elapsed_seconds": 9.554559
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 빅토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대 그래프에 비유된다.",
+          "language": "Korean",
+          "elapsed_seconds": 11.80129,
+          "audio_elapsed_seconds": 10.704075
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 빅토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대 그래프에 비유된다.",
+          "language": "Korean",
+          "elapsed_seconds": 12.516426,
+          "audio_elapsed_seconds": 11.419212
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "",
+          "language": "Korean",
+          "elapsed_seconds": 13.579134,
+          "audio_elapsed_seconds": 12.48192
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 13.57921,
+          "audio_elapsed_seconds": 12.481995
+        }
+      ],
+      "errors": 0,
+      "reference_chars": 52,
+      "cer": 0.0,
+      "audio": "audio/ko-04.wav",
+      "sha256": "e28117e5ba80cdfff918199eec2350cd47d5878aca2abe689f35db47ed91bb35",
+      "sha256_verified": true
+    },
+    {
+      "sample_id": "fleurs-ko-test-row-5",
+      "language": "ko",
+      "requested_language": "ko-KR",
+      "reference": "합금은 기본적으로 금속 두 개 이상의 혼합물이다 주기율표 상에 원소가 많이 있다는 것을 잊지 마라",
+      "audio_seconds": 9.9,
+      "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. 주기율표상의 원소가 많이 있다는 것을 잊지 마라.",
+      "detected_languages": [
+        "Korean"
+      ],
+      "startup_seconds": 1.069624,
+      "first_partial_seconds": 1.505903,
+      "final_lag_seconds": 0.279379,
+      "end_to_end_seconds": 10.296974,
+      "audio_send_seconds": 9.900326,
+      "total_seconds": 11.366644,
+      "partial_count": 7,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 1.069624,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합법",
+          "language": "Korean",
+          "elapsed_seconds": 2.575574,
+          "audio_elapsed_seconds": 1.505903
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로",
+          "language": "Korean",
+          "elapsed_seconds": 3.697523,
+          "audio_elapsed_seconds": 2.627853
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 2개 이상의",
+          "language": "Korean",
+          "elapsed_seconds": 4.849376,
+          "audio_elapsed_seconds": 3.779705
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 2개 이상의 혼합물이다.",
+          "language": "Korean",
+          "elapsed_seconds": 5.99772,
+          "audio_elapsed_seconds": 4.92805
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 2개 이상의 혼합물이다. 주기율표상의 원수이다.",
+          "language": "Korean",
+          "elapsed_seconds": 7.091915,
+          "audio_elapsed_seconds": 6.022245
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 2개 이상의 혼합물이다. 주기율표상의 원소가 많이 있다는 것이다.",
+          "language": "Korean",
+          "elapsed_seconds": 8.340198,
+          "audio_elapsed_seconds": 7.270528
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. 주기율표상의 원소가 많이 있다는 것을 잊지 마라.",
+          "language": "Korean",
+          "elapsed_seconds": 9.433455,
+          "audio_elapsed_seconds": 8.363784
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. 주기율표상의 원소가 많이 있다는 것을 잊지 마라.",
+          "language": "Korean",
+          "elapsed_seconds": 11.24905,
+          "audio_elapsed_seconds": 10.179379
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "",
+          "language": "Korean",
+          "elapsed_seconds": 11.306459,
+          "audio_elapsed_seconds": 10.236789
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 11.306826,
+          "audio_elapsed_seconds": 10.237155
+        }
+      ],
+      "errors": 1,
+      "reference_chars": 40,
+      "cer": 0.025,
+      "audio": "audio/ko-05.wav",
+      "sha256": "98e7a8d6b9f12cad30fee3fcfbea51e64505a9e85f9e989db8df8f7a730d3ac7",
+      "sha256_verified": true
+    },
+    {
+      "sample_id": "fleurs-ko-test-row-6",
+      "language": "ko",
+      "requested_language": "ko-KR",
+      "reference": "\"1940년 8월 15일 연합군은 프랑스 남부를 침략했고 이 침략은 \"드래군 작전\"\"이라 불렸다. ",
+      "audio_seconds": 13.62,
+      "text": "천구백사십년 팔월 십오일 연합군은 프랑스 남부를 침략했고 이 침략은 드래군 작전이라 불렸다",
+      "detected_languages": [
+        "Korean"
+      ],
+      "startup_seconds": 1.086722,
+      "first_partial_seconds": 3.960693,
+      "final_lag_seconds": 0.884335,
+      "end_to_end_seconds": 14.565768,
+      "audio_send_seconds": 13.620294,
+      "total_seconds": 15.652536,
+      "partial_count": 9,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 1.086722,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "",
+          "language": "Korean",
+          "elapsed_seconds": 2.831801,
+          "audio_elapsed_seconds": 1.745033
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "1940년 8월",
+          "language": "Korean",
+          "elapsed_seconds": 5.047461,
+          "audio_elapsed_seconds": 3.960693
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "1940년 팔월 십오일",
+          "language": "Korean",
+          "elapsed_seconds": 6.18684,
+          "audio_elapsed_seconds": 5.100072
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "1940년 팔월 십오일 연합군은",
+          "language": "Korean",
+          "elapsed_seconds": 7.272717,
+          "audio_elapsed_seconds": 6.185949
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "1940년 8월 15일 연합군은 프랑스 남부를 침략했습니다.",
+          "language": "Korean",
+          "elapsed_seconds": 8.373553,
+          "audio_elapsed_seconds": 7.286785
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "천 구백 사십년 팔월 십 오일 연합군은 프랑스 남부를 침략했고",
+          "language": "Korean",
+          "elapsed_seconds": 9.625745,
+          "audio_elapsed_seconds": 8.538977
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "천구백사십년 팔월 십오일 연합군은 프랑스 남부를 침략했고 이 침략은",
+          "language": "Korean",
+          "elapsed_seconds": 10.774475,
+          "audio_elapsed_seconds": 9.687707
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "천구백사십년 팔월 십오일 연합군은 프랑스 남부를 침략했고 이 침략은 드래군 작전이라",
+          "language": "Korean",
+          "elapsed_seconds": 11.887126,
+          "audio_elapsed_seconds": 10.800358
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "천 구백 사십년 팔월 십 오일 연합군은 프랑스 남부를 침략했고 이 침략은 드래군 작전이라 불렸다",
+          "language": "Korean",
+          "elapsed_seconds": 13.020354,
+          "audio_elapsed_seconds": 11.933586
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "천구백사십년 팔월 십오일 연합군은 프랑스 남부를 침략했고 이 침략은 드래군 작전이라 불렸다",
+          "language": "Korean",
+          "elapsed_seconds": 15.237995,
+          "audio_elapsed_seconds": 14.151227
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "천구백사십년 팔월 십오일 연합군은 프랑스 남부를 침략했고 이 침략은 드래군 작전이라 불렸다",
+          "language": "Korean",
+          "elapsed_seconds": 15.591103,
+          "audio_elapsed_seconds": 14.504335
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 15.592357,
+          "audio_elapsed_seconds": 14.505589
+        }
+      ],
+      "errors": 8,
+      "reference_chars": 38,
+      "cer": 0.21052631578947367,
+      "audio": "audio/ko-06.wav",
+      "sha256": "af557e078402208382ad74605ddcd861b056acedd8a8feae7b497d3d03bae351",
+      "sha256_verified": true
+    },
+    {
+      "sample_id": "fleurs-ko-test-row-7",
+      "language": "ko",
+      "requested_language": "ko-KR",
+      "reference": "그래도 관계자의 조언을 듣고 모든 표지판을 지키고 안전 경고에 세심한 주의를 기울여야 합니다",
+      "audio_seconds": 7.02,
+      "text": "그래도 관계자의 조언을 듣고 모든 표지판을 지키고 안전 경고에 세심한 주의를 기울여야 합니다",
+      "detected_languages": [
+        "Korean"
+      ],
+      "startup_seconds": 1.019942,
+      "first_partial_seconds": 1.534168,
+      "final_lag_seconds": 0.537672,
+      "end_to_end_seconds": 7.616345,
+      "audio_send_seconds": 7.020344,
+      "total_seconds": 8.636335,
+      "partial_count": 6,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 1.019942,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "그래도 과연",
+          "language": "Korean",
+          "elapsed_seconds": 2.554158,
+          "audio_elapsed_seconds": 1.534168
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "그래도 관계자의 조언을 듣고",
+          "language": "Korean",
+          "elapsed_seconds": 3.634992,
+          "audio_elapsed_seconds": 2.615002
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "그래도 관계자의 조언을 듣고 모든 표지판을",
+          "language": "Korean",
+          "elapsed_seconds": 4.884905,
+          "audio_elapsed_seconds": 3.864916
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "그래도 관계자의 조언을 듣고 모든 표지판을 시키고 안전",
+          "language": "Korean",
+          "elapsed_seconds": 5.996325,
+          "audio_elapsed_seconds": 4.976335
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "그래도 관계자의 조언을 듣고 모든 표지판을 지키고 안전 경고에 세심한 주의를 기울일",
+          "language": "Korean",
+          "elapsed_seconds": 7.120821,
+          "audio_elapsed_seconds": 6.100832
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "그래도 관계자의 조언을 듣고 모든 표지판을 지키고 안전 경고에 세심한 주의를 기울여야 합니다",
+          "language": "Korean",
+          "elapsed_seconds": 8.228878,
+          "audio_elapsed_seconds": 7.208888
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "그래도 관계자의 조언을 듣고 모든 표지판을 지키고 안전 경고에 세심한 주의를 기울여야 합니다",
+          "language": "Korean",
+          "elapsed_seconds": 8.577662,
+          "audio_elapsed_seconds": 7.557672
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 8.577708,
+          "audio_elapsed_seconds": 7.557719
+        }
+      ],
+      "errors": 0,
+      "reference_chars": 39,
+      "cer": 0.0,
+      "audio": "audio/ko-07.wav",
+      "sha256": "d5baf05d8a3b72b94d3696bd77179cf64f85b4b579b2241a63ecb20f1ea3bcd0",
+      "sha256_verified": true
+    },
+    {
+      "sample_id": "fleurs-ko-test-row-8",
+      "language": "ko",
+      "requested_language": "ko-KR",
+      "reference": "지하철의 정규 안내 방송은 카탈로니아어로만 제공되나 계획에 없던 운행 중단 시에는 자동 시스템을 통해 스페인어 영어 프랑스어 아라비아어 일본어를 포함한 다양한 언어로 방송됩니다",
+      "audio_seconds": 18.9,
+      "text": "지하철의 정규 안내방송은 카탈로니아어로만 제공되나 계획이 없던 운행 중단 시에는 자동 시스템을 통해 스페인어 영어 프랑스어 아라비아어 일본 이 번호를 포함한 다양한 언어로 방송됩니다.",
+      "detected_languages": [
+        "Korean"
+      ],
+      "startup_seconds": 1.139765,
+      "first_partial_seconds": 2.660194,
+      "final_lag_seconds": 0.356858,
+      "end_to_end_seconds": 19.316854,
+      "audio_send_seconds": 18.900146,
+      "total_seconds": 20.456679,
+      "partial_count": 15,
+      "final_count": 2,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 1.139765,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "지하",
+          "language": "Korean",
+          "elapsed_seconds": 3.800019,
+          "audio_elapsed_seconds": 2.660194
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "지하철의 정규 안내 방식",
+          "language": "Korean",
+          "elapsed_seconds": 4.854656,
+          "audio_elapsed_seconds": 3.714831
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "지하철의 정규 안내 방송은 카창",
+          "language": "Korean",
+          "elapsed_seconds": 6.120105,
+          "audio_elapsed_seconds": 4.98028
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "지하철의 정규 안내 방송은 카탈로니아",
+          "language": "Korean",
+          "elapsed_seconds": 7.197591,
+          "audio_elapsed_seconds": 6.057766
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "지하철의 정규 안내 방송은 카탈로니아어로만 제공되나?",
+          "language": "Korean",
+          "elapsed_seconds": 8.435931,
+          "audio_elapsed_seconds": 7.296106
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "지하철의 정규 안내 방송은 카탈로니아어로만 제공되나 계획이 없던",
+          "language": "Korean",
+          "elapsed_seconds": 9.472401,
+          "audio_elapsed_seconds": 8.332576
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "지하철의 정규 안내 방송은 카탈로니아어로만 제공되나 계획이 없던 운행 중단 시에는",
+          "language": "Korean",
+          "elapsed_seconds": 10.599617,
+          "audio_elapsed_seconds": 9.459793
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "지하철의 정규 안내 방송은 카탈로니아어로만 제공되나 계획이 없던 운행 중단 시에는 자동시",
+          "language": "Korean",
+          "elapsed_seconds": 11.863083,
+          "audio_elapsed_seconds": 10.723259
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "지하철의 정규 안내 방송은 카탈로니아어로만 제공되나 계획이 없던 운행 중단 시에는 자동 시스템을 통해 스페인",
+          "language": "Korean",
+          "elapsed_seconds": 12.943473,
+          "audio_elapsed_seconds": 11.803648
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "지하철의 정규 안내 방송은 카탈로니아어로만 제공되나 계획이 없던 운행 중단 시에는 자동 시스템을 통해 스페인어 영어",
+          "language": "Korean",
+          "elapsed_seconds": 14.134655,
+          "audio_elapsed_seconds": 12.994831
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "지하철의 정규 안내 방송은 카탈로니아어로만 제공되나 계획이 없던 운행 중단 시에는 자동 시스템을 통해 스페인어 영어 프랑스어",
+          "language": "Korean",
+          "elapsed_seconds": 15.247178,
+          "audio_elapsed_seconds": 14.107353
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "지하철의 정규 안내 방송은 카탈로니아어로만 제공되나 계획이 없던 운행 중단 시에는 자동 시스템을 통해 스페인어 영어 프랑스어 아라비아어",
+          "language": "Korean",
+          "elapsed_seconds": 16.343156,
+          "audio_elapsed_seconds": 15.203331
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "지하철의 정규 안내방송은 카탈로니아어로만 제공되나 계획이 없던 운행 중단 시에는 자동 시스템을 통해 스페인어 영어 프랑스어 아라비아어 일본",
+          "language": "Korean",
+          "elapsed_seconds": 16.865063,
+          "audio_elapsed_seconds": 15.725239
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": ".",
+          "language": "Korean",
+          "elapsed_seconds": 17.482142,
+          "audio_elapsed_seconds": 16.342318
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "다양한 언어로 방송",
+          "language": "Korean",
+          "elapsed_seconds": 18.597864,
+          "audio_elapsed_seconds": 17.45804
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "이 언어를 포함한 다양한 언어로 방송됩니다.",
+          "language": "Korean",
+          "elapsed_seconds": 19.88265,
+          "audio_elapsed_seconds": 18.742826
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "이 번호를 포함한 다양한 언어로 방송됩니다.",
+          "language": "Korean",
+          "elapsed_seconds": 20.396683,
+          "audio_elapsed_seconds": 19.256858
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 20.396753,
+          "audio_elapsed_seconds": 19.256929
+        }
+      ],
+      "errors": 4,
+      "reference_chars": 76,
+      "cer": 0.05263157894736842,
+      "audio": "audio/ko-08.wav",
+      "sha256": "03d9bd245ed0a22e3f18f69aa43c9aa23f9bd0d348f06c47f5ad6d72c06a4d68",
+      "sha256_verified": true
+    },
+    {
+      "sample_id": "fleurs-ko-test-row-9",
+      "language": "ko",
+      "requested_language": "ko-KR",
+      "reference": "교전이 발발한 직후 영국은 독일에 대한 해상 봉쇄를 시작한다",
+      "audio_seconds": 4.8,
+      "text": "교전이 발발한 직후 영국은 독일에 대한 해상봉쇄를 시작한다",
+      "detected_languages": [
+        "Korean"
+      ],
+      "startup_seconds": 1.068671,
+      "first_partial_seconds": 1.498613,
+      "final_lag_seconds": 0.467404,
+      "end_to_end_seconds": 5.327052,
+      "audio_send_seconds": 4.801005,
+      "total_seconds": 6.395783,
+      "partial_count": 4,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 1.068671,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "교전이",
+          "language": "Korean",
+          "elapsed_seconds": 2.567345,
+          "audio_elapsed_seconds": 1.498613
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "교전이 발발한 직후 영국은.",
+          "language": "Korean",
+          "elapsed_seconds": 3.717941,
+          "audio_elapsed_seconds": 2.64921
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "교전이 발발한 직후 영국은 독일에 대한 해상",
+          "language": "Korean",
+          "elapsed_seconds": 4.861476,
+          "audio_elapsed_seconds": 3.792745
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "교전이 발발한 직후 영국은 독일에 대한 해상봉쇄를 시작한다",
+          "language": "Korean",
+          "elapsed_seconds": 6.110659,
+          "audio_elapsed_seconds": 5.041927
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "교전이 발발한 직후 영국은 독일에 대한 해상봉쇄를 시작한다",
+          "language": "Korean",
+          "elapsed_seconds": 6.336136,
+          "audio_elapsed_seconds": 5.267404
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 6.336195,
+          "audio_elapsed_seconds": 5.267463
+        }
+      ],
+      "errors": 0,
+      "reference_chars": 25,
+      "cer": 0.0,
+      "audio": "audio/ko-09.wav",
+      "sha256": "ece2fcf7473eb903bbf380f71137be4259d08bf438f32af3acd92d1bdc94e155",
+      "sha256_verified": true
+    }
+  ],
+  "summary": {
+    "successful_samples": 10,
+    "failed_samples": 0,
+    "pending_samples": 0,
+    "error_count": 0,
+    "ranking_allowed": true,
+    "cer": 0.042505592841163314,
+    "wer": null,
+    "valid_only": {
+      "cer": 0.042505592841163314,
+      "errors": 19,
+      "reference_chars": 447,
+      "wer": null,
+      "word_errors": 0,
+      "reference_words": 0,
+      "partial_count": 78,
+      "partial_before_audio_end_samples": 10,
+      "samples_with_partial": 10,
+      "median_startup_seconds": 1.0732995,
+      "median_first_partial_seconds": 2.5856215000000002,
+      "median_final_lag_seconds": 0.31811849999999997,
+      "median_end_to_end_seconds": 11.81342
+    }
+  }
+}

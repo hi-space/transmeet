@@ -1,0 +1,43 @@
+{
+  "EndpointName": "transmeet-qwen-streaming",
+  "EndpointArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen-streaming",
+  "EndpointConfigName": "transmeet-qwen-streaming-e05b013eb7d0-cfg",
+  "ProductionVariants": [
+    {
+      "VariantName": "AllTraffic",
+      "DeployedImages": [
+        {
+          "SpecifiedImage": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming@sha256:767bfb4858b1fe4cbb64b72f4a150d242829ea8c52230b3c237c2553be1fb394",
+          "ResolvedImage": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming@sha256:767bfb4858b1fe4cbb64b72f4a150d242829ea8c52230b3c237c2553be1fb394",
+          "ResolutionTime": "2026-10-28 20:06:46.683000+00:00"
+        }
+      ],
+      "CurrentWeight": 1.0,
+      "DesiredWeight": 1.0,
+      "CurrentInstanceCount": 1,
+      "DesiredInstanceCount": 1
+    }
+  ],
+  "EndpointStatus": "InService",
+  "CreationTime": "2026-10-28 20:06:46.292000+00:00",
+  "LastModifiedTime": "2026-10-28 20:13:32.724000+00:00",
+  "MetricsConfig": {
+    "EnableDetailedObservability": true
+  },
+  "ResponseMetadata": {
+    "RequestId": "c9c8480f-a4f9-4d23-8b59-1561771a1666",
+    "HTTPStatusCode": 200,
+    "HTTPHeaders": {
+      "x-amzn-requestid": "c9c8480f-a4f9-4d23-8b59-1561771a1666",
+      "strict-transport-security": "max-age=47304000; includeSubDomains",
+      "x-frame-options": "DENY",
+      "content-security-policy": "frame-ancestors 'none'",
+      "cache-control": "no-cache, no-store, must-revalidate",
+      "x-content-type-options": "nosniff",
+      "content-type": "application/x-amz-json-1.1",
+      "content-length": "882",
+      "date": "Wed, 28 Oct 2026 20:13:47 GMT"
+    },
+    "RetryAttempts": 0
+  }
+}

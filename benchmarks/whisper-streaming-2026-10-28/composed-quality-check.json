@@ -1,0 +1,400 @@
+{
+  "mode": "local VAD + existing staging batch decoder; no streaming timing claims",
+  "results": [
+    {
+      "id": "fleurs-ko-test-row-0",
+      "language": "ko",
+      "reference": "다리 밑 수직 간격은 15미터이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년 3월까지이다",
+      "text": "다리 및 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년 3월까지이다.",
+      "segments": [
+        {
+          "seconds": 11.06,
+          "vad_probability": 0.9999990463256836,
+          "text": "다리 및 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년 3월까지이다."
+        },
+        {
+          "seconds": 1.42,
+          "vad_probability": 0.028561562299728394,
+          "text": ""
+        }
+      ],
+      "errors": 3,
+      "reference_chars": 53,
+      "cer": 0.05660377358490566
+    },
+    {
+      "id": "fleurs-ko-test-row-1",
+      "language": "ko",
+      "reference": "델 포트로가 2세트에서 먼저 어드밴티지를 얻었지만 6 대 6이 된 후 다시 타이 브레이크가 필요했다",
+      "text": "델포트로가 2세트에서 먼저 어드벤티즈를 얻었지만 6대6이 된 후 다시 타이 브레이크가 필요했다.",
+      "segments": [
+        {
+          "seconds": 0.82,
+          "vad_probability": 0.10279163718223572,
+          "text": ""
+        },
+        {
+          "seconds": 8.68,
+          "vad_probability": 0.9999985694885254,
+          "text": "델포트로가 2세트에서 먼저 어드벤티즈를 얻었지만 6대6이 된 후 다시 타이 브레이크가 필요했다."
+        },
+        {
+          "seconds": 1.3,
+          "vad_probability": 0.09100431203842163,
+          "text": ""
+        }
+      ],
+      "errors": 2,
+      "reference_chars": 41,
+      "cer": 0.04878048780487805
+    },
+    {
+      "id": "fleurs-ko-test-row-2",
+      "language": "ko",
+      "reference": "염소 사육은 대략 일만 년 전에 이란의 자그로스산맥에서 시작한 것으로 보입니다",
+      "text": "염소사육은 대략 1만 년 전에 이란의 자그로스 산맥에서 시작한 것으로 보입니다.",
+      "segments": [
+        {
+          "seconds": 7.38,
+          "vad_probability": 0.9999980926513672,
+          "text": "염소사육은 대략 1만 년 전에 이란의 자그로스 산맥에서 시작한 것으로 보입니다."
+        },
+        {
+          "seconds": 1.56,
+          "vad_probability": 0.033364295959472656,
+          "text": ""
+        }
+      ],
+      "errors": 1,
+      "reference_chars": 33,
+      "cer": 0.030303030303030304
+    },
+    {
+      "id": "fleurs-ko-test-row-3",
+      "language": "ko",
+      "reference": "겨울에 북발트해를 건널 경우에는 빙판을 통과하면서 꽤 끔찍한 소음이 발생하기 때문에 객실의 위치를 확인하는 것이 좋다",
+      "text": "겨울에 북발트해를 건널 경우에는 빙판을 통과하면서 꽤 끔찍한 소음이 발생하기 때문에 객실의 위치를 확인하는 것이 좋다",
+      "segments": [
+        {
+          "seconds": 12.54,
+          "vad_probability": 0.999996542930603,
+          "text": "겨울에 북발트해를 건널 경우에는 빙판을 통과하면서 꽤 끔찍한 소음이 발생하기 때문에 객실의 위치를 확인하는 것이 좋다"
+        }
+      ],
+      "errors": 0,
+      "reference_chars": 50,
+      "cer": 0.0
+    },
+    {
+      "id": "fleurs-ko-test-row-4",
+      "language": "ko",
+      "reference": "홍콩의 스카이라인을 이루는 빌딩 행렬은 빅토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대그래프에 비유된다",
+      "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 빅토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대 그래프에 비유된다.",
+      "segments": [
+        {
+          "seconds": 10.68,
+          "vad_probability": 0.9999988675117493,
+          "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 빅토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대 그래프에 비유된다."
+        },
+        {
+          "seconds": 1.44,
+          "vad_probability": 0.027253836393356323,
+          "text": ""
+        }
+      ],
+      "errors": 0,
+      "reference_chars": 52,
+      "cer": 0.0
+    },
+    {
+      "id": "fleurs-ko-test-row-5",
+      "language": "ko",
+      "reference": "합금은 기본적으로 금속 두 개 이상의 혼합물이다 주기율표 상에 원소가 많이 있다는 것을 잊지 마라",
+      "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. 주기율표상의 원소가 많이 있다는 것을 잊지 마라.",
+      "segments": [
+        {
+          "seconds": 9.46,
+          "vad_probability": 0.9999991655349731,
+          "text": "합금은 기본적으로 금속 두 개 이상의 혼합물이다. 주기율표상의 원소가 많이 있다는 것을 잊지 마라."
+        },
+        {
+          "seconds": 0.44,
+          "vad_probability": 0.02838107943534851,
+          "text": ""
+        }
+      ],
+      "errors": 1,
+      "reference_chars": 40,
+      "cer": 0.025
+    },
+    {
+      "id": "fleurs-ko-test-row-6",
+      "language": "ko",
+      "reference": "\"1940년 8월 15일 연합군은 프랑스 남부를 침략했고 이 침략은 \"드래군 작전\"\"이라 불렸다. ",
+      "text": "천구백사십년 팔월 십오일 연합군은 프랑스 남부를 침략했고 이 침략은 드래군 작전이라 불렸다",
+      "segments": [
+        {
+          "seconds": 1.32,
+          "vad_probability": 0.01728808879852295,
+          "text": ""
+        },
+        {
+          "seconds": 12.3,
+          "vad_probability": 0.9999954700469971,
+          "text": "천구백사십년 팔월 십오일 연합군은 프랑스 남부를 침략했고 이 침략은 드래군 작전이라 불렸다"
+        }
+      ],
+      "errors": 8,
+      "reference_chars": 38,
+      "cer": 0.21052631578947367
+    },
+    {
+      "id": "fleurs-ko-test-row-7",
+      "language": "ko",
+      "reference": "그래도 관계자의 조언을 듣고 모든 표지판을 지키고 안전 경고에 세심한 주의를 기울여야 합니다",
+      "text": "그래도 관계자의 조언을 듣고 모든 표지판을 지키고 안전 경고에 세심한 주의를 기울여야 합니다",
+      "segments": [
+        {
+          "seconds": 7.02,
+          "vad_probability": 0.9999983310699463,
+          "text": "그래도 관계자의 조언을 듣고 모든 표지판을 지키고 안전 경고에 세심한 주의를 기울여야 합니다"
+        }
+      ],
+      "errors": 0,
+      "reference_chars": 39,
+      "cer": 0.0
+    },
+    {
+      "id": "fleurs-ko-test-row-8",
+      "language": "ko",
+      "reference": "지하철의 정규 안내 방송은 카탈로니아어로만 제공되나 계획에 없던 운행 중단 시에는 자동 시스템을 통해 스페인어 영어 프랑스어 아라비아어 일본어를 포함한 다양한 언어로 방송됩니다",
+      "text": "지하철의 정규 안내방송은 카탈로니아어로만 제공되나 계획이 없던 운행 중단 시에는 자동 시스템을 통해 스페인어 영어 프랑스어 아라비아어 일본 이 번호를 포함한 다양한 언어로 방송됩니다.",
+      "segments": [
+        {
+          "seconds": 15.0,
+          "vad_probability": 0.9999957084655762,
+          "text": "지하철의 정규 안내방송은 카탈로니아어로만 제공되나 계획이 없던 운행 중단 시에는 자동 시스템을 통해 스페인어 영어 프랑스어 아라비아어 일본"
+        },
+        {
+          "seconds": 3.9,
+          "vad_probability": 0.999972939491272,
+          "text": "이 번호를 포함한 다양한 언어로 방송됩니다."
+        }
+      ],
+      "errors": 4,
+      "reference_chars": 76,
+      "cer": 0.05263157894736842
+    },
+    {
+      "id": "fleurs-ko-test-row-9",
+      "language": "ko",
+      "reference": "교전이 발발한 직후 영국은 독일에 대한 해상 봉쇄를 시작한다",
+      "text": "교전이 발발한 직후 영국은 독일에 대한 해상봉쇄를 시작한다",
+      "segments": [
+        {
+          "seconds": 4.8,
+          "vad_probability": 0.999997079372406,
+          "text": "교전이 발발한 직후 영국은 독일에 대한 해상봉쇄를 시작한다"
+        }
+      ],
+      "errors": 0,
+      "reference_chars": 25,
+      "cer": 0.0
+    },
+    {
+      "id": "fleurs-en-test-row-0",
+      "language": "en",
+      "reference": "However, due to the slow communication channels, styles in the west could lag behind by 25 to 30 year.",
+      "text": "However, due to the slow communication channels, styles in the West could lag behind by 25 to 30 years.",
+      "segments": [
+        {
+          "seconds": 9.48,
+          "vad_probability": 0.9999887943267822,
+          "text": "However, due to the slow communication channels, styles in the West could lag behind by 25 to 30 years."
+        },
+        {
+          "seconds": 1.08,
+          "vad_probability": 0.014704972505569458,
+          "text": ""
+        }
+      ],
+      "errors": 1,
+      "reference_chars": 81,
+      "cer": 0.012345679012345678,
+      "word_errors": 1,
+      "reference_words": 19,
+      "wer": 0.05263157894736842
+    },
+    {
+      "id": "fleurs-en-test-row-1",
+      "language": "en",
+      "reference": "All nouns, alongside the word Sie for you, always begin with a capital letter, even in the middle of a sentence.",
+      "text": "All nouns alongside the words say for you always begin with a capital letter even in the middle of a sentence.",
+      "segments": [
+        {
+          "seconds": 8.76,
+          "vad_probability": 0.999997615814209,
+          "text": "All nouns alongside the words say for you always begin with a capital letter even in the middle of a sentence."
+        }
+      ],
+      "errors": 3,
+      "reference_chars": 88,
+      "cer": 0.03409090909090909,
+      "word_errors": 2,
+      "reference_words": 21,
+      "wer": 0.09523809523809523
+    },
+    {
+      "id": "fleurs-en-test-row-2",
+      "language": "en",
+      "reference": "To the north and within easy reach is the romantic and fascinating town of Sintra and which was made famous to foreigners after a glowing account of its splendours recorded by Lord Byron.",
+      "text": "To the north and within easy reach is the romantic and fascinating town of Sintra and which was made famous to foreigners after a glowing account of its splendorous recorded by Lord Byron.",
+      "segments": [
+        {
+          "seconds": 11.46,
+          "vad_probability": 0.9996179342269897,
+          "text": "To the north and within easy reach is the romantic and fascinating town of Sintra and which was made famous to foreigners after a glowing account of its splendorous recorded by Lord Byron."
+        }
+      ],
+      "errors": 3,
+      "reference_chars": 154,
+      "cer": 0.01948051948051948,
+      "word_errors": 1,
+      "reference_words": 33,
+      "wer": 0.030303030303030304
+    },
+    {
+      "id": "fleurs-en-test-row-3",
+      "language": "en",
+      "reference": "The cabbage juice changes color depending on how acidic or basic (alkaline) the chemical is.",
+      "text": "The cabbage juice changes color depending on how acidic, basic, alkaline the chemical is.",
+      "segments": [
+        {
+          "seconds": 5.76,
+          "vad_probability": 0.9986923933029175,
+          "text": "The cabbage juice changes color depending on how acidic, basic, alkaline the chemical is."
+        }
+      ],
+      "errors": 2,
+      "reference_chars": 75,
+      "cer": 0.02666666666666667,
+      "word_errors": 1,
+      "reference_words": 15,
+      "wer": 0.06666666666666667
+    },
+    {
+      "id": "fleurs-en-test-row-4",
+      "language": "en",
+      "reference": "Many people don't think about them as dinosaurs because they have feathers and can fly.",
+      "text": "Many people don't think about them as dinosaurs because they have feathers and can fly.",
+      "segments": [
+        {
+          "seconds": 4.32,
+          "vad_probability": 0.9696804881095886,
+          "text": "Many people don't think about them as dinosaurs because they have feathers and can fly."
+        }
+      ],
+      "errors": 0,
+      "reference_chars": 71,
+      "cer": 0.0,
+      "word_errors": 0,
+      "reference_words": 15,
+      "wer": 0.0
+    },
+    {
+      "id": "fleurs-en-test-row-5",
+      "language": "en",
+      "reference": "The hospital has followed protocol for infection control, including separating the patient from others to prevent possible infection of others.",
+      "text": "The hospital has followed protocol for infection control, including separating the patient from others to prevent possible infection of others.",
+      "segments": [
+        {
+          "seconds": 11.42,
+          "vad_probability": 0.9999991655349731,
+          "text": "The hospital has followed protocol for infection control, including separating the patient from others to prevent possible infection of others."
+        }
+      ],
+      "errors": 0,
+      "reference_chars": 122,
+      "cer": 0.0,
+      "word_errors": 0,
+      "reference_words": 20,
+      "wer": 0.0
+    },
+    {
+      "id": "fleurs-en-test-row-6",
+      "language": "en",
+      "reference": "The Northern Marianas emergency management office said that there were no damages reported in the nation.",
+      "text": "The Northern Marianas Emergency Management Office said that there were no damages reported in the nation.",
+      "segments": [
+        {
+          "seconds": 10.8,
+          "vad_probability": 0.9996864795684814,
+          "text": "The Northern Marianas Emergency Management Office said that there were no damages reported in the nation."
+        }
+      ],
+      "errors": 0,
+      "reference_chars": 89,
+      "cer": 0.0,
+      "word_errors": 0,
+      "reference_words": 16,
+      "wer": 0.0
+    },
+    {
+      "id": "fleurs-en-test-row-7",
+      "language": "en",
+      "reference": "Twentieth century research has shown that there are two pools of genetic variation: hidden and expressed.",
+      "text": "20th century research has shown that there are two pools of genetic variation hidden and expressed.",
+      "segments": [
+        {
+          "seconds": 6.96,
+          "vad_probability": 0.9991914629936218,
+          "text": "20th century research has shown that there are two pools of genetic variation hidden and expressed."
+        }
+      ],
+      "errors": 7,
+      "reference_chars": 88,
+      "cer": 0.07954545454545454,
+      "word_errors": 1,
+      "reference_words": 16,
+      "wer": 0.0625
+    },
+    {
+      "id": "fleurs-en-test-row-8",
+      "language": "en",
+      "reference": "The aspect ratio of this format (dividing by twelve to obtain the simplest whole-number ratio) is therefore said to be 3:2.",
+      "text": "The aspect ratio of this format, dividing by 12 to obtain the simplest whole number ratio, is therefore said to be 3 to 2.",
+      "segments": [
+        {
+          "seconds": 11.04,
+          "vad_probability": 0.9999988079071045,
+          "text": "The aspect ratio of this format, dividing by 12 to obtain the simplest whole number ratio, is therefore said to be 3 to 2."
+        }
+      ],
+      "errors": 8,
+      "reference_chars": 98,
+      "cer": 0.08163265306122448,
+      "word_errors": 2,
+      "reference_words": 23,
+      "wer": 0.08695652173913043
+    },
+    {
+      "id": "fleurs-en-test-row-9",
+      "language": "en",
+      "reference": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses, easier to reach than those built in modern times.",
+      "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach than those built in modern times.",
+      "segments": [
+        {
+          "seconds": 9.9,
+          "vad_probability": 0.9993648529052734,
+          "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach than those built in modern times."
+        }
+      ],
+      "errors": 0,
+      "reference_chars": 141,
+      "cer": 0.0,
+      "word_errors": 0,
+      "reference_words": 33,
+      "wer": 0.0
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "region": "ap-northeast-2",
+  "image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming@sha256:767bfb4858b1fe4cbb64b72f4a150d242829ea8c52230b3c237c2553be1fb394",
+  "image_tag": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming:20261028-c5f424c0c230",
+  "image_id": "sha256:c5f424c0c23054f0a20f2594be1777103012c375f372d7a66f71a9a227a2fdca",
+  "image_size_bytes": 9205664728,
+  "base_image": "vllm/vllm-openai@sha256:48a03c91eaa04fb7e71c77121a85e661d62de1b2207edf591aea6a05d779f9ef",
+  "qwen_asr": "0.0.6",
+  "vllm": "0.14.0",
+  "torch": "2.9.1+cu129",
+  "created_at": "2026-10-28T20:06:44.475454+00:00",
+  "offline_contract": {
+    "contracts": "pass",
+    "qwen_asr": "0.0.6",
+    "vllm": "0.14.0",
+    "torch": "2.9.1+cu129",
+    "cuda": "12.9",
+    "official_finalizer_unicode_regression": "reproduced and fixed",
+    "token_ids": [
+      142176,
+      57801,
+      85413,
+      225,
+      38231,
+      13,
+      138779,
+      35711
+    ]
+  }
+}

@@ -1,0 +1,603 @@
+{
+  "created_at": "2026-10-28T23:44:40.419729+00:00",
+  "status": "complete",
+  "fresh_results": 80,
+  "unique_audio_files": 20,
+  "all_provider_input_hashes_match": true,
+  "endpoint_identity_and_hardware_unchanged_during_run": true,
+  "providers": {
+    "transcribe": {
+      "ko_cer": 0.087248322147651,
+      "en_wer": 0.06635071090047394,
+      "ko_character_errors": 39,
+      "ko_reference_characters": 447,
+      "en_word_errors": 14,
+      "en_reference_words": 211,
+      "first_caption_median_seconds": 2.633679,
+      "first_caption_p90_seconds": 3.9274546000000004,
+      "first_partial_median_seconds": 2.633679,
+      "caption_update_interval_median_seconds": 0.5082665,
+      "caption_update_interval_p90_seconds": 0.5943039999999999,
+      "final_lag_median_seconds": 0.1636145,
+      "ended_median_seconds": 11.080021,
+      "end_to_end_median_seconds": 11.080070500000001,
+      "startup_median_seconds": 0.811342,
+      "transport_error_count": 0,
+      "failed_samples": 0,
+      "samples_without_final_caption": 0,
+      "samples_with_partial": 20,
+      "ranking_allowed": true,
+      "max_capture_end_slip_seconds": 0.23293300000000006,
+      "model_id": "Amazon Transcribe Streaming (service managed)",
+      "region": "us-east-1",
+      "endpoint": "transcribestreaming.us-east-1.amazonaws.com",
+      "transport": "amazon_transcribe_streaming",
+      "decode_strategy": "managed_streaming_recognition",
+      "model_chunk_ms": null,
+      "hardware": "AWS managed; no customer SageMaker endpoint",
+      "image": null,
+      "artifact": null,
+      "by_language": {
+        "ko": {
+          "successful_samples": 10,
+          "failed_samples": 0,
+          "pending_samples": 0,
+          "error_count": 0,
+          "ranking_allowed": true,
+          "cer": 0.087248322147651,
+          "wer": null,
+          "valid_only": {
+            "cer": 0.087248322147651,
+            "errors": 39,
+            "reference_chars": 447,
+            "wer": null,
+            "word_errors": 0,
+            "reference_words": 0,
+            "partial_count": 159,
+            "partial_before_audio_end_samples": 10,
+            "samples_with_partial": 10,
+            "median_startup_seconds": 0.8042925,
+            "median_first_partial_seconds": 2.923512,
+            "median_final_lag_seconds": -0.494064,
+            "median_end_to_end_seconds": 11.904482999999999,
+            "median_first_caption_seconds": 2.923512,
+            "p90_first_caption_seconds": 4.3454286,
+            "caption_update_interval_median_seconds": 0.490126,
+            "caption_update_interval_p90_seconds": 0.593754
+          },
+          "median_first_caption_seconds": 2.923512,
+          "p90_first_caption_seconds": 4.3454286,
+          "caption_update_interval_median_seconds": 0.490126,
+          "caption_update_interval_p90_seconds": 0.593754,
+          "samples_without_final_caption": 0
+        },
+        "en": {
+          "successful_samples": 10,
+          "failed_samples": 0,
+          "pending_samples": 0,
+          "error_count": 0,
+          "ranking_allowed": true,
+          "cer": 0.03773584905660377,
+          "wer": 0.06635071090047394,
+          "valid_only": {
+            "cer": 0.03773584905660377,
+            "errors": 38,
+            "reference_chars": 1007,
+            "wer": 0.06635071090047394,
+            "word_errors": 14,
+            "reference_words": 211,
+            "partial_count": 139,
+            "partial_before_audio_end_samples": 10,
+            "samples_with_partial": 10,
+            "median_startup_seconds": 0.8196365,
+            "median_first_partial_seconds": 2.488936,
+            "median_final_lag_seconds": 0.3332115,
+            "median_end_to_end_seconds": 10.728413,
+            "median_first_caption_seconds": 2.488936,
+            "p90_first_caption_seconds": 2.7557834999999997,
+            "caption_update_interval_median_seconds": 0.515225,
+            "caption_update_interval_p90_seconds": 0.594641
+          },
+          "median_first_caption_seconds": 2.488936,
+          "p90_first_caption_seconds": 2.7557834999999997,
+          "caption_update_interval_median_seconds": 0.515225,
+          "caption_update_interval_p90_seconds": 0.594641,
+          "samples_without_final_caption": 0
+        }
+      },
+      "reports": {
+        "ko": "transcribe-ko.json",
+        "en": "transcribe-en.json"
+      }
+    },
+    "whisper": {
+      "ko_cer": 0.042505592841163314,
+      "en_wer": 0.037914691943127965,
+      "ko_character_errors": 19,
+      "ko_reference_characters": 447,
+      "en_word_errors": 8,
+      "en_reference_words": 211,
+      "first_caption_median_seconds": 1.53918,
+      "first_caption_p90_seconds": 2.7003977,
+      "first_partial_median_seconds": 1.53918,
+      "caption_update_interval_median_seconds": 1.127132,
+      "caption_update_interval_p90_seconds": 1.2585722,
+      "final_lag_median_seconds": 0.5109855000000001,
+      "ended_median_seconds": 11.007344,
+      "end_to_end_median_seconds": 11.0669285,
+      "startup_median_seconds": 1.081564,
+      "transport_error_count": 0,
+      "failed_samples": 0,
+      "samples_without_final_caption": 0,
+      "samples_with_partial": 20,
+      "ranking_allowed": true,
+      "max_capture_end_slip_seconds": 0.0012340000000001794,
+      "model_id": "openai/whisper-large-v3-turbo",
+      "region": "us-east-1",
+      "endpoint": "whisper-large",
+      "transport": "sagemaker_bidirectional_http2",
+      "decode_strategy": "bounded_utterance_redecode",
+      "model_chunk_ms": 1000,
+      "hardware": [
+        {
+          "instance_type": "ml.g5.xlarge",
+          "current_instance_count": 1
+        }
+      ],
+      "image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-whisper-streaming@sha256:365fd9234b8ad353937a45fd3660429cd6b354d8bd56192fb0f35312c31f35a5",
+      "artifact": {
+        "S3DataSource": {
+          "S3Uri": "s3://jumpstart-cache-prod-us-east-1/huggingface-asr/huggingface-asr-whisper-large-v3-turbo/artifacts/inference-prepack/v1.0.0/",
+          "S3DataType": "S3Prefix",
+          "CompressionType": "None"
+        }
+      },
+      "by_language": {
+        "ko": {
+          "successful_samples": 10,
+          "failed_samples": 0,
+          "pending_samples": 0,
+          "error_count": 0,
+          "ranking_allowed": true,
+          "cer": 0.042505592841163314,
+          "wer": null,
+          "valid_only": {
+            "cer": 0.042505592841163314,
+            "errors": 19,
+            "reference_chars": 447,
+            "wer": null,
+            "word_errors": 0,
+            "reference_words": 0,
+            "partial_count": 78,
+            "partial_before_audio_end_samples": 10,
+            "samples_with_partial": 10,
+            "median_startup_seconds": 1.0855835,
+            "median_first_partial_seconds": 2.5607955000000002,
+            "median_final_lag_seconds": 0.356645,
+            "median_end_to_end_seconds": 11.811533,
+            "median_first_caption_seconds": 2.5607955000000002,
+            "p90_first_caption_seconds": 2.8496325999999996,
+            "caption_update_interval_median_seconds": 1.1377025,
+            "caption_update_interval_p90_seconds": 1.2616149
+          },
+          "median_first_caption_seconds": 2.5607955000000002,
+          "p90_first_caption_seconds": 2.8496325999999996,
+          "caption_update_interval_median_seconds": 1.1377025,
+          "caption_update_interval_p90_seconds": 1.2616149,
+          "samples_without_final_caption": 0
+        },
+        "en": {
+          "successful_samples": 10,
+          "failed_samples": 0,
+          "pending_samples": 0,
+          "error_count": 0,
+          "ranking_allowed": true,
+          "cer": 0.023833167825223437,
+          "wer": 0.037914691943127965,
+          "valid_only": {
+            "cer": 0.023833167825223437,
+            "errors": 24,
+            "reference_chars": 1007,
+            "wer": 0.037914691943127965,
+            "word_errors": 8,
+            "reference_words": 211,
+            "partial_count": 71,
+            "partial_before_audio_end_samples": 10,
+            "samples_with_partial": 10,
+            "median_startup_seconds": 1.074293,
+            "median_first_partial_seconds": 1.507863,
+            "median_final_lag_seconds": 0.551175,
+            "median_end_to_end_seconds": 10.7378985,
+            "median_first_caption_seconds": 1.507863,
+            "p90_first_caption_seconds": 1.6545465999999995,
+            "caption_update_interval_median_seconds": 1.119407,
+            "caption_update_interval_p90_seconds": 1.2545984000000001
+          },
+          "median_first_caption_seconds": 1.507863,
+          "p90_first_caption_seconds": 1.6545465999999995,
+          "caption_update_interval_median_seconds": 1.119407,
+          "caption_update_interval_p90_seconds": 1.2545984000000001,
+          "samples_without_final_caption": 0
+        }
+      },
+      "reports": {
+        "ko": "whisper-ko.json",
+        "en": "whisper-en.json"
+      }
+    },
+    "qwen3-asr": {
+      "ko_cer": 0.042505592841163314,
+      "en_wer": 0.037914691943127965,
+      "ko_character_errors": 19,
+      "ko_reference_characters": 447,
+      "en_word_errors": 8,
+      "en_reference_words": 211,
+      "first_caption_median_seconds": 1.2152319999999999,
+      "first_caption_p90_seconds": 1.2660387,
+      "first_partial_median_seconds": 1.2234444999999998,
+      "caption_update_interval_median_seconds": 0.9931645,
+      "caption_update_interval_p90_seconds": 1.171903,
+      "final_lag_median_seconds": 0.403392,
+      "ended_median_seconds": 10.793614999999999,
+      "end_to_end_median_seconds": 10.852651999999999,
+      "startup_median_seconds": 0.328562,
+      "transport_error_count": 0,
+      "failed_samples": 0,
+      "samples_without_final_caption": 0,
+      "samples_with_partial": 20,
+      "ranking_allowed": true,
+      "max_capture_end_slip_seconds": 0.00144100000000158,
+      "model_id": "Qwen/Qwen3-ASR-1.7B",
+      "region": "ap-northeast-2",
+      "endpoint": "transmeet-qwen-streaming",
+      "transport": "sagemaker_bidirectional_http2",
+      "decode_strategy": "qwen_cumulative_audio_and_text_prefix",
+      "model_chunk_ms": 1000,
+      "hardware": [
+        {
+          "instance_type": "ml.g6.xlarge",
+          "current_instance_count": 1
+        }
+      ],
+      "image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming@sha256:31fd09210793be44424f5d45270d99ceb26c2dc4bcd5e8ff962048631def63d3",
+      "artifact": {
+        "S3DataSource": {
+          "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/",
+          "S3DataType": "S3Prefix",
+          "CompressionType": "None"
+        }
+      },
+      "by_language": {
+        "ko": {
+          "successful_samples": 10,
+          "failed_samples": 0,
+          "pending_samples": 0,
+          "error_count": 0,
+          "ranking_allowed": true,
+          "cer": 0.042505592841163314,
+          "wer": null,
+          "valid_only": {
+            "cer": 0.042505592841163314,
+            "errors": 19,
+            "reference_chars": 447,
+            "wer": null,
+            "word_errors": 0,
+            "reference_words": 0,
+            "partial_count": 97,
+            "partial_before_audio_end_samples": 10,
+            "samples_with_partial": 10,
+            "median_startup_seconds": 0.348414,
+            "median_first_partial_seconds": 1.2338,
+            "median_final_lag_seconds": 0.357857,
+            "median_end_to_end_seconds": 11.596819,
+            "median_first_caption_seconds": 1.2326264999999998,
+            "p90_first_caption_seconds": 1.2690726,
+            "caption_update_interval_median_seconds": 0.9944015,
+            "caption_update_interval_p90_seconds": 1.1738981
+          },
+          "median_first_caption_seconds": 1.2326264999999998,
+          "p90_first_caption_seconds": 1.2690726,
+          "caption_update_interval_median_seconds": 0.9944015,
+          "caption_update_interval_p90_seconds": 1.1738981,
+          "samples_without_final_caption": 0
+        },
+        "en": {
+          "successful_samples": 10,
+          "failed_samples": 0,
+          "pending_samples": 0,
+          "error_count": 0,
+          "ranking_allowed": true,
+          "cer": 0.024826216484607744,
+          "wer": 0.037914691943127965,
+          "valid_only": {
+            "cer": 0.024826216484607744,
+            "errors": 25,
+            "reference_chars": 1007,
+            "wer": 0.037914691943127965,
+            "word_errors": 8,
+            "reference_words": 211,
+            "partial_count": 79,
+            "partial_before_audio_end_samples": 10,
+            "samples_with_partial": 10,
+            "median_startup_seconds": 0.3232125,
+            "median_first_partial_seconds": 1.199835,
+            "median_final_lag_seconds": 0.403392,
+            "median_end_to_end_seconds": 10.7078265,
+            "median_first_caption_seconds": 1.199835,
+            "p90_first_caption_seconds": 1.2383104999999999,
+            "caption_update_interval_median_seconds": 0.9931645,
+            "caption_update_interval_p90_seconds": 1.1365351
+          },
+          "median_first_caption_seconds": 1.199835,
+          "p90_first_caption_seconds": 1.2383104999999999,
+          "caption_update_interval_median_seconds": 0.9931645,
+          "caption_update_interval_p90_seconds": 1.1365351,
+          "samples_without_final_caption": 0
+        }
+      },
+      "reports": {
+        "ko": "qwen3-asr-ko.json",
+        "en": "qwen3-asr-en.json"
+      }
+    },
+    "nemotron": {
+      "ko_cer": 0.0894854586129754,
+      "en_wer": 0.07109004739336493,
+      "ko_character_errors": 40,
+      "ko_reference_characters": 447,
+      "en_word_errors": 15,
+      "en_reference_words": 211,
+      "first_caption_median_seconds": 1.806208,
+      "first_caption_p90_seconds": 2.9244585,
+      "first_partial_median_seconds": 1.806208,
+      "caption_update_interval_median_seconds": 0.004007,
+      "caption_update_interval_p90_seconds": 0.6296263,
+      "final_lag_median_seconds": 0.052306,
+      "ended_median_seconds": 10.751771000000002,
+      "end_to_end_median_seconds": 10.813179000000002,
+      "startup_median_seconds": 0.3222815,
+      "transport_error_count": 0,
+      "failed_samples": 0,
+      "samples_without_final_caption": 0,
+      "samples_with_partial": 20,
+      "ranking_allowed": true,
+      "max_capture_end_slip_seconds": 0.0012010000000000076,
+      "model_id": "nvidia/nemotron-3.5-asr-streaming-0.6b",
+      "region": "ap-northeast-2",
+      "endpoint": "transmeet-nemotron-streaming",
+      "transport": "sagemaker_bidirectional_http2",
+      "decode_strategy": "rnnt_streaming",
+      "model_chunk_ms": 560,
+      "hardware": [
+        {
+          "instance_type": "ml.g5.xlarge",
+          "current_instance_count": 1
+        }
+      ],
+      "image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-nemotron-streaming@sha256:c20c3f92bf90b7786e4a5122e4404e682c418fca8f2d7442601595a7261e6c23",
+      "artifact": {
+        "S3DataSource": {
+          "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-nvidia-nemotron-3-5-asr-streaming-0-6b/artifacts/inference-prepack/v1.0.2/",
+          "S3DataType": "S3Prefix",
+          "CompressionType": "None"
+        }
+      },
+      "by_language": {
+        "ko": {
+          "successful_samples": 10,
+          "failed_samples": 0,
+          "pending_samples": 0,
+          "error_count": 0,
+          "ranking_allowed": true,
+          "cer": 0.0894854586129754,
+          "wer": null,
+          "valid_only": {
+            "cer": 0.0894854586129754,
+            "errors": 40,
+            "reference_chars": 447,
+            "wer": null,
+            "word_errors": 0,
+            "reference_words": 0,
+            "partial_count": 419,
+            "partial_before_audio_end_samples": 10,
+            "samples_with_partial": 10,
+            "median_startup_seconds": 0.3498625,
+            "median_first_partial_seconds": 2.285635,
+            "median_final_lag_seconds": -0.8088925,
+            "median_end_to_end_seconds": 11.5778365,
+            "median_first_caption_seconds": 2.285635,
+            "p90_first_caption_seconds": 2.926114,
+            "caption_update_interval_median_seconds": 0.004454,
+            "caption_update_interval_p90_seconds": 0.6302209999999999
+          },
+          "median_first_caption_seconds": 2.285635,
+          "p90_first_caption_seconds": 2.926114,
+          "caption_update_interval_median_seconds": 0.004454,
+          "caption_update_interval_p90_seconds": 0.6302209999999999,
+          "samples_without_final_caption": 0
+        },
+        "en": {
+          "successful_samples": 10,
+          "failed_samples": 0,
+          "pending_samples": 0,
+          "error_count": 0,
+          "ranking_allowed": true,
+          "cer": 0.04667328699106256,
+          "wer": 0.07109004739336493,
+          "valid_only": {
+            "cer": 0.04667328699106256,
+            "errors": 47,
+            "reference_chars": 1007,
+            "wer": 0.07109004739336493,
+            "word_errors": 15,
+            "reference_words": 211,
+            "partial_count": 475,
+            "partial_before_audio_end_samples": 10,
+            "samples_with_partial": 10,
+            "median_startup_seconds": 0.321241,
+            "median_first_partial_seconds": 1.803598,
+            "median_final_lag_seconds": 0.053683,
+            "median_end_to_end_seconds": 10.3656015,
+            "median_first_caption_seconds": 1.803598,
+            "p90_first_caption_seconds": 2.2825757,
+            "caption_update_interval_median_seconds": 0.003574,
+            "caption_update_interval_p90_seconds": 0.6278762
+          },
+          "median_first_caption_seconds": 1.803598,
+          "p90_first_caption_seconds": 2.2825757,
+          "caption_update_interval_median_seconds": 0.003574,
+          "caption_update_interval_p90_seconds": 0.6278762,
+          "samples_without_final_caption": 0
+        }
+      },
+      "reports": {
+        "ko": "nemotron-ko.json",
+        "en": "nemotron-en.json"
+      }
+    }
+  },
+  "whisper_vs_historical_batch": {
+    "baseline_run_started_at": "2026-10-28T21:06:23.940839+00:00",
+    "baseline_summary": "../../stt-streaming-comparison-2026-10-28/final/summary.json",
+    "baseline_first_caption_seconds": 7.9754605000000005,
+    "streaming_first_caption_seconds": 1.53918,
+    "first_caption_reduction_percent": 80.70105168221949,
+    "baseline_ko_cer": 0.12080536912751678,
+    "streaming_ko_cer": 0.042505592841163314,
+    "baseline_en_wer": 0.06635071090047394,
+    "streaming_en_wer": 0.037914691943127965,
+    "baseline_hardware": [
+      {
+        "instance_type": "ml.g5.2xlarge",
+        "current_instance_count": 1
+      }
+    ],
+    "streaming_hardware": [
+      {
+        "instance_type": "ml.g5.xlarge",
+        "current_instance_count": 1
+      }
+    ],
+    "baseline_image": "763104351884.dkr.ecr.us-east-1.amazonaws.com/huggingface-pytorch-inference:2.1.0-transformers4.37.0-gpu-py310-cu118-ubuntu20.04",
+    "streaming_image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-whisper-streaming@sha256:365fd9234b8ad353937a45fd3660429cd6b354d8bd56192fb0f35312c31f35a5",
+    "interpretation": "Full serving-path comparison: 6-second batch windows on ml.g5.2xlarge versus periodic bounded-utterance streaming plus Silero VAD on ml.g5.xlarge. Hardware, container/decoder, VAD and framing changed; do not attribute all differences to streaming alone."
+  },
+  "application_recording_probe": {
+    "source": "benchmarks/whisper-streaming-2026-10-28/application-stream.json",
+    "sha256": "8b55199cd1d332517ebfb6336d5e779fa887080332f05bda1376eee1d53ed8d2",
+    "first_partial_from_recording_seconds": 2.7529388265684247,
+    "audio_seconds": 12.48,
+    "passed": true,
+    "clock_note": "Separate single production application probe, measured from recording start; not the post-ready model/API benchmark clock."
+  },
+  "latency_definition": "Caption metrics begin after ready. Startup is reported separately. Final lag is last unique nonempty final minus full source-file EOF including trailing silence. Intervals pool changed nonempty hypotheses within clips.",
+  "limitations": [
+    "20 read-speech clips (10 KO + 10 EN), not spontaneous overlapping meetings.",
+    "Different providers run on the actual production regions/hardware; this is not an equal-hardware model study.",
+    "Whisper and Qwen streaming periodically re-decode bounded/cumulative audio; transport streaming does not imply a cache-aware acoustic model.",
+    "First caption means first nonempty hypothesis, not necessarily the first correct word.",
+    "Application setup, frontend rendering, translation and persistence are outside the main post-ready timing clock."
+  ],
+  "input_hashes": [
+    {
+      "language": "en",
+      "sample_id": "fleurs-en-test-row-0",
+      "sha256": "b438b60eb4e9fddbcaa303e27070c2458c3daac42f0b08d5d8622c47335d24f7"
+    },
+    {
+      "language": "en",
+      "sample_id": "fleurs-en-test-row-1",
+      "sha256": "fd99727983733f9771077fe1a030fcc44ea7e16be1e9396cff525db2886a8f0f"
+    },
+    {
+      "language": "en",
+      "sample_id": "fleurs-en-test-row-2",
+      "sha256": "b4aea90be63667ffe68bd0c67fcc11b6a5bc334a4566df8153c074b37e2760d6"
+    },
+    {
+      "language": "en",
+      "sample_id": "fleurs-en-test-row-3",
+      "sha256": "1a2230cb99ec7ed59df1ad0cf43020b093c6536f9b4ca02636b8daa9c4577229"
+    },
+    {
+      "language": "en",
+      "sample_id": "fleurs-en-test-row-4",
+      "sha256": "5fda1c914915f9fcd856b11739eb88570deb747c0a492c841255f13383d00e82"
+    },
+    {
+      "language": "en",
+      "sample_id": "fleurs-en-test-row-5",
+      "sha256": "c15df2cdf2811dde17f6086317a9aeb0f2cb4a9967204c6beac2cd87fadfb93b"
+    },
+    {
+      "language": "en",
+      "sample_id": "fleurs-en-test-row-6",
+      "sha256": "b804e68fee5b002c5a6942a4dbefe4dba14b3f816e07404c80ee508527ecf956"
+    },
+    {
+      "language": "en",
+      "sample_id": "fleurs-en-test-row-7",
+      "sha256": "eecacd023023857f4a8fb8b86a5815a06c972ac49584d34fec14d71640a9c684"
+    },
+    {
+      "language": "en",
+      "sample_id": "fleurs-en-test-row-8",
+      "sha256": "409f227a6a0d463314a5b138931d658c69377b1684a134f2459aa698eb0fc8cd"
+    },
+    {
+      "language": "en",
+      "sample_id": "fleurs-en-test-row-9",
+      "sha256": "3f988cc9edf80f64bcb387e5d6353604fd7ef7b3d5016b495fc6f09a18847b2f"
+    },
+    {
+      "language": "ko",
+      "sample_id": "fleurs-ko-test-row-0",
+      "sha256": "692ead3d5546b300c37b0bb6b5eae299f1023d1452651ba4ae0e93173e6d9067"
+    },
+    {
+      "language": "ko",
+      "sample_id": "fleurs-ko-test-row-1",
+      "sha256": "8dff9bb3597dcc33c4b98c916cfb91ba682f51019144630530de5deb72481c1f"
+    },
+    {
+      "language": "ko",
+      "sample_id": "fleurs-ko-test-row-2",
+      "sha256": "27d54da0d7627cfd223c3028f773fe83cff4d3e102b40aeed771035198a18e36"
+    },
+    {
+      "language": "ko",
+      "sample_id": "fleurs-ko-test-row-3",
+      "sha256": "8214291abc74551abca9612b7504ae1b2988ecd29d4c3b8f4e1e42a389b56527"
+    },
+    {
+      "language": "ko",
+      "sample_id": "fleurs-ko-test-row-4",
+      "sha256": "e28117e5ba80cdfff918199eec2350cd47d5878aca2abe689f35db47ed91bb35"
+    },
+    {
+      "language": "ko",
+      "sample_id": "fleurs-ko-test-row-5",
+      "sha256": "98e7a8d6b9f12cad30fee3fcfbea51e64505a9e85f9e989db8df8f7a730d3ac7"
+    },
+    {
+      "language": "ko",
+      "sample_id": "fleurs-ko-test-row-6",
+      "sha256": "af557e078402208382ad74605ddcd861b056acedd8a8feae7b497d3d03bae351"
+    },
+    {
+      "language": "ko",
+      "sample_id": "fleurs-ko-test-row-7",
+      "sha256": "d5baf05d8a3b72b94d3696bd77179cf64f85b4b579b2241a63ecb20f1ea3bcd0"
+    },
+    {
+      "language": "ko",
+      "sample_id": "fleurs-ko-test-row-8",
+      "sha256": "03d9bd245ed0a22e3f18f69aa43c9aa23f9bd0d348f06c47f5ad6d72c06a4d68"
+    },
+    {
+      "language": "ko",
+      "sample_id": "fleurs-ko-test-row-9",
+      "sha256": "ece2fcf7473eb903bbf380f71137be4259d08bf438f32af3acd92d1bdc94e155"
+    }
+  ]
+}

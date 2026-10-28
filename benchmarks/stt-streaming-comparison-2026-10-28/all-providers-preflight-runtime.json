@@ -1,0 +1,106 @@
+{
+  "ecs": {
+    "checked_at": "2026-10-28T21:01:15.811230+00:00",
+    "service_task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+    "service_revision": 35,
+    "registered_at": "2026-10-28 20:55:22.870000+00:00",
+    "environment": {
+      "QWEN_ASR_ENDPOINT": "transmeet-qwen3-asr",
+      "NEMOTRON_STREAMING_REGION": "ap-northeast-2",
+      "NEMOTRON_ASR_ENDPOINT": "transmeet-nemotron-asr",
+      "WHISPER_ENDPOINT": "whisper-large",
+      "QWEN_STREAMING_ENABLED": "true",
+      "NEMOTRON_ASR_REGION": "ap-northeast-2",
+      "NEMOTRON_STREAMING_ENDPOINT": "transmeet-nemotron-streaming",
+      "NEMOTRON_STREAMING_ENABLED": "true",
+      "NEMOTRON_STREAMING_CHUNK_MS": "560",
+      "QWEN_STREAMING_REGION": "ap-northeast-2",
+      "QWEN_ASR_INFERENCE_COMPONENT": "transmeet-qwen3-asr-ic-v2",
+      "NEMOTRON_ASR_INFERENCE_COMPONENT": "transmeet-nemotron-asr-ic-v2",
+      "QWEN_STREAMING_CHUNK_MS": "1000",
+      "QWEN_STREAMING_ENDPOINT": "transmeet-qwen-streaming",
+      "REGION": "us-east-1",
+      "STT_IDLE_SECONDS": "0",
+      "QWEN_ASR_REGION": "ap-northeast-2"
+    },
+    "running_count": 1,
+    "pending_count": 0,
+    "deployments": [
+      {
+        "status": "PRIMARY",
+        "taskDefinition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+        "runningCount": 1,
+        "pendingCount": 0,
+        "rolloutState": "COMPLETED",
+        "rolloutStateReason": "ECS deployment ecs-svc/7333950839463620706 completed."
+      }
+    ],
+    "tasks": [
+      {
+        "task_arn": "arn:aws:ecs:us-east-1:913524902871:task/transmeet-ws-cluster/c4b98eb2de8c453f93d1f28f74f18df0",
+        "task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+        "status": "RUNNING",
+        "started_at": "2026-10-28 20:56:25.708000+00:00",
+        "containers": [
+          {
+            "name": "ws-backend",
+            "image_digest": "sha256:bb9fdc8f9895b8a4bb9776fc69138ae065bfd47ff430f17dae28b276a9091fbe",
+            "status": "RUNNING",
+            "private_ips": [
+              "172.31.95.87"
+            ]
+          }
+        ]
+      }
+    ],
+    "targets": [
+      {
+        "Target": {
+          "Id": "172.31.11.38",
+          "Port": 8000,
+          "AvailabilityZone": "us-east-1c"
+        },
+        "HealthCheckPort": "8000",
+        "TargetHealth": {
+          "State": "draining",
+          "Reason": "Target.DeregistrationInProgress",
+          "Description": "Target deregistration is in progress"
+        },
+        "AdministrativeOverride": {
+          "State": "no_override",
+          "Reason": "AdministrativeOverride.NoOverride",
+          "Description": "No override is currently active on target"
+        }
+      },
+      {
+        "Target": {
+          "Id": "172.31.95.87",
+          "Port": 8000,
+          "AvailabilityZone": "us-east-1d"
+        },
+        "HealthCheckPort": "8000",
+        "TargetHealth": {
+          "State": "healthy"
+        },
+        "AdministrativeOverride": {
+          "State": "no_override",
+          "Reason": "AdministrativeOverride.NoOverride",
+          "Description": "No override is currently active on target"
+        }
+      }
+    ]
+  },
+  "transcribe_iam": {
+    "checked_at": "2026-10-28T21:01:13.404672+00:00",
+    "role_arn": "arn:aws:iam::913524902871:role/TransmeetStack-WsTaskRole4B337A19-JBueyIt7ZiW8",
+    "action": "transcribe:StartStreamTranscription",
+    "simulation": [
+      {
+        "EvalActionName": "transcribe:StartStreamTranscription",
+        "EvalResourceName": "*",
+        "EvalDecision": "allowed",
+        "MissingContextValues": []
+      }
+    ]
+  }
+}

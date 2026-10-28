@@ -1,0 +1,147 @@
+[
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/.gitattributes",
+    "size": 1519,
+    "etag": "\"a859f8a89685747ffd4171b870540c41\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/README.md",
+    "size": 57456,
+    "etag": "\"466baf802840557b5afe5d9a2dd2e3be\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/__model_info__.json",
+    "size": 191,
+    "etag": "\"13bed882d35cb46d55dbc9f45044ada8\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/__script_info__.json",
+    "size": 153,
+    "etag": "\"9b25db3601326cb2f5d3c081530e3ec3\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/chat_template.json",
+    "size": 1161,
+    "etag": "\"c5c89ac87470b563c44a099abec74852\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/code/__script_info__.json",
+    "size": 153,
+    "etag": "\"9b25db3601326cb2f5d3c081530e3ec3\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/code/lib/av/av-17.0.1-cp311-abi3-manylinux_2_28_x86_64.whl",
+    "size": 36345295,
+    "etag": "\"bb786a03d171cd78bab13a678c7d3023-5\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/code/lib/resampy/resampy-0.4.3-py3-none-any.whl",
+    "size": 3076529,
+    "etag": "\"9d5f4a774c9a5ca15c378cf234116b1c\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/code/lib/soundfile/soundfile-0.13.1-py2.py3-none-manylinux_2_28_x86_64.whl",
+    "size": 1313646,
+    "etag": "\"392cb12282ce64eb87b36ecfcb1cfcdd\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/code/model.py",
+    "size": 887,
+    "etag": "\"18a92d55d3caf4cb3023257baf7a9718\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/code/requirements.txt",
+    "size": 223,
+    "etag": "\"4164eb85905dbd8e987091cb181646ef\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/code/script_requirements.txt",
+    "size": 805,
+    "etag": "\"3bbc50e118af91e1399b4c2abd96030e\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/code/version",
+    "size": 6,
+    "etag": "\"c9e47dbb0e1927076ed7b2e1ec157be7\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/config.json",
+    "size": 6194,
+    "etag": "\"f1315d64e7cff7bf6135dea7b70d4172\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/generation_config.json",
+    "size": 142,
+    "etag": "\"296c3d621f1499245bbd5fff6f772890\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/lib/av/av-17.0.1-cp311-abi3-manylinux_2_28_x86_64.whl",
+    "size": 36345295,
+    "etag": "\"bb786a03d171cd78bab13a678c7d3023-5\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/lib/resampy/resampy-0.4.3-py3-none-any.whl",
+    "size": 3076529,
+    "etag": "\"9d5f4a774c9a5ca15c378cf234116b1c\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/lib/soundfile/soundfile-0.13.1-py2.py3-none-manylinux_2_28_x86_64.whl",
+    "size": 1313646,
+    "etag": "\"392cb12282ce64eb87b36ecfcb1cfcdd\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/merges.txt",
+    "size": 1671853,
+    "etag": "\"72dacf1de43bc354dc3c521e44ed0b24\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/model-00001-of-00002.safetensors",
+    "size": 4220320824,
+    "etag": "\"4a99892d2a023f7514409bda66963ab6-504\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/model-00002-of-00002.safetensors",
+    "size": 478200688,
+    "etag": "\"79d9e69442d1e471bace9fbe3729f5f0-58\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/model.py",
+    "size": 887,
+    "etag": "\"18a92d55d3caf4cb3023257baf7a9718\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/model.safetensors.index.json",
+    "size": 64821,
+    "etag": "\"56d3a6f80d5a3798120f74942298a685\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/preprocessor_config.json",
+    "size": 330,
+    "etag": "\"1c0efacb433b9e7b5b95347c0d7f7547\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/requirements.txt",
+    "size": 223,
+    "etag": "\"4164eb85905dbd8e987091cb181646ef\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/script_requirements.txt",
+    "size": 805,
+    "etag": "\"3bbc50e118af91e1399b4c2abd96030e\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/tokenizer_config.json",
+    "size": 12487,
+    "etag": "\"386e410370ceabe53c2b976affe10b0d\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/version",
+    "size": 6,
+    "etag": "\"c9e47dbb0e1927076ed7b2e1ec157be7\""
+  },
+  {
+    "key": "huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/vocab.json",
+    "size": 2776833,
+    "etag": "\"613b8e4a622c4a2c90e9e1245fc540d6\""
+  }
+]

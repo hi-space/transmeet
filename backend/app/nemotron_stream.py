@@ -1,4 +1,4 @@
-"""One bounded Nemotron recording over SageMaker's bidirectional HTTP/2 API.
+"""Bounded Qwen/Nemotron recordings over SageMaker's bidirectional HTTP/2 API.
 
 Audio is never retried: a transport failure leaves an explicit error. Planned
 rotation first flushes the old decoder, then consumes the remaining FIFO audio
@@ -355,6 +355,10 @@ async def response_messages(output_stream):
 
 
 class NemotronStream:
+    # The transport is shared; only the model's decode interval differs.
+    allowed_chunk_ms = (320, 560)
+    label = "Nemotron"
+
     def __init__(
         self, endpoint_name: str, language: str = "auto", chunk_ms: int = 560,
         region: str = "us-east-1", *, connection_factory=None, queue_size: int = 64,
@@ -362,8 +366,9 @@ class NemotronStream:
         startup_timeout: float = 30, rotate_seconds: float = 25 * 60,
         worker_python: str | None = None,
     ):
-        if language not in ("ko-KR", "en-US", "auto") or chunk_ms not in (320, 560):
-            raise ValueError("Invalid Nemotron language or chunk size")
+        if (language not in ("ko-KR", "en-US", "auto")
+                or type(chunk_ms) is not int or chunk_ms not in self.allowed_chunk_ms):
+            raise ValueError(f"Invalid {self.label} language or chunk size")
         if not endpoint_name or queue_size < 1 or not 0 < rotate_seconds <= 25 * 60:
             raise ValueError("Invalid Nemotron stream configuration")
         self.endpoint_name = endpoint_name
@@ -449,7 +454,7 @@ class NemotronStream:
         except asyncio.CancelledError:
             raise
         except Exception as exc:
-            logger.warning("Nemotron stream failed: %s", exc)
+            logger.warning("%s stream failed: %s", self.label, exc)
             await self._fail(exc)
         finally:
             # Release byte strings when an error interrupts the sender.
@@ -520,6 +525,26 @@ class NemotronStream:
             for task in (sender, reader, rotation):
                 task.cancel()
             await asyncio.gather(sender, reader, rotation, return_exceptions=True)
+
+
+class QwenStream(NemotronStream):
+    """Qwen's vLLM state updates on one/two-second chunks over the same wire."""
+
+    allowed_chunk_ms = (1000, 2000)
+    label = "Qwen"
+
+    def __init__(self, *args, chunk_ms: int = 1000, **kwargs):
+        super().__init__(*args, chunk_ms=chunk_ms, **kwargs)
+
+
+class WhisperStream(NemotronStream):
+    """Whisper periodically revises a bounded utterance over the shared wire."""
+
+    allowed_chunk_ms = (1000, 2000)
+    label = "Whisper"
+
+    def __init__(self, *args, chunk_ms: int = 1000, **kwargs):
+        super().__init__(*args, chunk_ms=chunk_ms, **kwargs)
 
 
 if __name__ == "__main__":

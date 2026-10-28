@@ -9,7 +9,8 @@ Transcribe mode uses a **persistent streaming session** for the entire recording
   - On stopRecording: send end-of-stream, wait for remaining results
 
 Enabled Nemotron recordings use a persistent SageMaker bidirectional stream.
-Whisper, Qwen3-ASR, and batch Nemotron use the buffer/flush pipeline:
+Enabled Qwen and Nemotron use persistent SageMaker bidirectional sessions.
+Whisper and batch Qwen/Nemotron use the buffer/flush pipeline:
   - Audio chunks are buffered per connection
   - 600ms after the latest chunk (or when the buffer is full), audio is sent to SageMaker
 
@@ -91,7 +92,7 @@ from .summary_prompt import (
     resolve_summary_style,
     transcript_lines,
 )
-from .nemotron_stream import MAX_INPUT_BYTES, NemotronStream, NemotronStreamError
+from .nemotron_stream import MAX_INPUT_BYTES, NemotronStream, NemotronStreamError, QwenStream, WhisperStream
 from .stt import (
     active_endpoint_for,
     active_inference_component_for,
@@ -99,6 +100,8 @@ from .stt import (
     inference_component_for,
     is_streaming_provider,
     parse_response,
+    parse_streaming_response,
+    streaming_chunk_ms,
     transcribe_audio,
     validate_provider,
 )
@@ -164,6 +167,7 @@ class ConnectionState:
     owned_meetings: set = field(default_factory=set)
     stt_provider: str = "whisper"
     stt_ready: bool = False
+    stt_streaming: bool = False
     target_lang: str = "ko"
     source_lang: str = "auto"
     # None is reserved for legacy callers; new sessions resolve a separate target.
@@ -180,7 +184,7 @@ class ConnectionState:
     # Transcribe mode: persistent streaming session
     audio_queue: asyncio.Queue = field(default_factory=asyncio.Queue)
     transcribe_task: Optional[asyncio.Task] = None
-    nemotron_stream: Optional[NemotronStream] = None
+    speech_stream: Optional[NemotronStream] = None
     # Match a final with its speculative subtitle even after a recording switch.
     stt_stream_id: Optional[str] = None
     stt_utterance_id: Optional[int] = None
@@ -203,6 +207,15 @@ class ConnectionState:
     audio_meeting_id: Optional[str] = None
     # 버퍼의 첫 조각을 받은 시각 — 구간 키의 정렬 기준
     audio_started_at: Optional[datetime] = None
+
+    @property
+    def nemotron_stream(self):
+        """Compatibility with callers of the original streaming integration."""
+        return self.speech_stream
+
+    @nemotron_stream.setter
+    def nemotron_stream(self, stream):
+        self.speech_stream = stream
 
 
 # In-memory connection registry (single-process; scales with one Fargate task)
@@ -456,7 +469,7 @@ async def _process_segment(
 
     translation_target = _translation_target(state, detected_language)
     stream_metadata = ({
-        "sttProvider": "nemotron",
+        "sttProvider": state.stt_provider,
         "streamId": state.stt_stream_id,
         "utteranceId": state.stt_utterance_id,
     } if state.stt_stream_id is not None else {})
@@ -935,18 +948,25 @@ async def _run_transcribe_streaming(
         logger.exception("[Transcribe] Session failed for connection_id=%s", connection_id)
 
 
-def _start_nemotron_streaming(state: ConnectionState, ws: WebSocket, connection_id: str) -> None:
+def _start_sagemaker_streaming(state: ConnectionState, ws: WebSocket, connection_id: str) -> None:
     """Snapshot one recording; partials stay live and only unique finals are saved."""
     snapshot = replace(state)
+    provider = snapshot.stt_provider
+    stream_class, label = {
+        "whisper": (WhisperStream, "Whisper"),
+        "qwen3-asr": (QwenStream, "Qwen"),
+        "nemotron": (NemotronStream, "Nemotron"),
+    }[provider]
     recording_id = uuid4().hex
-    stream = NemotronStream(
-        endpoint_name=active_endpoint_for("nemotron"),
+    stream = stream_class(
+        endpoint_name=active_endpoint_for(provider),
         language=LANG_CODE_MAP.get(snapshot.source_lang, "auto"),
-        chunk_ms=config.NEMOTRON_STREAMING_CHUNK_MS,
-        region=active_region_for("nemotron"),
+        chunk_ms=streaming_chunk_ms(provider),
+        region=active_region_for(provider),
+        # All models share the isolated SageMaker SDK/CRT environment.
         worker_python=config.NEMOTRON_STREAM_PYTHON,
     )
-    state.nemotron_stream = stream
+    state.speech_stream = stream
     seen_finals = set()
     generation = None
     pending_utterance = None
@@ -962,7 +982,7 @@ def _start_nemotron_streaming(state: ConnectionState, ws: WebSocket, connection_
         if pending_utterance is not None:
             await send({
                 "type": "subtitle_stream", "phase": "stt_partial", "messageId": "partial",
-                "originalText": "", "speaker": snapshot.speaker, "sttProvider": "nemotron",
+                "originalText": "", "speaker": snapshot.speaker, "sttProvider": provider,
                 "streamId": f"{recording_id}:{generation}", "utteranceId": pending_utterance,
                 "timestamp": _iso_now(),
             })
@@ -977,9 +997,10 @@ def _start_nemotron_streaming(state: ConnectionState, ws: WebSocket, connection_
         kind = event["type"]
         if kind == "error":
             await clear_partial()
-            await _nemotron_recording_failed(
+            await _sagemaker_recording_failed(
                 state, ws, connection_id, stream,
-                f"Nemotron 실시간 음성 인식에 실패했습니다: {event['message']}",
+                f"{label} 실시간 음성 인식에 실패했습니다: {event['message']}",
+                provider=provider,
             )
             return
         if kind == "ended":
@@ -990,7 +1011,7 @@ def _start_nemotron_streaming(state: ConnectionState, ws: WebSocket, connection_
         utterance_id = event["utterance_id"]
         if utterance_id in seen_finals:
             return
-        result = parse_response("nemotron", event)
+        result = parse_streaming_response(provider, event)
         fallback = "" if _is_auto(snapshot.source_lang) else snapshot.source_lang
         language = resolve_detected_language(result.language or fallback, result.text)
         stream_id = f"{recording_id}:{generation}"
@@ -999,7 +1020,7 @@ def _start_nemotron_streaming(state: ConnectionState, ws: WebSocket, connection_
             await send({
                 "type": "subtitle_stream", "phase": "stt_partial", "messageId": "partial",
                 "originalText": result.text, "detectedLanguage": language,
-                "speaker": snapshot.speaker, "sttProvider": "nemotron",
+                "speaker": snapshot.speaker, "sttProvider": provider,
                 "streamId": stream_id, "utteranceId": utterance_id, "timestamp": _iso_now(),
             })
             return
@@ -1026,13 +1047,18 @@ def _start_nemotron_streaming(state: ConnectionState, ws: WebSocket, connection_
     stream.start(on_event)
 
 
-async def _nemotron_recording_failed(state, ws, connection_id, stream, message):
+def _start_nemotron_streaming(state: ConnectionState, ws: WebSocket, connection_id: str) -> None:
+    _start_sagemaker_streaming(state, ws, connection_id)
+
+
+async def _sagemaker_recording_failed(state, ws, connection_id, stream, message, *, provider=None):
+    provider = provider or state.stt_provider
     payloads = [{"type": "error", "message": message, "timestamp": _iso_now()}]
-    if state.nemotron_stream is stream:
+    if state.speech_stream is stream:
         state.stt_ready = False
-        capacity.release("nemotron", connection_id)
+        capacity.release(provider, connection_id)
         payloads.append({
-            "type": "stt_status", "provider": "nemotron", "status": "error",
+            "type": "stt_status", "provider": provider, "status": "error",
             "streaming": True, "managed": False, "recordingBlocked": True, "message": message,
         })
     for payload in payloads:
@@ -1042,28 +1068,31 @@ async def _nemotron_recording_failed(state, ws, connection_id, stream, message):
             pass
 
 
-def _nemotron_pcm(audio_data: str) -> bytes:
+def _streaming_pcm(audio_data: str) -> bytes:
     """Decode the browser WAV, including a short tail and nonstandard RIFF headers."""
     if len(audio_data) > (MAX_INPUT_BYTES + 4096) * 4 // 3 + 4:
-        raise ValueError("Nemotron 오디오 메시지가 너무 큽니다.")
+        raise ValueError("오디오 메시지가 너무 큽니다.")
     audio_bytes = base64.b64decode(audio_data, validate=True)
     try:
         with wave.open(io.BytesIO(audio_bytes), "rb") as audio:
             if (audio.getnchannels(), audio.getsampwidth(), audio.getframerate(), audio.getcomptype()) != (
                 1, 2, 16000, "NONE",
             ):
-                raise ValueError("Nemotron은 16 kHz mono PCM16 오디오를 사용합니다.")
+                raise ValueError("실시간 음성 인식은 16 kHz mono PCM16 오디오를 사용합니다.")
             size = audio.getnframes() * 2
             if size > MAX_INPUT_BYTES:
-                raise ValueError("Nemotron 오디오 메시지가 너무 큽니다.")
+                raise ValueError("오디오 메시지가 너무 큽니다.")
             # Reading one extra frame exposes an odd trailing byte in a malformed
             # data chunk; readframes(nframes) would silently truncate that byte.
             pcm = audio.readframes(audio.getnframes() + 1)
             if len(pcm) != size or len(pcm) % 2:
-                raise ValueError("Nemotron 오디오 메시지가 잘렸습니다.")
+                raise ValueError("오디오 메시지가 잘렸습니다.")
             return pcm
     except (wave.Error, EOFError) as exc:
-        raise ValueError("Nemotron 오디오 메시지가 올바른 WAV가 아닙니다.") from exc
+        raise ValueError("오디오 메시지가 올바른 WAV가 아닙니다.") from exc
+
+
+_nemotron_pcm = _streaming_pcm
 
 
 # ─── SageMaker providers: buffer/flush pipeline ─────────────────────────────
@@ -1763,9 +1792,9 @@ async def _claim_meeting(state: ConnectionState, meeting_id: Optional[str]) -> O
 async def _stop_recording(state: ConnectionState, ws: WebSocket, connection_id: str) -> None:
     """녹음 정지: STT 를 마무리하고 아직 안 올린 녹음을 S3 로 올린다."""
     state.stt_ready = False
-    if state.nemotron_stream is not None:
-        await state.nemotron_stream.close()
-        state.nemotron_stream = None
+    if state.speech_stream is not None:
+        await state.speech_stream.close()
+        state.speech_stream = None
     elif state.stt_provider == "transcribe":
         if state.transcribe_task and not state.transcribe_task.done():
             # Signal end-of-stream; wait up to 8 s for final results
@@ -1848,8 +1877,16 @@ async def ws_endpoint(
                 await _stop_recording(state, ws, connection_id)
                 provider = data.get("sttProvider", "whisper")
                 try:
-                    validate_provider(provider)
-                    source_lang, translation_target = parse_language_settings(provider, data)
+                    # Older Whisper clients send multi-second WAV batches and
+                    # translate partials speculatively. They must opt into the
+                    # new protocol before any streaming session is opened.
+                    streaming = is_streaming_provider(provider) and (
+                        provider != "whisper" or data.get("sttStreaming") is True
+                    )
+                    validate_provider(provider, streaming=streaming)
+                    source_lang, translation_target = parse_language_settings(
+                        provider, data, streaming=streaming,
+                    )
                 except (TypeError, ValueError) as exc:
                     await _safe_send(ws, {
                         "type": "error",
@@ -1857,7 +1894,7 @@ async def ws_endpoint(
                         "timestamp": _iso_now(),
                     })
                     continue
-                if active_inference_component_for(provider) or is_streaming_provider(provider):
+                if active_inference_component_for(provider) or streaming:
                     status = await capacity.start_session(provider, connection_id)
                     if status["status"] != "ready":
                         await _safe_send(ws, {"type": "stt_status", **status, "recordingBlocked": True})
@@ -1879,6 +1916,7 @@ async def ws_endpoint(
 
                 state.stt_provider = provider
                 state.stt_ready = True
+                state.stt_streaming = streaming
                 state.target_lang = translation_target if translation_target != "auto" else "ko"
                 state.source_lang = source_lang
                 state.translation_target = translation_target
@@ -1914,8 +1952,8 @@ async def ws_endpoint(
                     state.transcribe_task = asyncio.create_task(
                         _run_transcribe_streaming(state, ws, connection_id)
                     )
-                elif is_streaming_provider(state.stt_provider):
-                    _start_nemotron_streaming(state, ws, connection_id)
+                elif state.stt_streaming:
+                    _start_sagemaker_streaming(state, ws, connection_id)
 
             elif action == "stopRecording":
                 await _stop_recording(state, ws, connection_id)
@@ -2053,16 +2091,16 @@ async def ws_endpoint(
                 capacity.touch(state.stt_provider)
                 audio_data: Optional[str] = data.get("audioData")
                 if audio_data:
-                    if state.nemotron_stream is not None:
+                    if state.speech_stream is not None:
                         try:
-                            pcm = _nemotron_pcm(audio_data)
+                            pcm = _streaming_pcm(audio_data)
                             _buffer_audio(state, connection_id, pcm)
                             # Silence drives model endpointing; even a tiny stop tail is valid.
-                            await state.nemotron_stream.send_audio(pcm)
+                            await state.speech_stream.send_audio(pcm)
                         except Exception as exc:
-                            await _nemotron_recording_failed(
-                                state, ws, connection_id, state.nemotron_stream,
-                                f"Nemotron 오디오 전송에 실패했습니다: {exc}",
+                            await _sagemaker_recording_failed(
+                                state, ws, connection_id, state.speech_stream,
+                                f"실시간 오디오 전송에 실패했습니다: {exc}",
                             )
                             await _stop_recording(state, ws, connection_id)
                         continue
@@ -2116,9 +2154,9 @@ async def ws_endpoint(
     except WebSocketDisconnect:
         logger.info("[ws] Disconnected: connection_id=%s", connection_id)
     finally:
-        if state.nemotron_stream is not None:
+        if state.speech_stream is not None:
             await _stop_recording(state, ws, connection_id)
-        if is_streaming_provider(state.stt_provider) and state.segment_tasks:
+        if state.stt_streaming and state.segment_tasks:
             await asyncio.gather(*list(state.segment_tasks), return_exceptions=True)
         capacity.release(state.stt_provider, connection_id)
         # Clean up both modes

@@ -1,0 +1,13 @@
+{
+  "status": "complete",
+  "started_at": "2026-10-28T20:51:26.973851+00:00",
+  "previous_task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:32",
+  "task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:34",
+  "image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-ws-backend@sha256:bb9fdc8f9895b8a4bb9776fc69138ae065bfd47ff430f17dae28b276a9091fbe",
+  "model_endpoint": "transmeet-qwen-streaming",
+  "model_config": "transmeet-qwen-streaming-c0a866de6144-cfg",
+  "region": "ap-northeast-2",
+  "chunk_ms": 1000,
+  "other_environment": "Preserved from the current live ECS task definition",
+  "completed_at": "2026-10-28T20:54:23.518819+00:00"
+}

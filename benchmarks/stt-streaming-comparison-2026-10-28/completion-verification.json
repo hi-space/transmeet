@@ -1,0 +1,11 @@
+{
+  "backend_workspace": "485 passed (including final comparison harness)",
+  "merged_live_image": "40 targeted Qwen/language/region tests passed",
+  "browser": "18 Qwen scenarios passed",
+  "frontend_unit": "73 passed",
+  "types_and_production_build": "passed",
+  "full_app_native_smoke": "Qwen and Nemotron KO/EN authentication, live partials, translation and persistence passed",
+  "fresh_performance": "80/80, zero transport errors;80scores+hashes recomputed",
+  "digital_silence": "40 seconds, zero transcripts/errors",
+  "runtime_state": "2026-10-28T21:35:21.327417+00:00"
+}

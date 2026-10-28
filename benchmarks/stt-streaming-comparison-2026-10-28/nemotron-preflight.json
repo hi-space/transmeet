@@ -1,0 +1,288 @@
+{
+  "checked_at": "2026-10-28T20:59:15.448096+00:00",
+  "audit_scope": "Read-only deployment, IAM, previous payload records, and reusable input verification. No new GPU inference or AWS/source mutations.",
+  "live_ecs": {
+    "last_observed_at": "2026-10-28T21:01:15.811230+00:00",
+    "service_task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+    "deployments": [
+      {
+        "status": "PRIMARY",
+        "taskDefinition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+        "runningCount": 1,
+        "pendingCount": 0,
+        "rolloutState": "COMPLETED",
+        "rolloutStateReason": "ECS deployment ecs-svc/7333950839463620706 completed."
+      }
+    ],
+    "running_tasks": [
+      {
+        "task_arn": "arn:aws:ecs:us-east-1:913524902871:task/transmeet-ws-cluster/c4b98eb2de8c453f93d1f28f74f18df0",
+        "task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+        "status": "RUNNING",
+        "started_at": "2026-10-28 20:56:25.708000+00:00",
+        "containers": [
+          {
+            "name": "ws-backend",
+            "image_digest": "sha256:bb9fdc8f9895b8a4bb9776fc69138ae065bfd47ff430f17dae28b276a9091fbe",
+            "status": "RUNNING",
+            "private_ips": [
+              "172.31.95.87"
+            ]
+          }
+        ]
+      }
+    ],
+    "healthy_target_ips": [
+      "172.31.95.87"
+    ]
+  },
+  "native_endpoint": {
+    "confidence": "verified",
+    "region": "ap-northeast-2",
+    "name": "transmeet-nemotron-streaming",
+    "arn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-streaming",
+    "status": "InService",
+    "endpoint_config": "transmeet-nemotron-streaming-859ae8f54c75-cfg",
+    "model_name": "transmeet-nemotron-streaming-859ae8f54c75",
+    "model_id": "nvidia/nemotron-3.5-asr-streaming-0.6b",
+    "jumpstart_artifact_version": "1.0.2",
+    "image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-nemotron-streaming@sha256:c20c3f92bf90b7786e4a5122e4404e682c418fca8f2d7442601595a7261e6c23",
+    "artifact": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-nvidia-nemotron-3-5-asr-streaming-0-6b/artifacts/inference-prepack/v1.0.2/",
+    "actual_instance_type": "ml.g5.xlarge",
+    "current_instance_count": 1,
+    "desired_instance_count": 1,
+    "configured_instance_pools": [
+      {
+        "InstanceType": "ml.g5.xlarge",
+        "Priority": 1
+      },
+      {
+        "InstanceType": "ml.g5.4xlarge",
+        "Priority": 2
+      }
+    ],
+    "scalable_targets": [],
+    "inference_ami": "al2-ami-sagemaker-inference-gpu-3-1",
+    "image_matches_previous_successful_provenance": true,
+    "previous_source_hashes_match_current_source": true
+  },
+  "iam": {
+    "task_role": "arn:aws:iam::913524902871:role/TransmeetStack-WsTaskRole4B337A19-JBueyIt7ZiW8",
+    "native_endpoint_resource_decisions": {
+      "sagemaker:InvokeEndpoint": "allowed",
+      "sagemaker:InvokeEndpointWithResponseStream": "implicitDeny",
+      "sagemaker:InvokeEndpointWithBidirectionalStream": "allowed"
+    },
+    "required_actions_allowed": true,
+    "note": "Regular InvokeEndpoint and bidirectional action were simulated separately. WithResponseStream is a different, unused API in the inspected native client. Simulator success is not a substitute for runtime IAM/application protocol verification."
+  },
+  "previous_real_payload_evidence": {
+    "scope": "Existing completed runs; do not substitute for the user-requested new post-deployment four-provider comparison.",
+    "reports": [
+      {
+        "path": "benchmarks/nemotron-streaming-2026-10-28/ko-320.json",
+        "sha256": "1fd2dfe6ed8e41693556d79427102d0c045f7f29ff098efcdb9fc609afe38852",
+        "created_at": "2026-10-28T20:33:07.660899+00:00",
+        "completed_file_mtime": "2026-10-28T20:35:03.416188+00:00",
+        "manifest_sha256": "5d61914cdf01e27d3e266557bd3295624023efb6396b2b0a2f37e9c5b5606ee0",
+        "chunk_ms": 320,
+        "language_mode": "manifest",
+        "status": "complete",
+        "summary": {
+          "successful_samples": 10,
+          "failed_samples": 0,
+          "pending_samples": 0,
+          "error_count": 0,
+          "ranking_allowed": true,
+          "cer": 0.10067114093959731,
+          "wer": null,
+          "valid_only": {
+            "cer": 0.10067114093959731,
+            "errors": 45,
+            "reference_chars": 447,
+            "wer": null,
+            "word_errors": 0,
+            "reference_words": 0,
+            "partial_count": 420,
+            "partial_before_audio_end_samples": 10,
+            "samples_with_partial": 10,
+            "median_startup_seconds": 0.345006,
+            "median_first_partial_seconds": 1.9653405,
+            "median_final_lag_seconds": -0.7846770000000001,
+            "median_end_to_end_seconds": 11.584397500000001
+          }
+        }
+      },
+      {
+        "path": "benchmarks/nemotron-streaming-2026-10-28/ko-560.json",
+        "sha256": "2e34a0df383382f0d8fe80bad562fe09cb2dae506d96a4a4957e89653e557e23",
+        "created_at": "2026-10-28T20:36:39.908927+00:00",
+        "completed_file_mtime": "2026-10-28T20:38:35.639942+00:00",
+        "manifest_sha256": "5d61914cdf01e27d3e266557bd3295624023efb6396b2b0a2f37e9c5b5606ee0",
+        "chunk_ms": 560,
+        "language_mode": "manifest",
+        "status": "complete",
+        "summary": {
+          "successful_samples": 10,
+          "failed_samples": 0,
+          "pending_samples": 0,
+          "error_count": 0,
+          "ranking_allowed": true,
+          "cer": 0.0894854586129754,
+          "wer": null,
+          "valid_only": {
+            "cer": 0.0894854586129754,
+            "errors": 40,
+            "reference_chars": 447,
+            "wer": null,
+            "word_errors": 0,
+            "reference_words": 0,
+            "partial_count": 419,
+            "partial_before_audio_end_samples": 10,
+            "samples_with_partial": 10,
+            "median_startup_seconds": 0.320867,
+            "median_first_partial_seconds": 2.284858,
+            "median_final_lag_seconds": -0.8085964999999999,
+            "median_end_to_end_seconds": 11.5690505
+          }
+        }
+      },
+      {
+        "path": "benchmarks/nemotron-streaming-2026-10-28/en-320.json",
+        "sha256": "46d443dfb91c4c058938bb1da2fa7deac0d778fc8e5a9de1b49978e9c425186c",
+        "created_at": "2026-10-28T20:35:03.940744+00:00",
+        "completed_file_mtime": "2026-10-28T20:36:39.384078+00:00",
+        "manifest_sha256": "09d2c6e77bb6d075a0d1f70560855dc94e8899cb3615c4b50092f51eeac001d6",
+        "chunk_ms": 320,
+        "language_mode": "manifest",
+        "status": "complete",
+        "summary": {
+          "successful_samples": 10,
+          "failed_samples": 0,
+          "pending_samples": 0,
+          "error_count": 0,
+          "ranking_allowed": true,
+          "cer": 0.06256206554121152,
+          "wer": 0.0947867298578199,
+          "valid_only": {
+            "cer": 0.06256206554121152,
+            "errors": 63,
+            "reference_chars": 1007,
+            "wer": 0.0947867298578199,
+            "word_errors": 20,
+            "reference_words": 211,
+            "partial_count": 472,
+            "partial_before_audio_end_samples": 10,
+            "samples_with_partial": 10,
+            "median_startup_seconds": 0.3238215,
+            "median_first_partial_seconds": 1.643038,
+            "median_final_lag_seconds": 0.049275,
+            "median_end_to_end_seconds": 10.3562325
+          }
+        }
+      },
+      {
+        "path": "benchmarks/nemotron-streaming-2026-10-28/en-560.json",
+        "sha256": "0606483bc99df7a6d2cf9d6b6d03a28036fb98af3863fddfb1dd47c6feffcd29",
+        "created_at": "2026-10-28T20:38:36.161251+00:00",
+        "completed_file_mtime": "2026-10-28T20:40:11.581831+00:00",
+        "manifest_sha256": "09d2c6e77bb6d075a0d1f70560855dc94e8899cb3615c4b50092f51eeac001d6",
+        "chunk_ms": 560,
+        "language_mode": "manifest",
+        "status": "complete",
+        "summary": {
+          "successful_samples": 10,
+          "failed_samples": 0,
+          "pending_samples": 0,
+          "error_count": 0,
+          "ranking_allowed": true,
+          "cer": 0.04667328699106256,
+          "wer": 0.07109004739336493,
+          "valid_only": {
+            "cer": 0.04667328699106256,
+            "errors": 47,
+            "reference_chars": 1007,
+            "wer": 0.07109004739336493,
+            "word_errors": 15,
+            "reference_words": 211,
+            "partial_count": 475,
+            "partial_before_audio_end_samples": 10,
+            "samples_with_partial": 10,
+            "median_startup_seconds": 0.323905,
+            "median_first_partial_seconds": 1.8026845,
+            "median_final_lag_seconds": 0.052665500000000004,
+            "median_end_to_end_seconds": 10.361473
+          }
+        }
+      }
+    ],
+    "successful_samples": 40,
+    "failed_samples": 0,
+    "all_samples_produced_partials_before_audio_end": true,
+    "session_validation_path": "benchmarks/nemotron-streaming-2026-10-28/session-validation.json",
+    "session_tests": [
+      {
+        "test": "AUTO Korean clip",
+        "passed_without_transport_errors": true,
+        "partial_before_audio_end": true,
+        "final_count": 1
+      },
+      {
+        "test": "AUTO English clip",
+        "passed_without_transport_errors": true,
+        "partial_before_audio_end": true,
+        "final_count": 1
+      },
+      {
+        "test": "35-second silence and AUTO language switch",
+        "passed_without_transport_errors": true,
+        "resolved_languages": [
+          "en",
+          "ko"
+        ],
+        "final_count": 2
+      }
+    ],
+    "concurrency_claim": "README states concurrent sessions were tested. The session-validation JSON preserves two AUTO result rows but does not record shared absolute timestamps or an explicit concurrency flag, so simultaneous overlap cannot be independently established from that artifact alone."
+  },
+  "same_fleurs_inputs": [
+    {
+      "language": "ko",
+      "manifest": "benchmarks/stt-ko-en-2026-10-28/manifest-ko.json",
+      "sha256": "5d61914cdf01e27d3e266557bd3295624023efb6396b2b0a2f37e9c5b5606ee0",
+      "sample_count": 10,
+      "total_audio_seconds": 111.12,
+      "all_audio_sha256_verified": true
+    },
+    {
+      "language": "en",
+      "manifest": "benchmarks/stt-ko-en-2026-10-28/manifest-en.json",
+      "sha256": "09d2c6e77bb6d075a0d1f70560855dc94e8899cb3615c4b50092f51eeac001d6",
+      "sample_count": 10,
+      "total_audio_seconds": 90.98,
+      "all_audio_sha256_verified": true
+    }
+  ],
+  "local_native_processes_at_last_check": [],
+  "remaining_before_final_comparison": [
+    "Confirm application/ECS-task-role live partial/final protocol success for the exact selected native endpoint; existing direct benchmark results and IAM simulation do not independently prove the production application path.",
+    "Root coordinates fresh four-provider runs after deployment verification and keeps requests on each GPU non-overlapping."
+  ],
+  "fair_comparison_conditions": [
+    "Use all 20 hash-identical FLEURS PCM16/16kHz/mono files with the same references; no trimming, VAD-based input loss, augmentation, or number rewriting.",
+    "Use the deployed production settings: Nemotron 560 ms and Qwen 1000 ms; record them explicitly. Model chunk duration is separate from common 160 ms real-time capture pacing.",
+    "Use identical language-mode policy for the final corpus. Prior native accuracy used explicit manifest language; AUTO checks are separate and must not be silently mixed into that corpus.",
+    "Measure startup separately; measure first nonempty displayed text from audio capture start after readiness. Keep leading silence in all models and score finalized text only.",
+    "Record whether the first displayed text is partial or final. Preserve startup, first-partial/first-text, final lag, full capture duration, and transport errors as separate metrics.",
+    "Do not treat real-time replay end-to-end time or the earlier unpaced full-clip/batch wall time as the same latency metric. Final lag can be negative because of trailing silence.",
+    "Record provider regions and client location/path; native endpoints are Seoul while existing Transcribe/Whisper configuration is us-east-1. Direct endpoint timings exclude browser/microphone, translation, and meeting persistence.",
+    "Any failed or incomplete condition retains events/errors and cannot receive a rankable corpus score. Twenty clean read-speech clips do not establish performance under noisy, overlapping meeting speech."
+  ],
+  "evidence_files": [
+    "nemotron-preflight-live.json",
+    "nemotron-preflight-iam.json",
+    "nemotron-preflight-rollout.json",
+    "nemotron-preflight-inputs.json"
+  ],
+  "updated_at": "2026-10-28T21:02:23.789648+00:00"
+}

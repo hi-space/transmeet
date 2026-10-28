@@ -1,0 +1,338 @@
+[
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218326542,
+    "message": "INFO:     Waiting for application startup.",
+    "ingestionTime": 1793218331545
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218334884,
+    "message": "INFO 10-28 13:12:14 [utils.py:263] non-default args: {'dtype': 'bfloat16', 'max_model_len': 8192, 'gpu_memory_utilization': 0.78, 'max_num_seqs': 1, 'disable_log_stats': True, 'enforce_eager': True, 'model': '/opt/ml/model'}",
+    "ingestionTime": 1793218339903
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218334884,
+    "message": "INFO 10-28 13:12:14 [model.py:530] Resolved architecture: Qwen3ASRForConditionalGeneration",
+    "ingestionTime": 1793218339903
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218336888,
+    "message": "ERROR 10-28 13:12:14 [repo_utils.py:65] Error retrieving safetensors: Repo id must be in the form 'repo_name' or 'namespace/repo_name': '/opt/ml/model'. Use `repo_type` argument if needed., retrying 1 of 2",
+    "ingestionTime": 1793218339903
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218336888,
+    "message": "ERROR 10-28 13:12:16 [repo_utils.py:63] Error retrieving safetensors: Repo id must be in the form 'repo_name' or 'namespace/repo_name': '/opt/ml/model'. Use `repo_type` argument if needed.",
+    "ingestionTime": 1793218339903
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218336888,
+    "message": "INFO 10-28 13:12:16 [model.py:1866] Downcasting torch.float32 to torch.bfloat16.",
+    "ingestionTime": 1793218339903
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218337139,
+    "message": "INFO 10-28 13:12:16 [model.py:1545] Using max model len 8192",
+    "ingestionTime": 1793218339903
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218337139,
+    "message": "INFO 10-28 13:12:16 [scheduler.py:229] Chunked prefill is enabled with max_num_batched_tokens=8192.",
+    "ingestionTime": 1793218339903
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218337139,
+    "message": "INFO 10-28 13:12:16 [vllm.py:630] Asynchronous scheduling is enabled.",
+    "ingestionTime": 1793218339903
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218337139,
+    "message": "INFO 10-28 13:12:16 [vllm.py:637] Disabling NCCL for DP synchronization when using async scheduling.",
+    "ingestionTime": 1793218339903
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218337139,
+    "message": "WARNING 10-28 13:12:16 [vllm.py:665] Enforce eager set, overriding optimization level to -O0",
+    "ingestionTime": 1793218339903
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218337390,
+    "message": "INFO 10-28 13:12:16 [vllm.py:765] Cudagraph is disabled under eager mode",
+    "ingestionTime": 1793218339903
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218337390,
+    "message": "The tokenizer you are loading from '/opt/ml/model' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.",
+    "ingestionTime": 1793218339903
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218342106,
+    "message": "The following generation flags are not valid and may be ignored: ['temperature']. Set `TRANSFORMERS_VERBOSITY=info` for more details.",
+    "ingestionTime": 1793218347125
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218351166,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m INFO 10-28 13:12:31 [core.py:97] Initializing a V1 LLM engine (v0.14.0) with config: model='/opt/ml/model', speculative_config=None, tokenizer='/opt/ml/model', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=8192, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, disable_custom_all_reduce=False, quantization=None, enforce_eager=True, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_fallback=False, disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False), seed=0, served_model_name=/opt/ml/model, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'level': None, 'mode': <CompilationMode.NONE: 0>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['all'], 'splitting_ops': [], 'compile_mm_encoder': False, 'compile_sizes': [], 'compile_ranges_split_points': [8192], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.NONE: 0>, 'cudagraph_num_of_warmups': 0, 'cudagraph_capture_sizes': [], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'eliminate_noops': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False}, 'max_cudagraph_capture_size': 0, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': True}, 'local_cache_dir': None}",
+    "ingestionTime": 1793218356185
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218351166,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m /usr/local/lib/python3.12/dist-packages/vllm/v1/executor/uniproc_executor.py:52: UserWarning: Failed to get the IP address, using 0.0.0.0 by default.The value can be set by the environment variable VLLM_HOST_IP or HOST_IP.",
+    "ingestionTime": 1793218356185
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218351667,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m   distributed_init_method = get_distributed_init_method(get_ip(), get_open_port())",
+    "ingestionTime": 1793218356185
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218352419,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m The tokenizer you are loading from '/opt/ml/model' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.",
+    "ingestionTime": 1793218356185
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218352419,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m INFO 10-28 13:12:32 [parallel_state.py:1214] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://0.0.0.0:48509 backend=nccl",
+    "ingestionTime": 1793218356185
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218352419,
+    "message": "[W1028 13:12:32.122063912 socket.cpp:209] [c10d] The hostname of the client socket cannot be retrieved. err=-3",
+    "ingestionTime": 1793218356185
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218353672,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m INFO 10-28 13:12:32 [parallel_state.py:1425] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank N/A",
+    "ingestionTime": 1793218356185
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218355676,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m The tokenizer you are loading from '/opt/ml/model' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.",
+    "ingestionTime": 1793218356185
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218356678,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m The tokenizer you are loading from '/opt/ml/model' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.",
+    "ingestionTime": 1793218361684
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218357179,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m INFO 10-28 13:12:36 [gpu_model_runner.py:3808] Starting to load model /opt/ml/model...",
+    "ingestionTime": 1793218361684
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218357179,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m INFO 10-28 13:12:37 [mm_encoder_attention.py:86] Using AttentionBackendEnum.FLASH_ATTN for MMEncoderAttention.",
+    "ingestionTime": 1793218361684
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218357179,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m INFO 10-28 13:12:37 [vllm.py:630] Asynchronous scheduling is enabled.",
+    "ingestionTime": 1793218361684
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218357179,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m WARNING 10-28 13:12:37 [vllm.py:672] Inductor compilation was disabled by user settings, optimizations settings that are only active during inductor compilation will be ignored.",
+    "ingestionTime": 1793218361684
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218362106,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m INFO 10-28 13:12:37 [vllm.py:765] Cudagraph is disabled under eager mode",
+    "ingestionTime": 1793218367110
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218375720,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m INFO 10-28 13:12:55 [cuda.py:351] Using FLASH_ATTN attention backend out of potential backends: ('FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION')",
+    "ingestionTime": 1793218380738
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218375971,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m #015Loading safetensors checkpoint shards:   0% Completed | 0/2 [00:00<?, ?it/s]",
+    "ingestionTime": 1793218380738
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218376473,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m #015Loading safetensors checkpoint shards:  50% Completed | 1/2 [00:00<00:00,  7.01it/s]",
+    "ingestionTime": 1793218380738
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218376473,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m #015Loading safetensors checkpoint shards: 100% Completed | 2/2 [00:00<00:00,  2.57it/s]",
+    "ingestionTime": 1793218380738
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218376473,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m #015Loading safetensors checkpoint shards: 100% Completed | 2/2 [00:00<00:00,  2.84it/s]",
+    "ingestionTime": 1793218380738
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218376723,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m ",
+    "ingestionTime": 1793218380738
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218377225,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m INFO 10-28 13:12:56 [default_loader.py:291] Loading weights took 0.81 seconds",
+    "ingestionTime": 1793218380738
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218377476,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m INFO 10-28 13:12:57 [gpu_model_runner.py:3905] Model loading took 3.87 GiB memory and 19.449100 seconds",
+    "ingestionTime": 1793218380738
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218380232,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m INFO 10-28 13:12:57 [gpu_model_runner.py:4715] Encoder cache will be initialized with a budget of 8192 tokens, and profiled with 21 audio items of the maximum feature size.",
+    "ingestionTime": 1793218380738
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218380483,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m INFO 10-28 13:12:59 [gpu_worker.py:358] Available KV cache memory: 9.67 GiB",
+    "ingestionTime": 1793218380738
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218380483,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m INFO 10-28 13:13:00 [kv_cache_utils.py:1305] GPU KV cache size: 90,512 tokens",
+    "ingestionTime": 1793218380738
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218380753,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m INFO 10-28 13:13:00 [kv_cache_utils.py:1310] Maximum concurrency for 8,192 tokens per request: 11.05x",
+    "ingestionTime": 1793218385757
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218381235,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m INFO 10-28 13:13:00 [core.py:273] init engine (profile, create kv cache, warmup model) took 3.51 seconds",
+    "ingestionTime": 1793218385757
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218381235,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m WARNING 10-28 13:13:01 [vllm.py:672] Inductor compilation was disabled by user settings, optimizations settings that are only active during inductor compilation will be ignored.",
+    "ingestionTime": 1793218385757
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218381235,
+    "message": "#033[0;36m(EngineCore_DP0 pid=64)#033[0;0m INFO 10-28 13:13:01 [vllm.py:765] Cudagraph is disabled under eager mode",
+    "ingestionTime": 1793218385757
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218382238,
+    "message": "INFO 10-28 13:13:01 [llm.py:347] Supported tasks: ['generate', 'transcription']",
+    "ingestionTime": 1793218385757
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218384243,
+    "message": "The tokenizer you are loading from '/opt/ml/model' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.",
+    "ingestionTime": 1793218385757
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218385497,
+    "message": "The tokenizer you are loading from '/opt/ml/model' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.",
+    "ingestionTime": 1793218385757
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218385497,
+    "message": "Qwen streaming ready: model=/opt/ml/model gpu=NVIDIA L4",
+    "ingestionTime": 1793218385757
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218385497,
+    "message": "INFO:     Application startup complete.",
+    "ingestionTime": 1793218385757
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218389509,
+    "message": "INFO:     Uvicorn running on http://0.0.0.0:8080 (Press CTRL+C to quit)",
+    "ingestionTime": 1793218394532
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218394106,
+    "message": "INFO:     169.254.178.2:57578 - \"GET /ping HTTP/1.1\" 200 OK",
+    "ingestionTime": 1793218394532
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218398277,
+    "message": "INFO:     169.254.178.2:57578 - \"GET /ping HTTP/1.1\" 200 OK",
+    "ingestionTime": 1793218403298
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218399279,
+    "message": "INFO:     169.254.178.2:32858 - \"GET /metrics HTTP/1.1\" 404 Not Found",
+    "ingestionTime": 1793218403298
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218404106,
+    "message": "INFO:     169.254.178.2:57578 - \"GET /ping HTTP/1.1\" 200 OK",
+    "ingestionTime": 1793218409219
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218409106,
+    "message": "INFO:     169.254.178.2:32872 - \"GET /ping HTTP/1.1\" 200 OK",
+    "ingestionTime": 1793218409219
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218414106,
+    "message": "INFO:     169.254.178.2:32872 - \"GET /ping HTTP/1.1\" 200 OK",
+    "ingestionTime": 1793218419121
+  },
+  {
+    "stream": "AllTraffic/i-0d2a6d38513497449",
+    "timestamp": 1793218419106,
+    "message": "INFO:     169.254.178.2:55296 - \"GET /ping HTTP/1.1\" 200 OK",
+    "ingestionTime": 1793218419121
+  }
+]

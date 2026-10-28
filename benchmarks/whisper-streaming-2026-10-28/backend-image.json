@@ -1,0 +1,7 @@
+{
+  "image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-ws-backend@sha256:df0dce3909c014120b0c1c1d0dd89a9f69979c6ba79536d706927c82ed8e7524",
+  "tag": "whisper-streaming-20261028-f2701264ecd0",
+  "base_image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-ws-backend@sha256:bb9fdc8f9895b8a4bb9776fc69138ae065bfd47ff430f17dae28b276a9091fbe",
+  "base_task": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+  "overlay_sha256": "f2701264ecd0b412cc6ec53413e1a3a560c8a71e30cb35d3c614309451e207e1"
+}

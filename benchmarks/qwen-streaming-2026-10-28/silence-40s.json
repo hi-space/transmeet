@@ -1,0 +1,39 @@
+{
+  "sample_id": "digital-silence-40s",
+  "language": "en",
+  "requested_language": "auto",
+  "reference": "",
+  "audio_seconds": 40.0,
+  "text": "",
+  "detected_languages": [],
+  "startup_seconds": 0.36096,
+  "first_partial_seconds": null,
+  "final_lag_seconds": null,
+  "end_to_end_seconds": 40.064886,
+  "audio_send_seconds": 40.000364,
+  "total_seconds": 40.425906,
+  "partial_count": 0,
+  "final_count": 0,
+  "partial_before_audio_end": false,
+  "error_count": 0,
+  "events": [
+    {
+      "type": "ready",
+      "stream_id": 1,
+      "elapsed_seconds": 0.36096,
+      "audio_elapsed_seconds": null
+    },
+    {
+      "type": "ended",
+      "stream_id": 1,
+      "elapsed_seconds": 40.365763,
+      "audio_elapsed_seconds": 40.004743
+    }
+  ],
+  "errors": 0,
+  "reference_chars": 0,
+  "cer": null,
+  "word_errors": 0,
+  "reference_words": 0,
+  "wer": null
+}

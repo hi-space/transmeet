@@ -1,0 +1,41 @@
+{
+  "EndpointName": "whisper-large",
+  "EndpointArn": "arn:aws:sagemaker:us-east-1:913524902871:endpoint/whisper-large",
+  "EndpointConfigName": "whisper-large-1770857274414",
+  "ProductionVariants": [
+    {
+      "VariantName": "AllTraffic",
+      "DeployedImages": [
+        {
+          "SpecifiedImage": "763104351884.dkr.ecr.us-east-1.amazonaws.com/huggingface-pytorch-inference:2.1.0-transformers4.37.0-gpu-py310-cu118-ubuntu20.04",
+          "ResolvedImage": "763104351884.dkr.ecr.us-east-1.amazonaws.com/huggingface-pytorch-inference@sha256:c1fa2c7f57e0e9637267afbc199e2ae51d152d997278d28292723b16f118e4b1",
+          "ResolutionTime": "2026-02-12 00:47:56.797000+00:00"
+        }
+      ],
+      "CurrentWeight": 1.0,
+      "DesiredWeight": 1.0,
+      "CurrentInstanceCount": 1,
+      "DesiredInstanceCount": 1
+    }
+  ],
+  "EndpointStatus": "InService",
+  "FailureReason": "Unable to provision requested ML compute capacity due to InsufficientInstanceCapacity error. Please retry using a different ML instance type or after some time. Consider configuring InstancePools in your EndpointConfig with multiple instance types for priority-based fallback to improve capacity availability.",
+  "CreationTime": "2026-02-12 00:47:56.079000+00:00",
+  "LastModifiedTime": "2026-10-28 22:56:36.891000+00:00",
+  "ResponseMetadata": {
+    "RequestId": "94e7ad21-66ec-446a-9788-1d7838687ab0",
+    "HTTPStatusCode": 200,
+    "HTTPHeaders": {
+      "x-amzn-requestid": "94e7ad21-66ec-446a-9788-1d7838687ab0",
+      "strict-transport-security": "max-age=47304000; includeSubDomains",
+      "x-frame-options": "DENY",
+      "content-security-policy": "frame-ancestors 'none'",
+      "cache-control": "no-cache, no-store, must-revalidate",
+      "x-content-type-options": "nosniff",
+      "content-type": "application/x-amz-json-1.1",
+      "content-length": "1097",
+      "date": "Wed, 28 Oct 2026 22:59:24 GMT"
+    },
+    "RetryAttempts": 0
+  }
+}

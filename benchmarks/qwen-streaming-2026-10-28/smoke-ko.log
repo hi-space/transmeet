@@ -1,0 +1,25 @@
+fleurs-ko-test-row-0: CER=0.057
+{
+  "successful_samples": 1,
+  "failed_samples": 0,
+  "pending_samples": 0,
+  "error_count": 0,
+  "ranking_allowed": true,
+  "cer": 0.05660377358490566,
+  "wer": null,
+  "valid_only": {
+    "cer": 0.05660377358490566,
+    "errors": 3,
+    "reference_chars": 53,
+    "wer": null,
+    "word_errors": 0,
+    "reference_words": 0,
+    "partial_count": 9,
+    "partial_before_audio_end_samples": 1,
+    "samples_with_partial": 1,
+    "median_startup_seconds": 0.927648,
+    "median_first_partial_seconds": 2.419298,
+    "median_final_lag_seconds": -0.481464,
+    "median_end_to_end_seconds": 12.546365
+  }
+}

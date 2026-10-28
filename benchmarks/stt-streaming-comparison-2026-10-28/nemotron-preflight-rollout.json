@@ -1,0 +1,145 @@
+{
+  "checked_at": "2026-10-28T20:58:07.903576+00:00",
+  "service_task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+  "desired_count": 1,
+  "running_count": 1,
+  "pending_count": 0,
+  "deployments": [
+    {
+      "id": "ecs-svc/7333950839463620706",
+      "status": "PRIMARY",
+      "taskDefinition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+      "runningCount": 1,
+      "pendingCount": 0,
+      "rolloutState": "IN_PROGRESS"
+    },
+    {
+      "id": "ecs-svc/9180536270840274829",
+      "status": "DRAINING",
+      "taskDefinition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:34",
+      "runningCount": 0,
+      "pendingCount": 0,
+      "rolloutState": "COMPLETED"
+    }
+  ],
+  "tasks": [
+    {
+      "task_arn": "arn:aws:ecs:us-east-1:913524902871:task/transmeet-ws-cluster/c4b98eb2de8c453f93d1f28f74f18df0",
+      "task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+      "last_status": "RUNNING",
+      "started_at": "2026-10-28 20:56:25.708000+00:00",
+      "containers": [
+        {
+          "name": "ws-backend",
+          "image_digest": "sha256:bb9fdc8f9895b8a4bb9776fc69138ae065bfd47ff430f17dae28b276a9091fbe",
+          "status": "RUNNING",
+          "private_ips": [
+            "172.31.95.87"
+          ]
+        }
+      ],
+      "stt_environment": {
+        "NEMOTRON_STREAMING_REGION": "ap-northeast-2",
+        "QWEN_STREAMING_ENABLED": "true",
+        "NEMOTRON_STREAMING_ENDPOINT": "transmeet-nemotron-streaming",
+        "NEMOTRON_STREAMING_ENABLED": "true",
+        "NEMOTRON_STREAMING_CHUNK_MS": "560",
+        "QWEN_STREAMING_REGION": "ap-northeast-2",
+        "QWEN_STREAMING_CHUNK_MS": "1000",
+        "QWEN_STREAMING_ENDPOINT": "transmeet-qwen-streaming"
+      }
+    }
+  ],
+  "target_health": [
+    {
+      "target_group_arn": "arn:aws:elasticloadbalancing:us-east-1:913524902871:targetgroup/Transm-WsTg5-1MSB7AWIPOVX/072a3aa798dbe54a",
+      "targets": [
+        {
+          "Target": {
+            "Id": "172.31.11.38",
+            "Port": 8000,
+            "AvailabilityZone": "us-east-1c"
+          },
+          "HealthCheckPort": "8000",
+          "TargetHealth": {
+            "State": "draining",
+            "Reason": "Target.DeregistrationInProgress",
+            "Description": "Target deregistration is in progress"
+          },
+          "AdministrativeOverride": {
+            "State": "no_override",
+            "Reason": "AdministrativeOverride.NoOverride",
+            "Description": "No override is currently active on target"
+          }
+        },
+        {
+          "Target": {
+            "Id": "172.31.58.109",
+            "Port": 8000,
+            "AvailabilityZone": "us-east-1e"
+          },
+          "HealthCheckPort": "8000",
+          "TargetHealth": {
+            "State": "draining",
+            "Reason": "Target.DeregistrationInProgress",
+            "Description": "Target deregistration is in progress"
+          },
+          "AdministrativeOverride": {
+            "State": "no_override",
+            "Reason": "AdministrativeOverride.NoOverride",
+            "Description": "No override is currently active on target"
+          }
+        },
+        {
+          "Target": {
+            "Id": "172.31.95.87",
+            "Port": 8000,
+            "AvailabilityZone": "us-east-1d"
+          },
+          "HealthCheckPort": "8000",
+          "TargetHealth": {
+            "State": "healthy"
+          },
+          "AdministrativeOverride": {
+            "State": "no_override",
+            "Reason": "AdministrativeOverride.NoOverride",
+            "Description": "No override is currently active on target"
+          }
+        }
+      ]
+    }
+  ],
+  "previous_benchmark_source_match": {
+    "inference/nemotron_streaming/engine.py": {
+      "matches": true,
+      "previous_sha256": "bfb7bd57f8db60932639bea99656b10138e6e8305ecc4b5741390194f00bcdbd",
+      "current_sha256": "bfb7bd57f8db60932639bea99656b10138e6e8305ecc4b5741390194f00bcdbd"
+    },
+    "inference/nemotron_streaming/endpoint_policy.py": {
+      "matches": true,
+      "previous_sha256": "0e7b97c3eec15be595c8be0a2c15f1e37a9834d6f38e67477637712002e2d222",
+      "current_sha256": "0e7b97c3eec15be595c8be0a2c15f1e37a9834d6f38e67477637712002e2d222"
+    },
+    "inference/nemotron_streaming/model_runtime.py": {
+      "matches": true,
+      "previous_sha256": "00a75564c34d2ad015a434bf534b501d88601d61544f1824d678a150e13dd5aa",
+      "current_sha256": "00a75564c34d2ad015a434bf534b501d88601d61544f1824d678a150e13dd5aa"
+    },
+    "inference/nemotron_streaming/server.py": {
+      "matches": true,
+      "previous_sha256": "a2baf9bc5b658c02fafb72351157c07de5d7f49ee3e6bf74063eb3fcbf167d51",
+      "current_sha256": "a2baf9bc5b658c02fafb72351157c07de5d7f49ee3e6bf74063eb3fcbf167d51"
+    },
+    "backend/app/nemotron_stream.py": {
+      "matches": true,
+      "previous_sha256": "dbefdfcb0c97011ac43d26ef46e9d268350b331e4957b85904e4b039483a9d9e",
+      "current_sha256": "dbefdfcb0c97011ac43d26ef46e9d268350b331e4957b85904e4b039483a9d9e"
+    },
+    "backend/scripts/benchmark_nemotron_streaming.py": {
+      "matches": true,
+      "previous_sha256": "d489b5bf425224669a20c4333a306c9b68d1dd9dffdbdee6a3f0260153610ea9",
+      "current_sha256": "d489b5bf425224669a20c4333a306c9b68d1dd9dffdbdee6a3f0260153610ea9"
+    }
+  },
+  "active_native_processes": []
+}

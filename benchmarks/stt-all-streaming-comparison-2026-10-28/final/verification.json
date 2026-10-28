@@ -1,0 +1,22 @@
+{
+  "checked_at": "2026-10-28T23:44:40.419729+00:00",
+  "all80_scores_recomputed": true,
+  "all80_audio_hashes_rechecked": true,
+  "unchanged_harness_source": true,
+  "unchanged_deployed_endpoint_images_configs_hardware": true,
+  "report_sha256": {
+    "transcribe-ko.json": "13103820e7553bb1b0741e6e5cad5a62a9130031712ea3f31bc44dcd424ada5f",
+    "transcribe-en.json": "d55b87da455362ae101741fc1779bae7914239b6183b116ff5bdc27eeb84c924",
+    "whisper-ko.json": "4328a4927afc5fdaa4121b128a2ba486e437e5cf40e2b2ab2593f6feb3a8af22",
+    "whisper-en.json": "a0e461fc51a6a0f84d36cfdfe8ee94301048a139cfd16b8a0d9805c0be5afda2",
+    "qwen3-asr-ko.json": "1d5af097fcae635412c00c1d54b4cfe5df2c825f977727dd709c31968b340fa6",
+    "qwen3-asr-en.json": "7d8a6adc554b6bd8b2805c0677145b769f0417b19ab53044eb419bf7f118eefa",
+    "nemotron-ko.json": "a0a0f6b8ce83e795a2fb10f1c6a6542cf8709e844970a0a97c7021415ad563e6",
+    "nemotron-en.json": "5ea54abeb6917a2839892531311d6bc98acb5f5aaf363b221d90de67f3fbb7de"
+  },
+  "score_rows_checked": 80,
+  "audio_hashes_checked": 80,
+  "fresh_reports_checked": 8,
+  "all_reports_error_free": true,
+  "all_whisper_clips_have_partials": true
+}

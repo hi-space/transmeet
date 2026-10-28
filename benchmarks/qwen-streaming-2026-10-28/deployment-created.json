@@ -1,0 +1,27 @@
+{
+  "EndpointName": "transmeet-qwen-streaming",
+  "EndpointArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen-streaming",
+  "EndpointConfigName": "transmeet-qwen-streaming-e05b013eb7d0-cfg",
+  "EndpointStatus": "Creating",
+  "CreationTime": "2026-10-28 20:06:46.292000+00:00",
+  "LastModifiedTime": "2026-10-28 20:06:46.292000+00:00",
+  "MetricsConfig": {
+    "EnableDetailedObservability": true
+  },
+  "ResponseMetadata": {
+    "RequestId": "5a3dcd18-2684-484e-ae54-e952136a3d5b",
+    "HTTPStatusCode": 200,
+    "HTTPHeaders": {
+      "x-amzn-requestid": "5a3dcd18-2684-484e-ae54-e952136a3d5b",
+      "strict-transport-security": "max-age=47304000; includeSubDomains",
+      "x-frame-options": "DENY",
+      "content-security-policy": "frame-ancestors 'none'",
+      "cache-control": "no-cache, no-store, must-revalidate",
+      "x-content-type-options": "nosniff",
+      "content-type": "application/x-amz-json-1.1",
+      "content-length": "353",
+      "date": "Wed, 28 Oct 2026 20:06:46 GMT"
+    },
+    "RetryAttempts": 0
+  }
+}

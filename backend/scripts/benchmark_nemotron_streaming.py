@@ -265,9 +265,12 @@ def save_report(path: Path, report: dict):
     temporary.replace(path)
 
 
-async def run_benchmark(args, *, stream_factory=None, clock=time.perf_counter, sleep=asyncio.sleep):
-    if args.chunk_ms not in (320, 560) or not args.endpoint.strip():
-        raise ValueError("A streaming endpoint and chunk-ms of 320 or 560 are required")
+async def run_benchmark(
+    args, *, stream_factory=None, clock=time.perf_counter, sleep=asyncio.sleep,
+    model_id=MODEL_ID, artifact_version=ARTIFACT_VERSION, allowed_chunks=(320, 560),
+):
+    if args.chunk_ms not in allowed_chunks or not args.endpoint.strip():
+        raise ValueError(f"A streaming endpoint and chunk-ms in {allowed_chunks} are required")
     ready_timeout = getattr(args, "ready_timeout", 45)
     close_timeout = getattr(args, "close_timeout", 15)
     if any(not math.isfinite(value) or value <= 0 for value in (ready_timeout, close_timeout)):
@@ -276,7 +279,7 @@ async def run_benchmark(args, *, stream_factory=None, clock=time.perf_counter, s
     manifest, manifest_hash, prepared = prepare_samples(path, args.limit)
     report = {
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "model_id": MODEL_ID, "jumpstart_artifact_version": ARTIFACT_VERSION,
+        "model_id": model_id, "jumpstart_artifact_version": artifact_version,
         "endpoint": args.endpoint, "region": args.region,
         "manifest": str(path), "manifest_sha256": manifest_hash,
         "source": manifest.get("source"), "license": manifest.get("license"),

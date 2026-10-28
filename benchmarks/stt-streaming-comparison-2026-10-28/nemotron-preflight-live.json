@@ -1,0 +1,374 @@
+{
+  "checked_at": "2026-10-28T20:56:19.026115+00:00",
+  "audit_mode": "read_only_no_new_inference",
+  "native_seoul": {
+    "region": "ap-northeast-2",
+    "endpoint_name": "transmeet-nemotron-streaming",
+    "checked_at": "2026-10-28T20:56:19.212740+00:00",
+    "endpoint": {
+      "EndpointName": "transmeet-nemotron-streaming",
+      "EndpointArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-streaming",
+      "EndpointConfigName": "transmeet-nemotron-streaming-859ae8f54c75-cfg",
+      "ProductionVariants": [
+        {
+          "VariantName": "AllTraffic",
+          "DeployedImages": [
+            {
+              "SpecifiedImage": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-nemotron-streaming@sha256:c20c3f92bf90b7786e4a5122e4404e682c418fca8f2d7442601595a7261e6c23",
+              "ResolvedImage": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-nemotron-streaming@sha256:c20c3f92bf90b7786e4a5122e4404e682c418fca8f2d7442601595a7261e6c23",
+              "ResolutionTime": "2026-10-28 20:28:25.844000+00:00"
+            }
+          ],
+          "CurrentWeight": 1.0,
+          "DesiredWeight": 1.0,
+          "CurrentInstanceCount": 1,
+          "DesiredInstanceCount": 1,
+          "InstancePools": [
+            {
+              "InstanceType": "ml.g5.xlarge",
+              "CurrentInstanceCount": 1
+            }
+          ]
+        }
+      ],
+      "EndpointStatus": "InService",
+      "CreationTime": "2026-10-28 20:14:18.607000+00:00",
+      "LastModifiedTime": "2026-10-28 20:32:37.234000+00:00",
+      "LastDeploymentConfig": {
+        "BlueGreenUpdatePolicy": {
+          "TrafficRoutingConfiguration": {
+            "Type": "ALL_AT_ONCE",
+            "WaitIntervalInSeconds": 0
+          },
+          "TerminationWaitInSeconds": 0
+        }
+      },
+      "MetricsConfig": {
+        "EnableDetailedObservability": true
+      }
+    },
+    "endpoint_config": {
+      "EndpointConfigName": "transmeet-nemotron-streaming-859ae8f54c75-cfg",
+      "EndpointConfigArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint-config/transmeet-nemotron-streaming-859ae8f54c75-cfg",
+      "ProductionVariants": [
+        {
+          "VariantName": "AllTraffic",
+          "ModelName": "transmeet-nemotron-streaming-859ae8f54c75",
+          "InitialInstanceCount": 1,
+          "InstancePools": [
+            {
+              "InstanceType": "ml.g5.xlarge",
+              "Priority": 1
+            },
+            {
+              "InstanceType": "ml.g5.4xlarge",
+              "Priority": 2
+            }
+          ],
+          "VariantInstanceProvisionTimeoutInSeconds": 600,
+          "InitialVariantWeight": 1.0,
+          "ModelDataDownloadTimeoutInSeconds": 1800,
+          "ContainerStartupHealthCheckTimeoutInSeconds": 1800,
+          "InferenceAmiVersion": "al2-ami-sagemaker-inference-gpu-3-1"
+        }
+      ],
+      "CreationTime": "2026-10-28 20:28:25.089000+00:00",
+      "EnableNetworkIsolation": false,
+      "MetricsConfig": {
+        "EnableDetailedObservability": true
+      }
+    },
+    "models": [
+      {
+        "ModelName": "transmeet-nemotron-streaming-859ae8f54c75",
+        "PrimaryContainer": {
+          "Image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-nemotron-streaming@sha256:c20c3f92bf90b7786e4a5122e4404e682c418fca8f2d7442601595a7261e6c23",
+          "Mode": "SingleModel",
+          "ModelDataSource": {
+            "S3DataSource": {
+              "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-nvidia-nemotron-3-5-asr-streaming-0-6b/artifacts/inference-prepack/v1.0.2/",
+              "S3DataType": "S3Prefix",
+              "CompressionType": "None"
+            }
+          },
+          "Environment": {
+            "MODEL_DIR": "/opt/ml/model",
+            "NVIDIA_DRIVER_CAPABILITIES": "compute,utility",
+            "NVIDIA_VISIBLE_DEVICES": "all"
+          }
+        },
+        "ExecutionRoleArn": "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+        "CreationTime": "2026-10-28 20:28:24.821000+00:00",
+        "ModelArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:model/transmeet-nemotron-streaming-859ae8f54c75",
+        "EnableNetworkIsolation": true,
+        "DeploymentRecommendation": {
+          "RecommendationStatus": "COMPLETED",
+          "RealTimeInferenceRecommendations": [
+            {
+              "RecommendationId": "transmeet-nemotron-streaming-859ae8f54c75/WCscX4m9",
+              "InstanceType": "ml.g4dn.4xlarge",
+              "Environment": {}
+            },
+            {
+              "RecommendationId": "transmeet-nemotron-streaming-859ae8f54c75/1IKSqa46",
+              "InstanceType": "ml.c5.large",
+              "Environment": {}
+            },
+            {
+              "RecommendationId": "transmeet-nemotron-streaming-859ae8f54c75/ZGVYDElb",
+              "InstanceType": "ml.c5.xlarge",
+              "Environment": {}
+            }
+          ]
+        }
+      }
+    ],
+    "scalable_targets": []
+  },
+  "native_us_east_v2": {
+    "region": "us-east-1",
+    "endpoint_name": "transmeet-nemotron-streaming-v2",
+    "checked_at": "2026-10-28T20:56:19.237619+00:00",
+    "error": {
+      "Message": "Could not find endpoint \"transmeet-nemotron-streaming-v2\".",
+      "Code": "ValidationException"
+    }
+  },
+  "ecs": {
+    "region": "us-east-1",
+    "cluster": "transmeet-ws-cluster",
+    "service_name": "TransmeetStack-WsServiceF27E424E-6Sv7kqQAPFMC",
+    "service": {
+      "serviceArn": "arn:aws:ecs:us-east-1:913524902871:service/transmeet-ws-cluster/TransmeetStack-WsServiceF27E424E-6Sv7kqQAPFMC",
+      "status": "ACTIVE",
+      "desiredCount": 1,
+      "runningCount": 1,
+      "pendingCount": 1,
+      "taskDefinition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+      "enableExecuteCommand": false,
+      "deployments": [
+        {
+          "id": "ecs-svc/7333950839463620706",
+          "status": "PRIMARY",
+          "taskDefinition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+          "desiredCount": 1,
+          "pendingCount": 1,
+          "runningCount": 0,
+          "failedTasks": 0,
+          "createdAt": "2026-10-28 20:55:23.691000+00:00",
+          "updatedAt": "2026-10-28 20:55:37.276000+00:00",
+          "launchType": "FARGATE",
+          "platformVersion": "1.4.0",
+          "platformFamily": "Linux",
+          "networkConfiguration": {
+            "awsvpcConfiguration": {
+              "subnets": [
+                "subnet-004e4de8f44df73f4",
+                "subnet-0c94bfe05f0196437",
+                "subnet-025fec8b3e9c9dfa3",
+                "subnet-084c6f3b4f66e3400",
+                "subnet-0dc381e600c5dd74b",
+                "subnet-022e4dec99016c27d"
+              ],
+              "securityGroups": [
+                "sg-013bc1506ab8a1c67"
+              ],
+              "assignPublicIp": "ENABLED"
+            }
+          },
+          "rolloutState": "IN_PROGRESS",
+          "rolloutStateReason": "ECS deployment ecs-svc/7333950839463620706 in progress."
+        },
+        {
+          "id": "ecs-svc/9180536270840274829",
+          "status": "ACTIVE",
+          "taskDefinition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:34",
+          "desiredCount": 1,
+          "pendingCount": 0,
+          "runningCount": 1,
+          "failedTasks": 0,
+          "createdAt": "2026-10-28 20:51:26.638000+00:00",
+          "updatedAt": "2026-10-28 20:55:37.281000+00:00",
+          "launchType": "FARGATE",
+          "platformVersion": "1.4.0",
+          "platformFamily": "Linux",
+          "networkConfiguration": {
+            "awsvpcConfiguration": {
+              "subnets": [
+                "subnet-004e4de8f44df73f4",
+                "subnet-0c94bfe05f0196437",
+                "subnet-025fec8b3e9c9dfa3",
+                "subnet-084c6f3b4f66e3400",
+                "subnet-0dc381e600c5dd74b",
+                "subnet-022e4dec99016c27d"
+              ],
+              "securityGroups": [
+                "sg-013bc1506ab8a1c67"
+              ],
+              "assignPublicIp": "ENABLED"
+            }
+          },
+          "rolloutState": "COMPLETED",
+          "rolloutStateReason": "ECS deployment ecs-svc/9180536270840274829 completed."
+        }
+      ]
+    },
+    "recent_events": [
+      {
+        "id": "db2e3d29-82f9-46a2-a857-a7960adfa1e7",
+        "createdAt": "2026-10-28 20:56:19.240000+00:00",
+        "message": "(service TransmeetStack-WsServiceF27E424E-6Sv7kqQAPFMC) registered 1 targets in (target-group arn:aws:elasticloadbalancing:us-east-1:913524902871:targetgroup/Transm-WsTg5-1MSB7AWIPOVX/072a3aa798dbe54a)"
+      },
+      {
+        "id": "e95a5024-fa1c-4f63-9a9f-c28baab046f4",
+        "createdAt": "2026-10-28 20:55:38.063000+00:00",
+        "message": "(service TransmeetStack-WsServiceF27E424E-6Sv7kqQAPFMC) has started 1 tasks: (task c4b98eb2de8c453f93d1f28f74f18df0)."
+      },
+      {
+        "id": "e7dea8ad-c385-4afd-ade7-0af42d637902",
+        "createdAt": "2026-10-28 20:54:14.980000+00:00",
+        "message": "(service TransmeetStack-WsServiceF27E424E-6Sv7kqQAPFMC) has reached a steady state."
+      },
+      {
+        "id": "dabd7499-cf7f-4dce-b64d-0901c9688f4b",
+        "createdAt": "2026-10-28 20:54:14.979000+00:00",
+        "message": "(service TransmeetStack-WsServiceF27E424E-6Sv7kqQAPFMC) (deployment ecs-svc/9180536270840274829) deployment completed."
+      },
+      {
+        "id": "192cc2a8-cf28-4f2b-b685-f7bb4be5b317",
+        "createdAt": "2026-10-28 20:53:13.094000+00:00",
+        "message": "(service TransmeetStack-WsServiceF27E424E-6Sv7kqQAPFMC, taskSet ecs-svc/0089837094073131813) has begun draining connections on 1 tasks."
+      }
+    ],
+    "running_tasks": [
+      {
+        "taskArn": "arn:aws:ecs:us-east-1:913524902871:task/transmeet-ws-cluster/c4b98eb2de8c453f93d1f28f74f18df0",
+        "taskDefinitionArn": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+        "lastStatus": "ACTIVATING",
+        "desiredStatus": "RUNNING",
+        "healthStatus": "UNKNOWN",
+        "startedAt": null,
+        "enableExecuteCommand": false,
+        "containers": [
+          {
+            "containerArn": "arn:aws:ecs:us-east-1:913524902871:container/transmeet-ws-cluster/c4b98eb2de8c453f93d1f28f74f18df0/52d936b7-6054-4f32-b482-674afc33b59f",
+            "taskArn": "arn:aws:ecs:us-east-1:913524902871:task/transmeet-ws-cluster/c4b98eb2de8c453f93d1f28f74f18df0",
+            "name": "ws-backend",
+            "image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-ws-backend@sha256:bb9fdc8f9895b8a4bb9776fc69138ae065bfd47ff430f17dae28b276a9091fbe",
+            "imageDigest": "sha256:bb9fdc8f9895b8a4bb9776fc69138ae065bfd47ff430f17dae28b276a9091fbe",
+            "runtimeId": "c4b98eb2de8c453f93d1f28f74f18df0-4156682698",
+            "lastStatus": "RUNNING",
+            "networkBindings": [],
+            "networkInterfaces": [
+              {
+                "attachmentId": "8ea994e4-c505-4d7d-a9c3-d4a87bd3df5e",
+                "privateIpv4Address": "172.31.95.87"
+              }
+            ],
+            "healthStatus": "UNKNOWN",
+            "cpu": "0"
+          }
+        ]
+      },
+      {
+        "taskArn": "arn:aws:ecs:us-east-1:913524902871:task/transmeet-ws-cluster/0e4f68a7c7e34e6fa6ee0f0a81cf5f01",
+        "taskDefinitionArn": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:34",
+        "lastStatus": "RUNNING",
+        "desiredStatus": "RUNNING",
+        "healthStatus": "UNKNOWN",
+        "startedAt": "2026-10-28 20:52:15.049000+00:00",
+        "enableExecuteCommand": false,
+        "containers": [
+          {
+            "containerArn": "arn:aws:ecs:us-east-1:913524902871:container/transmeet-ws-cluster/0e4f68a7c7e34e6fa6ee0f0a81cf5f01/f80cf1c2-f91b-4228-95ee-38cd92564a42",
+            "taskArn": "arn:aws:ecs:us-east-1:913524902871:task/transmeet-ws-cluster/0e4f68a7c7e34e6fa6ee0f0a81cf5f01",
+            "name": "ws-backend",
+            "image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-ws-backend@sha256:bb9fdc8f9895b8a4bb9776fc69138ae065bfd47ff430f17dae28b276a9091fbe",
+            "imageDigest": "sha256:bb9fdc8f9895b8a4bb9776fc69138ae065bfd47ff430f17dae28b276a9091fbe",
+            "runtimeId": "0e4f68a7c7e34e6fa6ee0f0a81cf5f01-4156682698",
+            "lastStatus": "RUNNING",
+            "networkBindings": [],
+            "networkInterfaces": [
+              {
+                "attachmentId": "b9afe9ce-de57-4843-a82d-389e3037089d",
+                "privateIpv4Address": "172.31.11.38"
+              }
+            ],
+            "healthStatus": "UNKNOWN",
+            "cpu": "0"
+          }
+        ]
+      }
+    ],
+    "task_definitions": {
+      "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:34": {
+        "taskDefinitionArn": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:34",
+        "family": "TransmeetStackWsTaskDef7E775A03",
+        "revision": 34,
+        "status": "ACTIVE",
+        "taskRoleArn": "arn:aws:iam::913524902871:role/TransmeetStack-WsTaskRole4B337A19-JBueyIt7ZiW8",
+        "executionRoleArn": "arn:aws:iam::913524902871:role/TransmeetStack-WsTaskDefExecutionRoleA86DEEEE-OFxQo1JTMvS6",
+        "registeredAt": "2026-10-28 20:51:26.103000+00:00",
+        "containers": [
+          {
+            "name": "ws-backend",
+            "image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-ws-backend@sha256:bb9fdc8f9895b8a4bb9776fc69138ae065bfd47ff430f17dae28b276a9091fbe",
+            "command": [],
+            "entryPoint": [],
+            "environment": {
+              "QWEN_ASR_ENDPOINT": "transmeet-qwen3-asr",
+              "NEMOTRON_STREAMING_REGION": "us-east-1",
+              "NEMOTRON_ASR_ENDPOINT": "transmeet-nemotron-asr",
+              "QWEN_STREAMING_ENABLED": "true",
+              "NEMOTRON_STREAMING_ENDPOINT": "transmeet-nemotron-streaming-v2",
+              "NEMOTRON_ASR_REGION": "ap-northeast-2",
+              "NEMOTRON_STREAMING_ENABLED": "false",
+              "NEMOTRON_STREAMING_CHUNK_MS": "560",
+              "QWEN_STREAMING_REGION": "ap-northeast-2",
+              "NEMOTRON_ASR_INFERENCE_COMPONENT": "transmeet-nemotron-asr-ic-v2",
+              "REGION": "us-east-1",
+              "QWEN_STREAMING_ENDPOINT": "transmeet-qwen-streaming",
+              "QWEN_STREAMING_CHUNK_MS": "1000",
+              "STT_IDLE_SECONDS": "0",
+              "QWEN_ASR_REGION": "ap-northeast-2"
+            }
+          }
+        ]
+      },
+      "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35": {
+        "taskDefinitionArn": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+        "family": "TransmeetStackWsTaskDef7E775A03",
+        "revision": 35,
+        "status": "ACTIVE",
+        "taskRoleArn": "arn:aws:iam::913524902871:role/TransmeetStack-WsTaskRole4B337A19-JBueyIt7ZiW8",
+        "executionRoleArn": "arn:aws:iam::913524902871:role/TransmeetStack-WsTaskDefExecutionRoleA86DEEEE-OFxQo1JTMvS6",
+        "registeredAt": "2026-10-28 20:55:22.870000+00:00",
+        "containers": [
+          {
+            "name": "ws-backend",
+            "image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-ws-backend@sha256:bb9fdc8f9895b8a4bb9776fc69138ae065bfd47ff430f17dae28b276a9091fbe",
+            "command": [],
+            "entryPoint": [],
+            "environment": {
+              "QWEN_ASR_ENDPOINT": "transmeet-qwen3-asr",
+              "NEMOTRON_STREAMING_REGION": "ap-northeast-2",
+              "NEMOTRON_ASR_ENDPOINT": "transmeet-nemotron-asr",
+              "QWEN_STREAMING_ENABLED": "true",
+              "NEMOTRON_ASR_REGION": "ap-northeast-2",
+              "NEMOTRON_STREAMING_ENDPOINT": "transmeet-nemotron-streaming",
+              "NEMOTRON_STREAMING_ENABLED": "true",
+              "NEMOTRON_STREAMING_CHUNK_MS": "560",
+              "QWEN_STREAMING_REGION": "ap-northeast-2",
+              "NEMOTRON_ASR_INFERENCE_COMPONENT": "transmeet-nemotron-asr-ic-v2",
+              "QWEN_STREAMING_CHUNK_MS": "1000",
+              "QWEN_STREAMING_ENDPOINT": "transmeet-qwen-streaming",
+              "REGION": "us-east-1",
+              "STT_IDLE_SECONDS": "0",
+              "QWEN_ASR_REGION": "ap-northeast-2"
+            }
+          }
+        ]
+      }
+    }
+  }
+}

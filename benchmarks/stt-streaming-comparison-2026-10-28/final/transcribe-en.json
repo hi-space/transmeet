@@ -1,0 +1,2343 @@
+{
+  "created_at": "2026-10-28T21:08:29.877119+00:00",
+  "provider": "transcribe",
+  "model_id": "Amazon Transcribe Streaming (service managed)",
+  "jumpstart_artifact_version": null,
+  "endpoint": "transcribestreaming.us-east-1.amazonaws.com",
+  "region": "us-east-1",
+  "manifest": "/home/ubuntu/workspace/transmeet/benchmarks/stt-ko-en-2026-10-28/manifest-en.json",
+  "manifest_sha256": "09d2c6e77bb6d075a0d1f70560855dc94e8899cb3615c4b50092f51eeac001d6",
+  "source": {
+    "dataset": "google/fleurs",
+    "config": "en_us",
+    "split": "test",
+    "rows": "0-9",
+    "url": "https://huggingface.co/datasets/google/fleurs",
+    "parquet": "https://huggingface.co/datasets/google/fleurs/resolve/refs%2Fconvert%2Fparquet/en_us/test/0000.parquet"
+  },
+  "license": "CC-BY-4.0",
+  "preflight": {
+    "path": "/home/ubuntu/workspace/transmeet/benchmarks/stt-streaming-comparison-2026-10-28/all-providers-preflight.json",
+    "sha256": "2a7ba3ebb8c4e2e5e8755fccf21d6bba4ad5586e67be5291482ffb0cdd545241"
+  },
+  "planned_samples": 10,
+  "status": "complete",
+  "conditions": {
+    "mode": "realtime_capture",
+    "recognition_mode": "native_streaming",
+    "model_chunk_ms": null,
+    "batch_window_ms": null,
+    "capture_frame_ms": 160,
+    "language_mode": "known language from manifest",
+    "input": "Identical SHA-256 verified 16 kHz mono PCM16 WAV; no trimming, gain changes or augmentation",
+    "pacing": "Await adapter ready; send each 160 ms frame at its simulated capture end",
+    "first_caption": "First nonempty partial OR final, relative to audio capture start",
+    "first_partial": "First nonempty partial; null for Whisper, which emits finals only",
+    "caption_updates": "Changed nonempty text per utterance; duplicate finals ignored; intervals within each clip include pauses",
+    "percentiles": "Linear interpolation at (n-1)*p; undefined when no intervals exist",
+    "final_lag": "Last unique nonempty final minus complete source WAV duration, including trailing silence; can be negative",
+    "ended": "Ended acknowledgement relative to audio capture start",
+    "end_to_end": "Capture start through stream close, including complete source duration",
+    "startup": "Measured separately and excluded from capture-relative timings; Whisper ready means its capture buffer is ready",
+    "application_latency": "Model/API benchmark, excluding browser, application WebSocket, translation and persistence startup",
+    "accuracy": "Finalized text only; English Unicode word WER and Korean normalized character CER",
+    "missing_results": "Successful empty recognition counts as deletions and is flagged; transport errors are unscored",
+    "warmup": "Deployment verification is external; no timed samples are discarded or reused from tuning",
+    "sample_order": "Manifest order, serial within this provider",
+    "http2_worker_python": null,
+    "ready_timeout_seconds": 45,
+    "close_timeout_seconds": 60
+  },
+  "results": [
+    {
+      "sample_id": "fleurs-en-test-row-0",
+      "language": "en",
+      "requested_language": "en-US",
+      "reference": "However, due to the slow communication channels, styles in the west could lag behind by 25 to 30 year.",
+      "audio_seconds": 10.56,
+      "text": "However due to the slow communication channels, styles in the West could lag behind by 25 to 30 years.",
+      "detected_languages": [
+        "en-US"
+      ],
+      "startup_seconds": 0.819174,
+      "first_partial_seconds": 2.599722,
+      "final_lag_seconds": -0.284198,
+      "end_to_end_seconds": 10.972655,
+      "audio_send_seconds": 10.573413,
+      "total_seconds": 11.791952,
+      "partial_count": 14,
+      "final_count": 2,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 0.819174,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "However",
+          "language": "en-US",
+          "elapsed_seconds": 3.419018,
+          "audio_elapsed_seconds": 2.599722
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "However",
+          "language": "en-US",
+          "elapsed_seconds": 3.826194,
+          "audio_elapsed_seconds": 3.006897
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "due to the s",
+          "language": "en-US",
+          "elapsed_seconds": 4.634472,
+          "audio_elapsed_seconds": 3.815176
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "due to the slow commun",
+          "language": "en-US",
+          "elapsed_seconds": 4.961615,
+          "audio_elapsed_seconds": 4.142318
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "due to the slow communication",
+          "language": "en-US",
+          "elapsed_seconds": 5.496791,
+          "audio_elapsed_seconds": 4.677494
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "due to the slow communication channels",
+          "language": "en-US",
+          "elapsed_seconds": 6.003417,
+          "audio_elapsed_seconds": 5.18412
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "due to the slow communication channels,",
+          "language": "en-US",
+          "elapsed_seconds": 6.503761,
+          "audio_elapsed_seconds": 5.684464
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "due to the slow communication channels, styles",
+          "language": "en-US",
+          "elapsed_seconds": 6.861444,
+          "audio_elapsed_seconds": 6.042148
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "due to the slow communication channels, styles in the",
+          "language": "en-US",
+          "elapsed_seconds": 7.390541,
+          "audio_elapsed_seconds": 6.571244
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "due to the slow communication channels, styles in the West",
+          "language": "en-US",
+          "elapsed_seconds": 7.916843,
+          "audio_elapsed_seconds": 7.097546
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "due to the slow communication channels, styles in the West could lag",
+          "language": "en-US",
+          "elapsed_seconds": 8.440724,
+          "audio_elapsed_seconds": 7.621428
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "due to the slow communication channels, styles in the West could lag behind",
+          "language": "en-US",
+          "elapsed_seconds": 8.834805,
+          "audio_elapsed_seconds": 8.015508
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "due to the slow communication channels, styles in the West could lag behind by",
+          "language": "en-US",
+          "elapsed_seconds": 9.416734,
+          "audio_elapsed_seconds": 8.597437
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "due to the slow communication channels, styles in the West could lag behind by 25",
+          "language": "en-US",
+          "elapsed_seconds": 9.763406,
+          "audio_elapsed_seconds": 8.94411
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "due to the slow communication channels, styles in the West could lag behind by 25 to 3",
+          "language": "en-US",
+          "elapsed_seconds": 10.333873,
+          "audio_elapsed_seconds": 9.514577
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "due to the slow communication channels, styles in the West could lag behind by 25 to 30 years.",
+          "language": "en-US",
+          "elapsed_seconds": 11.095098,
+          "audio_elapsed_seconds": 10.275802
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 11.791907,
+          "audio_elapsed_seconds": 10.972611
+        }
+      ],
+      "errors": 1,
+      "reference_chars": 81,
+      "cer": 0.012345679012345678,
+      "word_errors": 1,
+      "reference_words": 19,
+      "wer": 0.05263157894736842,
+      "first_caption_seconds": 2.599722,
+      "caption_update_count": 15,
+      "caption_update_times_seconds": [
+        2.599722,
+        3.815176,
+        4.142318,
+        4.677494,
+        5.18412,
+        5.684464,
+        6.042148,
+        6.571244,
+        7.097546,
+        7.621428,
+        8.015508,
+        8.597437,
+        8.94411,
+        9.514577,
+        10.275802
+      ],
+      "caption_update_intervals_seconds": [
+        1.215454,
+        0.327142,
+        0.535176,
+        0.506626,
+        0.500344,
+        0.357684,
+        0.529096,
+        0.526302,
+        0.523882,
+        0.39408,
+        0.581929,
+        0.346673,
+        0.570467,
+        0.761225
+      ],
+      "caption_update_interval_median_seconds": 0.525092,
+      "caption_update_interval_p90_seconds": 0.7074362000000003,
+      "ended_seconds": 10.972611,
+      "missing_final_caption": false,
+      "provider": "transcribe",
+      "audio": "audio/en-00.wav",
+      "sha256": "b438b60eb4e9fddbcaa303e27070c2458c3daac42f0b08d5d8622c47335d24f7",
+      "sha256_verified": true,
+      "parameters": {
+        "language_code": "en-US",
+        "media_sample_rate_hz": 16000,
+        "media_encoding": "pcm",
+        "show_speaker_label": true
+      }
+    },
+    {
+      "sample_id": "fleurs-en-test-row-1",
+      "language": "en",
+      "requested_language": "en-US",
+      "reference": "All nouns, alongside the word Sie for you, always begin with a capital letter, even in the middle of a sentence.",
+      "audio_seconds": 8.76,
+      "text": "All nouns alongside the world say for you always begin with a capital letter, even in the middle of a sentence.",
+      "detected_languages": [
+        "en-US"
+      ],
+      "startup_seconds": 0.816634,
+      "first_partial_seconds": 2.218247,
+      "final_lag_seconds": 0.722957,
+      "end_to_end_seconds": 9.498785,
+      "audio_send_seconds": 8.771046,
+      "total_seconds": 10.315504,
+      "partial_count": 15,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 0.816634,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "All noun",
+          "language": "en-US",
+          "elapsed_seconds": 3.034966,
+          "audio_elapsed_seconds": 2.218247
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "All nouns along",
+          "language": "en-US",
+          "elapsed_seconds": 3.568113,
+          "audio_elapsed_seconds": 2.751394
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "All nouns alongside the",
+          "language": "en-US",
+          "elapsed_seconds": 4.128417,
+          "audio_elapsed_seconds": 3.311698
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "All nouns alongside the world",
+          "language": "en-US",
+          "elapsed_seconds": 4.498889,
+          "audio_elapsed_seconds": 3.68217
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "All nouns alongside the world say for",
+          "language": "en-US",
+          "elapsed_seconds": 5.035079,
+          "audio_elapsed_seconds": 4.21836
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "All nouns alongside the world say for you",
+          "language": "en-US",
+          "elapsed_seconds": 5.563959,
+          "audio_elapsed_seconds": 4.74724
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "All nouns alongside the world say for you, always",
+          "language": "en-US",
+          "elapsed_seconds": 6.089551,
+          "audio_elapsed_seconds": 5.272832
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "All nouns alongside the world say for you always begin",
+          "language": "en-US",
+          "elapsed_seconds": 6.45203,
+          "audio_elapsed_seconds": 5.635311
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "All nouns alongside the world say for you always begin with a",
+          "language": "en-US",
+          "elapsed_seconds": 7.013762,
+          "audio_elapsed_seconds": 6.197043
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "All nouns alongside the world say for you always begin with a capital",
+          "language": "en-US",
+          "elapsed_seconds": 7.356373,
+          "audio_elapsed_seconds": 6.539654
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "All nouns alongside the world say for you always begin with a capital letter",
+          "language": "en-US",
+          "elapsed_seconds": 7.932802,
+          "audio_elapsed_seconds": 7.116083
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "All nouns alongside the world say for you always begin with a capital letter, even",
+          "language": "en-US",
+          "elapsed_seconds": 8.474815,
+          "audio_elapsed_seconds": 7.658096
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "All nouns alongside the world say for you always begin with a capital letter, even in the middle",
+          "language": "en-US",
+          "elapsed_seconds": 8.814802,
+          "audio_elapsed_seconds": 7.998083
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "All nouns alongside the world say for you always begin with a capital letter, even in the middle of a",
+          "language": "en-US",
+          "elapsed_seconds": 9.356934,
+          "audio_elapsed_seconds": 8.540215
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "All nouns alongside the world say for you always begin with a capital letter, even in the middle of a sentence",
+          "language": "en-US",
+          "elapsed_seconds": 9.881467,
+          "audio_elapsed_seconds": 9.064748
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "All nouns alongside the world say for you always begin with a capital letter, even in the middle of a sentence.",
+          "language": "en-US",
+          "elapsed_seconds": 10.299676,
+          "audio_elapsed_seconds": 9.482957
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 10.315474,
+          "audio_elapsed_seconds": 9.498755
+        }
+      ],
+      "errors": 3,
+      "reference_chars": 88,
+      "cer": 0.03409090909090909,
+      "word_errors": 2,
+      "reference_words": 21,
+      "wer": 0.09523809523809523,
+      "first_caption_seconds": 2.218247,
+      "caption_update_count": 16,
+      "caption_update_times_seconds": [
+        2.218247,
+        2.751394,
+        3.311698,
+        3.68217,
+        4.21836,
+        4.74724,
+        5.272832,
+        5.635311,
+        6.197043,
+        6.539654,
+        7.116083,
+        7.658096,
+        7.998083,
+        8.540215,
+        9.064748,
+        9.482957
+      ],
+      "caption_update_intervals_seconds": [
+        0.533147,
+        0.560304,
+        0.370472,
+        0.53619,
+        0.52888,
+        0.525592,
+        0.362479,
+        0.561732,
+        0.342611,
+        0.576429,
+        0.542013,
+        0.339987,
+        0.542132,
+        0.524533,
+        0.418209
+      ],
+      "caption_update_interval_median_seconds": 0.52888,
+      "caption_update_interval_p90_seconds": 0.5611608,
+      "ended_seconds": 9.498755,
+      "missing_final_caption": false,
+      "provider": "transcribe",
+      "audio": "audio/en-01.wav",
+      "sha256": "fd99727983733f9771077fe1a030fcc44ea7e16be1e9396cff525db2886a8f0f",
+      "sha256_verified": true,
+      "parameters": {
+        "language_code": "en-US",
+        "media_sample_rate_hz": 16000,
+        "media_encoding": "pcm",
+        "show_speaker_label": true
+      }
+    },
+    {
+      "sample_id": "fleurs-en-test-row-2",
+      "language": "en",
+      "requested_language": "en-US",
+      "reference": "To the north and within easy reach is the romantic and fascinating town of Sintra and which was made famous to foreigners after a glowing account of its splendours recorded by Lord Byron.",
+      "audio_seconds": 11.46,
+      "text": "To the north and within easy reach is a romantic and fascinating town of Cintra and which was made famous. to foreigners after a glowing account of its splendors recorded by Lord Byron.",
+      "detected_languages": [
+        "en-US"
+      ],
+      "startup_seconds": 0.80404,
+      "first_partial_seconds": 1.904441,
+      "final_lag_seconds": 0.739935,
+      "end_to_end_seconds": 12.216551,
+      "audio_send_seconds": 11.479947,
+      "total_seconds": 13.02066,
+      "partial_count": 19,
+      "final_count": 2,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 0.80404,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "To the north",
+          "language": "en-US",
+          "elapsed_seconds": 2.70855,
+          "audio_elapsed_seconds": 1.904441
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "To the north and within",
+          "language": "en-US",
+          "elapsed_seconds": 3.252419,
+          "audio_elapsed_seconds": 2.44831
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "To the north and within easy reach",
+          "language": "en-US",
+          "elapsed_seconds": 3.78249,
+          "audio_elapsed_seconds": 2.978381
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "To the north and within easy reach is a",
+          "language": "en-US",
+          "elapsed_seconds": 4.1602,
+          "audio_elapsed_seconds": 3.356091
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "To the north and within easy reach is a romantic",
+          "language": "en-US",
+          "elapsed_seconds": 4.729372,
+          "audio_elapsed_seconds": 3.925263
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "To the north and within easy reach is a romantic and fasc",
+          "language": "en-US",
+          "elapsed_seconds": 5.272773,
+          "audio_elapsed_seconds": 4.468664
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "To the north and within easy reach is a romantic and fascinating",
+          "language": "en-US",
+          "elapsed_seconds": 5.669087,
+          "audio_elapsed_seconds": 4.864978
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "To the north and within easy reach is a romantic and fascinating town of C",
+          "language": "en-US",
+          "elapsed_seconds": 6.231586,
+          "audio_elapsed_seconds": 5.427477
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "To the north and within easy reach is a romantic and fascinating town of Cintra",
+          "language": "en-US",
+          "elapsed_seconds": 6.600785,
+          "audio_elapsed_seconds": 5.796676
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "To the north and within easy reach is a romantic and fascinating town of Cintra and which was",
+          "language": "en-US",
+          "elapsed_seconds": 7.15015,
+          "audio_elapsed_seconds": 6.346041
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "To the north and within easy reach is a romantic and fascinating town of Cintra and which was made",
+          "language": "en-US",
+          "elapsed_seconds": 7.511077,
+          "audio_elapsed_seconds": 6.706968
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "To the north and within easy reach is a romantic and fascinating town of Cintra and which was made famous.",
+          "language": "en-US",
+          "elapsed_seconds": 8.42889,
+          "audio_elapsed_seconds": 7.624781
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "to foreign",
+          "language": "en-US",
+          "elapsed_seconds": 9.072082,
+          "audio_elapsed_seconds": 8.267973
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "to foreigners after",
+          "language": "en-US",
+          "elapsed_seconds": 9.542056,
+          "audio_elapsed_seconds": 8.737947
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "to foreigners after a glowing",
+          "language": "en-US",
+          "elapsed_seconds": 9.884928,
+          "audio_elapsed_seconds": 9.080819
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "to foreigners after a glowing account of",
+          "language": "en-US",
+          "elapsed_seconds": 10.48847,
+          "audio_elapsed_seconds": 9.684361
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "to foreigners after a glowing account of its sple",
+          "language": "en-US",
+          "elapsed_seconds": 10.847068,
+          "audio_elapsed_seconds": 10.042959
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "to foreigners after a glowing account of its splendors",
+          "language": "en-US",
+          "elapsed_seconds": 11.389976,
+          "audio_elapsed_seconds": 10.585867
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "to foreigners after a glowing account of its splendors recorded by",
+          "language": "en-US",
+          "elapsed_seconds": 11.954035,
+          "audio_elapsed_seconds": 11.149926
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "to foreigners after a glowing account of its splendors recorded by Lord By",
+          "language": "en-US",
+          "elapsed_seconds": 12.313253,
+          "audio_elapsed_seconds": 11.509144
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "to foreigners after a glowing account of its splendors recorded by Lord Byron.",
+          "language": "en-US",
+          "elapsed_seconds": 13.004044,
+          "audio_elapsed_seconds": 12.199935
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 13.020632,
+          "audio_elapsed_seconds": 12.216523
+        }
+      ],
+      "errors": 5,
+      "reference_chars": 154,
+      "cer": 0.032467532467532464,
+      "word_errors": 3,
+      "reference_words": 33,
+      "wer": 0.09090909090909091,
+      "first_caption_seconds": 1.904441,
+      "caption_update_count": 21,
+      "caption_update_times_seconds": [
+        1.904441,
+        2.44831,
+        2.978381,
+        3.356091,
+        3.925263,
+        4.468664,
+        4.864978,
+        5.427477,
+        5.796676,
+        6.346041,
+        6.706968,
+        7.624781,
+        8.267973,
+        8.737947,
+        9.080819,
+        9.684361,
+        10.042959,
+        10.585867,
+        11.149926,
+        11.509144,
+        12.199935
+      ],
+      "caption_update_intervals_seconds": [
+        0.543869,
+        0.530071,
+        0.37771,
+        0.569172,
+        0.543401,
+        0.396314,
+        0.562499,
+        0.369199,
+        0.549365,
+        0.360927,
+        0.917813,
+        0.643192,
+        0.469974,
+        0.342872,
+        0.603542,
+        0.358598,
+        0.542908,
+        0.564059,
+        0.359218,
+        0.690791
+      ],
+      "caption_update_interval_median_seconds": 0.5431545,
+      "caption_update_interval_p90_seconds": 0.6479519,
+      "ended_seconds": 12.216523,
+      "missing_final_caption": false,
+      "provider": "transcribe",
+      "audio": "audio/en-02.wav",
+      "sha256": "b4aea90be63667ffe68bd0c67fcc11b6a5bc334a4566df8153c074b37e2760d6",
+      "sha256_verified": true,
+      "parameters": {
+        "language_code": "en-US",
+        "media_sample_rate_hz": 16000,
+        "media_encoding": "pcm",
+        "show_speaker_label": true
+      }
+    },
+    {
+      "sample_id": "fleurs-en-test-row-3",
+      "language": "en",
+      "requested_language": "en-US",
+      "reference": "The cabbage juice changes color depending on how acidic or basic (alkaline) the chemical is.",
+      "audio_seconds": 5.76,
+      "text": "The cabbage juice changes color depending on how acidic, basic alkaline, the chemical is.",
+      "detected_languages": [
+        "en-US"
+      ],
+      "startup_seconds": 0.79985,
+      "first_partial_seconds": 1.903084,
+      "final_lag_seconds": 0.765411,
+      "end_to_end_seconds": 6.540888,
+      "audio_send_seconds": 5.762792,
+      "total_seconds": 7.340817,
+      "partial_count": 9,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 0.79985,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The cabbage",
+          "language": "en-US",
+          "elapsed_seconds": 2.703013,
+          "audio_elapsed_seconds": 1.903084
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The cabbage juice change",
+          "language": "en-US",
+          "elapsed_seconds": 3.249504,
+          "audio_elapsed_seconds": 2.449575
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The cabbage juice changes color",
+          "language": "en-US",
+          "elapsed_seconds": 3.790856,
+          "audio_elapsed_seconds": 2.990927
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The cabbage juice changes color depending on",
+          "language": "en-US",
+          "elapsed_seconds": 4.140977,
+          "audio_elapsed_seconds": 3.341048
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The cabbage juice changes color depending on how a",
+          "language": "en-US",
+          "elapsed_seconds": 4.664821,
+          "audio_elapsed_seconds": 3.864892
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The cabbage juice changes color depending on how acidic,",
+          "language": "en-US",
+          "elapsed_seconds": 5.186077,
+          "audio_elapsed_seconds": 4.386148
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The cabbage juice changes color depending on how acidic, basic",
+          "language": "en-US",
+          "elapsed_seconds": 5.678879,
+          "audio_elapsed_seconds": 4.87895
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The cabbage juice changes color depending on how acidic, basic alkaline",
+          "language": "en-US",
+          "elapsed_seconds": 6.181226,
+          "audio_elapsed_seconds": 5.381297
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The cabbage juice changes color depending on how acidic, basic alkaline, the chem",
+          "language": "en-US",
+          "elapsed_seconds": 6.562875,
+          "audio_elapsed_seconds": 5.762946
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The cabbage juice changes color depending on how acidic, basic alkaline, the chemical is.",
+          "language": "en-US",
+          "elapsed_seconds": 7.32534,
+          "audio_elapsed_seconds": 6.525411
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 7.340792,
+          "audio_elapsed_seconds": 6.540863
+        }
+      ],
+      "errors": 2,
+      "reference_chars": 75,
+      "cer": 0.02666666666666667,
+      "word_errors": 1,
+      "reference_words": 15,
+      "wer": 0.06666666666666667,
+      "first_caption_seconds": 1.903084,
+      "caption_update_count": 10,
+      "caption_update_times_seconds": [
+        1.903084,
+        2.449575,
+        2.990927,
+        3.341048,
+        3.864892,
+        4.386148,
+        4.87895,
+        5.381297,
+        5.762946,
+        6.525411
+      ],
+      "caption_update_intervals_seconds": [
+        0.546491,
+        0.541352,
+        0.350121,
+        0.523844,
+        0.521256,
+        0.492802,
+        0.502347,
+        0.381649,
+        0.762465
+      ],
+      "caption_update_interval_median_seconds": 0.521256,
+      "caption_update_interval_p90_seconds": 0.5896858,
+      "ended_seconds": 6.540863,
+      "missing_final_caption": false,
+      "provider": "transcribe",
+      "audio": "audio/en-03.wav",
+      "sha256": "1a2230cb99ec7ed59df1ad0cf43020b093c6536f9b4ca02636b8daa9c4577229",
+      "sha256_verified": true,
+      "parameters": {
+        "language_code": "en-US",
+        "media_sample_rate_hz": 16000,
+        "media_encoding": "pcm",
+        "show_speaker_label": true
+      }
+    },
+    {
+      "sample_id": "fleurs-en-test-row-4",
+      "language": "en",
+      "requested_language": "en-US",
+      "reference": "Many people don't think about them as dinosaurs because they have feathers and can fly.",
+      "audio_seconds": 4.32,
+      "text": "Many people don't think about them as dinosaurs because they have feathers and can fly.",
+      "detected_languages": [
+        "en-US"
+      ],
+      "startup_seconds": 0.741136,
+      "first_partial_seconds": 1.768223,
+      "final_lag_seconds": 0.954973,
+      "end_to_end_seconds": 5.288,
+      "audio_send_seconds": 4.374424,
+      "total_seconds": 6.029213,
+      "partial_count": 7,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 0.741136,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "Many people",
+          "language": "en-US",
+          "elapsed_seconds": 2.509437,
+          "audio_elapsed_seconds": 1.768223
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "Many people don't think",
+          "language": "en-US",
+          "elapsed_seconds": 3.019405,
+          "audio_elapsed_seconds": 2.278192
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "Many people don't think about them as",
+          "language": "en-US",
+          "elapsed_seconds": 3.450616,
+          "audio_elapsed_seconds": 2.709402
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "Many people don't think about them as dinosaurs",
+          "language": "en-US",
+          "elapsed_seconds": 3.968185,
+          "audio_elapsed_seconds": 3.226971
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "Many people don't think about them as dinosaurs because they",
+          "language": "en-US",
+          "elapsed_seconds": 4.526075,
+          "audio_elapsed_seconds": 3.784862
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "Many people don't think about them as dinosaurs because they have feathers",
+          "language": "en-US",
+          "elapsed_seconds": 4.926262,
+          "audio_elapsed_seconds": 4.185048
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "Many people don't think about them as dinosaurs because they have feathers and can f",
+          "language": "en-US",
+          "elapsed_seconds": 5.483112,
+          "audio_elapsed_seconds": 4.741898
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "Many people don't think about them as dinosaurs because they have feathers and can fly.",
+          "language": "en-US",
+          "elapsed_seconds": 6.016187,
+          "audio_elapsed_seconds": 5.274973
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 6.029188,
+          "audio_elapsed_seconds": 5.287974
+        }
+      ],
+      "errors": 0,
+      "reference_chars": 71,
+      "cer": 0.0,
+      "word_errors": 0,
+      "reference_words": 15,
+      "wer": 0.0,
+      "first_caption_seconds": 1.768223,
+      "caption_update_count": 8,
+      "caption_update_times_seconds": [
+        1.768223,
+        2.278192,
+        2.709402,
+        3.226971,
+        3.784862,
+        4.185048,
+        4.741898,
+        5.274973
+      ],
+      "caption_update_intervals_seconds": [
+        0.509969,
+        0.43121,
+        0.517569,
+        0.557891,
+        0.400186,
+        0.55685,
+        0.533075
+      ],
+      "caption_update_interval_median_seconds": 0.517569,
+      "caption_update_interval_p90_seconds": 0.5572663999999999,
+      "ended_seconds": 5.287974,
+      "missing_final_caption": false,
+      "provider": "transcribe",
+      "audio": "audio/en-04.wav",
+      "sha256": "5fda1c914915f9fcd856b11739eb88570deb747c0a492c841255f13383d00e82",
+      "sha256_verified": true,
+      "parameters": {
+        "language_code": "en-US",
+        "media_sample_rate_hz": 16000,
+        "media_encoding": "pcm",
+        "show_speaker_label": true
+      }
+    },
+    {
+      "sample_id": "fleurs-en-test-row-5",
+      "language": "en",
+      "requested_language": "en-US",
+      "reference": "The hospital has followed protocol for infection control, including separating the patient from others to prevent possible infection of others.",
+      "audio_seconds": 11.42,
+      "text": "The hospital has followed protocol for infection control, and cooling, separating the patient from others to prevent possible infection of others.",
+      "detected_languages": [
+        "en-US"
+      ],
+      "startup_seconds": 0.771287,
+      "first_partial_seconds": 2.662317,
+      "final_lag_seconds": 0.303732,
+      "end_to_end_seconds": 11.886389,
+      "audio_send_seconds": 11.421249,
+      "total_seconds": 12.65775,
+      "partial_count": 19,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 0.771287,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital",
+          "language": "en-US",
+          "elapsed_seconds": 3.433677,
+          "audio_elapsed_seconds": 2.662317
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has follow",
+          "language": "en-US",
+          "elapsed_seconds": 3.776684,
+          "audio_elapsed_seconds": 3.005324
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has followed protoc",
+          "language": "en-US",
+          "elapsed_seconds": 4.353772,
+          "audio_elapsed_seconds": 3.582411
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has followed protocol for in",
+          "language": "en-US",
+          "elapsed_seconds": 4.891763,
+          "audio_elapsed_seconds": 4.120403
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has followed protocol for infection",
+          "language": "en-US",
+          "elapsed_seconds": 5.235818,
+          "audio_elapsed_seconds": 4.464458
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has followed protocol for infection control",
+          "language": "en-US",
+          "elapsed_seconds": 5.82601,
+          "audio_elapsed_seconds": 5.05465
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has followed protocol for infection control,",
+          "language": "en-US",
+          "elapsed_seconds": 6.180323,
+          "audio_elapsed_seconds": 5.408963
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has followed protocol for infection control, and cool",
+          "language": "en-US",
+          "elapsed_seconds": 6.75426,
+          "audio_elapsed_seconds": 5.9829
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has followed protocol for infection control, and cooling, se",
+          "language": "en-US",
+          "elapsed_seconds": 7.230216,
+          "audio_elapsed_seconds": 6.458856
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has followed protocol for infection control, and cooling, separating the",
+          "language": "en-US",
+          "elapsed_seconds": 7.764107,
+          "audio_elapsed_seconds": 6.992747
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has followed protocol for infection control, and cooling, separating the patient",
+          "language": "en-US",
+          "elapsed_seconds": 8.117526,
+          "audio_elapsed_seconds": 7.346166
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has followed protocol for infection control, and cooling, separating the patient from",
+          "language": "en-US",
+          "elapsed_seconds": 8.643374,
+          "audio_elapsed_seconds": 7.872014
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has followed protocol for infection control, and cooling, separating the patient from others",
+          "language": "en-US",
+          "elapsed_seconds": 9.188332,
+          "audio_elapsed_seconds": 8.416971
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has followed protocol for infection control, and cooling, separating the patient from others to pre",
+          "language": "en-US",
+          "elapsed_seconds": 9.54945,
+          "audio_elapsed_seconds": 8.77809
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has followed protocol for infection control, and cooling, separating the patient from others to prevent possible",
+          "language": "en-US",
+          "elapsed_seconds": 10.075918,
+          "audio_elapsed_seconds": 9.304558
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has followed protocol for infection control, and cooling, separating the patient from others to prevent possible in",
+          "language": "en-US",
+          "elapsed_seconds": 10.662315,
+          "audio_elapsed_seconds": 9.890955
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has followed protocol for infection control, and cooling, separating the patient from others to prevent possible infection",
+          "language": "en-US",
+          "elapsed_seconds": 11.137632,
+          "audio_elapsed_seconds": 10.366272
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has followed protocol for infection control, and cooling, separating the patient from others to prevent possible infection of",
+          "language": "en-US",
+          "elapsed_seconds": 11.631372,
+          "audio_elapsed_seconds": 10.860012
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has followed protocol for infection control, and cooling, separating the patient from others to prevent possible infection of other",
+          "language": "en-US",
+          "elapsed_seconds": 12.045273,
+          "audio_elapsed_seconds": 11.273912
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The hospital has followed protocol for infection control, and cooling, separating the patient from others to prevent possible infection of others.",
+          "language": "en-US",
+          "elapsed_seconds": 12.495092,
+          "audio_elapsed_seconds": 11.723732
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 12.657707,
+          "audio_elapsed_seconds": 11.886347
+        }
+      ],
+      "errors": 5,
+      "reference_chars": 122,
+      "cer": 0.040983606557377046,
+      "word_errors": 2,
+      "reference_words": 20,
+      "wer": 0.1,
+      "first_caption_seconds": 2.662317,
+      "caption_update_count": 20,
+      "caption_update_times_seconds": [
+        2.662317,
+        3.005324,
+        3.582411,
+        4.120403,
+        4.464458,
+        5.05465,
+        5.408963,
+        5.9829,
+        6.458856,
+        6.992747,
+        7.346166,
+        7.872014,
+        8.416971,
+        8.77809,
+        9.304558,
+        9.890955,
+        10.366272,
+        10.860012,
+        11.273912,
+        11.723732
+      ],
+      "caption_update_intervals_seconds": [
+        0.343007,
+        0.577087,
+        0.537992,
+        0.344055,
+        0.590192,
+        0.354313,
+        0.573937,
+        0.475956,
+        0.533891,
+        0.353419,
+        0.525848,
+        0.544957,
+        0.361119,
+        0.526468,
+        0.586397,
+        0.475317,
+        0.49374,
+        0.4139,
+        0.44982
+      ],
+      "caption_update_interval_median_seconds": 0.49374,
+      "caption_update_interval_p90_seconds": 0.578949,
+      "ended_seconds": 11.886347,
+      "missing_final_caption": false,
+      "provider": "transcribe",
+      "audio": "audio/en-05.wav",
+      "sha256": "c15df2cdf2811dde17f6086317a9aeb0f2cb4a9967204c6beac2cd87fadfb93b",
+      "sha256_verified": true,
+      "parameters": {
+        "language_code": "en-US",
+        "media_sample_rate_hz": 16000,
+        "media_encoding": "pcm",
+        "show_speaker_label": true
+      }
+    },
+    {
+      "sample_id": "fleurs-en-test-row-6",
+      "language": "en",
+      "requested_language": "en-US",
+      "reference": "The Northern Marianas emergency management office said that there were no damages reported in the nation.",
+      "audio_seconds": 10.8,
+      "text": "The northern Mariana's Emergency Management Office said that there were no damages reported in the nation.",
+      "detected_languages": [
+        "en-US"
+      ],
+      "startup_seconds": 0.781503,
+      "first_partial_seconds": 2.416621,
+      "final_lag_seconds": -2.061074,
+      "end_to_end_seconds": 11.135496,
+      "audio_send_seconds": 10.807867,
+      "total_seconds": 11.917068,
+      "partial_count": 13,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 0.781503,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The north",
+          "language": "en-US",
+          "elapsed_seconds": 3.198193,
+          "audio_elapsed_seconds": 2.416621
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The northern",
+          "language": "en-US",
+          "elapsed_seconds": 3.724993,
+          "audio_elapsed_seconds": 2.943421
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The northern Marian",
+          "language": "en-US",
+          "elapsed_seconds": 4.224551,
+          "audio_elapsed_seconds": 3.442978
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The northern Mariana's Emer",
+          "language": "en-US",
+          "elapsed_seconds": 4.621477,
+          "audio_elapsed_seconds": 3.839905
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The northern Mariana's Emergency",
+          "language": "en-US",
+          "elapsed_seconds": 5.137399,
+          "audio_elapsed_seconds": 4.355827
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The northern Mariana's Emergency Management",
+          "language": "en-US",
+          "elapsed_seconds": 5.650855,
+          "audio_elapsed_seconds": 4.869283
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The northern Mariana's Emergency Management Office",
+          "language": "en-US",
+          "elapsed_seconds": 6.255135,
+          "audio_elapsed_seconds": 5.473562
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The northern Mariana's Emergency Management Office",
+          "language": "en-US",
+          "elapsed_seconds": 6.567886,
+          "audio_elapsed_seconds": 5.786314
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The northern Mariana's Emergency Management Office said that there",
+          "language": "en-US",
+          "elapsed_seconds": 7.112756,
+          "audio_elapsed_seconds": 6.331183
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The northern Mariana's Emergency Management Office said that there were no",
+          "language": "en-US",
+          "elapsed_seconds": 7.459599,
+          "audio_elapsed_seconds": 6.678026
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The northern Mariana's Emergency Management Office said that there were no damages",
+          "language": "en-US",
+          "elapsed_seconds": 8.080506,
+          "audio_elapsed_seconds": 7.298934
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The northern Mariana's Emergency Management Office said that there were no damages reported",
+          "language": "en-US",
+          "elapsed_seconds": 8.535618,
+          "audio_elapsed_seconds": 7.754046
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The northern Mariana's Emergency Management Office said that there were no damages reported in the",
+          "language": "en-US",
+          "elapsed_seconds": 9.035671,
+          "audio_elapsed_seconds": 8.254098
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The northern Mariana's Emergency Management Office said that there were no damages reported in the nation.",
+          "language": "en-US",
+          "elapsed_seconds": 9.520498,
+          "audio_elapsed_seconds": 8.738926
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 11.91703,
+          "audio_elapsed_seconds": 11.135458
+        }
+      ],
+      "errors": 0,
+      "reference_chars": 89,
+      "cer": 0.0,
+      "word_errors": 0,
+      "reference_words": 16,
+      "wer": 0.0,
+      "first_caption_seconds": 2.416621,
+      "caption_update_count": 13,
+      "caption_update_times_seconds": [
+        2.416621,
+        2.943421,
+        3.442978,
+        3.839905,
+        4.355827,
+        4.869283,
+        5.473562,
+        6.331183,
+        6.678026,
+        7.298934,
+        7.754046,
+        8.254098,
+        8.738926
+      ],
+      "caption_update_intervals_seconds": [
+        0.5268,
+        0.499557,
+        0.396927,
+        0.515922,
+        0.513456,
+        0.604279,
+        0.857621,
+        0.346843,
+        0.620908,
+        0.455112,
+        0.500052,
+        0.484828
+      ],
+      "caption_update_interval_median_seconds": 0.506754,
+      "caption_update_interval_p90_seconds": 0.6192451,
+      "ended_seconds": 11.135458,
+      "missing_final_caption": false,
+      "provider": "transcribe",
+      "audio": "audio/en-06.wav",
+      "sha256": "b804e68fee5b002c5a6942a4dbefe4dba14b3f816e07404c80ee508527ecf956",
+      "sha256_verified": true,
+      "parameters": {
+        "language_code": "en-US",
+        "media_sample_rate_hz": 16000,
+        "media_encoding": "pcm",
+        "show_speaker_label": true
+      }
+    },
+    {
+      "sample_id": "fleurs-en-test-row-7",
+      "language": "en",
+      "requested_language": "en-US",
+      "reference": "Twentieth century research has shown that there are two pools of genetic variation: hidden and expressed.",
+      "audio_seconds": 6.96,
+      "text": "20th century research has shown that there are 2 pools of genetic variation hidden and expressed.",
+      "detected_languages": [
+        "en-US"
+      ],
+      "startup_seconds": 0.789655,
+      "first_partial_seconds": 2.81918,
+      "final_lag_seconds": 0.381513,
+      "end_to_end_seconds": 7.515111,
+      "audio_send_seconds": 6.978062,
+      "total_seconds": 8.30484,
+      "partial_count": 9,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 0.789655,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "20th",
+          "language": "en-US",
+          "elapsed_seconds": 3.608909,
+          "audio_elapsed_seconds": 2.81918
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "20th century",
+          "language": "en-US",
+          "elapsed_seconds": 4.106498,
+          "audio_elapsed_seconds": 3.316769
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "20th century research has",
+          "language": "en-US",
+          "elapsed_seconds": 4.45625,
+          "audio_elapsed_seconds": 3.666521
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "20th century research has shown that there",
+          "language": "en-US",
+          "elapsed_seconds": 4.978339,
+          "audio_elapsed_seconds": 4.18861
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "20th century research has shown that there are 2 po",
+          "language": "en-US",
+          "elapsed_seconds": 5.511687,
+          "audio_elapsed_seconds": 4.721958
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "20th century research has shown that there are 2 pools of gene",
+          "language": "en-US",
+          "elapsed_seconds": 6.029341,
+          "audio_elapsed_seconds": 5.239612
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "20th century research has shown that there are 2 pools of genetic vari",
+          "language": "en-US",
+          "elapsed_seconds": 6.400938,
+          "audio_elapsed_seconds": 5.611209
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "20th century research has shown that there are 2 pools of genetic variation",
+          "language": "en-US",
+          "elapsed_seconds": 6.956374,
+          "audio_elapsed_seconds": 6.166645
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "20th century research has shown that there are 2 pools of genetic variation hidden and",
+          "language": "en-US",
+          "elapsed_seconds": 7.498913,
+          "audio_elapsed_seconds": 6.709184
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "20th century research has shown that there are 2 pools of genetic variation hidden and expressed.",
+          "language": "en-US",
+          "elapsed_seconds": 8.131242,
+          "audio_elapsed_seconds": 7.341513
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 8.304805,
+          "audio_elapsed_seconds": 7.515076
+        }
+      ],
+      "errors": 10,
+      "reference_chars": 88,
+      "cer": 0.11363636363636363,
+      "word_errors": 2,
+      "reference_words": 16,
+      "wer": 0.125,
+      "first_caption_seconds": 2.81918,
+      "caption_update_count": 10,
+      "caption_update_times_seconds": [
+        2.81918,
+        3.316769,
+        3.666521,
+        4.18861,
+        4.721958,
+        5.239612,
+        5.611209,
+        6.166645,
+        6.709184,
+        7.341513
+      ],
+      "caption_update_intervals_seconds": [
+        0.497589,
+        0.349752,
+        0.522089,
+        0.533348,
+        0.517654,
+        0.371597,
+        0.555436,
+        0.542539,
+        0.632329
+      ],
+      "caption_update_interval_median_seconds": 0.522089,
+      "caption_update_interval_p90_seconds": 0.5708146000000001,
+      "ended_seconds": 7.515076,
+      "missing_final_caption": false,
+      "provider": "transcribe",
+      "audio": "audio/en-07.wav",
+      "sha256": "eecacd023023857f4a8fb8b86a5815a06c972ac49584d34fec14d71640a9c684",
+      "sha256_verified": true,
+      "parameters": {
+        "language_code": "en-US",
+        "media_sample_rate_hz": 16000,
+        "media_encoding": "pcm",
+        "show_speaker_label": true
+      }
+    },
+    {
+      "sample_id": "fleurs-en-test-row-8",
+      "language": "en",
+      "requested_language": "en-US",
+      "reference": "The aspect ratio of this format (dividing by twelve to obtain the simplest whole-number ratio) is therefore said to be 3:2.",
+      "audio_seconds": 11.04,
+      "text": "The aspect ratio of this format, dividing by 12 to obtain the simplest whole number ratio is therefore said to be free to 2.",
+      "detected_languages": [
+        "en-US"
+      ],
+      "startup_seconds": 0.773556,
+      "first_partial_seconds": 2.684184,
+      "final_lag_seconds": 0.22182,
+      "end_to_end_seconds": 11.492013,
+      "audio_send_seconds": 11.080925,
+      "total_seconds": 12.265643,
+      "partial_count": 18,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 0.773556,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect",
+          "language": "en-US",
+          "elapsed_seconds": 3.457815,
+          "audio_elapsed_seconds": 2.684184
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect ratio",
+          "language": "en-US",
+          "elapsed_seconds": 3.974099,
+          "audio_elapsed_seconds": 3.200468
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect ratio of this form",
+          "language": "en-US",
+          "elapsed_seconds": 4.478739,
+          "audio_elapsed_seconds": 3.705108
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect ratio of this format,",
+          "language": "en-US",
+          "elapsed_seconds": 4.991577,
+          "audio_elapsed_seconds": 4.217946
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect ratio of this format, divi",
+          "language": "en-US",
+          "elapsed_seconds": 5.491569,
+          "audio_elapsed_seconds": 4.717939
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect ratio of this format, dividing",
+          "language": "en-US",
+          "elapsed_seconds": 5.992282,
+          "audio_elapsed_seconds": 5.218651
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect ratio of this format, dividing by 12",
+          "language": "en-US",
+          "elapsed_seconds": 6.445481,
+          "audio_elapsed_seconds": 5.671851
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect ratio of this format, dividing by 12 to",
+          "language": "en-US",
+          "elapsed_seconds": 6.816671,
+          "audio_elapsed_seconds": 6.04304
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect ratio of this format, dividing by 12 to obtain",
+          "language": "en-US",
+          "elapsed_seconds": 7.421466,
+          "audio_elapsed_seconds": 6.647835
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect ratio of this format, dividing by 12 to obtain the simples",
+          "language": "en-US",
+          "elapsed_seconds": 7.912127,
+          "audio_elapsed_seconds": 7.138496
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect ratio of this format, dividing by 12 to obtain the simplest whole number",
+          "language": "en-US",
+          "elapsed_seconds": 8.277605,
+          "audio_elapsed_seconds": 7.503975
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect ratio of this format, dividing by 12 to obtain the simplest whole number rat",
+          "language": "en-US",
+          "elapsed_seconds": 8.826643,
+          "audio_elapsed_seconds": 8.053012
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect ratio of this format, dividing by 12 to obtain the simplest whole number ratio",
+          "language": "en-US",
+          "elapsed_seconds": 9.335152,
+          "audio_elapsed_seconds": 8.561522
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect ratio of this format, dividing by 12 to obtain the simplest whole number ratio is",
+          "language": "en-US",
+          "elapsed_seconds": 9.850416,
+          "audio_elapsed_seconds": 9.076785
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect ratio of this format, dividing by 12 to obtain the simplest whole number ratio is therefore",
+          "language": "en-US",
+          "elapsed_seconds": 10.217559,
+          "audio_elapsed_seconds": 9.443928
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect ratio of this format, dividing by 12 to obtain the simplest whole number ratio is therefore said to",
+          "language": "en-US",
+          "elapsed_seconds": 10.742465,
+          "audio_elapsed_seconds": 9.968834
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect ratio of this format, dividing by 12 to obtain the simplest whole number ratio is therefore said to be free",
+          "language": "en-US",
+          "elapsed_seconds": 11.271115,
+          "audio_elapsed_seconds": 10.497484
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect ratio of this format, dividing by 12 to obtain the simplest whole number ratio is therefore said to be free to 2",
+          "language": "en-US",
+          "elapsed_seconds": 11.75114,
+          "audio_elapsed_seconds": 10.97751
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "The aspect ratio of this format, dividing by 12 to obtain the simplest whole number ratio is therefore said to be free to 2.",
+          "language": "en-US",
+          "elapsed_seconds": 12.03545,
+          "audio_elapsed_seconds": 11.26182
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 12.265601,
+          "audio_elapsed_seconds": 11.49197
+        }
+      ],
+      "errors": 12,
+      "reference_chars": 98,
+      "cer": 0.12244897959183673,
+      "word_errors": 3,
+      "reference_words": 23,
+      "wer": 0.13043478260869565,
+      "first_caption_seconds": 2.684184,
+      "caption_update_count": 19,
+      "caption_update_times_seconds": [
+        2.684184,
+        3.200468,
+        3.705108,
+        4.217946,
+        4.717939,
+        5.218651,
+        5.671851,
+        6.04304,
+        6.647835,
+        7.138496,
+        7.503975,
+        8.053012,
+        8.561522,
+        9.076785,
+        9.443928,
+        9.968834,
+        10.497484,
+        10.97751,
+        11.26182
+      ],
+      "caption_update_intervals_seconds": [
+        0.516284,
+        0.50464,
+        0.512838,
+        0.499993,
+        0.500712,
+        0.4532,
+        0.371189,
+        0.604795,
+        0.490661,
+        0.365479,
+        0.549037,
+        0.50851,
+        0.515263,
+        0.367143,
+        0.524906,
+        0.52865,
+        0.480026,
+        0.28431
+      ],
+      "caption_update_interval_median_seconds": 0.502676,
+      "caption_update_interval_p90_seconds": 0.5347661,
+      "ended_seconds": 11.49197,
+      "missing_final_caption": false,
+      "provider": "transcribe",
+      "audio": "audio/en-08.wav",
+      "sha256": "409f227a6a0d463314a5b138931d658c69377b1684a134f2459aa698eb0fc8cd",
+      "sha256_verified": true,
+      "parameters": {
+        "language_code": "en-US",
+        "media_sample_rate_hz": 16000,
+        "media_encoding": "pcm",
+        "show_speaker_label": true
+      }
+    },
+    {
+      "sample_id": "fleurs-en-test-row-9",
+      "language": "en",
+      "requested_language": "en-US",
+      "reference": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses, easier to reach than those built in modern times.",
+      "audio_seconds": 9.9,
+      "text": "As light pollution in their heyday was not the kind of problem it is today. They are usually located in cities or at campuses, easier to reach than those built in modern times.",
+      "detected_languages": [
+        "en-US"
+      ],
+      "startup_seconds": 0.925102,
+      "first_partial_seconds": 2.504044,
+      "final_lag_seconds": 0.1315,
+      "end_to_end_seconds": 10.434602,
+      "audio_send_seconds": 9.948868,
+      "total_seconds": 11.359798,
+      "partial_count": 16,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 0.925102,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "As light po",
+          "language": "en-US",
+          "elapsed_seconds": 3.42924,
+          "audio_elapsed_seconds": 2.504044
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "As light pollution in their",
+          "language": "en-US",
+          "elapsed_seconds": 3.794572,
+          "audio_elapsed_seconds": 2.869376
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "As light pollution in their heyday",
+          "language": "en-US",
+          "elapsed_seconds": 4.340965,
+          "audio_elapsed_seconds": 3.415769
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "As light pollution in their heyday was not the kind",
+          "language": "en-US",
+          "elapsed_seconds": 4.888156,
+          "audio_elapsed_seconds": 3.96296
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "As light pollution in their heyday was not the kind of problem",
+          "language": "en-US",
+          "elapsed_seconds": 5.234082,
+          "audio_elapsed_seconds": 4.308886
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "As light pollution in their heyday was not the kind of problem it is today",
+          "language": "en-US",
+          "elapsed_seconds": 5.781395,
+          "audio_elapsed_seconds": 4.856199
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "As light pollution in their heyday was not the kind of problem it is today. They are",
+          "language": "en-US",
+          "elapsed_seconds": 6.313472,
+          "audio_elapsed_seconds": 5.388276
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "As light pollution in their heyday was not the kind of problem it is today. They are usually loc",
+          "language": "en-US",
+          "elapsed_seconds": 6.678835,
+          "audio_elapsed_seconds": 5.753639
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "As light pollution in their heyday was not the kind of problem it is today. They are usually located in",
+          "language": "en-US",
+          "elapsed_seconds": 7.260728,
+          "audio_elapsed_seconds": 6.335532
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "As light pollution in their heyday was not the kind of problem it is today. They are usually located in cities or at",
+          "language": "en-US",
+          "elapsed_seconds": 7.768053,
+          "audio_elapsed_seconds": 6.842857
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "As light pollution in their heyday was not the kind of problem it is today. They are usually located in cities or at campuse",
+          "language": "en-US",
+          "elapsed_seconds": 8.190264,
+          "audio_elapsed_seconds": 7.265068
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "As light pollution in their heyday was not the kind of problem it is today. They are usually located in cities or at campuses, easier",
+          "language": "en-US",
+          "elapsed_seconds": 8.70543,
+          "audio_elapsed_seconds": 7.780234
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "As light pollution in their heyday was not the kind of problem it is today. They are usually located in cities or at campuses, easier to reach",
+          "language": "en-US",
+          "elapsed_seconds": 9.099473,
+          "audio_elapsed_seconds": 8.174277
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "As light pollution in their heyday was not the kind of problem it is today. They are usually located in cities or at campuses, easier to reach than those",
+          "language": "en-US",
+          "elapsed_seconds": 9.622507,
+          "audio_elapsed_seconds": 8.697311
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "As light pollution in their heyday was not the kind of problem it is today. They are usually located in cities or at campuses, easier to reach than those built in mo",
+          "language": "en-US",
+          "elapsed_seconds": 10.204156,
+          "audio_elapsed_seconds": 9.27896
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "As light pollution in their heyday was not the kind of problem it is today. They are usually located in cities or at campuses, easier to reach than those built in modern times",
+          "language": "en-US",
+          "elapsed_seconds": 10.54914,
+          "audio_elapsed_seconds": 9.623944
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "As light pollution in their heyday was not the kind of problem it is today. They are usually located in cities or at campuses, easier to reach than those built in modern times.",
+          "language": "en-US",
+          "elapsed_seconds": 10.956696,
+          "audio_elapsed_seconds": 10.0315
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 11.359754,
+          "audio_elapsed_seconds": 10.434558
+        }
+      ],
+      "errors": 0,
+      "reference_chars": 141,
+      "cer": 0.0,
+      "word_errors": 0,
+      "reference_words": 33,
+      "wer": 0.0,
+      "first_caption_seconds": 2.504044,
+      "caption_update_count": 17,
+      "caption_update_times_seconds": [
+        2.504044,
+        2.869376,
+        3.415769,
+        3.96296,
+        4.308886,
+        4.856199,
+        5.388276,
+        5.753639,
+        6.335532,
+        6.842857,
+        7.265068,
+        7.780234,
+        8.174277,
+        8.697311,
+        9.27896,
+        9.623944,
+        10.0315
+      ],
+      "caption_update_intervals_seconds": [
+        0.365332,
+        0.546393,
+        0.547191,
+        0.345926,
+        0.547313,
+        0.532077,
+        0.365363,
+        0.581893,
+        0.507325,
+        0.422211,
+        0.515166,
+        0.394043,
+        0.523034,
+        0.581649,
+        0.344984,
+        0.407556
+      ],
+      "caption_update_interval_median_seconds": 0.5112455,
+      "caption_update_interval_p90_seconds": 0.564481,
+      "ended_seconds": 10.434558,
+      "missing_final_caption": false,
+      "provider": "transcribe",
+      "audio": "audio/en-09.wav",
+      "sha256": "3f988cc9edf80f64bcb387e5d6353604fd7ef7b3d5016b495fc6f09a18847b2f",
+      "sha256_verified": true,
+      "parameters": {
+        "language_code": "en-US",
+        "media_sample_rate_hz": 16000,
+        "media_encoding": "pcm",
+        "show_speaker_label": true
+      }
+    }
+  ],
+  "summary": {
+    "successful_samples": 10,
+    "failed_samples": 0,
+    "pending_samples": 0,
+    "error_count": 0,
+    "ranking_allowed": true,
+    "cer": 0.03773584905660377,
+    "wer": 0.06635071090047394,
+    "valid_only": {
+      "cer": 0.03773584905660377,
+      "errors": 38,
+      "reference_chars": 1007,
+      "wer": 0.06635071090047394,
+      "word_errors": 14,
+      "reference_words": 211,
+      "partial_count": 139,
+      "partial_before_audio_end_samples": 10,
+      "samples_with_partial": 10,
+      "median_startup_seconds": 0.7947525,
+      "median_first_partial_seconds": 2.4603325,
+      "median_final_lag_seconds": 0.3426225,
+      "median_end_to_end_seconds": 10.7036285,
+      "median_first_caption_seconds": 2.4603325,
+      "p90_first_caption_seconds": 2.6976836,
+      "caption_update_interval_median_seconds": 0.516284,
+      "caption_update_interval_p90_seconds": 0.5828226000000001
+    },
+    "median_first_caption_seconds": 2.4603325,
+    "p90_first_caption_seconds": 2.6976836,
+    "caption_update_interval_median_seconds": 0.516284,
+    "caption_update_interval_p90_seconds": 0.5828226000000001,
+    "samples_without_final_caption": 0
+  }
+}

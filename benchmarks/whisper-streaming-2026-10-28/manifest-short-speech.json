@@ -1,0 +1,91 @@
+{
+  "source": {
+    "service": "Amazon Polly",
+    "engine": "neural",
+    "sample_rate": 16000,
+    "purpose": "legitimate short acknowledgements and quiet speech regression"
+  },
+  "license": "Original test phrases; AWS service output",
+  "samples": [
+    {
+      "id": "ko-thanks",
+      "language": "ko",
+      "reference": "감사합니다.",
+      "audio": "short-speech-audio/ko-thanks.wav",
+      "audio_seconds": 2.1625,
+      "sha256": "c98b8ca8dc364cd6e8c3d46dcfbb5ab0464e74f2c924e45457f7d2a4b85f18b6",
+      "gain": 1,
+      "voice": "Seoyeon"
+    },
+    {
+      "id": "ko-thanks-quiet",
+      "language": "ko",
+      "reference": "감사합니다.",
+      "audio": "short-speech-audio/ko-thanks-quiet.wav",
+      "audio_seconds": 2.1625,
+      "sha256": "6f5bf4097c2edfbc66ce0805ddbec9e6f28d383d8cb6dcbae8d40757cbd9038d",
+      "gain": 0.03,
+      "voice": "Seoyeon"
+    },
+    {
+      "id": "ko-yes",
+      "language": "ko",
+      "reference": "네.",
+      "audio": "short-speech-audio/ko-yes.wav",
+      "audio_seconds": 1.5375,
+      "sha256": "84b1336b27397d3cf131c5c95478feb44a70c14e62a1a340cbdc5baef37c32b2",
+      "gain": 1,
+      "voice": "Seoyeon"
+    },
+    {
+      "id": "ko-yes-quiet",
+      "language": "ko",
+      "reference": "네.",
+      "audio": "short-speech-audio/ko-yes-quiet.wav",
+      "audio_seconds": 1.5375,
+      "sha256": "e7c5fc66b6cf8b10b2f8db37fa8111bfecd7e6c43bbb0fdcc6bb4e3a887973f3",
+      "gain": 0.03,
+      "voice": "Seoyeon"
+    },
+    {
+      "id": "en-thanks",
+      "language": "en",
+      "reference": "Thank you.",
+      "audio": "short-speech-audio/en-thanks.wav",
+      "audio_seconds": 1.7625,
+      "sha256": "fc1ca0d83685ebc12af30f3dd61a88eb3f7296f16fd701b2d8850ae8b2c86fb8",
+      "gain": 1,
+      "voice": "Joanna"
+    },
+    {
+      "id": "en-thanks-quiet",
+      "language": "en",
+      "reference": "Thank you.",
+      "audio": "short-speech-audio/en-thanks-quiet.wav",
+      "audio_seconds": 1.7625,
+      "sha256": "5272c62299f4a1058fbe54762692cb6c8e796d75fa2da8656098c3e849f039cf",
+      "gain": 0.03,
+      "voice": "Joanna"
+    },
+    {
+      "id": "en-yes",
+      "language": "en",
+      "reference": "Yes.",
+      "audio": "short-speech-audio/en-yes.wav",
+      "audio_seconds": 1.7125,
+      "sha256": "fdd13d801f53e68dd92dd40b0ff4ba4ba151874cb89df44ae893cd97d033242b",
+      "gain": 1,
+      "voice": "Joanna"
+    },
+    {
+      "id": "en-yes-quiet",
+      "language": "en",
+      "reference": "Yes.",
+      "audio": "short-speech-audio/en-yes-quiet.wav",
+      "audio_seconds": 1.7125,
+      "sha256": "6d6711c1b401dd93c858d0e84671c3d88cb20615f0341625a2e7b56871cce356",
+      "gain": 0.03,
+      "voice": "Joanna"
+    }
+  ]
+}

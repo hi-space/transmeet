@@ -46,19 +46,27 @@ export class TransmeetStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    const whisperStreamingEndpoint = this.node.tryGetContext('whisperStreamingEndpoint') || process.env.WHISPER_STREAMING_ENDPOINT || WHISPER_ENDPOINT;
+    const whisperStreamingRegion = this.node.tryGetContext('whisperStreamingRegion') || process.env.WHISPER_STREAMING_REGION || REGION;
+    const whisperStreamingEnabled = String(this.node.tryGetContext('whisperStreamingEnabled') ?? process.env.WHISPER_STREAMING_ENABLED ?? 'true') === 'true';
     const qwenAsrEndpoint = this.node.tryGetContext('qwenAsrEndpoint') || process.env.QWEN_ASR_ENDPOINT || 'transmeet-qwen3-asr';
     const nemotronAsrEndpoint = this.node.tryGetContext('nemotronAsrEndpoint') || process.env.NEMOTRON_ASR_ENDPOINT || 'transmeet-nemotron-asr';
     const qwenAsrRegion = this.node.tryGetContext('qwenAsrRegion') || process.env.QWEN_ASR_REGION || 'ap-northeast-2';
+    const qwenStreamingEndpoint = this.node.tryGetContext('qwenStreamingEndpoint') || process.env.QWEN_STREAMING_ENDPOINT || 'transmeet-qwen-streaming';
+    const qwenStreamingRegion = this.node.tryGetContext('qwenStreamingRegion') || process.env.QWEN_STREAMING_REGION || qwenAsrRegion;
+    const qwenStreamingEnabled = String(this.node.tryGetContext('qwenStreamingEnabled') ?? process.env.QWEN_STREAMING_ENABLED ?? 'true') === 'true';
     const nemotronAsrRegion = this.node.tryGetContext('nemotronAsrRegion') || process.env.NEMOTRON_ASR_REGION || 'ap-northeast-2';
-    const nemotronStreamingEndpoint = this.node.tryGetContext('nemotronStreamingEndpoint') || process.env.NEMOTRON_STREAMING_ENDPOINT || 'transmeet-nemotron-streaming-v2';
-    const nemotronStreamingRegion = this.node.tryGetContext('nemotronStreamingRegion') || process.env.NEMOTRON_STREAMING_REGION || REGION;
-    const nemotronStreamingEnabled = String(this.node.tryGetContext('nemotronStreamingEnabled') ?? process.env.NEMOTRON_STREAMING_ENABLED ?? 'false') === 'true';
+    const nemotronStreamingEndpoint = this.node.tryGetContext('nemotronStreamingEndpoint') || process.env.NEMOTRON_STREAMING_ENDPOINT || 'transmeet-nemotron-streaming';
+    const nemotronStreamingRegion = this.node.tryGetContext('nemotronStreamingRegion') || process.env.NEMOTRON_STREAMING_REGION || 'ap-northeast-2';
+    const nemotronStreamingEnabled = String(this.node.tryGetContext('nemotronStreamingEnabled') ?? process.env.NEMOTRON_STREAMING_ENABLED ?? 'true') === 'true';
     const qwenAsrComponent = this.node.tryGetContext('qwenAsrComponent') || process.env.QWEN_ASR_INFERENCE_COMPONENT || 'transmeet-qwen3-asr-ic-v2';
     const nemotronAsrComponent = this.node.tryGetContext('nemotronAsrComponent') || process.env.NEMOTRON_ASR_INFERENCE_COMPONENT || 'transmeet-nemotron-asr-ic-v2';
     const wsImageTag = this.node.tryGetContext('wsImageTag') || 'latest';
     const speechEndpoints = [
       { endpoint: WHISPER_ENDPOINT, region: REGION },
+      { endpoint: whisperStreamingEndpoint, region: whisperStreamingRegion },
       { endpoint: qwenAsrEndpoint, region: qwenAsrRegion },
+      { endpoint: qwenStreamingEndpoint, region: qwenStreamingRegion },
       { endpoint: nemotronAsrEndpoint, region: nemotronAsrRegion },
     ].filter(({ endpoint }) => Boolean(endpoint));
 
@@ -490,8 +498,13 @@ export class TransmeetStack extends cdk.Stack {
     );
     wsTaskRole.addToPolicy(
       new iam.PolicyStatement({
-        actions: ['sagemaker:InvokeEndpointWithBidirectionalStream', 'sagemaker:DescribeEndpoint'],
-        resources: [`arn:aws:sagemaker:${nemotronStreamingRegion}:${this.account}:endpoint/${nemotronStreamingEndpoint}`],
+        // The live HTTP/2 runtime also checks InvokeEndpoint on this same ARN.
+        actions: ['sagemaker:InvokeEndpoint', 'sagemaker:InvokeEndpointWithBidirectionalStream', 'sagemaker:DescribeEndpoint'],
+        resources: [
+          `arn:aws:sagemaker:${whisperStreamingRegion}:${this.account}:endpoint/${whisperStreamingEndpoint}`,
+          `arn:aws:sagemaker:${nemotronStreamingRegion}:${this.account}:endpoint/${nemotronStreamingEndpoint}`,
+          `arn:aws:sagemaker:${qwenStreamingRegion}:${this.account}:endpoint/${qwenStreamingEndpoint}`,
+        ],
       })
     );
     wsTaskRole.addToPolicy(
@@ -742,7 +755,15 @@ export class TransmeetStack extends cdk.Stack {
         PAGES_TABLE,
         SUMMARY_SNAPSHOTS_TABLE,
         WHISPER_ENDPOINT,
+        WHISPER_STREAMING_ENDPOINT: whisperStreamingEndpoint,
+        WHISPER_STREAMING_REGION: whisperStreamingRegion,
+        WHISPER_STREAMING_ENABLED: String(whisperStreamingEnabled),
+        WHISPER_STREAMING_CHUNK_MS: process.env.WHISPER_STREAMING_CHUNK_MS || '1000',
         QWEN_ASR_ENDPOINT: qwenAsrEndpoint,
+        QWEN_STREAMING_ENDPOINT: qwenStreamingEndpoint,
+        QWEN_STREAMING_REGION: qwenStreamingRegion,
+        QWEN_STREAMING_ENABLED: String(qwenStreamingEnabled),
+        QWEN_STREAMING_CHUNK_MS: process.env.QWEN_STREAMING_CHUNK_MS || '1000',
         NEMOTRON_ASR_ENDPOINT: nemotronAsrEndpoint,
         NEMOTRON_STREAMING_ENDPOINT: nemotronStreamingEndpoint,
         NEMOTRON_STREAMING_ENABLED: String(nemotronStreamingEnabled),

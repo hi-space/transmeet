@@ -256,6 +256,8 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
   const startRecording = useCallback(
     (opts: {
       sttProvider: string
+      /** Opt into the model stream only after discovering its backend capability. */
+      sttStreaming?: boolean
       sourceLang?: SourceLanguage
       translationTarget?: TranslationTarget
       modelId?: string

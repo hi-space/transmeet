@@ -1,0 +1,46 @@
+{
+  "conditions": {
+    "ko-1000": {
+      "success": 10,
+      "failed": 0,
+      "live_partial_before_end": 10,
+      "error_metric": "CER",
+      "error_rate": 0.042505592841163314,
+      "first_partial_median_seconds": 2.5856215000000002,
+      "final_lag_median_seconds": 0.31811849999999997
+    },
+    "ko-2000": {
+      "success": 10,
+      "failed": 0,
+      "live_partial_before_end": 10,
+      "error_metric": "CER",
+      "error_rate": 0.042505592841163314,
+      "first_partial_median_seconds": 2.5163375,
+      "final_lag_median_seconds": 0.3482475
+    },
+    "en-1000": {
+      "success": 10,
+      "failed": 0,
+      "live_partial_before_end": 10,
+      "error_metric": "WER",
+      "error_rate": 0.037914691943127965,
+      "first_partial_median_seconds": 1.5109460000000001,
+      "final_lag_median_seconds": 0.5171840000000001
+    },
+    "en-2000": {
+      "success": 10,
+      "failed": 0,
+      "live_partial_before_end": 10,
+      "error_metric": "WER",
+      "error_rate": 0.037914691943127965,
+      "first_partial_median_seconds": 2.5280005,
+      "final_lag_median_seconds": 0.47772800000000004
+    }
+  },
+  "identical_final_text_across_intervals": true,
+  "selected_interval_ms": 1000,
+  "measurement_endpoint": "transmeet-whisper-streaming",
+  "measurement_instance": "ml.g5.xlarge",
+  "speech_samples": 20,
+  "streaming_runs": 40
+}

@@ -1,0 +1,61 @@
+{
+  "checked_at": "2026-10-28T20:14:41.429798+00:00",
+  "focused_tests": {
+    "command": "python -m pytest tests/test_qwen_engine.py tests/test_qwen_server.py tests/test_qwen_streaming_deploy.py -q",
+    "passed": 24
+  },
+  "image_offline_runtime": {
+    "contracts": "pass",
+    "qwen_asr": "0.0.6",
+    "vllm": "0.14.0",
+    "torch": "2.9.1+cu129",
+    "cuda": "12.9",
+    "official_finalizer_unicode_regression": "reproduced and fixed",
+    "token_ids": [
+      142176,
+      57801,
+      85413,
+      225,
+      38231,
+      13,
+      138779,
+      35711
+    ]
+  },
+  "image_offline_websocket": {
+    "asgi_contract": "pass",
+    "sequence": [
+      "ready",
+      "partial",
+      "final",
+      "ended"
+    ],
+    "preserved_samples": 2641
+  },
+  "gpu_inference": "real GPU warm-up passed; paced speech validation owned by parent",
+  "seoul_g6_2xlarge_endpoint_quota": 2,
+  "endpoint_status": "InService",
+  "endpoint_name": "transmeet-qwen-streaming",
+  "endpoint_config": "transmeet-qwen-streaming-e05b013eb7d0-cfg",
+  "image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming@sha256:767bfb4858b1fe4cbb64b72f4a150d242829ea8c52230b3c237c2553be1fb394",
+  "network_isolation": true,
+  "current_instance_count": 1,
+  "inference_source_sha256": {
+    "inference/qwen_streaming/Dockerfile": "8b3af02014cc68cc020411459010c9eee79fffd875048aa3f2b5f912a9dc9bd8",
+    "inference/qwen_streaming/Dockerfile.dockerignore": "34b7b6551fce8a938c931d104fab1183d777bdb29ac92bdbdbda6845fc034fa5",
+    "inference/qwen_streaming/__init__.py": "27cd94dde58d7530f72da5da1c2350a2e423a5d1df930c31154502f8529acce1",
+    "inference/qwen_streaming/bootstrap.py": "fa83bc7c6017a6adee6ea07e9c9ab471a4f7ada6d93e34ebc7cd357dc0a025a0",
+    "inference/qwen_streaming/endpoint_policy.py": "347d5c6db24dd3c15f1db132f3b6449cf27b7e6c0e91b7e929e2cbaf3252d4b5",
+    "inference/qwen_streaming/engine.py": "2a8fa38d10db560567bb2f7e8e041ef619419ce3a1932b97811ae77319299c7a",
+    "inference/qwen_streaming/model_runtime.py": "c303c52deaf09c7237da733577edce08e3749e02be1e6ff6db25febaec4f6807",
+    "inference/qwen_streaming/requirements.txt": "5a11baa75110bd63986b77b96ca66923fd501d0e6bb8c5259503d05a87a59aae",
+    "inference/qwen_streaming/server.py": "06aca0adfdd3423771edf7dc1c26fb5773ac99997640c3cf2afedd59dd1f57d8"
+  },
+  "full_backend_suite": {
+    "command": "python -m pytest -q",
+    "passed": 457,
+    "warnings": 3,
+    "warnings_detail": "Existing Pydantic class-based Config deprecation",
+    "elapsed_seconds": 8.52
+  }
+}

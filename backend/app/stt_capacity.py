@@ -62,14 +62,15 @@ class CapacityManager:
 
     async def status(self, provider, refresh=False):
         identity = {"provider": provider}
-        if provider == "nemotron":
-            identity["streaming"] = is_streaming_provider(provider)
+        streaming = is_streaming_provider(provider)
+        if provider in MANAGED_PROVIDERS or streaming:
+            identity["streaming"] = streaming
         try:
             validate_provider(provider)
         except (TypeError, ValueError):
             return {**identity, "status": "unavailable",
                     "message": "이 음성 인식 엔진은 아직 설정되지 않았습니다."}
-        if provider not in MANAGED_PROVIDERS:
+        if provider not in MANAGED_PROVIDERS and not streaming:
             return {**identity, "status": "ready", "managed": False}
         cached = self.cache.get(provider)
         if cached and not refresh and self.clock() - cached[0] < 2:
@@ -140,7 +141,7 @@ class CapacityManager:
 
     async def prepare(self, provider):
         if provider not in MANAGED_PROVIDERS:
-            return await self.status(provider)
+            return await self.status(provider, refresh=is_streaming_provider(provider))
         async with self.locks[provider]:
             self.touch(provider)
             status = await self.status(provider, refresh=True)

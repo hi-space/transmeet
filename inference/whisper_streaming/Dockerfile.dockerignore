@@ -1,0 +1,7 @@
+**
+!inference/
+!inference/__init__.py
+!inference/whisper_streaming/
+!inference/whisper_streaming/**
+**/__pycache__/**
+**/*.pyc

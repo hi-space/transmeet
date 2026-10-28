@@ -1,0 +1,17 @@
+{
+  "checked_at": "2026-10-28T21:11:49.160541+00:00",
+  "source_hash_matches_run": true,
+  "all80_scores_recomputed": true,
+  "all80_input_hashes_rechecked": true,
+  "all8_reports_complete_and_rankable": true,
+  "report_sha256": {
+    "transcribe-ko.json": "850a8fcb3793f07ee2e7bca97cf0ed91347164c049dbc58cbd1328288cadcdd8",
+    "transcribe-en.json": "06f7227921a4e71eaa63bab1f15aa6cfadea5dfdffee0ec7705df5f9f8e8d1ea",
+    "whisper-ko.json": "f53b50537b6e1ecc750bd798c081130e89bdfe5a16ea26ccc4ca8c077fb5db45",
+    "whisper-en.json": "4c913368135122e70154007e2625eb393be49d53db1f71a93f10e1b8b3ee3aae",
+    "qwen3-asr-ko.json": "935d0c7e86a2b1487a5dec93a924547c2284152852530469668f6132581ae50f",
+    "qwen3-asr-en.json": "7782da9a99613ae0ea694b5bd53e2e06c043130daedd9de6739ada841e6a7c8b",
+    "nemotron-ko.json": "83bd1a1f439e687b2b070cc3aaee27f4d083a95b638c66fb92cf341ce06255e6",
+    "nemotron-en.json": "7ad9974ef4e9959e40514de78887968b85d1b1432044911142afe68f4111e039"
+  }
+}

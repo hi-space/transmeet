@@ -1,0 +1,197 @@
+{
+  "created_at": "2026-10-28T22:03:54.205072+00:00",
+  "model_id": "openai/whisper-large-v3-turbo",
+  "jumpstart_artifact_version": "1.0.0",
+  "endpoint": "transmeet-whisper-streaming",
+  "region": "us-east-1",
+  "manifest": "/home/ubuntu/workspace/transmeet/benchmarks/stt-ko-en-2026-10-28/manifest-en.json",
+  "manifest_sha256": "09d2c6e77bb6d075a0d1f70560855dc94e8899cb3615c4b50092f51eeac001d6",
+  "source": {
+    "dataset": "google/fleurs",
+    "config": "en_us",
+    "split": "test",
+    "rows": "0-9",
+    "url": "https://huggingface.co/datasets/google/fleurs",
+    "parquet": "https://huggingface.co/datasets/google/fleurs/resolve/refs%2Fconvert%2Fparquet/en_us/test/0000.parquet"
+  },
+  "license": "CC-BY-4.0",
+  "planned_samples": 1,
+  "status": "complete",
+  "conditions": {
+    "mode": "realtime_streaming",
+    "model_chunk_ms": 1000,
+    "capture_frame_ms": 160,
+    "language_mode": "manifest",
+    "input": "SHA-256 verified 16 kHz mono PCM16 WAV; no trimming or augmentation",
+    "pacing": "await ready, then send every frame at its audio end time",
+    "startup": "stream start to first ready; excluded from audio-relative latency",
+    "final_lag": "last unique nonempty final minus audio end; trailing silence can make this negative",
+    "end_to_end": "audio capture start through stream close, including audio duration",
+    "event_elapsed_origin": "stream start; audio_elapsed_seconds starts after ready",
+    "cer_normalization": "benchmark_stt.score_transcript: NFKC, casefold, alphanumeric characters",
+    "wer_normalization": "English only: NFKC, casefold, remove straight/curly apostrophes, Unicode alphanumeric words",
+    "model_identity": "expected pinned artifact; endpoint deployment provenance is checked separately",
+    "ready_timeout_seconds": 45,
+    "close_timeout_seconds": 20
+  },
+  "results": [
+    {
+      "sample_id": "fleurs-en-test-row-0",
+      "language": "en",
+      "requested_language": "en-US",
+      "reference": "However, due to the slow communication channels, styles in the west could lag behind by 25 to 30 year.",
+      "audio_seconds": 10.56,
+      "text": "However, due to the slow communication channels, styles in the West could lag behind by 25 to 30 years. Thank you.",
+      "detected_languages": [
+        "English"
+      ],
+      "startup_seconds": 1.110341,
+      "first_partial_seconds": 1.468994,
+      "final_lag_seconds": 0.319419,
+      "end_to_end_seconds": 10.939365,
+      "audio_send_seconds": 10.5608,
+      "total_seconds": 12.049764,
+      "partial_count": 8,
+      "final_count": 2,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 1.110341,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "Hello.",
+          "language": "English",
+          "elapsed_seconds": 2.579393,
+          "audio_elapsed_seconds": 1.468994
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "However, due to",
+          "language": "English",
+          "elapsed_seconds": 3.673716,
+          "audio_elapsed_seconds": 2.563316
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "However, due to the slow communication,",
+          "language": "English",
+          "elapsed_seconds": 4.883696,
+          "audio_elapsed_seconds": 3.773296
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "However, due to the slow communication channels,",
+          "language": "English",
+          "elapsed_seconds": 5.953764,
+          "audio_elapsed_seconds": 4.843365
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "However, due to the slow communication channels, styles in the West",
+          "language": "English",
+          "elapsed_seconds": 7.089933,
+          "audio_elapsed_seconds": 5.979534
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "However, due to the slow communication channels, styles in the West could lag behind",
+          "language": "English",
+          "elapsed_seconds": 8.221743,
+          "audio_elapsed_seconds": 7.111343
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "However, due to the slow communication channels, styles in the West could lag behind by 25%,",
+          "language": "English",
+          "elapsed_seconds": 9.305412,
+          "audio_elapsed_seconds": 8.195013
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "However, due to the slow communication channels, styles in the West could lag behind by 25 to 30 years.",
+          "language": "English",
+          "elapsed_seconds": 10.511921,
+          "audio_elapsed_seconds": 9.401521
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "However, due to the slow communication channels, styles in the West could lag behind by 25 to 30 years.",
+          "language": "English",
+          "elapsed_seconds": 11.193387,
+          "audio_elapsed_seconds": 10.082987
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "Thank you.",
+          "language": "English",
+          "elapsed_seconds": 11.989818,
+          "audio_elapsed_seconds": 10.879419
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 11.989877,
+          "audio_elapsed_seconds": 10.879478
+        }
+      ],
+      "errors": 9,
+      "reference_chars": 81,
+      "cer": 0.1111111111111111,
+      "word_errors": 3,
+      "reference_words": 19,
+      "wer": 0.15789473684210525,
+      "audio": "audio/en-00.wav",
+      "sha256": "b438b60eb4e9fddbcaa303e27070c2458c3daac42f0b08d5d8622c47335d24f7",
+      "sha256_verified": true
+    }
+  ],
+  "summary": {
+    "successful_samples": 1,
+    "failed_samples": 0,
+    "pending_samples": 0,
+    "error_count": 0,
+    "ranking_allowed": true,
+    "cer": 0.1111111111111111,
+    "wer": 0.15789473684210525,
+    "valid_only": {
+      "cer": 0.1111111111111111,
+      "errors": 9,
+      "reference_chars": 81,
+      "wer": 0.15789473684210525,
+      "word_errors": 3,
+      "reference_words": 19,
+      "partial_count": 8,
+      "partial_before_audio_end_samples": 1,
+      "samples_with_partial": 1,
+      "median_startup_seconds": 1.110341,
+      "median_first_partial_seconds": 1.468994,
+      "median_final_lag_seconds": 0.319419,
+      "median_end_to_end_seconds": 10.939365
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "test_meetings": 10,
+  "delete_results": [
+    {
+      "meeting": "1eb5ea10-cc6e-4030-8f04-0b6c1c8e09e3",
+      "status": 204
+    },
+    {
+      "meeting": "0001b2eb-23a7-41e0-9d5f-46353460cc92",
+      "status": 204
+    },
+    {
+      "meeting": "83d3fc9b-03ca-4cb3-9343-05193b1bc6af",
+      "status": 204
+    },
+    {
+      "meeting": "6f735fef-1fc3-43ef-ba6d-51b3948c8116",
+      "status": 204
+    },
+    {
+      "meeting": "fb8f53b3-69a3-4a80-8a92-39f7e6dce182",
+      "status": 204
+    },
+    {
+      "meeting": "0b3cffe5-e679-459e-9b66-5299865d1b73",
+      "status": 204
+    },
+    {
+      "meeting": "1079c633-fdbe-4769-b28d-a10ac333ce98",
+      "status": 204
+    },
+    {
+      "meeting": "c67b33b8-5f68-4a0e-b0ec-3728e03b17b2",
+      "status": 204
+    },
+    {
+      "meeting": "3d404b8e-addd-4887-b2b1-d3c12364767b",
+      "status": 204
+    },
+    {
+      "meeting": "dc781801-b3ae-48c0-b12b-b60dbb05a419",
+      "status": 204
+    }
+  ],
+  "test_audio_removed": true,
+  "test_cognito_user_deleted": true,
+  "private_tokens_removed": true,
+  "no_user_meetings_touched": true
+}

@@ -1,0 +1,12 @@
+{
+  "started_at": "2026-10-28T20:20:49.066424+00:00",
+  "bucket": "transmeet-frontend-913524902871",
+  "distribution": "EZT7NX9EZJO9J",
+  "previous_index_etag": "\"702ff5e3b7852c06b2f10b14b9babc4a\"",
+  "index_sha256": "9a396b87786e894007c65761222c3918e610675811c22b7c7e352ec8d5e1f2cb",
+  "source": "isolated production build, validated Qwen browser scenarios and lint/types",
+  "status": "complete",
+  "invalidation_id": "IDF96B729R17AQHMNVJJET0367",
+  "invalidation_status": "Completed",
+  "uploaded_at": "2026-10-28T20:21:06.203964+00:00"
+}

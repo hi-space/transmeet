@@ -1,0 +1,46 @@
+{
+  "checked_at": "2026-10-28T20:23:21.080896+00:00",
+  "focused_tests": 33,
+  "full_backend_tests": 466,
+  "existing_warnings": 3,
+  "image_check": {
+    "all20_actual_wavs_exact_pcm_retained": true,
+    "digital_silence_no_decoder": true
+  },
+  "all20_recordings": "exact original PCM preserved, every utterance at most15 seconds",
+  "tradeoff": "Nonzero room tone is passed to ASR. Only exact digital silence is skipped while idle; uncertain background consumes bounded inference rather than risking lost words.",
+  "observed_g6_2xlarge_envelope": {
+    "peak_memory_percent": 12.440944196268067,
+    "approximate_memory_gib": 3.9811,
+    "peak_cpu_percent": 105.09553470919325,
+    "peak_gpu_memory_percent": 62.9981766084918
+  },
+  "candidate_instance": {
+    "type": "ml.g6.xlarge",
+    "cpu": 4,
+    "memory_gib": 16,
+    "gpu_memory_gb": 24,
+    "hourly_usd": 1.3854,
+    "price_source": "../stt-ko-en-2026-10-28/regional-pricing.json"
+  },
+  "hardware_limit": "Observed smoke workload fits; final adequacy requires fresh paced speech probes on the replacement instance.",
+  "inference_source_sha256": {
+    "inference/qwen_streaming/Dockerfile": "8b3af02014cc68cc020411459010c9eee79fffd875048aa3f2b5f912a9dc9bd8",
+    "inference/qwen_streaming/Dockerfile.dockerignore": "34b7b6551fce8a938c931d104fab1183d777bdb29ac92bdbdbda6845fc034fa5",
+    "inference/qwen_streaming/__init__.py": "27cd94dde58d7530f72da5da1c2350a2e423a5d1df930c31154502f8529acce1",
+    "inference/qwen_streaming/bootstrap.py": "fa83bc7c6017a6adee6ea07e9c9ab471a4f7ada6d93e34ebc7cd357dc0a025a0",
+    "inference/qwen_streaming/endpoint_policy.py": "347d5c6db24dd3c15f1db132f3b6449cf27b7e6c0e91b7e929e2cbaf3252d4b5",
+    "inference/qwen_streaming/engine.py": "bb59319da7ca261c9256572069bbccb4767b3b4d8617d7c44e48f6b9853c9531",
+    "inference/qwen_streaming/model_runtime.py": "c303c52deaf09c7237da733577edce08e3749e02be1e6ff6db25febaec4f6807",
+    "inference/qwen_streaming/requirements.txt": "5a11baa75110bd63986b77b96ca66923fd501d0e6bb8c5259503d05a87a59aae",
+    "inference/qwen_streaming/server.py": "06aca0adfdd3423771edf7dc1c26fb5773ac99997640c3cf2afedd59dd1f57d8"
+  },
+  "ready_verified_at": "2026-10-28T20:31:28.562668+00:00",
+  "endpoint_status": "InService",
+  "endpoint_config": "transmeet-qwen-streaming-c0a866de6144-cfg",
+  "live_instance_type": "ml.g6.xlarge",
+  "current_instance_count": 1,
+  "gpu_warmup": "passed on NVIDIA L4 in replacement host",
+  "actual_speech_validation": "Parent running KO6, EN0 and EN4 probes followed by all20 recordings at1s and2s chunks.",
+  "host_metrics_file": "deployment-retention-host-metrics.json"
+}

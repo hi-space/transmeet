@@ -1,0 +1,37 @@
+{
+  "EndpointConfigName": "transmeet-qwen-streaming-c0a866de6144-cfg",
+  "EndpointConfigArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint-config/transmeet-qwen-streaming-c0a866de6144-cfg",
+  "ProductionVariants": [
+    {
+      "VariantName": "AllTraffic",
+      "ModelName": "transmeet-qwen-streaming-c0a866de6144",
+      "InitialInstanceCount": 1,
+      "InstanceType": "ml.g6.xlarge",
+      "InitialVariantWeight": 1.0,
+      "ModelDataDownloadTimeoutInSeconds": 1800,
+      "ContainerStartupHealthCheckTimeoutInSeconds": 1800,
+      "InferenceAmiVersion": "al2023-ami-sagemaker-inference-gpu-4-1"
+    }
+  ],
+  "CreationTime": "2026-10-28 20:23:22.287000+00:00",
+  "EnableNetworkIsolation": false,
+  "MetricsConfig": {
+    "EnableDetailedObservability": true
+  },
+  "ResponseMetadata": {
+    "RequestId": "91518e31-55bb-4c0c-8d0b-f46bb6041622",
+    "HTTPStatusCode": 200,
+    "HTTPHeaders": {
+      "x-amzn-requestid": "91518e31-55bb-4c0c-8d0b-f46bb6041622",
+      "strict-transport-security": "max-age=47304000; includeSubDomains",
+      "x-frame-options": "DENY",
+      "content-security-policy": "frame-ancestors 'none'",
+      "cache-control": "no-cache, no-store, must-revalidate",
+      "x-content-type-options": "nosniff",
+      "content-type": "application/x-amz-json-1.1",
+      "content-length": "649",
+      "date": "Wed, 28 Oct 2026 20:31:28 GMT"
+    },
+    "RetryAttempts": 0
+  }
+}

@@ -10,10 +10,18 @@ class Config(BaseSettings):
     # 내 양식 사본(meetingId 키). 회의 항목은 400 KB 한도에 가까워 따로 둔다.
     SUMMARY_SNAPSHOTS_TABLE: str = "transmeet-summary-snapshots"
     WHISPER_ENDPOINT: str = "whisper-large"
+    WHISPER_STREAMING_ENABLED: bool = False
+    WHISPER_STREAMING_ENDPOINT: str = ""
+    WHISPER_STREAMING_REGION: str = ""
+    WHISPER_STREAMING_CHUNK_MS: int = 1000
     QWEN_ASR_ENDPOINT: str = ""
     NEMOTRON_ASR_ENDPOINT: str = ""
     QWEN_ASR_REGION: str = ""
     NEMOTRON_ASR_REGION: str = ""
+    QWEN_STREAMING_ENABLED: bool = False
+    QWEN_STREAMING_ENDPOINT: str = ""
+    QWEN_STREAMING_REGION: str = ""
+    QWEN_STREAMING_CHUNK_MS: int = 1000
     NEMOTRON_STREAMING_ENABLED: bool = False
     NEMOTRON_STREAMING_ENDPOINT: str = ""
     NEMOTRON_STREAMING_REGION: str = ""

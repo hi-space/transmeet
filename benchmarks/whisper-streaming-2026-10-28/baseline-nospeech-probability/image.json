@@ -1,0 +1,7 @@
+{
+  "image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-whisper-streaming@sha256:d3284901b2b134240390dde7e4b1e926288ff3fc68c16ba1124b33e77cb514e1",
+  "tag": "20261028-1fea2f1c8461",
+  "source_sha256": "1fea2f1c8461cb4ee7c75e2d2bdc5dbadb7476c0961cf8a0863bde945a5de94e",
+  "size_bytes": 9789381314,
+  "no_speech_threshold": 0.6
+}

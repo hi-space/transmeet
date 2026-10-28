@@ -1,0 +1,813 @@
+{
+  "checked_at": "2026-10-28T21:00:05.215051+00:00",
+  "audit_mode": "read_only_no_inference",
+  "ecs": {
+    "task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+    "revision": 35,
+    "environment": {
+      "QWEN_ASR_ENDPOINT": "transmeet-qwen3-asr",
+      "NEMOTRON_STREAMING_REGION": "ap-northeast-2",
+      "NEMOTRON_ASR_ENDPOINT": "transmeet-nemotron-asr",
+      "WHISPER_ENDPOINT": "whisper-large",
+      "QWEN_STREAMING_ENABLED": "true",
+      "NEMOTRON_ASR_REGION": "ap-northeast-2",
+      "NEMOTRON_STREAMING_ENDPOINT": "transmeet-nemotron-streaming",
+      "NEMOTRON_STREAMING_ENABLED": "true",
+      "NEMOTRON_STREAMING_CHUNK_MS": "560",
+      "QWEN_STREAMING_REGION": "ap-northeast-2",
+      "QWEN_ASR_INFERENCE_COMPONENT": "transmeet-qwen3-asr-ic-v2",
+      "NEMOTRON_ASR_INFERENCE_COMPONENT": "transmeet-nemotron-asr-ic-v2",
+      "QWEN_STREAMING_CHUNK_MS": "1000",
+      "QWEN_STREAMING_ENDPOINT": "transmeet-qwen-streaming",
+      "REGION": "us-east-1",
+      "STT_IDLE_SECONDS": "0",
+      "QWEN_ASR_REGION": "ap-northeast-2"
+    },
+    "task_role": "arn:aws:iam::913524902871:role/TransmeetStack-WsTaskRole4B337A19-JBueyIt7ZiW8",
+    "image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-ws-backend@sha256:bb9fdc8f9895b8a4bb9776fc69138ae065bfd47ff430f17dae28b276a9091fbe",
+    "service": {
+      "desiredCount": 1,
+      "runningCount": 1,
+      "pendingCount": 0,
+      "deployments": [
+        {
+          "id": "ecs-svc/7333950839463620706",
+          "status": "PRIMARY",
+          "taskDefinition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+          "desiredCount": 1,
+          "pendingCount": 0,
+          "runningCount": 1,
+          "failedTasks": 0,
+          "createdAt": "2026-10-28 20:55:23.691000+00:00",
+          "updatedAt": "2026-10-28 20:58:22.245000+00:00",
+          "launchType": "FARGATE",
+          "platformVersion": "1.4.0",
+          "platformFamily": "Linux",
+          "networkConfiguration": {
+            "awsvpcConfiguration": {
+              "subnets": [
+                "subnet-004e4de8f44df73f4",
+                "subnet-0c94bfe05f0196437",
+                "subnet-025fec8b3e9c9dfa3",
+                "subnet-084c6f3b4f66e3400",
+                "subnet-0dc381e600c5dd74b",
+                "subnet-022e4dec99016c27d"
+              ],
+              "securityGroups": [
+                "sg-013bc1506ab8a1c67"
+              ],
+              "assignPublicIp": "ENABLED"
+            }
+          },
+          "rolloutState": "COMPLETED",
+          "rolloutStateReason": "ECS deployment ecs-svc/7333950839463620706 completed."
+        }
+      ]
+    },
+    "containers": [
+      {
+        "name": "ws-backend",
+        "logConfiguration": {
+          "logDriver": "awslogs",
+          "options": {
+            "awslogs-group": "TransmeetStack-WsTaskDefwsbackendLogGroupC057CDB9-cNUhJCUgCNSp",
+            "awslogs-region": "us-east-1",
+            "awslogs-stream-prefix": "transmeet-ws"
+          },
+          "secretOptions": []
+        },
+        "image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-ws-backend@sha256:bb9fdc8f9895b8a4bb9776fc69138ae065bfd47ff430f17dae28b276a9091fbe"
+      }
+    ]
+  },
+  "endpoints": {
+    "nemotron_native": {
+      "key": "nemotron_native",
+      "region": "ap-northeast-2",
+      "endpoint_name": "transmeet-nemotron-streaming",
+      "component_name": null,
+      "checked_at": "2026-10-28T21:00:05.397008+00:00",
+      "endpoint": {
+        "EndpointName": "transmeet-nemotron-streaming",
+        "EndpointArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-streaming",
+        "EndpointConfigName": "transmeet-nemotron-streaming-859ae8f54c75-cfg",
+        "ProductionVariants": [
+          {
+            "VariantName": "AllTraffic",
+            "DeployedImages": [
+              {
+                "SpecifiedImage": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-nemotron-streaming@sha256:c20c3f92bf90b7786e4a5122e4404e682c418fca8f2d7442601595a7261e6c23",
+                "ResolvedImage": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-nemotron-streaming@sha256:c20c3f92bf90b7786e4a5122e4404e682c418fca8f2d7442601595a7261e6c23",
+                "ResolutionTime": "2026-10-28 20:28:25.844000+00:00"
+              }
+            ],
+            "CurrentWeight": 1.0,
+            "DesiredWeight": 1.0,
+            "CurrentInstanceCount": 1,
+            "DesiredInstanceCount": 1,
+            "InstancePools": [
+              {
+                "InstanceType": "ml.g5.xlarge",
+                "CurrentInstanceCount": 1
+              }
+            ]
+          }
+        ],
+        "EndpointStatus": "InService",
+        "CreationTime": "2026-10-28 20:14:18.607000+00:00",
+        "LastModifiedTime": "2026-10-28 20:32:37.234000+00:00",
+        "LastDeploymentConfig": {
+          "BlueGreenUpdatePolicy": {
+            "TrafficRoutingConfiguration": {
+              "Type": "ALL_AT_ONCE",
+              "WaitIntervalInSeconds": 0
+            },
+            "TerminationWaitInSeconds": 0
+          }
+        },
+        "MetricsConfig": {
+          "EnableDetailedObservability": true
+        }
+      },
+      "config": {
+        "EndpointConfigName": "transmeet-nemotron-streaming-859ae8f54c75-cfg",
+        "EndpointConfigArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint-config/transmeet-nemotron-streaming-859ae8f54c75-cfg",
+        "ProductionVariants": [
+          {
+            "VariantName": "AllTraffic",
+            "ModelName": "transmeet-nemotron-streaming-859ae8f54c75",
+            "InitialInstanceCount": 1,
+            "InstancePools": [
+              {
+                "InstanceType": "ml.g5.xlarge",
+                "Priority": 1
+              },
+              {
+                "InstanceType": "ml.g5.4xlarge",
+                "Priority": 2
+              }
+            ],
+            "VariantInstanceProvisionTimeoutInSeconds": 600,
+            "InitialVariantWeight": 1.0,
+            "ModelDataDownloadTimeoutInSeconds": 1800,
+            "ContainerStartupHealthCheckTimeoutInSeconds": 1800,
+            "InferenceAmiVersion": "al2-ami-sagemaker-inference-gpu-3-1"
+          }
+        ],
+        "CreationTime": "2026-10-28 20:28:25.089000+00:00",
+        "EnableNetworkIsolation": false,
+        "MetricsConfig": {
+          "EnableDetailedObservability": true
+        }
+      },
+      "models": [
+        {
+          "ModelName": "transmeet-nemotron-streaming-859ae8f54c75",
+          "PrimaryContainer": {
+            "Image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-nemotron-streaming@sha256:c20c3f92bf90b7786e4a5122e4404e682c418fca8f2d7442601595a7261e6c23",
+            "Mode": "SingleModel",
+            "ModelDataSource": {
+              "S3DataSource": {
+                "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-nvidia-nemotron-3-5-asr-streaming-0-6b/artifacts/inference-prepack/v1.0.2/",
+                "S3DataType": "S3Prefix",
+                "CompressionType": "None"
+              }
+            },
+            "Environment": {
+              "MODEL_DIR": "/opt/ml/model",
+              "NVIDIA_DRIVER_CAPABILITIES": "compute,utility",
+              "NVIDIA_VISIBLE_DEVICES": "all"
+            }
+          },
+          "ExecutionRoleArn": "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+          "CreationTime": "2026-10-28 20:28:24.821000+00:00",
+          "ModelArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:model/transmeet-nemotron-streaming-859ae8f54c75",
+          "EnableNetworkIsolation": true,
+          "DeploymentRecommendation": {
+            "RecommendationStatus": "COMPLETED",
+            "RealTimeInferenceRecommendations": [
+              {
+                "RecommendationId": "transmeet-nemotron-streaming-859ae8f54c75/WCscX4m9",
+                "InstanceType": "ml.g4dn.4xlarge",
+                "Environment": {}
+              },
+              {
+                "RecommendationId": "transmeet-nemotron-streaming-859ae8f54c75/1IKSqa46",
+                "InstanceType": "ml.c5.large",
+                "Environment": {}
+              },
+              {
+                "RecommendationId": "transmeet-nemotron-streaming-859ae8f54c75/ZGVYDElb",
+                "InstanceType": "ml.c5.xlarge",
+                "Environment": {}
+              }
+            ]
+          }
+        }
+      ],
+      "scalable_targets": [],
+      "actual_hardware": [
+        {
+          "instance_type": "ml.g5.xlarge",
+          "current_instance_count": 1
+        }
+      ],
+      "current_host_count": 1,
+      "desired_host_count": 1,
+      "current_copy_count": null
+    },
+    "qwen_native": {
+      "key": "qwen_native",
+      "region": "ap-northeast-2",
+      "endpoint_name": "transmeet-qwen-streaming",
+      "component_name": null,
+      "checked_at": "2026-10-28T21:00:05.394308+00:00",
+      "endpoint": {
+        "EndpointName": "transmeet-qwen-streaming",
+        "EndpointArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen-streaming",
+        "EndpointConfigName": "transmeet-qwen-streaming-c0a866de6144-cfg",
+        "ProductionVariants": [
+          {
+            "VariantName": "AllTraffic",
+            "DeployedImages": [
+              {
+                "SpecifiedImage": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming@sha256:31fd09210793be44424f5d45270d99ceb26c2dc4bcd5e8ff962048631def63d3",
+                "ResolvedImage": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming@sha256:31fd09210793be44424f5d45270d99ceb26c2dc4bcd5e8ff962048631def63d3",
+                "ResolutionTime": "2026-10-28 20:23:23.083000+00:00"
+              }
+            ],
+            "CurrentWeight": 1.0,
+            "DesiredWeight": 1.0,
+            "CurrentInstanceCount": 1,
+            "DesiredInstanceCount": 1
+          }
+        ],
+        "EndpointStatus": "InService",
+        "CreationTime": "2026-10-28 20:06:46.292000+00:00",
+        "LastModifiedTime": "2026-10-28 20:30:25.007000+00:00",
+        "MetricsConfig": {
+          "EnableDetailedObservability": true
+        }
+      },
+      "config": {
+        "EndpointConfigName": "transmeet-qwen-streaming-c0a866de6144-cfg",
+        "EndpointConfigArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint-config/transmeet-qwen-streaming-c0a866de6144-cfg",
+        "ProductionVariants": [
+          {
+            "VariantName": "AllTraffic",
+            "ModelName": "transmeet-qwen-streaming-c0a866de6144",
+            "InitialInstanceCount": 1,
+            "InstanceType": "ml.g6.xlarge",
+            "InitialVariantWeight": 1.0,
+            "ModelDataDownloadTimeoutInSeconds": 1800,
+            "ContainerStartupHealthCheckTimeoutInSeconds": 1800,
+            "InferenceAmiVersion": "al2023-ami-sagemaker-inference-gpu-4-1"
+          }
+        ],
+        "CreationTime": "2026-10-28 20:23:22.287000+00:00",
+        "EnableNetworkIsolation": false,
+        "MetricsConfig": {
+          "EnableDetailedObservability": true
+        }
+      },
+      "models": [
+        {
+          "ModelName": "transmeet-qwen-streaming-c0a866de6144",
+          "PrimaryContainer": {
+            "Image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming@sha256:31fd09210793be44424f5d45270d99ceb26c2dc4bcd5e8ff962048631def63d3",
+            "Mode": "SingleModel",
+            "ModelDataSource": {
+              "S3DataSource": {
+                "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/",
+                "S3DataType": "S3Prefix",
+                "CompressionType": "None"
+              }
+            },
+            "Environment": {
+              "HF_HUB_OFFLINE": "1",
+              "MODEL_DIR": "/opt/ml/model",
+              "NVIDIA_DRIVER_CAPABILITIES": "compute,utility",
+              "NVIDIA_VISIBLE_DEVICES": "all",
+              "TRANSFORMERS_OFFLINE": "1",
+              "VLLM_WORKER_MULTIPROC_METHOD": "spawn"
+            }
+          },
+          "ExecutionRoleArn": "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+          "CreationTime": "2026-10-28 20:23:21.969000+00:00",
+          "ModelArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:model/transmeet-qwen-streaming-c0a866de6144",
+          "EnableNetworkIsolation": true,
+          "DeploymentRecommendation": {
+            "RecommendationStatus": "COMPLETED",
+            "RealTimeInferenceRecommendations": [
+              {
+                "RecommendationId": "transmeet-qwen-streaming-c0a866de6144/VIfFjPJX",
+                "InstanceType": "ml.g4dn.4xlarge",
+                "Environment": {}
+              },
+              {
+                "RecommendationId": "transmeet-qwen-streaming-c0a866de6144/YN7zhMbh",
+                "InstanceType": "ml.c5.large",
+                "Environment": {}
+              },
+              {
+                "RecommendationId": "transmeet-qwen-streaming-c0a866de6144/1vFgMyNb",
+                "InstanceType": "ml.c5.xlarge",
+                "Environment": {}
+              }
+            ]
+          }
+        }
+      ],
+      "scalable_targets": [],
+      "actual_hardware": [
+        {
+          "instance_type": "ml.g6.xlarge",
+          "current_instance_count": 1
+        }
+      ],
+      "current_host_count": 1,
+      "desired_host_count": 1,
+      "current_copy_count": null
+    },
+    "nemotron_legacy_batch": {
+      "key": "nemotron_legacy_batch",
+      "region": "ap-northeast-2",
+      "endpoint_name": "transmeet-nemotron-asr",
+      "component_name": "transmeet-nemotron-asr-ic-v2",
+      "checked_at": "2026-10-28T21:00:05.385578+00:00",
+      "endpoint": {
+        "EndpointName": "transmeet-nemotron-asr",
+        "EndpointArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-asr",
+        "EndpointConfigName": "transmeet-nemotron-asr-warm-v1",
+        "ProductionVariants": [
+          {
+            "VariantName": "AllTraffic",
+            "CurrentInstanceCount": 1,
+            "DesiredInstanceCount": 1,
+            "ManagedInstanceScaling": {
+              "Status": "ENABLED",
+              "MinInstanceCount": 1,
+              "MaxInstanceCount": 1,
+              "ScaleInPolicy": {
+                "Strategy": "IDLE_RELEASE"
+              }
+            }
+          }
+        ],
+        "EndpointStatus": "InService",
+        "CreationTime": "2026-10-28 19:13:20.916000+00:00",
+        "LastModifiedTime": "2026-10-28 19:15:23.838000+00:00",
+        "MetricsConfig": {
+          "EnableDetailedObservability": true
+        }
+      },
+      "config": {
+        "EndpointConfigName": "transmeet-nemotron-asr-warm-v1",
+        "EndpointConfigArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint-config/transmeet-nemotron-asr-warm-v1",
+        "ProductionVariants": [
+          {
+            "VariantName": "AllTraffic",
+            "InitialInstanceCount": 1,
+            "InstanceType": "ml.g5.2xlarge",
+            "ManagedInstanceScaling": {
+              "Status": "ENABLED",
+              "MinInstanceCount": 1,
+              "MaxInstanceCount": 1,
+              "ScaleInPolicy": {
+                "Strategy": "IDLE_RELEASE"
+              }
+            }
+          }
+        ],
+        "CreationTime": "2026-10-28 19:13:20.501000+00:00",
+        "ExecutionRoleArn": "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+        "EnableNetworkIsolation": true,
+        "MetricsConfig": {
+          "EnableDetailedObservability": true
+        }
+      },
+      "component": {
+        "InferenceComponentName": "transmeet-nemotron-asr-ic-v2",
+        "InferenceComponentArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:inference-component/transmeet-nemotron-asr-ic-v2",
+        "EndpointName": "transmeet-nemotron-asr",
+        "EndpointArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-asr",
+        "VariantName": "AllTraffic",
+        "Specification": {
+          "ModelName": "transmeet-nemotron-asr-model",
+          "StartupParameters": {
+            "ModelDataDownloadTimeoutInSeconds": 2400,
+            "ContainerStartupHealthCheckTimeoutInSeconds": 1800
+          },
+          "ComputeResourceRequirements": {
+            "NumberOfCpuCoresRequired": 2.0,
+            "NumberOfAcceleratorDevicesRequired": 1.0,
+            "MinMemoryRequiredInMb": 8192
+          },
+          "DataCacheConfig": {
+            "EnableCaching": true
+          }
+        },
+        "RuntimeConfig": {
+          "DesiredCopyCount": 1,
+          "CurrentCopyCount": 1,
+          "PlacementStatus": [
+            {
+              "InstanceType": "ml.g5.2xlarge",
+              "CurrentCopyCount": 1
+            }
+          ]
+        },
+        "CreationTime": "2026-10-28 19:15:42.027000+00:00",
+        "LastModifiedTime": "2026-10-28 19:21:01.248000+00:00",
+        "InferenceComponentStatus": "InService"
+      },
+      "models": [
+        {
+          "ModelName": "transmeet-nemotron-asr-model",
+          "PrimaryContainer": {
+            "Image": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311",
+            "Mode": "SingleModel",
+            "ModelDataSource": {
+              "S3DataSource": {
+                "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-nvidia-nemotron-3-5-asr-streaming-0-6b/artifacts/inference-prepack/v1.0.2/",
+                "S3DataType": "S3Prefix",
+                "CompressionType": "None"
+              }
+            },
+            "Environment": {
+              "ENDPOINT_SERVER_TIMEOUT": "3600",
+              "HF_TASK": "automatic-speech-recognition",
+              "MODEL_CACHE_ROOT": "/opt/ml/model",
+              "MODEL_PREPACK": "a625df9a",
+              "SAGEMAKER_ENV": "1",
+              "SAGEMAKER_MODEL_SERVER_TIMEOUT": "3600",
+              "SAGEMAKER_MODEL_SERVER_WORKERS": "1",
+              "SAGEMAKER_PROGRAM": "inference.py",
+              "SAGEMAKER_SUBMIT_DIRECTORY": "/opt/ml/model/code",
+              "TORCHDYNAMO_DISABLE": "1",
+              "TS_DEFAULT_RESPONSE_TIMEOUT": "900"
+            }
+          },
+          "ExecutionRoleArn": "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+          "CreationTime": "2026-10-28 19:13:20.162000+00:00",
+          "ModelArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:model/transmeet-nemotron-asr-model",
+          "EnableNetworkIsolation": true,
+          "DeploymentRecommendation": {
+            "RecommendationStatus": "COMPLETED",
+            "RealTimeInferenceRecommendations": [
+              {
+                "RecommendationId": "transmeet-nemotron-asr-model/DOWwL9m5",
+                "InstanceType": "ml.g4dn.4xlarge",
+                "Environment": {}
+              },
+              {
+                "RecommendationId": "transmeet-nemotron-asr-model/1oXFIEet",
+                "InstanceType": "ml.c5.large",
+                "Environment": {}
+              },
+              {
+                "RecommendationId": "transmeet-nemotron-asr-model/tAmiLzqy",
+                "InstanceType": "ml.g4dn.xlarge",
+                "Environment": {}
+              }
+            ]
+          }
+        }
+      ],
+      "scalable_targets": [
+        {
+          "ServiceNamespace": "sagemaker",
+          "ResourceId": "inference-component/transmeet-nemotron-asr-ic-v2",
+          "ScalableDimension": "sagemaker:inference-component:DesiredCopyCount",
+          "MinCapacity": 1,
+          "MaxCapacity": 1,
+          "RoleARN": "arn:aws:iam::913524902871:role/aws-service-role/sagemaker.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_SageMakerEndpoint",
+          "CreationTime": "2026-10-28 19:21:05.655000+00:00",
+          "SuspendedState": {
+            "DynamicScalingInSuspended": false,
+            "DynamicScalingOutSuspended": false,
+            "ScheduledScalingSuspended": false
+          },
+          "ScalableTargetARN": "arn:aws:application-autoscaling:ap-northeast-2:913524902871:scalable-target/056m26bf798def4144c3913e084723f455a9"
+        }
+      ],
+      "actual_hardware": [
+        {
+          "instance_type": "ml.g5.2xlarge",
+          "current_instance_count": 1
+        }
+      ],
+      "current_host_count": 1,
+      "desired_host_count": 1,
+      "current_copy_count": 1
+    },
+    "qwen_legacy_batch": {
+      "key": "qwen_legacy_batch",
+      "region": "ap-northeast-2",
+      "endpoint_name": "transmeet-qwen3-asr",
+      "component_name": "transmeet-qwen3-asr-ic-v2",
+      "checked_at": "2026-10-28T21:00:05.392791+00:00",
+      "endpoint": {
+        "EndpointName": "transmeet-qwen3-asr",
+        "EndpointArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen3-asr",
+        "EndpointConfigName": "transmeet-qwen3-asr-warm-v1",
+        "ProductionVariants": [
+          {
+            "VariantName": "AllTraffic",
+            "CurrentInstanceCount": 1,
+            "DesiredInstanceCount": 1,
+            "InstancePools": [
+              {
+                "InstanceType": "ml.g6.2xlarge",
+                "CurrentInstanceCount": 1
+              }
+            ],
+            "ManagedInstanceScaling": {
+              "Status": "ENABLED",
+              "MinInstanceCount": 1,
+              "MaxInstanceCount": 1,
+              "ScaleInPolicy": {
+                "Strategy": "IDLE_RELEASE"
+              }
+            }
+          }
+        ],
+        "EndpointStatus": "InService",
+        "CreationTime": "2026-10-28 19:13:32.788000+00:00",
+        "LastModifiedTime": "2026-10-28 19:16:01.125000+00:00",
+        "MetricsConfig": {
+          "EnableDetailedObservability": true
+        }
+      },
+      "config": {
+        "EndpointConfigName": "transmeet-qwen3-asr-warm-v1",
+        "EndpointConfigArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint-config/transmeet-qwen3-asr-warm-v1",
+        "ProductionVariants": [
+          {
+            "VariantName": "AllTraffic",
+            "InitialInstanceCount": 1,
+            "InstancePools": [
+              {
+                "InstanceType": "ml.g6.2xlarge",
+                "Priority": 1
+              },
+              {
+                "InstanceType": "ml.g6.xlarge",
+                "Priority": 2
+              }
+            ],
+            "VariantInstanceProvisionTimeoutInSeconds": 600,
+            "ManagedInstanceScaling": {
+              "Status": "ENABLED",
+              "MinInstanceCount": 1,
+              "MaxInstanceCount": 1,
+              "ScaleInPolicy": {
+                "Strategy": "IDLE_RELEASE"
+              }
+            }
+          }
+        ],
+        "CreationTime": "2026-10-28 19:13:32.315000+00:00",
+        "ExecutionRoleArn": "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+        "EnableNetworkIsolation": true,
+        "MetricsConfig": {
+          "EnableDetailedObservability": true
+        }
+      },
+      "component": {
+        "InferenceComponentName": "transmeet-qwen3-asr-ic-v2",
+        "InferenceComponentArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:inference-component/transmeet-qwen3-asr-ic-v2",
+        "EndpointName": "transmeet-qwen3-asr",
+        "EndpointArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen3-asr",
+        "VariantName": "AllTraffic",
+        "Specifications": [
+          {
+            "InstanceType": "ml.g6.2xlarge",
+            "ModelName": "transmeet-qwen3-asr-model-offline",
+            "StartupParameters": {
+              "ModelDataDownloadTimeoutInSeconds": 2400,
+              "ContainerStartupHealthCheckTimeoutInSeconds": 1800
+            },
+            "ComputeResourceRequirements": {
+              "NumberOfCpuCoresRequired": 2.0,
+              "NumberOfAcceleratorDevicesRequired": 1.0,
+              "MinMemoryRequiredInMb": 8192
+            },
+            "DataCacheConfig": {
+              "EnableCaching": true
+            }
+          },
+          {
+            "InstanceType": "ml.g6.xlarge",
+            "ModelName": "transmeet-qwen3-asr-model-offline",
+            "StartupParameters": {
+              "ModelDataDownloadTimeoutInSeconds": 2400,
+              "ContainerStartupHealthCheckTimeoutInSeconds": 1800
+            },
+            "ComputeResourceRequirements": {
+              "NumberOfCpuCoresRequired": 2.0,
+              "NumberOfAcceleratorDevicesRequired": 1.0,
+              "MinMemoryRequiredInMb": 8192
+            },
+            "DataCacheConfig": {
+              "EnableCaching": true
+            }
+          }
+        ],
+        "RuntimeConfig": {
+          "DesiredCopyCount": 1,
+          "CurrentCopyCount": 1,
+          "PlacementStatus": [
+            {
+              "InstanceType": "ml.g6.2xlarge",
+              "CurrentCopyCount": 1
+            }
+          ]
+        },
+        "CreationTime": "2026-10-28 19:16:13.980000+00:00",
+        "LastModifiedTime": "2026-10-28 19:22:26.210000+00:00",
+        "InferenceComponentStatus": "InService"
+      },
+      "models": [
+        {
+          "ModelName": "transmeet-qwen3-asr-model-offline",
+          "PrimaryContainer": {
+            "Image": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/vllm:server-sagemaker-cuda-v1",
+            "Mode": "SingleModel",
+            "ModelDataSource": {
+              "S3DataSource": {
+                "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/",
+                "S3DataType": "S3Prefix",
+                "CompressionType": "None"
+              }
+            },
+            "Environment": {
+              "ENDPOINT_SERVER_TIMEOUT": "3600",
+              "HF_MODEL_ID": "/opt/ml/model",
+              "MODEL_CACHE_ROOT": "/opt/ml/model",
+              "SAGEMAKER_ENV": "1",
+              "SAGEMAKER_MODEL_SERVER_TIMEOUT": "3600",
+              "SAGEMAKER_MODEL_SERVER_WORKERS": "1",
+              "SAGEMAKER_PROGRAM": "inference.py",
+              "SAGEMAKER_SUBMIT_DIRECTORY": "/opt/ml/model/code",
+              "SM_VLLM_MAX_MODEL_LEN": "32768",
+              "STANDARD_PIP_ARGS": "--no-deps --no-index -r /opt/ml/model/requirements.txt"
+            }
+          },
+          "ExecutionRoleArn": "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+          "CreationTime": "2026-10-28 19:13:31.865000+00:00",
+          "ModelArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:model/transmeet-qwen3-asr-model-offline",
+          "EnableNetworkIsolation": true,
+          "DeploymentRecommendation": {
+            "RecommendationStatus": "COMPLETED",
+            "RealTimeInferenceRecommendations": [
+              {
+                "RecommendationId": "transmeet-qwen3-asr-model-offline/mmg98WEN",
+                "InstanceType": "ml.g4dn.4xlarge",
+                "Environment": {}
+              },
+              {
+                "RecommendationId": "transmeet-qwen3-asr-model-offline/mO1eLrIW",
+                "InstanceType": "ml.c5.large",
+                "Environment": {}
+              },
+              {
+                "RecommendationId": "transmeet-qwen3-asr-model-offline/JeNWhh24",
+                "InstanceType": "ml.g4dn.xlarge",
+                "Environment": {}
+              }
+            ]
+          }
+        }
+      ],
+      "scalable_targets": [
+        {
+          "ServiceNamespace": "sagemaker",
+          "ResourceId": "inference-component/transmeet-qwen3-asr-ic-v2",
+          "ScalableDimension": "sagemaker:inference-component:DesiredCopyCount",
+          "MinCapacity": 1,
+          "MaxCapacity": 1,
+          "RoleARN": "arn:aws:iam::913524902871:role/aws-service-role/sagemaker.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_SageMakerEndpoint",
+          "CreationTime": "2026-10-28 19:22:38.104000+00:00",
+          "SuspendedState": {
+            "DynamicScalingInSuspended": false,
+            "DynamicScalingOutSuspended": false,
+            "ScheduledScalingSuspended": false
+          },
+          "ScalableTargetARN": "arn:aws:application-autoscaling:ap-northeast-2:913524902871:scalable-target/056mfc5b9efa53e442a784349623d39e6e8f"
+        }
+      ],
+      "actual_hardware": [
+        {
+          "instance_type": "ml.g6.2xlarge",
+          "current_instance_count": 1
+        }
+      ],
+      "current_host_count": 1,
+      "desired_host_count": 1,
+      "current_copy_count": 1
+    },
+    "whisper": {
+      "key": "whisper",
+      "region": "us-east-1",
+      "endpoint_name": "whisper-large",
+      "component_name": null,
+      "checked_at": "2026-10-28T21:00:05.389550+00:00",
+      "endpoint": {
+        "EndpointName": "whisper-large",
+        "EndpointArn": "arn:aws:sagemaker:us-east-1:913524902871:endpoint/whisper-large",
+        "EndpointConfigName": "whisper-large-1770857274414",
+        "ProductionVariants": [
+          {
+            "VariantName": "AllTraffic",
+            "DeployedImages": [
+              {
+                "SpecifiedImage": "763104351884.dkr.ecr.us-east-1.amazonaws.com/huggingface-pytorch-inference:2.1.0-transformers4.37.0-gpu-py310-cu118-ubuntu20.04",
+                "ResolvedImage": "763104351884.dkr.ecr.us-east-1.amazonaws.com/huggingface-pytorch-inference@sha256:c1fa2c7f57e0e9637267afbc199e2ae51d152d997278d28292723b16f118e4b1",
+                "ResolutionTime": "2026-02-12 00:47:56.797000+00:00"
+              }
+            ],
+            "CurrentWeight": 1.0,
+            "DesiredWeight": 1.0,
+            "CurrentInstanceCount": 1,
+            "DesiredInstanceCount": 1
+          }
+        ],
+        "EndpointStatus": "InService",
+        "CreationTime": "2026-02-12 00:47:56.079000+00:00",
+        "LastModifiedTime": "2026-02-12 00:53:22.062000+00:00"
+      },
+      "config": {
+        "EndpointConfigName": "whisper-large-1770857274414",
+        "EndpointConfigArn": "arn:aws:sagemaker:us-east-1:913524902871:endpoint-config/whisper-large-1770857274414",
+        "ProductionVariants": [
+          {
+            "VariantName": "AllTraffic",
+            "ModelName": "whisper-large-v3-turbo-004709",
+            "InitialInstanceCount": 1,
+            "InstanceType": "ml.g5.2xlarge",
+            "InitialVariantWeight": 1.0
+          }
+        ],
+        "CreationTime": "2026-02-12 00:47:54.953000+00:00",
+        "EnableNetworkIsolation": false
+      },
+      "models": [
+        {
+          "ModelName": "whisper-large-v3-turbo-004709",
+          "PrimaryContainer": {
+            "Image": "763104351884.dkr.ecr.us-east-1.amazonaws.com/huggingface-pytorch-inference:2.1.0-transformers4.37.0-gpu-py310-cu118-ubuntu20.04",
+            "Mode": "SingleModel",
+            "ModelDataSource": {
+              "S3DataSource": {
+                "S3Uri": "s3://jumpstart-cache-prod-us-east-1/huggingface-asr/huggingface-asr-whisper-large-v3-turbo/artifacts/inference-prepack/v1.0.0/",
+                "S3DataType": "S3Prefix",
+                "CompressionType": "None"
+              }
+            },
+            "Environment": {
+              "MODEL_CACHE_ROOT": "/opt/ml/model",
+              "SAGEMAKER_ENV": "1",
+              "SAGEMAKER_MODEL_SERVER_TIMEOUT": "3600",
+              "SAGEMAKER_PROGRAM": "inference.py"
+            }
+          },
+          "ExecutionRoleArn": "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+          "CreationTime": "2026-02-12 00:47:54.303000+00:00",
+          "ModelArn": "arn:aws:sagemaker:us-east-1:913524902871:model/whisper-large-v3-turbo-004709",
+          "EnableNetworkIsolation": true,
+          "DeploymentRecommendation": {
+            "RecommendationStatus": "COMPLETED",
+            "RealTimeInferenceRecommendations": [
+              {
+                "RecommendationId": "whisper-large-v3-turbo-004709/lilho3a2",
+                "InstanceType": "ml.g4dn.2xlarge",
+                "Environment": {}
+              },
+              {
+                "RecommendationId": "whisper-large-v3-turbo-004709/TER8s8XE",
+                "InstanceType": "ml.c5.2xlarge",
+                "Environment": {}
+              },
+              {
+                "RecommendationId": "whisper-large-v3-turbo-004709/oF79YUq1",
+                "InstanceType": "ml.c5.large",
+                "Environment": {}
+              }
+            ]
+          }
+        }
+      ],
+      "scalable_targets": [],
+      "actual_hardware": [
+        {
+          "instance_type": "ml.g5.2xlarge",
+          "current_instance_count": 1
+        }
+      ],
+      "current_host_count": 1,
+      "desired_host_count": 1,
+      "current_copy_count": null
+    }
+  }
+}

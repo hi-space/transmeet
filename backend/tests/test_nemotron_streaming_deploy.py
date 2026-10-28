@@ -99,3 +99,48 @@ def test_existing_endpoint_update_requires_explicit_flag():
     assert client.changes == ["model", "config", "endpoint"]
     deploy.apply_plan(client, second, update=True)
     assert client.changes == ["model", "config", "endpoint", "model", "config", "update"]
+
+
+def test_alternative_gpu_can_use_its_compatible_platform_default_ami():
+    deploy = module()
+    plan = deploy.make_plan("registry/model@sha256:abc", "role", instance="ml.g6.xlarge", ami=None)
+    pinned = deploy.make_plan("registry/model@sha256:abc", "role", instance="ml.g6.xlarge")
+    assert "InferenceAmiVersion" not in plan["endpoint_config"]["ProductionVariants"][0]
+    assert plan["model"]["ModelName"] != pinned["model"]["ModelName"]
+
+
+def test_gpu_pools_keep_one_model_copy_and_a_bounded_capacity_wait():
+    deploy = module()
+    plan = deploy.make_plan(
+        "registry/model@sha256:abc", "role", instance="ml.g6.2xlarge",
+        fallback_instances=("ml.g6.xlarge",), ami=None,
+    )
+    variant = plan["endpoint_config"]["ProductionVariants"][0]
+    assert "InstanceType" not in variant
+    assert variant["InstancePools"] == [
+        {"InstanceType": "ml.g6.2xlarge", "Priority": 1},
+        {"InstanceType": "ml.g6.xlarge", "Priority": 2},
+    ]
+    assert variant["InitialInstanceCount"] == 1
+    assert variant["ModelName"] == plan["model"]["ModelName"]
+    assert variant["VariantInstanceProvisionTimeoutInSeconds"] == 600
+
+
+def test_single_type_uses_instance_type_as_required_by_the_service():
+    deploy = module()
+    plan = deploy.make_plan(
+        "registry/model@sha256:abc", "role", instance="ml.g6.2xlarge",
+        ami=None,
+    )
+    variant = plan["endpoint_config"]["ProductionVariants"][0]
+    assert variant["InstanceType"] == "ml.g6.2xlarge"
+    assert "InstancePools" not in variant
+
+
+def test_regional_artifact_is_pinned_and_changes_the_deployment_identity():
+    deploy = module()
+    artifact = deploy.ARTIFACT.replace("prod-us-east-1", "prod-ap-northeast-2")
+    regional = deploy.make_plan("registry/model@sha256:abc", "role", artifact_uri=artifact)
+    default = deploy.make_plan("registry/model@sha256:abc", "role")
+    assert regional["model"]["PrimaryContainer"]["ModelDataSource"]["S3DataSource"]["S3Uri"] == artifact
+    assert regional["model"]["ModelName"] != default["model"]["ModelName"]

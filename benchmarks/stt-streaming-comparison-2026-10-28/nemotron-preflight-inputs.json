@@ -1,0 +1,18 @@
+[
+  {
+    "language": "ko",
+    "manifest": "benchmarks/stt-ko-en-2026-10-28/manifest-ko.json",
+    "sha256": "5d61914cdf01e27d3e266557bd3295624023efb6396b2b0a2f37e9c5b5606ee0",
+    "sample_count": 10,
+    "total_audio_seconds": 111.12,
+    "all_audio_sha256_verified": true
+  },
+  {
+    "language": "en",
+    "manifest": "benchmarks/stt-ko-en-2026-10-28/manifest-en.json",
+    "sha256": "09d2c6e77bb6d075a0d1f70560855dc94e8899cb3615c4b50092f51eeac001d6",
+    "sample_count": 10,
+    "total_audio_seconds": 90.98,
+    "all_audio_sha256_verified": true
+  }
+]

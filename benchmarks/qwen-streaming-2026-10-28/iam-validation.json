@@ -1,0 +1,38 @@
+{
+  "role": "arn:aws:iam::913524902871:role/TransmeetStack-WsTaskRole4B337A19-JBueyIt7ZiW8",
+  "policy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": [
+          "sagemaker:InvokeEndpoint",
+          "sagemaker:InvokeEndpointWithBidirectionalStream",
+          "sagemaker:DescribeEndpoint"
+        ],
+        "Resource": [
+          "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen-streaming"
+        ]
+      }
+    ]
+  },
+  "simulation": [
+    {
+      "action": "sagemaker:InvokeEndpointWithBidirectionalStream",
+      "decision": "allowed",
+      "resource": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen-streaming"
+    },
+    {
+      "action": "sagemaker:DescribeEndpoint",
+      "decision": "allowed",
+      "resource": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen-streaming"
+    },
+    {
+      "action": "sagemaker:InvokeEndpoint",
+      "decision": "allowed",
+      "resource": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen-streaming"
+    }
+  ],
+  "method": "Each action simulated separately; IAM rejects grouping different authorization types.",
+  "live_followup": "Initial HTTP2 invocation returned403 despite named streaming-action simulation. Added ordinary InvokeEndpoint on the same exact endpoint ARN; live verification follows."
+}

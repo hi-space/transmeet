@@ -1,0 +1,48 @@
+{
+  "source": {
+    "dataset": "google/fleurs",
+    "config": "en_us",
+    "split": "test",
+    "rows": "0-9",
+    "url": "https://huggingface.co/datasets/google/fleurs",
+    "parquet": "https://huggingface.co/datasets/google/fleurs/resolve/refs%2Fconvert%2Fparquet/en_us/test/0000.parquet"
+  },
+  "license": "CC-BY-4.0",
+  "purpose": "Retest quiet KO6,EN0,EN4 whose speech was incorrectly discarded by the original absolute RMS gate",
+  "samples": [
+    {
+      "id": "fleurs-ko-test-row-6",
+      "dataset_id": 1705,
+      "row_index": 6,
+      "audio": "../stt-ko-en-2026-10-28/audio/ko-06.wav",
+      "language": "ko",
+      "reference": "\"1940년 8월 15일 연합군은 프랑스 남부를 침략했고 이 침략은 \"드래군 작전\"\"이라 불렸다. ",
+      "audio_seconds": 13.62,
+      "sha256": "af557e078402208382ad74605ddcd861b056acedd8a8feae7b497d3d03bae351"
+    },
+    {
+      "id": "fleurs-en-test-row-0",
+      "dataset_id": 1904,
+      "row_index": 0,
+      "audio": "../stt-ko-en-2026-10-28/audio/en-00.wav",
+      "language": "en",
+      "reference": "However, due to the slow communication channels, styles in the west could lag behind by 25 to 30 year.",
+      "audio_seconds": 10.56,
+      "sha256": "b438b60eb4e9fddbcaa303e27070c2458c3daac42f0b08d5d8622c47335d24f7",
+      "source_audio_sha256": "33aca50159ec2e3cbcc894eb26faa916d6badb1b49fb75994973561540a7f012",
+      "source_audio_name": "1003119935936341070.wav"
+    },
+    {
+      "id": "fleurs-en-test-row-4",
+      "dataset_id": 1972,
+      "row_index": 4,
+      "audio": "../stt-ko-en-2026-10-28/audio/en-04.wav",
+      "language": "en",
+      "reference": "Many people don't think about them as dinosaurs because they have feathers and can fly.",
+      "audio_seconds": 4.32,
+      "sha256": "5fda1c914915f9fcd856b11739eb88570deb747c0a492c841255f13383d00e82",
+      "source_audio_sha256": "bfa2f3fb72a05cbcb7c0000a460435f2d0eedca7c5cc90f01aacc89127df7f63",
+      "source_audio_name": "10233995782544396174.wav"
+    }
+  ]
+}

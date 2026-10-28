@@ -1,0 +1,62 @@
+{
+  "ModelName": "transmeet-qwen-streaming-e05b013eb7d0",
+  "PrimaryContainer": {
+    "Image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming@sha256:767bfb4858b1fe4cbb64b72f4a150d242829ea8c52230b3c237c2553be1fb394",
+    "Mode": "SingleModel",
+    "ModelDataSource": {
+      "S3DataSource": {
+        "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/",
+        "S3DataType": "S3Prefix",
+        "CompressionType": "None"
+      }
+    },
+    "Environment": {
+      "HF_HUB_OFFLINE": "1",
+      "MODEL_DIR": "/opt/ml/model",
+      "NVIDIA_DRIVER_CAPABILITIES": "compute,utility",
+      "NVIDIA_VISIBLE_DEVICES": "all",
+      "TRANSFORMERS_OFFLINE": "1",
+      "VLLM_WORKER_MULTIPROC_METHOD": "spawn"
+    }
+  },
+  "ExecutionRoleArn": "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+  "CreationTime": "2026-10-28 20:06:45.421000+00:00",
+  "ModelArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:model/transmeet-qwen-streaming-e05b013eb7d0",
+  "EnableNetworkIsolation": true,
+  "DeploymentRecommendation": {
+    "RecommendationStatus": "COMPLETED",
+    "RealTimeInferenceRecommendations": [
+      {
+        "RecommendationId": "transmeet-qwen-streaming-e05b013eb7d0/lqSDad20",
+        "InstanceType": "ml.g4dn.4xlarge",
+        "Environment": {}
+      },
+      {
+        "RecommendationId": "transmeet-qwen-streaming-e05b013eb7d0/uBiKoIRA",
+        "InstanceType": "ml.c5.large",
+        "Environment": {}
+      },
+      {
+        "RecommendationId": "transmeet-qwen-streaming-e05b013eb7d0/ysfBjQAn",
+        "InstanceType": "ml.c5.xlarge",
+        "Environment": {}
+      }
+    ]
+  },
+  "ResponseMetadata": {
+    "RequestId": "e7ebe153-a592-424e-b846-1ca9b0161d74",
+    "HTTPStatusCode": 200,
+    "HTTPHeaders": {
+      "x-amzn-requestid": "e7ebe153-a592-424e-b846-1ca9b0161d74",
+      "strict-transport-security": "max-age=47304000; includeSubDomains",
+      "x-frame-options": "DENY",
+      "content-security-policy": "frame-ancestors 'none'",
+      "cache-control": "no-cache, no-store, must-revalidate",
+      "x-content-type-options": "nosniff",
+      "content-type": "application/x-amz-json-1.1",
+      "content-length": "1411",
+      "date": "Wed, 28 Oct 2026 20:13:47 GMT"
+    },
+    "RetryAttempts": 0
+  }
+}

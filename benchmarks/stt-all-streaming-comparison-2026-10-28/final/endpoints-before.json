@@ -1,0 +1,110 @@
+{
+  "checked_at": "2026-10-28T23:39:25.601729+00:00",
+  "mode": "read_only",
+  "providers": {
+    "whisper": {
+      "endpoint": "whisper-large",
+      "region": "us-east-1",
+      "status": "InService",
+      "endpoint_config": "whisper-large-f07ce2984867-cfg",
+      "hardware": [
+        {
+          "instance_type": "ml.g5.xlarge",
+          "current_instance_count": 1
+        }
+      ],
+      "models": [
+        {
+          "name": "whisper-large-f07ce2984867",
+          "image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-whisper-streaming@sha256:365fd9234b8ad353937a45fd3660429cd6b354d8bd56192fb0f35312c31f35a5",
+          "artifact": {
+            "S3DataSource": {
+              "S3Uri": "s3://jumpstart-cache-prod-us-east-1/huggingface-asr/huggingface-asr-whisper-large-v3-turbo/artifacts/inference-prepack/v1.0.0/",
+              "S3DataType": "S3Prefix",
+              "CompressionType": "None"
+            }
+          },
+          "network_isolation": true,
+          "deployed_images": [
+            {
+              "SpecifiedImage": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-whisper-streaming@sha256:365fd9234b8ad353937a45fd3660429cd6b354d8bd56192fb0f35312c31f35a5",
+              "ResolvedImage": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-whisper-streaming@sha256:365fd9234b8ad353937a45fd3660429cd6b354d8bd56192fb0f35312c31f35a5",
+              "ResolutionTime": "2026-10-28 23:00:53.268000+00:00"
+            }
+          ]
+        }
+      ]
+    },
+    "qwen3-asr": {
+      "endpoint": "transmeet-qwen-streaming",
+      "region": "ap-northeast-2",
+      "status": "InService",
+      "endpoint_config": "transmeet-qwen-streaming-c0a866de6144-cfg",
+      "hardware": [
+        {
+          "instance_type": "ml.g6.xlarge",
+          "current_instance_count": 1
+        }
+      ],
+      "models": [
+        {
+          "name": "transmeet-qwen-streaming-c0a866de6144",
+          "image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming@sha256:31fd09210793be44424f5d45270d99ceb26c2dc4bcd5e8ff962048631def63d3",
+          "artifact": {
+            "S3DataSource": {
+              "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/",
+              "S3DataType": "S3Prefix",
+              "CompressionType": "None"
+            }
+          },
+          "network_isolation": true,
+          "deployed_images": [
+            {
+              "SpecifiedImage": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming@sha256:31fd09210793be44424f5d45270d99ceb26c2dc4bcd5e8ff962048631def63d3",
+              "ResolvedImage": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming@sha256:31fd09210793be44424f5d45270d99ceb26c2dc4bcd5e8ff962048631def63d3",
+              "ResolutionTime": "2026-10-28 20:23:23.083000+00:00"
+            }
+          ]
+        }
+      ]
+    },
+    "nemotron": {
+      "endpoint": "transmeet-nemotron-streaming",
+      "region": "ap-northeast-2",
+      "status": "InService",
+      "endpoint_config": "transmeet-nemotron-streaming-859ae8f54c75-cfg",
+      "hardware": [
+        {
+          "instance_type": "ml.g5.xlarge",
+          "current_instance_count": 1
+        }
+      ],
+      "models": [
+        {
+          "name": "transmeet-nemotron-streaming-859ae8f54c75",
+          "image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-nemotron-streaming@sha256:c20c3f92bf90b7786e4a5122e4404e682c418fca8f2d7442601595a7261e6c23",
+          "artifact": {
+            "S3DataSource": {
+              "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-nvidia-nemotron-3-5-asr-streaming-0-6b/artifacts/inference-prepack/v1.0.2/",
+              "S3DataType": "S3Prefix",
+              "CompressionType": "None"
+            }
+          },
+          "network_isolation": true,
+          "deployed_images": [
+            {
+              "SpecifiedImage": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-nemotron-streaming@sha256:c20c3f92bf90b7786e4a5122e4404e682c418fca8f2d7442601595a7261e6c23",
+              "ResolvedImage": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-nemotron-streaming@sha256:c20c3f92bf90b7786e4a5122e4404e682c418fca8f2d7442601595a7261e6c23",
+              "ResolutionTime": "2026-10-28 20:28:25.844000+00:00"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "transcribe": {
+    "region": "us-east-1",
+    "service": "Amazon Transcribe Streaming",
+    "hardware": "AWS managed; no customer SageMaker endpoint"
+  }
+}

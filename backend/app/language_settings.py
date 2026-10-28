@@ -2,7 +2,9 @@
 from typing import Any
 
 
-def parse_language_settings(provider: str, payload: dict[str, Any]) -> tuple[str, str]:
+def parse_language_settings(
+    provider: str, payload: dict[str, Any], *, streaming: bool = False,
+) -> tuple[str, str]:
     """Return effective input and destination, preserving older clients' semantics."""
     source = payload.get("sourceLang")
     if source is None or source == "":
@@ -23,7 +25,7 @@ def parse_language_settings(provider: str, payload: dict[str, Any]) -> tuple[str
             raise ValueError("지원하지 않는 번역 대상입니다.")
 
     # Resolve the legacy destination before applying the provider's input mode.
-    return ("auto" if provider == "qwen3-asr" else source), target
+    return ("auto" if provider == "qwen3-asr" and not streaming else source), target
 
 
 def resolve_translation_target(selection: str, detected_language: str) -> str:

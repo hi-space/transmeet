@@ -1,0 +1,8 @@
+{
+  "image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming@sha256:31fd09210793be44424f5d45270d99ceb26c2dc4bcd5e8ff962048631def63d3",
+  "tag": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming:retention-20261028-ce7bcb962b4b",
+  "image_id": "sha256:ce7bcb962b4bd3235ba969be5c54ce515c526c08222cb2e3f9a274d21e14327f",
+  "created_at": "2026-10-28T20:23:21.043195+00:00",
+  "change": "Preserve all nonzero PCM; relative noise floor determines boundaries only.",
+  "unchanged": "Same Qwen3-ASR-1.7B artifact, qwen-asr0.0.6, vLLM0.14.0, wire contract and GPU architecture."
+}

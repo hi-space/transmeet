@@ -1,0 +1,6 @@
+{
+  "endpoint": "transmeet-nemotron-asr",
+  "old_config": "transmeet-nemotron-asr-warm-v1",
+  "new_config": "transmeet-nemotron-asr-streaming-retired-20261028",
+  "status": "updating"
+}

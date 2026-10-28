@@ -1,0 +1,34 @@
+fleurs-ko-test-row-0: CER=0.264
+fleurs-ko-test-row-1: CER=0.146
+fleurs-ko-test-row-2: CER=0.061
+fleurs-ko-test-row-3: CER=0.060
+fleurs-ko-test-row-4: CER=0.000
+fleurs-ko-test-row-5: CER=0.025
+fleurs-ko-test-row-6: CER=0.211
+fleurs-ko-test-row-7: CER=0.026
+fleurs-ko-test-row-8: CER=0.013
+fleurs-ko-test-row-9: CER=0.160
+{
+  "successful_samples": 10,
+  "failed_samples": 0,
+  "pending_samples": 0,
+  "error_count": 0,
+  "ranking_allowed": true,
+  "cer": 0.0894854586129754,
+  "wer": null,
+  "valid_only": {
+    "cer": 0.0894854586129754,
+    "errors": 40,
+    "reference_chars": 447,
+    "wer": null,
+    "word_errors": 0,
+    "reference_words": 0,
+    "partial_count": 419,
+    "partial_before_audio_end_samples": 10,
+    "samples_with_partial": 10,
+    "median_startup_seconds": 0.320867,
+    "median_first_partial_seconds": 2.284858,
+    "median_final_lag_seconds": -0.8085964999999999,
+    "median_end_to_end_seconds": 11.5690505
+  }
+}

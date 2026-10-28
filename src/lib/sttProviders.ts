@@ -32,19 +32,48 @@ export interface SttStatus {
   streaming?: boolean
 }
 
-export function isManagedStt(provider: SttProvider): boolean {
-  return provider === 'qwen3-asr' || provider === 'nemotron'
+export function isManagedStt(provider: SttProvider, state?: SttStatus): boolean {
+  return (
+    provider === 'qwen3-asr' ||
+    provider === 'nemotron' ||
+    (provider === 'whisper' && state?.provider === provider && state.streaming === true)
+  )
 }
 
 export function isStreamingStt(provider: SttProvider, state?: SttStatus): boolean {
   return (
     provider === 'transcribe' ||
-    (provider === 'nemotron' && state?.provider === provider && state.streaming === true)
+    (isManagedStt(provider, state) && state?.provider === provider && state.streaming === true)
+  )
+}
+
+/** SageMaker models revise hypotheses; translation consumes their final utterances. */
+export function shouldTranslateSttPartial(provider: SttProvider): boolean {
+  return provider === 'transcribe'
+}
+
+interface SttUtteranceIdentity {
+  sttProvider?: SttProvider
+  streamId?: string
+  utteranceId?: number
+}
+
+export function matchesSttUtterance(
+  result: SttUtteranceIdentity,
+  pending: SttUtteranceIdentity | null | undefined
+): boolean {
+  return (
+    (!result.sttProvider || !pending?.sttProvider || result.sttProvider === pending.sttProvider) &&
+    (result.streamId === undefined ||
+      result.utteranceId === undefined ||
+      pending?.streamId === undefined ||
+      pending.utteranceId === undefined ||
+      (result.streamId === pending.streamId && result.utteranceId === pending.utteranceId))
   )
 }
 
 export function shouldStopSttRecording(provider: SttProvider, state?: SttStatus): boolean {
-  if (!isManagedStt(provider) || !state || state.provider !== provider) return false
+  if (!isManagedStt(provider, state) || !state || state.provider !== provider) return false
   if (state.recordingBlocked) return true
   return state.status !== 'ready' && state.status !== 'unknown' && state.status !== 'checking'
 }
@@ -56,7 +85,15 @@ export function sttRecordingAction(
   isRecording: boolean
 ): 'start' | 'stop' | 'prepare' | 'wait' {
   if (isRecording) return 'stop'
-  if (!isManagedStt(provider)) return 'start'
+  // Discover the wire protocol before microphone capture chooses its frame size.
+  // Legacy Whisper answers ready without streaming and never needs preparation.
+  if (
+    provider === 'whisper' &&
+    (!state || state.provider !== provider || state.status === 'checking')
+  ) {
+    return 'wait'
+  }
+  if (!isManagedStt(provider, state)) return 'start'
   if (!state || state.provider !== provider) return 'prepare'
   if (state.status === 'ready') return 'start'
   if (state.status === 'starting' || state.status === 'cooling') return 'wait'

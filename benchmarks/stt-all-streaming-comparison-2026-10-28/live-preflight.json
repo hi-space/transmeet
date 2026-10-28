@@ -1,0 +1,123 @@
+{
+  "checked_at": "2026-10-28T23:34:46.688892+00:00",
+  "ecs_task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:36",
+  "deployments": [
+    {
+      "status": "PRIMARY",
+      "rolloutState": "COMPLETED",
+      "runningCount": 1,
+      "pendingCount": 0
+    }
+  ],
+  "backend_image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-ws-backend@sha256:df0dce3909c014120b0c1c1d0dd89a9f69979c6ba79536d706927c82ed8e7524",
+  "streaming_settings": {
+    "WHISPER_STREAMING_REGION": "us-east-1",
+    "NEMOTRON_STREAMING_REGION": "ap-northeast-2",
+    "QWEN_STREAMING_ENABLED": "true",
+    "NEMOTRON_STREAMING_ENDPOINT": "transmeet-nemotron-streaming",
+    "NEMOTRON_STREAMING_ENABLED": "true",
+    "NEMOTRON_STREAMING_CHUNK_MS": "560",
+    "WHISPER_STREAMING_ENDPOINT": "whisper-large",
+    "WHISPER_STREAMING_CHUNK_MS": "1000",
+    "QWEN_STREAMING_REGION": "ap-northeast-2",
+    "WHISPER_STREAMING_ENABLED": "true",
+    "QWEN_STREAMING_CHUNK_MS": "1000",
+    "QWEN_STREAMING_ENDPOINT": "transmeet-qwen-streaming"
+  },
+  "endpoints": [
+    {
+      "name": "whisper-large",
+      "region": "us-east-1",
+      "status": "InService",
+      "config": "whisper-large-f07ce2984867-cfg",
+      "current_instances": 1,
+      "variant": [
+        {
+          "VariantName": "AllTraffic",
+          "ModelName": "whisper-large-f07ce2984867",
+          "InitialInstanceCount": 1,
+          "InstanceType": "ml.g5.xlarge",
+          "InitialVariantWeight": 1.0,
+          "ModelDataDownloadTimeoutInSeconds": 1800,
+          "ContainerStartupHealthCheckTimeoutInSeconds": 900,
+          "InferenceAmiVersion": "al2023-ami-sagemaker-inference-gpu-4-1"
+        }
+      ],
+      "deployed_images": [
+        [
+          {
+            "SpecifiedImage": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-whisper-streaming@sha256:365fd9234b8ad353937a45fd3660429cd6b354d8bd56192fb0f35312c31f35a5",
+            "ResolvedImage": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-whisper-streaming@sha256:365fd9234b8ad353937a45fd3660429cd6b354d8bd56192fb0f35312c31f35a5",
+            "ResolutionTime": "2026-10-28 23:00:53.268000+00:00"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "transmeet-qwen-streaming",
+      "region": "ap-northeast-2",
+      "status": "InService",
+      "config": "transmeet-qwen-streaming-c0a866de6144-cfg",
+      "current_instances": 1,
+      "variant": [
+        {
+          "VariantName": "AllTraffic",
+          "ModelName": "transmeet-qwen-streaming-c0a866de6144",
+          "InitialInstanceCount": 1,
+          "InstanceType": "ml.g6.xlarge",
+          "InitialVariantWeight": 1.0,
+          "ModelDataDownloadTimeoutInSeconds": 1800,
+          "ContainerStartupHealthCheckTimeoutInSeconds": 1800,
+          "InferenceAmiVersion": "al2023-ami-sagemaker-inference-gpu-4-1"
+        }
+      ],
+      "deployed_images": [
+        [
+          {
+            "SpecifiedImage": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming@sha256:31fd09210793be44424f5d45270d99ceb26c2dc4bcd5e8ff962048631def63d3",
+            "ResolvedImage": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming@sha256:31fd09210793be44424f5d45270d99ceb26c2dc4bcd5e8ff962048631def63d3",
+            "ResolutionTime": "2026-10-28 20:23:23.083000+00:00"
+          }
+        ]
+      ]
+    },
+    {
+      "name": "transmeet-nemotron-streaming",
+      "region": "ap-northeast-2",
+      "status": "InService",
+      "config": "transmeet-nemotron-streaming-859ae8f54c75-cfg",
+      "current_instances": 1,
+      "variant": [
+        {
+          "VariantName": "AllTraffic",
+          "ModelName": "transmeet-nemotron-streaming-859ae8f54c75",
+          "InitialInstanceCount": 1,
+          "InstancePools": [
+            {
+              "InstanceType": "ml.g5.xlarge",
+              "Priority": 1
+            },
+            {
+              "InstanceType": "ml.g5.4xlarge",
+              "Priority": 2
+            }
+          ],
+          "VariantInstanceProvisionTimeoutInSeconds": 600,
+          "InitialVariantWeight": 1.0,
+          "ModelDataDownloadTimeoutInSeconds": 1800,
+          "ContainerStartupHealthCheckTimeoutInSeconds": 1800,
+          "InferenceAmiVersion": "al2-ami-sagemaker-inference-gpu-3-1"
+        }
+      ],
+      "deployed_images": [
+        [
+          {
+            "SpecifiedImage": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-nemotron-streaming@sha256:c20c3f92bf90b7786e4a5122e4404e682c418fca8f2d7442601595a7261e6c23",
+            "ResolvedImage": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-nemotron-streaming@sha256:c20c3f92bf90b7786e4a5122e4404e682c418fca8f2d7442601595a7261e6c23",
+            "ResolutionTime": "2026-10-28 20:28:25.844000+00:00"
+          }
+        ]
+      ]
+    }
+  ]
+}

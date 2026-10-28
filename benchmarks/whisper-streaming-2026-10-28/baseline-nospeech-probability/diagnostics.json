@@ -1,0 +1,275 @@
+[
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793224963083,
+    "message": "2026-10-28 22:02:41,784 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.000 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793224966834,
+    "eventId": "39990252985358466190993249846179461924506535238856933377"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225023214,
+    "message": "2026-10-28 22:03:42,101 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.120 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225026464,
+    "eventId": "39990254326324575723838150041952028707690912675681206274"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225024469,
+    "message": "2026-10-28 22:03:43,203 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=2.240 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225026464,
+    "eventId": "39990254354312010947994082084579355139864606365686628355"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225025471,
+    "message": "2026-10-28 22:03:44,269 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=3.360 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225026464,
+    "eventId": "39990254376657357636921766472398144849058264594679005188"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225026474,
+    "message": "2026-10-28 22:03:45,384 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=4.480 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225031478,
+    "eventId": "39990254399025005071047981489419799902609394387360088064"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225027976,
+    "message": "2026-10-28 22:03:46,627 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=5.600 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225031478,
+    "eventId": "39990254432520724359240977448006448748127233369342672898"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225028977,
+    "message": "2026-10-28 22:03:47,734 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=6.720 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225031478,
+    "eventId": "39990254454843770302970131212683702739048243236829069315"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225029979,
+    "message": "2026-10-28 22:03:48,872 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=7.840 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225031478,
+    "eventId": "39990254477189116991897815600502492448241901465821446148"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225031231,
+    "message": "2026-10-28 22:03:49,938 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=8.960 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225031478,
+    "eventId": "39990254505109649980458155773705211725597650071308926981"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225031488,
+    "message": "2026-10-28 22:03:51,025 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=10.080 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225036497,
+    "eventId": "39990254510840941496480525927147504774089879013826363392"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225033235,
+    "message": "2026-10-28 22:03:52,137 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=11.060 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225036497,
+    "eventId": "39990254549800343358313524555410404596406566564774150146"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225033736,
+    "message": "2026-10-28 22:03:53,087 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.100 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225036497,
+    "eventId": "39990254560973016702777366749319799451003395679270338563"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225033736,
+    "message": "2026-10-28 22:03:53,521 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.420 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225036497,
+    "eventId": "39990254560973016702777366749319799451003395679270338564"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225037995,
+    "message": "2026-10-28 22:03:56,684 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.120 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225041511,
+    "eventId": "39990254655951890503319290715182105379563816424357167106"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225038996,
+    "message": "2026-10-28 22:03:57,770 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=2.240 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225041511,
+    "eventId": "39990254678274936447048444479859359370484826291843563523"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225040249,
+    "message": "2026-10-28 22:03:58,964 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=3.360 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225041511,
+    "eventId": "39990254706217770180807315276203614366113223258837024772"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225041252,
+    "message": "2026-10-28 22:04:00,030 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=4.480 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225041511,
+    "eventId": "39990254728585417614933530287163939793579529849335382021"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225041503,
+    "message": "2026-10-28 22:04:01,150 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=5.600 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225041511,
+    "eventId": "39990254734182904659764716695689405080014268587336466438"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225043507,
+    "message": "2026-10-28 22:04:02,270 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=6.720 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225047509,
+    "eventId": "39990254778873598037620085478578173118670721085458481153"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225044759,
+    "message": "2026-10-28 22:04:03,341 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=7.840 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225047509,
+    "eventId": "39990254806794131026180425651780892396026469690945961986"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225045260,
+    "message": "2026-10-28 22:04:04,535 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=8.960 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225047509,
+    "eventId": "39990254817966804370644267845690287250623298805442150403"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225046262,
+    "message": "2026-10-28 22:04:05,217 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=9.480 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225047509,
+    "eventId": "39990254840312151059571952233509076959816957034434527236"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225046262,
+    "message": "2026-10-28 22:04:06,090 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.080 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225047509,
+    "eventId": "39990254840312151059571952233509076959816957034434527237"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225050019,
+    "message": "2026-10-28 22:04:09,247 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.120 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225053019,
+    "eventId": "39990254924096050770451503382919581213759864713669836803"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225050269,
+    "message": "2026-10-28 22:04:10,006 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.880 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225053019,
+    "eventId": "39990254929671237070084159168303510781921955090164940804"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225053778,
+    "message": "2026-10-28 22:04:12,945 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.120 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225058031,
+    "eventId": "39990255007924551971728115778011732767057812563407405057"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225054029,
+    "message": "2026-10-28 22:04:13,684 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.880 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225058031,
+    "eventId": "39990255013522039016559302186537198053492551301408489474"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225056786,
+    "message": "2026-10-28 22:04:16,607 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.120 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225058031,
+    "eventId": "39990255075005193528908230187751173331184083973396496391"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225057037,
+    "message": "2026-10-28 22:04:16,782 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.260 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225058031,
+    "eventId": "39990255080602680573739416596276638617618822711397580808"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225059794,
+    "message": "2026-10-28 22:04:19,520 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.120 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225063070,
+    "eventId": "39990255142085835086088344603582580899724790542112063492"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225060045,
+    "message": "2026-10-28 22:04:19,696 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.240 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225063070,
+    "eventId": "39990255147683322130919531012108046186159529280113147909"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225063053,
+    "message": "2026-10-28 22:04:22,492 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.120 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225063070,
+    "eventId": "39990255214763963688099645421847486750285800690102239242"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225063053,
+    "message": "2026-10-28 22:04:22,874 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.520 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225063070,
+    "eventId": "39990255214763963688099645421847486750285800690102239243"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225066312,
+    "message": "2026-10-28 22:04:25,586 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.120 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225069329,
+    "eventId": "39990255287442092290110946247679036761778127550044635139"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225066312,
+    "message": "2026-10-28 22:04:26,147 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.480 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225069329,
+    "eventId": "39990255287442092290110946247679036761778127550044635140"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225069567,
+    "message": "2026-10-28 22:04:28,792 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.120 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225074571,
+    "eventId": "39990255360031017911328124579714855677895868922543472640"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225069567,
+    "message": "2026-10-28 22:04:29,320 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.480 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225074571,
+    "eventId": "39990255360031017911328124579714855677895868922543472641"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225072573,
+    "message": "2026-10-28 22:04:31,959 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.120 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225074571,
+    "eventId": "39990255427067057978111177743171224805476843609520603142"
+  },
+  {
+    "logStreamName": "AllTraffic/i-0e012678dd7262be4",
+    "timestamp": 1793225072573,
+    "message": "2026-10-28 22:04:32,344 INFO inference.whisper_streaming.model_runtime Whisper speech gate audio_seconds=1.400 p_no_speech=0.000000 threshold=0.60 skipped=False",
+    "ingestionTime": 1793225074571,
+    "eventId": "39990255427067057978111177743171224805476843609520603143"
+  }
+]

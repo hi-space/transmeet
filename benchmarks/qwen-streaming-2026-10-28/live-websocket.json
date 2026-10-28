@@ -1,0 +1,240 @@
+{
+  "scope": "Actual deployed REST/Cognito/WebSocket/SageMaker/translation/persistence",
+  "results": [
+    {
+      "language": "ko",
+      "source_audio": "benchmarks/stt-ko-en-2026-10-28/audio/ko-06.wav",
+      "audio_seconds": 13.62,
+      "first_partial_from_recording_seconds": 3.938545,
+      "final_count": 2,
+      "saved_message_count": 2,
+      "originals": [
+        "그.",
+        "1940년 8월 15일, 연합군은 프랑스 남부를 침략했고, 이 침략은 드래곤 작전이라 불렸다."
+      ],
+      "translations": [
+        "그.",
+        "1940년 8월 15일, 연합군은 프랑스 남부를 침략했고, 이 침략은 드래곤 작전이라 불렸다."
+      ],
+      "translation_target": "ko",
+      "events": [
+        {
+          "type": "stt_status",
+          "provider": "qwen3-asr",
+          "streaming": true,
+          "managed": false,
+          "instances": 1,
+          "status": "ready",
+          "elapsed_seconds": 2.204951
+        },
+        {
+          "type": "subtitle_stream",
+          "phase": "stt_partial",
+          "messageId": "partial",
+          "originalText": "네.",
+          "detectedLanguage": "ko",
+          "speaker": "speaker1",
+          "sttProvider": "qwen3-asr",
+          "streamId": "69e5ab5840ea458dae02e1655285d27e:1",
+          "utteranceId": 1,
+          "timestamp": "2026-10-28T20:54:45.279149+00:00",
+          "elapsed_seconds": 3.938545
+        },
+        {
+          "type": "subtitle_stream",
+          "messageId": "1793220885458-tkhmk",
+          "phase": "stt",
+          "sttProvider": "qwen3-asr",
+          "streamId": "69e5ab5840ea458dae02e1655285d27e:1",
+          "utteranceId": 1,
+          "speaker": "speaker1",
+          "originalText": "그.",
+          "detectedLanguage": "ko",
+          "targetLanguage": "ko",
+          "timestamp": "2026-10-28T20:54:45.458007+00:00",
+          "elapsed_seconds": 4.117769
+        },
+        {
+          "type": "subtitle_stream",
+          "messageId": "1793220885458-tkhmk",
+          "phase": "done",
+          "sttProvider": "qwen3-asr",
+          "streamId": "69e5ab5840ea458dae02e1655285d27e:1",
+          "utteranceId": 1,
+          "speaker": "speaker1",
+          "originalText": "그.",
+          "translatedText": "그.",
+          "detectedLanguage": "ko",
+          "targetLanguage": "ko",
+          "timestamp": "2026-10-28T20:54:45.458007+00:00",
+          "elapsed_seconds": 4.117786
+        },
+        {
+          "type": "subtitle_stream",
+          "phase": "stt_partial",
+          "messageId": "partial",
+          "originalText": "그.",
+          "detectedLanguage": "ko",
+          "speaker": "speaker1",
+          "sttProvider": "qwen3-asr",
+          "streamId": "69e5ab5840ea458dae02e1655285d27e:1",
+          "utteranceId": 2,
+          "timestamp": "2026-10-28T20:54:45.527960+00:00",
+          "elapsed_seconds": 4.187107
+        },
+        {
+          "type": "subtitle_stream",
+          "phase": "stt_partial",
+          "messageId": "partial",
+          "originalText": "천구백사십년.",
+          "detectedLanguage": "ko",
+          "speaker": "speaker1",
+          "sttProvider": "qwen3-asr",
+          "streamId": "69e5ab5840ea458dae02e1655285d27e:1",
+          "utteranceId": 2,
+          "timestamp": "2026-10-28T20:54:45.718283+00:00",
+          "elapsed_seconds": 4.377515
+        },
+        {
+          "type": "subtitle_stream",
+          "phase": "stt_partial",
+          "messageId": "partial",
+          "originalText": "천구백사십년 팔월 십오일.",
+          "detectedLanguage": "ko",
+          "speaker": "speaker1",
+          "sttProvider": "qwen3-asr",
+          "streamId": "69e5ab5840ea458dae02e1655285d27e:1",
+          "utteranceId": 2,
+          "timestamp": "2026-10-28T20:54:46.529175+00:00",
+          "elapsed_seconds": 5.188428
+        },
+        {
+          "type": "subtitle_stream",
+          "phase": "stt_partial",
+          "messageId": "partial",
+          "originalText": "천구백사십년 팔월 십오일 연합군.",
+          "detectedLanguage": "ko",
+          "speaker": "speaker1",
+          "sttProvider": "qwen3-asr",
+          "streamId": "69e5ab5840ea458dae02e1655285d27e:1",
+          "utteranceId": 2,
+          "timestamp": "2026-10-28T20:54:47.577548+00:00",
+          "elapsed_seconds": 6.238189
+        },
+        {
+          "type": "subtitle_stream",
+          "phase": "stt_partial",
+          "messageId": "partial",
+          "originalText": "천구백사십년 팔월 십오일 연합군은 프랑스 남.",
+          "detectedLanguage": "ko",
+          "speaker": "speaker1",
+          "sttProvider": "qwen3-asr",
+          "streamId": "69e5ab5840ea458dae02e1655285d27e:1",
+          "utteranceId": 2,
+          "timestamp": "2026-10-28T20:54:48.510794+00:00",
+          "elapsed_seconds": 7.170162
+        },
+        {
+          "type": "subtitle_stream",
+          "phase": "stt_partial",
+          "messageId": "partial",
+          "originalText": "천구백사십년 팔월 십오일 연합군은 프랑스 남부를 침략했고.",
+          "detectedLanguage": "ko",
+          "speaker": "speaker1",
+          "sttProvider": "qwen3-asr",
+          "streamId": "69e5ab5840ea458dae02e1655285d27e:1",
+          "utteranceId": 2,
+          "timestamp": "2026-10-28T20:54:49.651361+00:00",
+          "elapsed_seconds": 8.310674
+        },
+        {
+          "type": "subtitle_stream",
+          "phase": "stt_partial",
+          "messageId": "partial",
+          "originalText": "천구백사십년 팔월 십오일 연합군은 프랑스 남부를 침략했고 이천.",
+          "detectedLanguage": "ko",
+          "speaker": "speaker1",
+          "sttProvider": "qwen3-asr",
+          "streamId": "69e5ab5840ea458dae02e1655285d27e:1",
+          "utteranceId": 2,
+          "timestamp": "2026-10-28T20:54:50.494500+00:00",
+          "elapsed_seconds": 9.153902
+        },
+        {
+          "type": "subtitle_stream",
+          "phase": "stt_partial",
+          "messageId": "partial",
+          "originalText": "천구백사십년 팔월 십오일 연합군은 프랑스 남부를 침략했고 이 침략은 드레퓌스",
+          "detectedLanguage": "ko",
+          "speaker": "speaker1",
+          "sttProvider": "qwen3-asr",
+          "streamId": "69e5ab5840ea458dae02e1655285d27e:1",
+          "utteranceId": 2,
+          "timestamp": "2026-10-28T20:54:51.637902+00:00",
+          "elapsed_seconds": 10.297098
+        },
+        {
+          "type": "subtitle_stream",
+          "phase": "stt_partial",
+          "messageId": "partial",
+          "originalText": "천구백사십년 팔월 십오일 연합군은 프랑스 남부를 침략했고 이 침략은 드래군 작전이라 불.",
+          "detectedLanguage": "ko",
+          "speaker": "speaker1",
+          "sttProvider": "qwen3-asr",
+          "streamId": "69e5ab5840ea458dae02e1655285d27e:1",
+          "utteranceId": 2,
+          "timestamp": "2026-10-28T20:54:52.484437+00:00",
+          "elapsed_seconds": 11.143759
+        },
+        {
+          "type": "subtitle_stream",
+          "phase": "stt_partial",
+          "messageId": "partial",
+          "originalText": "천구백사십년 팔월 십오일 연합군은 프랑스 남부를 침략했고 이 침략은 드래군 작전이라 불렸다.",
+          "detectedLanguage": "ko",
+          "speaker": "speaker1",
+          "sttProvider": "qwen3-asr",
+          "streamId": "69e5ab5840ea458dae02e1655285d27e:1",
+          "utteranceId": 2,
+          "timestamp": "2026-10-28T20:54:53.566402+00:00",
+          "elapsed_seconds": 12.225795
+        },
+        {
+          "type": "subtitle_stream",
+          "messageId": "1793220896421-w0vxw",
+          "phase": "stt",
+          "sttProvider": "qwen3-asr",
+          "streamId": "69e5ab5840ea458dae02e1655285d27e:1",
+          "utteranceId": 2,
+          "speaker": "speaker1",
+          "originalText": "1940년 8월 15일, 연합군은 프랑스 남부를 침략했고, 이 침략은 드래곤 작전이라 불렸다.",
+          "detectedLanguage": "ko",
+          "targetLanguage": "ko",
+          "timestamp": "2026-10-28T20:54:56.421645+00:00",
+          "elapsed_seconds": 15.08176
+        },
+        {
+          "type": "subtitle_stream",
+          "messageId": "1793220896421-w0vxw",
+          "phase": "done",
+          "sttProvider": "qwen3-asr",
+          "streamId": "69e5ab5840ea458dae02e1655285d27e:1",
+          "utteranceId": 2,
+          "speaker": "speaker1",
+          "originalText": "1940년 8월 15일, 연합군은 프랑스 남부를 침략했고, 이 침략은 드래곤 작전이라 불렸다.",
+          "translatedText": "1940년 8월 15일, 연합군은 프랑스 남부를 침략했고, 이 침략은 드래곤 작전이라 불렸다.",
+          "detectedLanguage": "ko",
+          "targetLanguage": "ko",
+          "timestamp": "2026-10-28T20:54:56.421645+00:00",
+          "elapsed_seconds": 15.081837
+        },
+        {
+          "type": "pong",
+          "timestamp": "2026-10-28T20:54:56.663650+00:00",
+          "elapsed_seconds": 15.32295
+        }
+      ],
+      "errors": []
+    }
+  ]
+}

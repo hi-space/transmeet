@@ -1,0 +1,29 @@
+{
+  "verified_at": "2026-10-28T23:13:28.624096+00:00",
+  "region": "us-east-1",
+  "endpoint": "whisper-large",
+  "endpoint_config": "whisper-large-f07ce2984867-cfg",
+  "endpoint_status": "InService",
+  "instance_type": "ml.g5.xlarge",
+  "instance_count": 1,
+  "inference_image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-whisper-streaming@sha256:365fd9234b8ad353937a45fd3660429cd6b354d8bd56192fb0f35312c31f35a5",
+  "backend_task": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:36",
+  "backend_image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-ws-backend@sha256:df0dce3909c014120b0c1c1d0dd89a9f69979c6ba79536d706927c82ed8e7524",
+  "streaming_enabled": true,
+  "model_chunk_ms": 1000,
+  "other_streaming_providers_preserved": [
+    "qwen3-asr",
+    "nemotron"
+  ],
+  "staging_endpoint_absent": true,
+  "test_credentials_removed": true,
+  "rollback_endpoint_config": "whisper-large-1770857274414",
+  "previous_backend_task": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+  "tests": {
+    "backend": 626,
+    "frontend": 121,
+    "browser_scenarios": 6,
+    "streaming_benchmark_runs": 40,
+    "short_speech_cases": 8
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "token_ids_verified_against_deployed_artifact": {
+    "decoder_start": 50258,
+    "no_speech": 50363,
+    "no_timestamps": 50364
+  },
+  "bos_gate_result": "Uniformly below six-decimal logging precision on speech, room tone and digital silence; unsuitable for admission on this checkpoint. Model-training cause unproven.",
+  "gate": {
+    "provider": "Silero VAD",
+    "package": "6.2.3",
+    "onnxruntime": "1.23.2",
+    "threshold": 0.5,
+    "normalization": false,
+    "minimum_speech_duration": null,
+    "model_sha256": "1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3"
+  },
+  "exact_container_confusion": {
+    "speech_segments_retained": 21,
+    "speech_segments_rejected": 0,
+    "noise_segments_rejected": 8,
+    "noise_segments_retained": 0,
+    "short_phrases_retained": 8,
+    "short_phrases_rejected": 0
+  },
+  "scoped_tests": "99 passed in 5.31s",
+  "full_backend_tests": "626 passed; 3 pre-existing Pydantic deprecation warnings; 12.37s",
+  "local_vad_timing_seconds": {
+    "median": 0.010902205016463995,
+    "max": 0.092094287276268
+  },
+  "pinned_api": "Torch2.1.0+cu118, Transformers4.39.3: fixed and automatic language paths validated; exactly one encoder call per accepted decode; CPU VAD provider and Torch thread restoration checked.",
+  "remaining": "Real Whisper large-v3-turbo staging end-to-end verification after v3 build."
+}

@@ -1,0 +1,235 @@
+{
+  "gate": "preserve all nonzero PCM; relative RMS chooses boundaries only",
+  "tradeoff": "Nonzero room tone reaches ASR too; uncertain background is bounded by15-second segments. Only exact digital silence can be skipped while idle.",
+  "samples": [
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/en-00.wav",
+      "sha256": "b438b60eb4e9fddbcaa303e27070c2458c3daac42f0b08d5d8622c47335d24f7",
+      "seconds": 10.56,
+      "retained_seconds": 10.56,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        9.48,
+        1.08
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/en-01.wav",
+      "sha256": "fd99727983733f9771077fe1a030fcc44ea7e16be1e9396cff525db2886a8f0f",
+      "seconds": 8.76,
+      "retained_seconds": 8.76,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        8.76
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/en-02.wav",
+      "sha256": "b4aea90be63667ffe68bd0c67fcc11b6a5bc334a4566df8153c074b37e2760d6",
+      "seconds": 11.46,
+      "retained_seconds": 11.46,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        11.46
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/en-03.wav",
+      "sha256": "1a2230cb99ec7ed59df1ad0cf43020b093c6536f9b4ca02636b8daa9c4577229",
+      "seconds": 5.76,
+      "retained_seconds": 5.76,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        5.76
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/en-04.wav",
+      "sha256": "5fda1c914915f9fcd856b11739eb88570deb747c0a492c841255f13383d00e82",
+      "seconds": 4.32,
+      "retained_seconds": 4.32,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        4.32
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/en-05.wav",
+      "sha256": "c15df2cdf2811dde17f6086317a9aeb0f2cb4a9967204c6beac2cd87fadfb93b",
+      "seconds": 11.42,
+      "retained_seconds": 11.42,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        11.42
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/en-06.wav",
+      "sha256": "b804e68fee5b002c5a6942a4dbefe4dba14b3f816e07404c80ee508527ecf956",
+      "seconds": 10.8,
+      "retained_seconds": 10.8,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        10.8
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/en-07.wav",
+      "sha256": "eecacd023023857f4a8fb8b86a5815a06c972ac49584d34fec14d71640a9c684",
+      "seconds": 6.96,
+      "retained_seconds": 6.96,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        6.96
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/en-08.wav",
+      "sha256": "409f227a6a0d463314a5b138931d658c69377b1684a134f2459aa698eb0fc8cd",
+      "seconds": 11.04,
+      "retained_seconds": 11.04,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        11.04
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/en-09.wav",
+      "sha256": "3f988cc9edf80f64bcb387e5d6353604fd7ef7b3d5016b495fc6f09a18847b2f",
+      "seconds": 9.9,
+      "retained_seconds": 9.9,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        9.9
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/ko-00.wav",
+      "sha256": "692ead3d5546b300c37b0bb6b5eae299f1023d1452651ba4ae0e93173e6d9067",
+      "seconds": 12.48,
+      "retained_seconds": 12.48,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        11.06,
+        1.42
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/ko-01.wav",
+      "sha256": "8dff9bb3597dcc33c4b98c916cfb91ba682f51019144630530de5deb72481c1f",
+      "seconds": 10.8,
+      "retained_seconds": 10.8,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        0.82,
+        8.68,
+        1.3
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/ko-02.wav",
+      "sha256": "27d54da0d7627cfd223c3028f773fe83cff4d3e102b40aeed771035198a18e36",
+      "seconds": 8.94,
+      "retained_seconds": 8.94,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        7.38,
+        1.56
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/ko-03.wav",
+      "sha256": "8214291abc74551abca9612b7504ae1b2988ecd29d4c3b8f4e1e42a389b56527",
+      "seconds": 12.54,
+      "retained_seconds": 12.54,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        12.54
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/ko-04.wav",
+      "sha256": "e28117e5ba80cdfff918199eec2350cd47d5878aca2abe689f35db47ed91bb35",
+      "seconds": 12.12,
+      "retained_seconds": 12.12,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        10.68,
+        1.44
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/ko-05.wav",
+      "sha256": "98e7a8d6b9f12cad30fee3fcfbea51e64505a9e85f9e989db8df8f7a730d3ac7",
+      "seconds": 9.9,
+      "retained_seconds": 9.9,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        9.46,
+        0.44
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/ko-06.wav",
+      "sha256": "af557e078402208382ad74605ddcd861b056acedd8a8feae7b497d3d03bae351",
+      "seconds": 13.62,
+      "retained_seconds": 13.62,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        1.32,
+        12.3
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/ko-07.wav",
+      "sha256": "d5baf05d8a3b72b94d3696bd77179cf64f85b4b579b2241a63ecb20f1ea3bcd0",
+      "seconds": 7.02,
+      "retained_seconds": 7.02,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        7.02
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/ko-08.wav",
+      "sha256": "03d9bd245ed0a22e3f18f69aa43c9aa23f9bd0d348f06c47f5ad6d72c06a4d68",
+      "seconds": 18.9,
+      "retained_seconds": 18.9,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        15.0,
+        3.9
+      ]
+    },
+    {
+      "audio": "benchmarks/stt-ko-en-2026-10-28/audio/ko-09.wav",
+      "sha256": "ece2fcf7473eb903bbf380f71137be4259d08bf438f32af3acd92d1bdc94e155",
+      "seconds": 4.8,
+      "retained_seconds": 4.8,
+      "all_samples_identical": true,
+      "nonzero_samples_identical": true,
+      "utterance_seconds": [
+        4.8
+      ]
+    }
+  ]
+}

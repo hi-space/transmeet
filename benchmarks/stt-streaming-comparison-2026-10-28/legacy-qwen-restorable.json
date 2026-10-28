@@ -1,0 +1,120 @@
+{
+  "at": "2026-10-28T21:21:31.213380+00:00",
+  "reason": "Unused legacy pool could not lower its host minimum without reserving a third g6.xlarge quota; native serving is verified. Retain model and endpoint configuration; remove only idle legacy inference component and endpoint compute.",
+  "endpoint": {
+    "EndpointName": "transmeet-qwen3-asr",
+    "EndpointArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen3-asr",
+    "EndpointConfigName": "transmeet-qwen3-asr-warm-v1",
+    "ProductionVariants": [
+      {
+        "VariantName": "AllTraffic",
+        "CurrentInstanceCount": 1,
+        "DesiredInstanceCount": 1,
+        "InstancePools": [
+          {
+            "InstanceType": "ml.g6.2xlarge",
+            "CurrentInstanceCount": 1
+          }
+        ],
+        "ManagedInstanceScaling": {
+          "Status": "ENABLED",
+          "MinInstanceCount": 1,
+          "MaxInstanceCount": 1,
+          "ScaleInPolicy": {
+            "Strategy": "IDLE_RELEASE"
+          }
+        }
+      }
+    ],
+    "EndpointStatus": "InService",
+    "CreationTime": "2026-10-28 19:13:32.788000+00:00",
+    "LastModifiedTime": "2026-10-28 19:16:01.125000+00:00",
+    "MetricsConfig": {
+      "EnableDetailedObservability": true
+    },
+    "ResponseMetadata": {
+      "RequestId": "55aec72b-fff1-4a78-a5e9-438854376503",
+      "HTTPStatusCode": 200,
+      "HTTPHeaders": {
+        "x-amzn-requestid": "55aec72b-fff1-4a78-a5e9-438854376503",
+        "strict-transport-security": "max-age=47304000; includeSubDomains",
+        "x-frame-options": "DENY",
+        "content-security-policy": "frame-ancestors 'none'",
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "x-content-type-options": "nosniff",
+        "content-type": "application/x-amz-json-1.1",
+        "content-length": "640",
+        "date": "Wed, 28 Oct 2026 21:21:31 GMT"
+      },
+      "RetryAttempts": 0
+    }
+  },
+  "inference_component": {
+    "InferenceComponentName": "transmeet-qwen3-asr-ic-v2",
+    "InferenceComponentArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:inference-component/transmeet-qwen3-asr-ic-v2",
+    "EndpointName": "transmeet-qwen3-asr",
+    "EndpointArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen3-asr",
+    "VariantName": "AllTraffic",
+    "Specifications": [
+      {
+        "InstanceType": "ml.g6.2xlarge",
+        "ModelName": "transmeet-qwen3-asr-model-offline",
+        "StartupParameters": {
+          "ModelDataDownloadTimeoutInSeconds": 2400,
+          "ContainerStartupHealthCheckTimeoutInSeconds": 1800
+        },
+        "ComputeResourceRequirements": {
+          "NumberOfCpuCoresRequired": 2.0,
+          "NumberOfAcceleratorDevicesRequired": 1.0,
+          "MinMemoryRequiredInMb": 8192
+        },
+        "DataCacheConfig": {
+          "EnableCaching": true
+        }
+      },
+      {
+        "InstanceType": "ml.g6.xlarge",
+        "ModelName": "transmeet-qwen3-asr-model-offline",
+        "StartupParameters": {
+          "ModelDataDownloadTimeoutInSeconds": 2400,
+          "ContainerStartupHealthCheckTimeoutInSeconds": 1800
+        },
+        "ComputeResourceRequirements": {
+          "NumberOfCpuCoresRequired": 2.0,
+          "NumberOfAcceleratorDevicesRequired": 1.0,
+          "MinMemoryRequiredInMb": 8192
+        },
+        "DataCacheConfig": {
+          "EnableCaching": true
+        }
+      }
+    ],
+    "RuntimeConfig": {
+      "DesiredCopyCount": 0,
+      "CurrentCopyCount": 0
+    },
+    "CreationTime": "2026-10-28 19:16:13.980000+00:00",
+    "LastModifiedTime": "2026-10-28 21:08:53.726000+00:00",
+    "InferenceComponentStatus": "InService",
+    "ResponseMetadata": {
+      "RequestId": "dfac6d45-653a-45c9-ac20-49279e36012f",
+      "HTTPStatusCode": 200,
+      "HTTPHeaders": {
+        "x-amzn-requestid": "dfac6d45-653a-45c9-ac20-49279e36012f",
+        "strict-transport-security": "max-age=47304000; includeSubDomains",
+        "x-frame-options": "DENY",
+        "content-security-policy": "frame-ancestors 'none'",
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "x-content-type-options": "nosniff",
+        "content-type": "application/x-amz-json-1.1",
+        "content-length": "1249",
+        "date": "Wed, 28 Oct 2026 21:21:31 GMT"
+      },
+      "RetryAttempts": 0
+    }
+  },
+  "model_retained": "transmeet-qwen3-asr-model-offline",
+  "endpoint_configuration_retained": "transmeet-qwen3-asr-warm-v1",
+  "native_endpoint": "transmeet-qwen-streaming",
+  "native_instance_count": 1
+}

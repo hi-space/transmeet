@@ -1,6 +1,6 @@
 # STT 엔진 선택과 한국어·영어 비교
 
-한국어·영어 각 10개 음성의 전체 문장·6초 분할 실측은 [2026-10-28 비교 보고서](../benchmarks/stt-ko-en-2026-10-28/README.md)에 있다. Qwen과 Nemotron 배치 엔진은 서울(`ap-northeast-2`)에 각각 GPU·모델 복제본 1개를 유지한다.
+한국어·영어 각 10개 음성의 전체 문장·6초 분할 실측은 [배치 비교 보고서](../benchmarks/stt-ko-en-2026-10-28/README.md)에 있다. Qwen의 연속 입력·부분 자막 구현과 실시간 측정은 [Qwen 스트리밍 기록](../benchmarks/qwen-streaming-2026-10-28/README.md)에 구분해서 보존한다.
 
 설정 → 음성·번역 → 고급 설정 → **음성 인식 엔진**에서 선택한다.
 
@@ -16,49 +16,125 @@
 | 화면 이름 | 내부 ID | 연결 방식 | 언어 처리 |
 |---|---|---|---|
 | Transcribe | `transcribe` | Amazon Transcribe의 지속 스트리밍 세션 | 고정 언어 또는 한·영 다국어 자동 식별 |
-| Whisper | `whisper` | 기존 SageMaker Whisper large-v3-turbo | 자동은 바이너리 WAV, 고정 언어는 JSON 요청으로 `korean` / `english` 전달 |
-| Qwen3-ASR | `qwen3-asr` | SageMaker Inference Component / Qwen3-ASR-1.7B | 현재 연결은 자동 감지 전용. 번역 대상은 독립적으로 선택 |
+| Whisper | `whisper` | 활성화 시 SageMaker 양방향 스트리밍 / Whisper large-v3-turbo, 비활성화 시 기존 배치 경로 | 스트리밍은 한국어·영어 지정 또는 자동 감지, 배치 요청 형식도 유지 |
+| Qwen3-ASR | `qwen3-asr` | 활성화 시 SageMaker 양방향 스트리밍 / Qwen3-ASR-1.7B vLLM, 비활성화 시 기존 배치 경로 | 스트리밍은 한국어·영어 지정 또는 자동 감지, 기존 배치는 자동 감지 |
 | Nemotron 3.5 | `nemotron` | 활성화 시 SageMaker 양방향 스트리밍 / Nemotron 3.5 ASR 0.6B, 비활성화 시 기존 배치 경로 | `ko-KR`, `en-US`, `auto`를 모델에 전달 |
 
 Transcribe의 AUTO는 `identify_multiple_languages=True`, `language_options=["en-US", "ko-KR"]`를 사용한다. 단일 언어 식별인 `identify_language`와 동시에 보내지 않는다. 고정 언어에서는 `language_code`만 지정한다. 화자 구분은 두 방식 모두 유지한다.
 
 Whisper 고정 언어 요청은 기존 테스트 앱과 같은 `audio_input`(WAV의 hex 문자열), `language`, `task="transcribe"` JSON 형식을 사용한다. Whisper가 영어 번역까지 수행하게 하지 않고, 원문 인식 이후 별도의 번역 대상 설정을 적용한다.
 
-Qwen과 Nemotron의 기존 배치 경로는 완성된 음성 구간을 인식한다. Nemotron 스트리밍을 활성화하면 모델의 캐시 기반 연속 인식을 사용하고, Transcribe와 마찬가지로 발화 중 부분 자막을 표시한다. Qwen의 현재 JumpStart 채팅 요청에는 강제 언어 옵션을 넣지 않는다. Qwen 선택 중에는 음성 언어 선택창이 자동 감지로 표시되고 비활성화되며, 다른 엔진으로 돌아오면 이전 입력 언어 선택을 복원한다. Qwen 모델 자체의 언어 지정 능력과 현재 앱의 요청 형식은 구분해야 한다.
+Qwen과 Nemotron 스트리밍은 발화 중 부분 자막을 갱신한다. Qwen은 공식 vLLM 스트리밍 API로 발화의 누적 음성과 이전 텍스트를 사용하며, Nemotron의 특징·디코더 캐시 방식과는 다르다. Qwen 스트리밍이 활성화되면 음성 언어 선택창도 활성화된다. 기존 JumpStart 배치 채팅 요청은 계속 자동 감지를 사용하므로, 이전 서버나 스트리밍 비활성화 환경에서는 자동 감지 표시를 유지한다.
 
 앱의 지원 범위는 한국어·영어다. AUTO는 선택한 엔진 안에서 언어를 처리하며 엔진을 자동 교체하지 않는다. 같은 음성 구간 안에서 두 언어가 섞인 경우의 단어별 분리나 인식 정확도까지 보장하는 설정은 아니다.
 
 클라이언트의 새 `translationTarget` 필드는 `auto | ko | en`이다. 이 필드가 없는 이전 WebSocket 요청은 기존 `sourceLang` / `targetLang` 의미를 유지한다. 각 발화의 실제 `detectedLanguage`와 `targetLanguage`를 결과와 저장 데이터에 남기고, 둘 중 하나라도 다르면 화면에서 말풍선을 합치지 않는다.
 
-브라우저 전송 간격은 Transcribe 700ms, 활성화된 Nemotron 스트리밍 160ms, 배치 엔진(Whisper·Qwen·기존 Nemotron) 기본 6초다. 배치 엔진에서는 설정 → 음성·번역 → 고급 설정 → **음성 처리 구간**에서 2·4·6·8·10초를 선택할 수 있으며, 선택은 이 브라우저에 저장된다. 기존 설정에 값이 없거나 잘못된 값이면 6초를 사용한다. 브라우저는 서버 상태의 `streaming: true`를 확인한 뒤에만 Nemotron을 짧은 전송 간격으로 전환하므로, 이전 백엔드나 비활성화된 환경에서는 기존 배치 설정이 유지된다.
+브라우저 전송 간격은 Transcribe 700ms, 활성화된 Whisper·Qwen·Nemotron 스트리밍 160ms, 배치 엔진 기본 6초다. 배치 엔진에서는 설정 → 음성·번역 → 고급 설정 → **음성 처리 구간**에서 2·4·6·8·10초를 선택할 수 있으며, 선택은 이 브라우저에 저장된다. 기존 설정에 값이 없거나 잘못된 값이면 6초를 사용한다. 브라우저는 해당 엔진의 서버 상태에 `streaming: true`가 있을 때만 짧은 전송 간격을 적용하므로 이전 서버와도 호환된다.
 
-Transcribe와 활성화된 Nemotron은 전송 사이에도 스트리밍 세션을 유지하므로 배치 구간 선택을 적용하지 않는다. 배치 경로의 서버는 수신 후 600ms 타이머로 버퍼를 처리하므로 모델에는 보통 선택한 길이의 구간이 들어간다. 이 타이머는 실제 오디오의 무음 길이를 측정하는 VAD가 아니다.
+스트리밍 엔진은 전송 사이에도 세션을 유지하므로 배치 구간 선택을 적용하지 않는다. 배치 경로의 서버는 수신 후 600ms 타이머로 버퍼를 처리하므로 모델에는 보통 선택한 길이의 구간이 들어간다. 이 타이머는 실제 오디오의 무음 길이를 측정하는 VAD가 아니다.
 
-무음 판정은 수집 구간 전체의 평균 대신 기존 2초 단위 구간 중 가장 큰 RMS 에너지를 사용한다. 짧은 발화 뒤에 긴 무음이 붙어도, 기존 2초 입력에서 통과하던 발화가 긴 입력의 평균에 희석되어 누락되지 않도록 한다.
+배치 경로의 무음 판정은 수집 구간 전체의 평균 대신 기존 2초 단위 구간 중 가장 큰 RMS 에너지를 사용한다. Qwen 스트리밍은 작은 목소리가 사라지지 않도록 0이 아닌 PCM을 모두 모델에 전달하며, 상대적인 에너지는 발화 경계를 정하는 데만 사용한다.
 
 배치 엔진은 첫 결과가 나오기 전에 선택한 구간만큼의 입력 수집 시간과 추론 시간이 필요하다. 녹음 중지·회의 종료·입력 언어·번역 대상·엔진 변경 시에는 간격을 채우지 않고 남은 음성을 즉시 전송한다. 녹음 중 처리 구간을 변경할 때도 기존 음성을 먼저 전송한 뒤 새 간격을 적용한다. 문맥 길이의 영향을 비교하려면 전체 문장, 기본값인 6초, 이전 기본값인 2초 조건을 함께 확인한다.
+
+## Whisper 스트리밍
+
+`inference/whisper_streaming/`은 기존 JumpStart Whisper large-v3-turbo
+가중치 `v1.0.0`을 사용한다. JumpStart 기본 추론 코드는 전체 결과를 한 번
+반환하므로, 별도 서버가 SageMaker 양방향 스트리밍 계약을 구현한다.
+원본 Whisper 모델의 인코더·디코더 캐시를 연속 입력에 그대로 이어 쓰는
+구조는 아니며, 현재 발화의 누적 음성을 1초 또는 2초 간격으로 다시 인식한다.
+추론 중 들어온 음성은 다음 누적 입력에 포함하고 오래된 중간 추론 작업은
+합쳐 처리한다. 초기 발화 경계는 상대적인 무음 800ms 또는 연속 15초다.
+Silero VAD 6.2.3의 ONNX 모델을 CPU에서 실행해 실제 음성이 있는지 먼저
+확인한다. 원래 음량에서 음성 확률이 0.5 이상인 구간이 없으면 결과를
+비운다. 음성이 있으면 받은 파형을 자르거나 증폭하지 않고 그대로
+Whisper에 전달한다. VAD 상태는 매번 초기화하며 녹음 사이에 공유하지 않는다.
+
+부분 자막은 이전 가설을 교체하며, 확정된 발화만 번역·저장한다. 녹음을
+멈출 때 처리 간격을 채우지 않은 짧은 음성도 인식한다. 브라우저는 최초
+녹음 전에 서버 기능을 확인하므로, 스트리밍 서버에 6초짜리 배치 오디오를
+잘못 보내지 않는다. 한국어·영어 지정과 자동 감지를 모두 지원한다.
+새 화면은 녹음 시작 시 `sttStreaming: true`를 전달한다. 이 값이 없는
+구버전 화면은 스트리밍이 활성화된 서버에서도 기존 배치 경로를 사용한다.
+
+설정은 `WHISPER_STREAMING_ENABLED`, `WHISPER_STREAMING_ENDPOINT`,
+`WHISPER_STREAMING_REGION`, `WHISPER_STREAMING_CHUNK_MS`다.
+스트리밍을 끄면 `WHISPER_ENDPOINT`의 기존 배치 요청을 사용한다.
+새 서버는 기존 WAV 및 `audio_input` JSON 배치 요청도 함께 처리한다.
+배치 요청은 최대 30초의 PCM WAV를 지원하고, 샘플레이트와 채널 수를
+16 kHz·mono로 정규화한다. 초과 길이는 조용히 잘라내지 않고 오류로 알린다.
+
+배포 계획은 다음과 같이 먼저 출력한다. `--apply`를 넣어야 AWS 리소스를
+생성하며, 기존 `whisper-large` 갱신에는 `--update`와 직전에 확인한
+`--expected-current-config`가 필요하다. 이전 모델과 엔드포인트 설정은
+롤백을 위해 남긴다.
+
+```bash
+python backend/scripts/deploy_whisper_streaming.py \
+  --image '<regional ECR URI>@sha256:<digest>' \
+  --role '<SageMaker execution role ARN>' \
+  --instance ml.g5.xlarge \
+  --endpoint transmeet-whisper-streaming
+
+python backend/scripts/benchmark_whisper_streaming.py \
+  --manifest benchmarks/stt-ko-en-2026-10-28/manifest-ko.json \
+  --endpoint transmeet-whisper-streaming --region us-east-1 \
+  --chunk-ms 1000 --output benchmarks/whisper-streaming-2026-10-28/ko-1000.json
+```
 
 엔진·입력 언어·번역 대상을 변경하면 브라우저에 남은 음성을 먼저 보내고, 이전 세션의 인식·번역을 이전 설정으로 마무리한 뒤 새 설정을 적용한다. 미설정 엔드포인트는 오류를 표시하며 다른 엔진으로 자동 대체하지 않는다.
 
 언어 설정 변경의 회귀 검사는 `npm run test:speech`, `cd backend && python -m pytest -q`로 실행한다. `tests/speech_languages_browser.py`는 제어된 API/WebSocket 응답과 브라우저의 가상 마이크로 설정 이전, 모델 전환, 녹음 버퍼 전송 순서, 부분 자막·수동 재번역·늦은 응답, 모바일 화면을 검사한다. 이 검사는 실제 AWS 모델의 인식 정확도 측정과 구분한다.
+
+## Qwen 연속 인식
+
+`inference/qwen_streaming/`은 `qwen-asr==0.0.6`, `vLLM==0.14.0`과 서울 JumpStart의 Qwen3-ASR-1.7B 가중치 아티팩트 `v1.0.0`을 사용한다. JumpStart 카탈로그 버전 `1.0.2`와 가중치 경로의 버전은 다르다. 컨테이너 이미지와 모델 파일의 식별값은 배포 기록에 보존한다.
+
+- 공식 `init_streaming_state`, `streaming_transcribe`, `finish_streaming_transcribe`를 사용한다. 네트워크 전송은 160ms이며, 모델 갱신 간격은 별도로 1000/2000ms를 선택한다.
+- 부분 자막은 이전 가설 전체를 교체한다. 확정된 발화만 번역·저장하며, 녹음·발화 ID로 늦게 도착한 결과를 구분한다.
+- 한국어 토큰 중간을 자르던 공식 종료 경로의 사례를 실제 토크나이저로 재현해 보호한다. 새 발화마다 입력·텍스트 상태를 분리하고 공유 GPU 호출은 직렬화한다.
+- 불확실한 작은 소리는 버리지 않는다. 대기 중 정확히 0인 디지털 무음만 생략한다. 배경 소음도 모델에 들어갈 수 있으므로 무음 추론을 줄이는 것보다 음성 보존을 우선한 정책이다.
+- 상대적 에너지로 판정한 무음이 800ms 이어지거나 발화가 15초가 되면 확정한다. 문맥과 큐 크기를 제한하고, 25분마다 입력을 배출한 뒤 SageMaker 연결을 교체한다.
+- 단일 모델 엔드포인트 `transmeet-qwen-streaming`을 서울에서 사용한다. 검증과 전환이 끝나면 기존 Qwen 배치 호스트·복제본을 0으로 돌려 Qwen GPU 한 대만 상시 유지한다.
+
+```dotenv
+QWEN_STREAMING_ENABLED=true
+QWEN_STREAMING_ENDPOINT=transmeet-qwen-streaming
+QWEN_STREAMING_REGION=ap-northeast-2
+QWEN_STREAMING_CHUNK_MS=1000
+STT_IDLE_SECONDS=0
+```
+
+HTTP/2 연결은 Nemotron과 같은 분리된 SDK 가상환경을 재사용한다. 로컬 실측에는 `NEMOTRON_STREAM_PYTHON`으로 이 가상환경의 Python을 지정한다. 아래 도구는 음성을 실제 재생 속도로 전송하고 첫 부분 자막, 전체 파일 끝 기준 마지막 확정 결과의 시차, CER/WER를 기록한다.
+
+```bash
+python backend/scripts/benchmark_qwen_streaming.py \
+  --manifest benchmarks/stt-ko-en-2026-10-28/manifest-ko.json \
+  --endpoint transmeet-qwen-streaming --region ap-northeast-2 \
+  --chunk-ms 1000 --output benchmarks/qwen-streaming-2026-10-28/ko-1000.json
+```
+
+배포 도구 `backend/scripts/deploy_qwen_streaming.py`는 기본적으로 계획만 출력하며, `--apply`가 새 리소스를 만들고 `--update`가 기존 스트리밍 엔드포인트 갱신을 허용한다. 운영 크기는 `--instance ml.g6.xlarge`로 명시한다. 기존 배치 경로로 되돌릴 때에는 보존한 모델·설정으로 배치 엔드포인트·컴포넌트를 재생성하고 준비 상태를 검증한 뒤 스트리밍 활성화를 해제한다.
 
 ## Nemotron 연속 인식
 
 원본 모델은 `nvidia/nemotron-3.5-asr-streaming-0.6b`, 모델 파일과 Transformers 실행 환경은 기존 JumpStart `1.0.2` 아티팩트다. `inference/nemotron_streaming/`의 별도 서버가 SageMaker 양방향 WebSocket 계약을 구현한다. 같은 발화의 특징·디코더 캐시는 다음 음성 조각에 이어서 사용한다. 서로 다른 녹음은 실행 상태를 공유하지 않으며, GPU 가중치만 공유한다.
 
 - 브라우저의 **160ms 전송 간격**과 모델의 **320/560ms 처리 설정**은 별개다. 첫 자막 지연에는 음성 내용, 네트워크, 추론 시간도 포함된다.
-- 20ms 단위 RMS로 발화 시작과 무음을 판정하고, 시작 전 최대 200ms를 보존한다. 기본 확정 기준은 700ms 무음이며, 30초 연속 발화에서도 구간을 확정해 상태 크기를 제한한다. 이 방식은 학습된 화자 분리나 잡음 제거 모델이 아니다.
+- 작은 목소리를 버리지 않도록, 대기 중 정확히 0인 디지털 무음만 제외한다. 20ms 단위의 상대적 에너지는 음성을 보낼지 결정하는 대신 문장 경계를 정하는 데 사용한다. 기본 확정 기준은 700ms 무음이며, 30초 연속 발화에서도 구간을 확정해 상태 크기를 제한한다. 배경 소음도 모델에 전달될 수 있으며, 이 방식은 학습된 잡음 제거 모델이 아니다.
 - 부분 자막은 현재 가설 전체를 갱신한다. 확정된 발화만 번역·저장하며, 녹음 정지와 설정 변경은 남은 짧은 오디오까지 배출한다. 이전 구간의 늦은 결과가 새 부분 자막을 지우지 않도록 스트림·발화 ID를 사용한다.
 - SageMaker 연결은 25분마다 기존 구간을 마무리하고 재연결한다. 입력과 결과 대기열에 상한이 있으며, 처리 실패는 녹음 중단 상태로 전달한다.
-- 스트리밍 API에는 추론 컴포넌트 선택 필드가 없어, `transmeet-nemotron-streaming-v2` 단일 모델 엔드포인트를 사용한다. 기존 배치 엔드포인트·컴포넌트는 별도로 보존한다.
+- 스트리밍 API에는 추론 컴포넌트 선택 필드가 없어, 서울의 `transmeet-nemotron-streaming` 단일 모델 엔드포인트를 사용한다. 기존 배치 엔드포인트·컴포넌트는 별도로 보존한다.
 - 기존 Transcribe와 HTTP/2 SDK가 요구하는 `awscrt` 버전이 달라, HTTP/2 연결은 별도 Python 가상환경의 프로세스로 실행한다. 백엔드 Docker 이미지가 `/opt/nemotron-stream`을 구성한다.
 
 백엔드 활성화 설정:
 
 ```dotenv
 NEMOTRON_STREAMING_ENABLED=true
-NEMOTRON_STREAMING_ENDPOINT=transmeet-nemotron-streaming-v2
-NEMOTRON_STREAMING_REGION=us-east-1
+NEMOTRON_STREAMING_ENDPOINT=transmeet-nemotron-streaming
+NEMOTRON_STREAMING_REGION=ap-northeast-2
 NEMOTRON_STREAMING_CHUNK_MS=560
 NEMOTRON_STREAM_PYTHON=/opt/nemotron-stream/bin/python
 ```
@@ -70,6 +146,8 @@ NEMOTRON_STREAM_PYTHON=/opt/nemotron-stream/bin/python
 ```bash
 docker build --platform linux/amd64 -f inference/nemotron_streaming/Dockerfile -t nemotron-streaming .
 python backend/scripts/deploy_nemotron_streaming.py \
+  --region ap-northeast-2 --endpoint transmeet-nemotron-streaming \
+  --instance ml.g5.xlarge --fallback-instance ml.g5.4xlarge \
   --image "$NEMOTRON_IMAGE_DIGEST_URI" --role "$SAGEMAKER_ROLE_ARN"
 ```
 
@@ -171,7 +249,7 @@ npx cdk diff \
 
 AWS Pricing API의 `USE1-Host:ml.g6.xlarge`, `USE1-Host:ml.g5.2xlarge` 조회 기준 인스턴스 비용은 각각 시간당 `$1.1267`, `$1.5150`이다(2026-10-28, 온디맨드). 두 개가 실행 중이면 합계 시간당 `$2.6417`이며 스토리지·지표·알람·전송·기존 Whisper·Transcribe 비용은 제외한다. Qwen 대체 풀인 `ml.g6.2xlarge`는 시간당 `$1.2220`이다. 실제 GPU 인스턴스가 0대인 동안 해당 GPU 호스팅 비용은 발생하지 않는다.
 
-현재 서울 배포의 실제 호스트는 Qwen `ml.g6.2xlarge`(시간당 `$1.5026`), Nemotron `ml.g5.2xlarge`(시간당 `$1.8629`)다. 합계 시간당 `$3.3655`, 월 730시간이면 약 `$2,456.82`이며 기존 Whisper와 기타 비용은 별도다. [서울 Pricing API 원문](../benchmarks/stt-ko-en-2026-10-28/regional-pricing.json)에 근거를 보존했다.
+서울 배치 비교 당시 Qwen은 `ml.g6.2xlarge`(시간당 `$1.5026`), Nemotron은 `ml.g5.2xlarge`(시간당 `$1.8629`)였다. Qwen 스트리밍의 `ml.g6.xlarge`는 같은 L4 GPU에 CPU 4개·메모리 16GiB이며 시간당 `$1.3854`, 월 730시간이면 약 `$1,011.34`다. Qwen 비용만의 값이며 다른 모델·스토리지·전송 등은 별도다. [서울 Pricing API 원문](../benchmarks/stt-ko-en-2026-10-28/regional-pricing.json)에 근거를 보존했다.
 
 ## 같은 음성으로 비교하기
 

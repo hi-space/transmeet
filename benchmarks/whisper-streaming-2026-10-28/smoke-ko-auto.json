@@ -1,0 +1,193 @@
+{
+  "created_at": "2026-10-28T22:24:38.330301+00:00",
+  "model_id": "openai/whisper-large-v3-turbo",
+  "jumpstart_artifact_version": "1.0.0",
+  "endpoint": "transmeet-whisper-streaming",
+  "region": "us-east-1",
+  "manifest": "/home/ubuntu/workspace/transmeet/benchmarks/stt-ko-en-2026-10-28/manifest-ko.json",
+  "manifest_sha256": "5d61914cdf01e27d3e266557bd3295624023efb6396b2b0a2f37e9c5b5606ee0",
+  "source": {
+    "dataset": "google/fleurs",
+    "config": "ko_kr",
+    "split": "test",
+    "rows": "0-9",
+    "url": "https://huggingface.co/datasets/google/fleurs"
+  },
+  "license": "CC-BY-4.0",
+  "planned_samples": 1,
+  "status": "complete",
+  "conditions": {
+    "mode": "realtime_streaming",
+    "model_chunk_ms": 1000,
+    "capture_frame_ms": 160,
+    "language_mode": "auto",
+    "input": "SHA-256 verified 16 kHz mono PCM16 WAV; no trimming or augmentation",
+    "pacing": "await ready, then send every frame at its audio end time",
+    "startup": "stream start to first ready; excluded from audio-relative latency",
+    "final_lag": "last unique nonempty final minus audio end; trailing silence can make this negative",
+    "end_to_end": "audio capture start through stream close, including audio duration",
+    "event_elapsed_origin": "stream start; audio_elapsed_seconds starts after ready",
+    "cer_normalization": "benchmark_stt.score_transcript: NFKC, casefold, alphanumeric characters",
+    "wer_normalization": "English only: NFKC, casefold, remove straight/curly apostrophes, Unicode alphanumeric words",
+    "model_identity": "expected pinned artifact; endpoint deployment provenance is checked separately",
+    "ready_timeout_seconds": 45,
+    "close_timeout_seconds": 20
+  },
+  "results": [
+    {
+      "sample_id": "fleurs-ko-test-row-0",
+      "language": "ko",
+      "requested_language": "auto",
+      "reference": "다리 밑 수직 간격은 15미터이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년 3월까지이다",
+      "audio_seconds": 12.48,
+      "text": "다리 및 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년 3월까지이다.",
+      "detected_languages": [
+        "Korean"
+      ],
+      "startup_seconds": 1.11012,
+      "first_partial_seconds": 2.609851,
+      "final_lag_seconds": -0.626458,
+      "end_to_end_seconds": 12.817618,
+      "audio_send_seconds": 12.480545,
+      "total_seconds": 13.927796,
+      "partial_count": 8,
+      "final_count": 1,
+      "partial_before_audio_end": true,
+      "error_count": 0,
+      "events": [
+        {
+          "type": "ready",
+          "stream_id": 1,
+          "elapsed_seconds": 1.11012,
+          "audio_elapsed_seconds": null
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다리미 수직간격",
+          "language": "Korean",
+          "elapsed_seconds": 3.720029,
+          "audio_elapsed_seconds": 2.609851
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다리미 수직 간격은 15m이며",
+          "language": "Korean",
+          "elapsed_seconds": 4.845452,
+          "audio_elapsed_seconds": 3.735273
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다름이 수직 간격은 15m이며 공사는 2017년에",
+          "language": "Korean",
+          "elapsed_seconds": 5.980762,
+          "audio_elapsed_seconds": 4.870584
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다리미 수직 간격은 15m이며 공사는 2011년 8월에 마무리하였는데요.",
+          "language": "Korean",
+          "elapsed_seconds": 7.293593,
+          "audio_elapsed_seconds": 6.183415
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다리미 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며",
+          "language": "Korean",
+          "elapsed_seconds": 8.367801,
+          "audio_elapsed_seconds": 7.257622
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다리 및 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행 간격은",
+          "language": "Korean",
+          "elapsed_seconds": 9.485207,
+          "audio_elapsed_seconds": 8.375028
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다리 및 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년입니다.",
+          "language": "Korean",
+          "elapsed_seconds": 10.616953,
+          "audio_elapsed_seconds": 9.506775
+        },
+        {
+          "type": "partial",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다리 및 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년 3월까지이다.",
+          "language": "Korean",
+          "elapsed_seconds": 11.857264,
+          "audio_elapsed_seconds": 10.747085
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 1,
+          "text": "다리 및 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년 3월까지이다.",
+          "language": "Korean",
+          "elapsed_seconds": 12.96372,
+          "audio_elapsed_seconds": 11.853542
+        },
+        {
+          "type": "final",
+          "stream_id": 1,
+          "utterance_id": 2,
+          "text": "",
+          "language": "",
+          "elapsed_seconds": 13.868806,
+          "audio_elapsed_seconds": 12.758628
+        },
+        {
+          "type": "ended",
+          "stream_id": 1,
+          "elapsed_seconds": 13.868861,
+          "audio_elapsed_seconds": 12.758683
+        }
+      ],
+      "errors": 3,
+      "reference_chars": 53,
+      "cer": 0.05660377358490566,
+      "audio": "audio/ko-00.wav",
+      "sha256": "692ead3d5546b300c37b0bb6b5eae299f1023d1452651ba4ae0e93173e6d9067",
+      "sha256_verified": true
+    }
+  ],
+  "summary": {
+    "successful_samples": 1,
+    "failed_samples": 0,
+    "pending_samples": 0,
+    "error_count": 0,
+    "ranking_allowed": true,
+    "cer": 0.05660377358490566,
+    "wer": null,
+    "valid_only": {
+      "cer": 0.05660377358490566,
+      "errors": 3,
+      "reference_chars": 53,
+      "wer": null,
+      "word_errors": 0,
+      "reference_words": 0,
+      "partial_count": 8,
+      "partial_before_audio_end_samples": 1,
+      "samples_with_partial": 1,
+      "median_startup_seconds": 1.11012,
+      "median_first_partial_seconds": 2.609851,
+      "median_final_lag_seconds": -0.626458,
+      "median_end_to_end_seconds": 12.817618
+    }
+  }
+}

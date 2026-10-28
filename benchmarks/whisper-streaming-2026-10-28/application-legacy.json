@@ -1,0 +1,49 @@
+{
+  "mode": "legacy",
+  "status": {
+    "type": "stt_status",
+    "provider": "whisper",
+    "streaming": true,
+    "managed": false,
+    "instances": 1,
+    "status": "ready"
+  },
+  "audio_seconds": 6.0,
+  "first_partial_seconds": null,
+  "final_count": 1,
+  "persisted_count": 1,
+  "events": [
+    {
+      "seconds": 1.5243286681361496,
+      "after_stop": true,
+      "type": "subtitle_stream",
+      "messageId": "1793229080912-x1oeb",
+      "phase": "stt",
+      "speaker": "speaker1",
+      "originalText": "다리미 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며",
+      "detectedLanguage": "ko",
+      "targetLanguage": "ko",
+      "timestamp": "2026-10-28T23:11:20.581759+00:00"
+    },
+    {
+      "seconds": 1.5243414263240993,
+      "after_stop": true,
+      "type": "subtitle_stream",
+      "messageId": "1793229080912-x1oeb",
+      "phase": "done",
+      "speaker": "speaker1",
+      "originalText": "다리미 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며",
+      "translatedText": "다리미 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며",
+      "detectedLanguage": "ko",
+      "targetLanguage": "ko",
+      "timestamp": "2026-10-28T23:11:20.581759+00:00"
+    },
+    {
+      "seconds": 1.5899469573050737,
+      "after_stop": true,
+      "type": "pong",
+      "timestamp": "2026-10-28T23:11:20.979674+00:00"
+    }
+  ],
+  "passed": true
+}

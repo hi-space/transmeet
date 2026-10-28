@@ -1,0 +1,73 @@
+{
+  "model": {
+    "ModelName": "transmeet-whisper-streaming-1fbb170e3f18",
+    "ExecutionRoleArn": "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+    "EnableNetworkIsolation": true,
+    "PrimaryContainer": {
+      "Image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-whisper-streaming@sha256:ed2880c78a49c09516505580eb99e780b897872415598311f0a776406cbe632d",
+      "ModelDataSource": {
+        "S3DataSource": {
+          "S3Uri": "s3://jumpstart-cache-prod-us-east-1/huggingface-asr/huggingface-asr-whisper-large-v3-turbo/artifacts/inference-prepack/v1.0.0/",
+          "S3DataType": "S3Prefix",
+          "CompressionType": "None"
+        }
+      },
+      "Environment": {
+        "MODEL_DIR": "/opt/ml/model",
+        "NVIDIA_VISIBLE_DEVICES": "all",
+        "NVIDIA_DRIVER_CAPABILITIES": "compute,utility",
+        "HF_HUB_OFFLINE": "1",
+        "TRANSFORMERS_OFFLINE": "1"
+      }
+    },
+    "Tags": [
+      {
+        "Key": "Application",
+        "Value": "TransMeet"
+      },
+      {
+        "Key": "SttProvider",
+        "Value": "whisper-streaming"
+      }
+    ]
+  },
+  "endpoint_config": {
+    "EndpointConfigName": "transmeet-whisper-streaming-1fbb170e3f18-cfg",
+    "ProductionVariants": [
+      {
+        "VariantName": "AllTraffic",
+        "ModelName": "transmeet-whisper-streaming-1fbb170e3f18",
+        "InitialInstanceCount": 1,
+        "InitialVariantWeight": 1.0,
+        "InstanceType": "ml.g5.xlarge",
+        "InferenceAmiVersion": "al2023-ami-sagemaker-inference-gpu-4-1",
+        "ModelDataDownloadTimeoutInSeconds": 1800,
+        "ContainerStartupHealthCheckTimeoutInSeconds": 900
+      }
+    ],
+    "Tags": [
+      {
+        "Key": "Application",
+        "Value": "TransMeet"
+      },
+      {
+        "Key": "SttProvider",
+        "Value": "whisper-streaming"
+      }
+    ]
+  },
+  "endpoint": {
+    "EndpointName": "transmeet-whisper-streaming",
+    "EndpointConfigName": "transmeet-whisper-streaming-1fbb170e3f18-cfg",
+    "Tags": [
+      {
+        "Key": "Application",
+        "Value": "TransMeet"
+      },
+      {
+        "Key": "SttProvider",
+        "Value": "whisper-streaming"
+      }
+    ]
+  }
+}

@@ -21,6 +21,7 @@ interface Props {
   settingsOpen?: boolean
   onLogout?: () => void
   sttProvider: SttProvider
+  sttStreaming?: boolean
   sourceLang: SourceLanguage
   translationTarget: TranslationTarget
   onChangeSourceLang: (source: SourceLanguage) => void
@@ -39,6 +40,7 @@ export default function Header({
   settingsOpen,
   onLogout,
   sttProvider,
+  sttStreaming = false,
   sourceLang,
   translationTarget,
   onChangeSourceLang,
@@ -87,6 +89,7 @@ export default function Header({
       <div className="ml-4 hidden lg:block">
         <SpeechLanguageControls
           provider={sttProvider}
+          streaming={sttStreaming}
           sourceLang={sourceLang}
           translationTarget={translationTarget}
           onChangeSourceLang={onChangeSourceLang}
@@ -184,6 +187,7 @@ export default function Header({
               <SpeechLanguageControls
                 compact
                 provider={sttProvider}
+                streaming={sttStreaming}
                 sourceLang={sourceLang}
                 translationTarget={translationTarget}
                 onChangeSourceLang={onChangeSourceLang}

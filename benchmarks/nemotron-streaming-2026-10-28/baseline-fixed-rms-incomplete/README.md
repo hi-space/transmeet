@@ -1,0 +1,1 @@
+This partial diagnostic run was stopped after the fixed RMS admission gate was shown to discard quiet speech. It is not a completed or rankable model comparison. The final runs use the corrected nonzero-audio admission policy.

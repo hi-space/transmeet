@@ -21,6 +21,11 @@ _ENDPOINT_SETTINGS = {
 }
 _LANGUAGES = {"ko": "ko-KR", "en": "en-US", "auto": "auto"}
 _LANGUAGE_TAG = re.compile(r"\s*<([a-z]{2,3}-[A-Za-z]{2,4})>\s*$")
+_STREAMING_SETTINGS = {
+    "whisper": ("WHISPER_STREAMING", (1000, 2000)),
+    "qwen3-asr": ("QWEN_STREAMING", (1000, 2000)),
+    "nemotron": ("NEMOTRON_STREAMING", (320, 560)),
+}
 
 
 @dataclass(frozen=True)
@@ -41,8 +46,10 @@ def region_for(provider: str) -> str:
 
 def active_region_for(provider: str) -> str:
     """The optional streaming endpoint may be deployed separately from batch."""
-    if provider == "nemotron" and getattr(config, "NEMOTRON_STREAMING_ENABLED", False):
-        return config.NEMOTRON_STREAMING_REGION.strip() or config.REGION
+    if is_streaming_provider(provider):
+        prefix, _ = _STREAMING_SETTINGS[provider]
+        fallback = region_for(provider) if provider == "qwen3-asr" else config.REGION
+        return getattr(config, f"{prefix}_REGION").strip() or fallback
     return region_for(provider)
 
 
@@ -56,23 +63,35 @@ def endpoint_for(provider: str) -> str:
     return endpoint
 
 
-def validate_provider(provider: str) -> None:
+def validate_provider(provider: str, *, streaming: bool | None = None) -> None:
     if provider != "transcribe":
-        active_endpoint_for(provider)
+        if streaming is False:
+            endpoint_for(provider)
+        else:
+            active_endpoint_for(provider)
 
 
 def is_streaming_provider(provider: str) -> bool:
-    return provider == "nemotron" and config.NEMOTRON_STREAMING_ENABLED
+    settings = _STREAMING_SETTINGS.get(provider)
+    return bool(settings and getattr(config, f"{settings[0]}_ENABLED"))
+
+
+def streaming_chunk_ms(provider: str) -> int:
+    prefix, allowed = _STREAMING_SETTINGS[provider]
+    chunk_ms = getattr(config, f"{prefix}_CHUNK_MS")
+    if type(chunk_ms) is not int or chunk_ms not in allowed:
+        raise ValueError(f"{prefix}_CHUNK_MS는 {allowed[0]} 또는 {allowed[1]}이어야 합니다.")
+    return chunk_ms
 
 
 def active_endpoint_for(provider: str) -> str:
     """Recording endpoint; batch remains available for rollback and benchmarks."""
     if is_streaming_provider(provider):
-        endpoint = config.NEMOTRON_STREAMING_ENDPOINT.strip()
+        prefix, _ = _STREAMING_SETTINGS[provider]
+        endpoint = getattr(config, f"{prefix}_ENDPOINT").strip()
         if not endpoint:
-            raise ValueError("nemotron 엔드포인트가 설정되지 않았습니다. NEMOTRON_STREAMING_ENDPOINT 설정이 필요합니다.")
-        if config.NEMOTRON_STREAMING_CHUNK_MS not in (320, 560):
-            raise ValueError("NEMOTRON_STREAMING_CHUNK_MS는 320 또는 560이어야 합니다.")
+            raise ValueError(f"{provider} 엔드포인트가 설정되지 않았습니다. {prefix}_ENDPOINT 설정이 필요합니다.")
+        streaming_chunk_ms(provider)
         return endpoint
     return endpoint_for(provider)
 
@@ -89,6 +108,18 @@ def inference_component_for(provider: str) -> str:
 def active_inference_component_for(provider: str) -> str:
     # The bidirectional SDK cannot address inference components.
     return "" if is_streaming_provider(provider) else inference_component_for(provider)
+
+
+def parse_streaming_response(provider: str, payload: dict[str, Any]) -> STTResult:
+    """Streaming containers emit hypotheses directly, without a chat envelope."""
+    if provider == "nemotron":
+        return parse_response(provider, payload)
+    if provider not in ("whisper", "qwen3-asr"):
+        raise ValueError(f"지원하지 않는 스트리밍 음성 인식 엔진: {provider}")
+    text, language = payload.get("text"), payload.get("language", "")
+    if not isinstance(text, str) or not isinstance(language, str):
+        raise ValueError(f"{provider}: 잘못된 스트리밍 음성 인식 응답입니다.")
+    return STTResult(text.strip(), language.strip())
 
 
 def build_request(provider: str, audio: bytes, source_lang: str = "auto") -> dict[str, Any]:

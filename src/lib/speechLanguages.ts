@@ -32,12 +32,13 @@ export function normalizeSpeechLanguages(value: unknown): SpeechLanguages {
   return { sourceLang, translationTarget }
 }
 
-/** Qwen's current chat adapter detects language, without a forced-language parameter. */
+/** Qwen's batch chat adapter is automatic; its streaming API accepts a language. */
 export function effectiveSourceLanguage(
   provider: SttProvider,
-  preferred: SourceLanguage
+  preferred: SourceLanguage,
+  streaming = false
 ): SourceLanguage {
-  return provider === 'qwen3-asr' ? 'auto' : preferred
+  return provider === 'qwen3-asr' && !streaming ? 'auto' : preferred
 }
 
 /**

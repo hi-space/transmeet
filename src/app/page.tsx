@@ -48,7 +48,10 @@ import {
   sttChunkDuration,
   sttRecordingAction,
   isManagedStt,
+  isStreamingStt,
   shouldStopSttRecording,
+  shouldTranslateSttPartial,
+  matchesSttUtterance,
   type SttProvider,
   type SttStatus,
 } from '@/lib/sttProviders'
@@ -180,9 +183,16 @@ export default function Home() {
   const { user, isLoading: authLoading, setUser, logout } = useAuth()
   const summaryTemplates = useSummaryTemplates(HAS_API && !authLoading && (!HAS_COGNITO || !!user))
   const { settings, updateSettings } = useSettings()
-  const speechSourceLang = effectiveSourceLanguage(settings.sttProvider, settings.sourceLang)
   const [sttStatuses, setSttStatuses] = useState<Partial<Record<SttProvider, SttStatus>>>({})
   const selectedSttStatus = sttStatuses[settings.sttProvider]
+  const selectedSttStreaming = isStreamingStt(settings.sttProvider, selectedSttStatus)
+  const sttStreamingRequested =
+    selectedSttStatus?.provider === settings.sttProvider && selectedSttStatus.streaming === true
+  const speechSourceLang = effectiveSourceLanguage(
+    settings.sttProvider,
+    settings.sourceLang,
+    selectedSttStreaming
+  )
   const {
     width: summaryWidth,
     minWidth: summaryMinWidth,
@@ -705,18 +715,9 @@ export default function Home() {
         const SILENCE_TIMEOUT_MS = settings.silenceTimeout
         const MAX_SENTENCES = settings.maxSentencesPerBubble
         const pendingDirection = pendingDirectionRef.current
-        const matchesPendingUtterance =
-          (!msg.sttProvider ||
-            !pendingDirection?.sttProvider ||
-            msg.sttProvider === pendingDirection.sttProvider) &&
-          (msg.streamId === undefined ||
-            msg.utteranceId === undefined ||
-            pendingDirection?.streamId === undefined ||
-            pendingDirection.utteranceId === undefined ||
-            (msg.streamId === pendingDirection.streamId &&
-              msg.utteranceId === pendingDirection.utteranceId))
+        const matchesPendingUtterance = matchesSttUtterance(msg, pendingDirection)
 
-        // 확정된 발화의 감지 언어를 헤더 배지에 반영한다. Whisper 모드는 partial 이
+        // 확정된 발화의 감지 언어를 헤더 배지에 반영한다. 배치 모드는 partial 이
         // 없어서 이 경로가 유일한 갱신 지점이다. __pending__/__manual__/__quick__ 는
         // 우리가 보낸 방향을 되돌려주는 것이므로 근거가 아니다.
         if (
@@ -780,7 +781,9 @@ export default function Home() {
             speaker: partialSpeaker,
             // 언어가 뒤집혔으면 이전 언어 번역은 버린다
             translation:
-              langFlipped || settings.sttProvider === 'nemotron' ? undefined : prev?.translation,
+              langFlipped || !shouldTranslateSttPartial(settings.sttProvider)
+                ? undefined
+                : prev?.translation,
           }))
 
           const { source: srcLang, target: tgtLang } = resolveDirection(
@@ -796,8 +799,8 @@ export default function Home() {
             utteranceId: msg.utteranceId,
           }
 
-          // Nemotron can revise an entire hypothesis; translate only its final utterance.
-          if (settings.sttProvider === 'nemotron') {
+          // SageMaker models can revise a hypothesis; translate only the final utterance.
+          if (!shouldTranslateSttPartial(settings.sttProvider)) {
             lastTranslatedPartialRef.current = ''
             pendingPartialRef.current = ''
             if (partialThrottleRef.current) {
@@ -1005,7 +1008,7 @@ export default function Home() {
           if (msg.messageId === '__pending__' || msg.messageId === '__pending_append__') {
             const currentDirection = pendingDirectionRef.current
             if (
-              settings.sttProvider === 'nemotron' ||
+              !shouldTranslateSttPartial(settings.sttProvider) ||
               !currentDirection ||
               (msg.detectedLanguage && msg.detectedLanguage !== currentDirection.source) ||
               (msg.targetLanguage && msg.targetLanguage !== currentDirection.target)
@@ -1446,7 +1449,13 @@ export default function Home() {
     audioSource: settings.audioSource,
   })
 
-  const recordingAction = sttRecordingAction(settings.sttProvider, selectedSttStatus, isRecording)
+  const recordingAction = sttRecordingAction(
+    settings.sttProvider,
+    !HAS_API && settings.sttProvider === 'whisper'
+      ? { provider: 'whisper', status: 'ready' }
+      : selectedSttStatus,
+    isRecording
+  )
   const prepareSelectedStt = useCallback(
     (provider: SttProvider = settings.sttProvider) => {
       const sent = prepareStt(provider)
@@ -1466,7 +1475,8 @@ export default function Home() {
   )
 
   useEffect(() => {
-    if (wsStatus !== 'connected' || !isManagedStt(settings.sttProvider)) return
+    // Whisper also needs capability discovery before choosing batch or stream frames.
+    if (wsStatus !== 'connected' || settings.sttProvider === 'transcribe') return
     requestSttStatus(settings.sttProvider)
     const timer = setInterval(() => requestSttStatus(settings.sttProvider), 5000)
     return () => clearInterval(timer)
@@ -1485,6 +1495,7 @@ export default function Home() {
       console.warn('[WS] Reconnected during recording — resending startRecording')
       startRecording({
         sttProvider: settings.sttProvider,
+        sttStreaming: sttStreamingRequested,
         sourceLang: speechSourceLang,
         translationTarget: settings.translationTarget,
         modelId: settings.translationModel,
@@ -1497,6 +1508,7 @@ export default function Home() {
     isRecording,
     startRecording,
     settings.sttProvider,
+    sttStreamingRequested,
     speechSourceLang,
     settings.translationTarget,
     settings.translationModel,
@@ -1548,6 +1560,7 @@ export default function Home() {
     flushAudio()
     startRecording({
       sttProvider: settings.sttProvider,
+      sttStreaming: sttStreamingRequested,
       sourceLang: speechSourceLang,
       translationTarget: settings.translationTarget,
       modelId: settings.translationModel,
@@ -1561,6 +1574,7 @@ export default function Home() {
     startRecording,
     flushAudio,
     settings.sttProvider,
+    sttStreamingRequested,
     settings.translationTarget,
     settings.translationModel,
     settings.translationTiming,
@@ -1575,6 +1589,7 @@ export default function Home() {
         console.warn('[STT-Watchdog] 25s 무응답 — startRecording 재전송')
         startRecording({
           sttProvider: settings.sttProvider,
+          sttStreaming: sttStreamingRequested,
           sourceLang: speechSourceLang,
           translationTarget: settings.translationTarget,
           modelId: settings.translationModel,
@@ -1588,6 +1603,7 @@ export default function Home() {
   }, [
     isRecording,
     settings.sttProvider,
+    sttStreamingRequested,
     wsStatus,
     speechSourceLang,
     settings.translationTarget,
@@ -1637,7 +1653,7 @@ export default function Home() {
         stopRecording()
       }
       updateSettings({ sttProvider: provider })
-      if (isManagedStt(provider)) prepareSelectedStt(provider)
+      if (isManagedStt(provider, sttStatuses[provider])) prepareSelectedStt(provider)
     },
     [
       isRecording,
@@ -1646,6 +1662,7 @@ export default function Home() {
       stopRecording,
       updateSettings,
       prepareSelectedStt,
+      sttStatuses,
     ]
   )
 
@@ -1669,6 +1686,7 @@ export default function Home() {
       setPausedMeetings((previous) => ({ ...previous, [activeMeetingId]: false }))
       startRecording({
         sttProvider: settings.sttProvider,
+        sttStreaming: sttStreamingRequested,
         sourceLang: speechSourceLang,
         translationTarget: settings.translationTarget,
         modelId: settings.translationModel,
@@ -1684,6 +1702,7 @@ export default function Home() {
     startRecording,
     stopRecording,
     settings.sttProvider,
+    sttStreamingRequested,
     speechSourceLang,
     settings.translationTarget,
     settings.translationModel,
@@ -2408,6 +2427,7 @@ export default function Home() {
         settingsOpen={settingsOpen}
         onLogout={HAS_COGNITO ? logout : undefined}
         sttProvider={settings.sttProvider}
+        sttStreaming={selectedSttStreaming}
         sourceLang={settings.sourceLang}
         translationTarget={settings.translationTarget}
         detectedLang={detectedLang}
@@ -2715,7 +2735,9 @@ export default function Home() {
               recordingAction === 'prepare'
                 ? '엔진 준비'
                 : recordingAction === 'wait'
-                  ? '엔진 준비 중'
+                  ? !selectedSttStatus || selectedSttStatus.status === 'checking'
+                    ? '엔진 상태 확인 중'
+                    : '엔진 준비 중'
                   : undefined
             }
             audioLevel={audioLevel}
@@ -2738,7 +2760,7 @@ export default function Home() {
             }
             status={
               <>
-                {isManagedStt(settings.sttProvider) && (
+                {isManagedStt(settings.sttProvider, selectedSttStatus) && (
                   <div className="ui-surface pointer-events-auto max-w-[min(24rem,calc(100vw-4rem))] px-3 pb-3 pt-1 shadow-lg">
                     <SttStatusPanel
                       state={selectedSttStatus}

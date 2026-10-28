@@ -8,25 +8,44 @@ import {
 } from '../src/lib/speechLanguages.ts'
 
 test('saved legacy AUTO keeps opposite-language translation', () => {
-  assert.deepEqual(
-    normalizeSpeechLanguages({ sourceLang: 'auto', targetLang: 'ko' }),
-    { sourceLang: 'auto', translationTarget: 'auto' }
-  )
+  assert.deepEqual(normalizeSpeechLanguages({ sourceLang: 'auto', targetLang: 'ko' }), {
+    sourceLang: 'auto',
+    translationTarget: 'auto',
+  })
 })
 
 test('saved fixed directions and new independent destinations survive migration', () => {
   for (const [saved, expected] of [
-    [{ sourceLang: 'ko', targetLang: 'en' }, { sourceLang: 'ko', translationTarget: 'en' }],
-    [{ sourceLang: 'en', targetLang: 'ko' }, { sourceLang: 'en', translationTarget: 'ko' }],
-    [{ sourceLang: 'auto', translationTarget: 'ko' }, { sourceLang: 'auto', translationTarget: 'ko' }],
-    [{ sourceLang: 'ko', translationTarget: 'auto' }, { sourceLang: 'ko', translationTarget: 'auto' }],
+    [
+      { sourceLang: 'ko', targetLang: 'en' },
+      { sourceLang: 'ko', translationTarget: 'en' },
+    ],
+    [
+      { sourceLang: 'en', targetLang: 'ko' },
+      { sourceLang: 'en', translationTarget: 'ko' },
+    ],
+    [
+      { sourceLang: 'auto', translationTarget: 'ko' },
+      { sourceLang: 'auto', translationTarget: 'ko' },
+    ],
+    [
+      { sourceLang: 'ko', translationTarget: 'auto' },
+      { sourceLang: 'ko', translationTarget: 'auto' },
+    ],
   ]) {
     assert.deepEqual(normalizeSpeechLanguages(saved), expected)
   }
 })
 
 test('missing or malformed saved language values have usable defaults', () => {
-  for (const saved of [undefined, null, [], 'auto', {}, { sourceLang: 'ja', translationTarget: {} }]) {
+  for (const saved of [
+    undefined,
+    null,
+    [],
+    'auto',
+    {},
+    { sourceLang: 'ja', translationTarget: {} },
+  ]) {
     assert.deepEqual(normalizeSpeechLanguages(saved), { sourceLang: 'en', translationTarget: 'ko' })
   }
 })
@@ -37,6 +56,13 @@ test('Qwen uses automatic input without erasing another engines preferred input'
     for (const provider of ['transcribe', 'whisper', 'nemotron']) {
       assert.equal(effectiveSourceLanguage(provider, preferred), preferred)
     }
+  }
+})
+
+test('streaming Qwen honors Korean and English input selection while batch remains automatic', () => {
+  for (const preferred of ['auto', 'ko', 'en']) {
+    assert.equal(effectiveSourceLanguage('qwen3-asr', preferred, true), preferred)
+    assert.equal(effectiveSourceLanguage('qwen3-asr', preferred, false), 'auto')
   }
 })
 
@@ -91,13 +117,16 @@ test('reopened meetings only merge speech with the same source and destination l
       timestamp: `2026-10-28T10:00:0${index}Z`,
     })),
   })
-  assert.deepEqual(meeting.messages.map((message) => ({
-    text: message.original,
-    source: message.detectedLanguage,
-    target: message.targetLanguage,
-  })), [
-    { text: '출시를 준비합니다.', source: 'ko', target: 'en' },
-    { text: 'The release is ready.', source: 'en', target: 'ko' },
-    { text: 'Please review it. Thank you for reviewing.', source: 'en', target: 'en' },
-  ])
+  assert.deepEqual(
+    meeting.messages.map((message) => ({
+      text: message.original,
+      source: message.detectedLanguage,
+      target: message.targetLanguage,
+    })),
+    [
+      { text: '출시를 준비합니다.', source: 'ko', target: 'en' },
+      { text: 'The release is ready.', source: 'en', target: 'ko' },
+      { text: 'Please review it. Thank you for reviewing.', source: 'en', target: 'en' },
+    ]
+  )
 })

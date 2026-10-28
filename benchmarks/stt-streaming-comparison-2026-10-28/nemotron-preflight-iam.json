@@ -1,0 +1,266 @@
+{
+  "checked_at": "2026-10-28T20:57:16.688514+00:00",
+  "action_names": [
+    "sagemaker:InvokeEndpoint",
+    "sagemaker:InvokeEndpointWithBidirectionalStream",
+    "sagemaker:InvokeEndpointWithResponseStream"
+  ],
+  "resource_arns": [
+    "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-streaming",
+    "arn:aws:sagemaker:us-east-1:913524902871:endpoint/transmeet-nemotron-streaming-v2"
+  ],
+  "principals": [
+    {
+      "arn": "arn:aws:iam::913524902871:role/TransmeetStack-WsTaskRole4B337A19-JBueyIt7ZiW8",
+      "role_name": "TransmeetStack-WsTaskRole4B337A19-JBueyIt7ZiW8",
+      "permissions_boundary": null,
+      "policies": [
+        {
+          "type": "inline",
+          "name": "TransMeetNemotronStreaming",
+          "sagemaker_statements": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "sagemaker:InvokeEndpointWithBidirectionalStream",
+                "sagemaker:DescribeEndpoint",
+                "sagemaker:InvokeEndpoint"
+              ],
+              "Resource": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-streaming"
+            }
+          ]
+        },
+        {
+          "type": "inline",
+          "name": "TransMeetQwenStreaming20261028",
+          "sagemaker_statements": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "sagemaker:InvokeEndpoint",
+                "sagemaker:InvokeEndpointWithBidirectionalStream",
+                "sagemaker:DescribeEndpoint"
+              ],
+              "Resource": [
+                "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen-streaming"
+              ]
+            }
+          ]
+        },
+        {
+          "type": "inline",
+          "name": "TransMeetSttSeoul20261028",
+          "sagemaker_statements": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "sagemaker:InvokeEndpoint",
+                "sagemaker:DescribeEndpoint"
+              ],
+              "Resource": [
+                "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen3-asr",
+                "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-asr"
+              ]
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "sagemaker:DescribeInferenceComponent",
+                "sagemaker:UpdateInferenceComponentRuntimeConfig"
+              ],
+              "Resource": [
+                "arn:aws:sagemaker:ap-northeast-2:913524902871:inference-component/transmeet-qwen3-asr-ic-v2",
+                "arn:aws:sagemaker:ap-northeast-2:913524902871:inference-component/transmeet-nemotron-asr-ic-v2"
+              ]
+            }
+          ]
+        },
+        {
+          "type": "inline",
+          "name": "WsTaskRoleDefaultPolicy7D1BCFAE",
+          "sagemaker_statements": [
+            {
+              "Action": [
+                "sagemaker:InvokeEndpoint",
+                "sagemaker:DescribeEndpoint"
+              ],
+              "Resource": [
+                "arn:aws:sagemaker:us-east-1:913524902871:endpoint/whisper-large",
+                "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen3-asr",
+                "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-asr"
+              ],
+              "Effect": "Allow"
+            },
+            {
+              "Action": [
+                "sagemaker:InvokeEndpointWithBidirectionalStream",
+                "sagemaker:DescribeEndpoint"
+              ],
+              "Resource": "arn:aws:sagemaker:us-east-1:913524902871:endpoint/transmeet-nemotron-streaming-v2",
+              "Effect": "Allow"
+            },
+            {
+              "Action": [
+                "sagemaker:DescribeInferenceComponent",
+                "sagemaker:UpdateInferenceComponentRuntimeConfig"
+              ],
+              "Resource": [
+                "arn:aws:sagemaker:ap-northeast-2:913524902871:inference-component/transmeet-qwen3-asr-ic-v2",
+                "arn:aws:sagemaker:ap-northeast-2:913524902871:inference-component/transmeet-nemotron-asr-ic-v2"
+              ],
+              "Effect": "Allow"
+            }
+          ]
+        }
+      ],
+      "simulation": [
+        {
+          "EvalActionName": "sagemaker:InvokeEndpoint",
+          "EvalResourceName": "arn:aws:sagemaker:${Region}:${Account}:${ResourceType}/${ResourceName}",
+          "EvalDecision": "implicitDeny",
+          "MatchedStatements": [
+            {
+              "SourcePolicyId": "role_TransmeetStack-WsTaskRole4B337A19-JBueyIt7ZiW8_TransMeetNemotronStreaming",
+              "SourcePolicyType": "IAM Policy",
+              "StartPosition": {
+                "Line": 1,
+                "Column": 41
+              },
+              "EndPosition": {
+                "Line": 1,
+                "Column": 280
+              }
+            }
+          ],
+          "MissingContextValues": [
+            "cloudwatch:namespace"
+          ],
+          "ResourceSpecificResults": [
+            {
+              "EvalResourceName": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-streaming",
+              "EvalResourceDecision": "allowed",
+              "MatchedStatements": [
+                {
+                  "SourcePolicyId": "role_TransmeetStack-WsTaskRole4B337A19-JBueyIt7ZiW8_TransMeetNemotronStreaming",
+                  "SourcePolicyType": "IAM Policy",
+                  "StartPosition": {
+                    "Line": 1,
+                    "Column": 41
+                  },
+                  "EndPosition": {
+                    "Line": 1,
+                    "Column": 280
+                  }
+                }
+              ]
+            },
+            {
+              "EvalResourceName": "arn:aws:sagemaker:us-east-1:913524902871:endpoint/transmeet-nemotron-streaming-v2",
+              "EvalResourceDecision": "implicitDeny",
+              "MissingContextValues": [
+                "cloudwatch:namespace"
+              ]
+            }
+          ]
+        },
+        {
+          "EvalActionName": "sagemaker:InvokeEndpointWithResponseStream",
+          "EvalResourceName": "arn:aws:sagemaker:${Region}:${Account}:${ResourceType}/${ResourceName}",
+          "EvalDecision": "implicitDeny",
+          "MatchedStatements": [],
+          "MissingContextValues": [
+            "cloudwatch:namespace"
+          ],
+          "ResourceSpecificResults": [
+            {
+              "EvalResourceName": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-streaming",
+              "EvalResourceDecision": "implicitDeny",
+              "MissingContextValues": [
+                "cloudwatch:namespace"
+              ]
+            },
+            {
+              "EvalResourceName": "arn:aws:sagemaker:us-east-1:913524902871:endpoint/transmeet-nemotron-streaming-v2",
+              "EvalResourceDecision": "implicitDeny",
+              "MissingContextValues": [
+                "cloudwatch:namespace"
+              ]
+            }
+          ]
+        },
+        {
+          "EvalActionName": "sagemaker:InvokeEndpointWithBidirectionalStream",
+          "EvalResourceName": "*",
+          "EvalDecision": "allowed",
+          "MatchedStatements": [
+            {
+              "SourcePolicyId": "role_TransmeetStack-WsTaskRole4B337A19-JBueyIt7ZiW8_WsTaskRoleDefaultPolicy7D1BCFAE",
+              "SourcePolicyType": "IAM Policy",
+              "StartPosition": {
+                "Line": 1,
+                "Column": 359
+              },
+              "EndPosition": {
+                "Line": 1,
+                "Column": 563
+              }
+            },
+            {
+              "SourcePolicyId": "role_TransmeetStack-WsTaskRole4B337A19-JBueyIt7ZiW8_TransMeetNemotronStreaming",
+              "SourcePolicyType": "IAM Policy",
+              "StartPosition": {
+                "Line": 1,
+                "Column": 41
+              },
+              "EndPosition": {
+                "Line": 1,
+                "Column": 280
+              }
+            }
+          ],
+          "MissingContextValues": [],
+          "ResourceSpecificResults": [
+            {
+              "EvalResourceName": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-streaming",
+              "EvalResourceDecision": "allowed",
+              "MatchedStatements": [
+                {
+                  "SourcePolicyId": "role_TransmeetStack-WsTaskRole4B337A19-JBueyIt7ZiW8_TransMeetNemotronStreaming",
+                  "SourcePolicyType": "IAM Policy",
+                  "StartPosition": {
+                    "Line": 1,
+                    "Column": 41
+                  },
+                  "EndPosition": {
+                    "Line": 1,
+                    "Column": 280
+                  }
+                }
+              ]
+            },
+            {
+              "EvalResourceName": "arn:aws:sagemaker:us-east-1:913524902871:endpoint/transmeet-nemotron-streaming-v2",
+              "EvalResourceDecision": "allowed",
+              "MatchedStatements": [
+                {
+                  "SourcePolicyId": "role_TransmeetStack-WsTaskRole4B337A19-JBueyIt7ZiW8_WsTaskRoleDefaultPolicy7D1BCFAE",
+                  "SourcePolicyType": "IAM Policy",
+                  "StartPosition": {
+                    "Line": 1,
+                    "Column": 359
+                  },
+                  "EndPosition": {
+                    "Line": 1,
+                    "Column": 563
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "simulation_note": "AWS rejected a combined simulation of bidirectional and regular/response-stream actions because they require different authorization information. Actions are simulated separately below.",
+  "caveat": "Read-only policy simulation; live HTTP/2 runtime authorization and application partial/final event flow are separate verification steps. No new inference was invoked."
+}

@@ -1,0 +1,51 @@
+{
+  "checked_at": "2026-10-28T21:35:21.327417+00:00",
+  "qwen_legacy_endpoint_removed": true,
+  "qwen_model_and_configuration_retained": true,
+  "nemotron_legacy_copies": {
+    "DesiredCopyCount": 0,
+    "CurrentCopyCount": 0
+  },
+  "records": [
+    {
+      "endpoint": "transmeet-qwen-streaming",
+      "status": "InService",
+      "config": "transmeet-qwen-streaming-c0a866de6144-cfg",
+      "current_hosts": 1,
+      "desired_hosts": 1
+    },
+    {
+      "endpoint": "transmeet-nemotron-streaming",
+      "status": "InService",
+      "config": "transmeet-nemotron-streaming-859ae8f54c75-cfg",
+      "current_hosts": 1,
+      "desired_hosts": 1
+    },
+    {
+      "endpoint": "transmeet-nemotron-asr",
+      "status": "InService",
+      "config": "transmeet-nemotron-asr-streaming-retired-20261028",
+      "current_hosts": 0,
+      "desired_hosts": 0
+    }
+  ],
+  "ecs_task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+  "ecs_deployments": [
+    {
+      "status": "PRIMARY",
+      "rolloutState": "COMPLETED",
+      "runningCount": 1,
+      "pendingCount": 0
+    }
+  ],
+  "selected_streaming": {
+    "NEMOTRON_STREAMING_REGION": "ap-northeast-2",
+    "QWEN_STREAMING_ENABLED": "true",
+    "NEMOTRON_STREAMING_ENDPOINT": "transmeet-nemotron-streaming",
+    "NEMOTRON_STREAMING_ENABLED": "true",
+    "NEMOTRON_STREAMING_CHUNK_MS": "560",
+    "QWEN_STREAMING_REGION": "ap-northeast-2",
+    "QWEN_STREAMING_CHUNK_MS": "1000",
+    "QWEN_STREAMING_ENDPOINT": "transmeet-qwen-streaming"
+  }
+}

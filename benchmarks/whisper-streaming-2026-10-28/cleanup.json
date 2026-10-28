@@ -1,0 +1,16 @@
+{
+  "staging_endpoint_deleted": true,
+  "stage_configs_deleted": [
+    "transmeet-whisper-streaming-1239830e0fb7-cfg",
+    "transmeet-whisper-streaming-1fbb170e3f18-cfg",
+    "transmeet-whisper-streaming-d86312d3a909-cfg"
+  ],
+  "stage_models_deleted": [
+    "transmeet-whisper-streaming-1239830e0fb7",
+    "transmeet-whisper-streaming-1fbb170e3f18",
+    "transmeet-whisper-streaming-d86312d3a909"
+  ],
+  "test_user_deleted": true,
+  "production_instance_count": 1,
+  "original_production_config_retained": "whisper-large-1770857274414"
+}

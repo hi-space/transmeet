@@ -1,0 +1,406 @@
+{
+  "checked_at": "2026-10-28T21:02:23.789648+00:00",
+  "scope": "Read-only AWS/configuration/evidence audit. No new GPU inference and no AWS/source mutation.",
+  "backend": {
+    "checked_at": "2026-10-28T21:01:15.811230+00:00",
+    "service_task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+    "service_revision": 35,
+    "registered_at": "2026-10-28 20:55:22.870000+00:00",
+    "environment": {
+      "QWEN_ASR_ENDPOINT": "transmeet-qwen3-asr",
+      "NEMOTRON_STREAMING_REGION": "ap-northeast-2",
+      "NEMOTRON_ASR_ENDPOINT": "transmeet-nemotron-asr",
+      "WHISPER_ENDPOINT": "whisper-large",
+      "QWEN_STREAMING_ENABLED": "true",
+      "NEMOTRON_ASR_REGION": "ap-northeast-2",
+      "NEMOTRON_STREAMING_ENDPOINT": "transmeet-nemotron-streaming",
+      "NEMOTRON_STREAMING_ENABLED": "true",
+      "NEMOTRON_STREAMING_CHUNK_MS": "560",
+      "QWEN_STREAMING_REGION": "ap-northeast-2",
+      "QWEN_ASR_INFERENCE_COMPONENT": "transmeet-qwen3-asr-ic-v2",
+      "NEMOTRON_ASR_INFERENCE_COMPONENT": "transmeet-nemotron-asr-ic-v2",
+      "QWEN_STREAMING_CHUNK_MS": "1000",
+      "QWEN_STREAMING_ENDPOINT": "transmeet-qwen-streaming",
+      "REGION": "us-east-1",
+      "STT_IDLE_SECONDS": "0",
+      "QWEN_ASR_REGION": "ap-northeast-2"
+    },
+    "running_count": 1,
+    "pending_count": 0,
+    "deployments": [
+      {
+        "status": "PRIMARY",
+        "taskDefinition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+        "runningCount": 1,
+        "pendingCount": 0,
+        "rolloutState": "COMPLETED",
+        "rolloutStateReason": "ECS deployment ecs-svc/7333950839463620706 completed."
+      }
+    ],
+    "tasks": [
+      {
+        "task_arn": "arn:aws:ecs:us-east-1:913524902871:task/transmeet-ws-cluster/c4b98eb2de8c453f93d1f28f74f18df0",
+        "task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:35",
+        "status": "RUNNING",
+        "started_at": "2026-10-28 20:56:25.708000+00:00",
+        "containers": [
+          {
+            "name": "ws-backend",
+            "image_digest": "sha256:bb9fdc8f9895b8a4bb9776fc69138ae065bfd47ff430f17dae28b276a9091fbe",
+            "status": "RUNNING",
+            "private_ips": [
+              "172.31.95.87"
+            ]
+          }
+        ]
+      }
+    ],
+    "targets": [
+      {
+        "Target": {
+          "Id": "172.31.11.38",
+          "Port": 8000,
+          "AvailabilityZone": "us-east-1c"
+        },
+        "HealthCheckPort": "8000",
+        "TargetHealth": {
+          "State": "draining",
+          "Reason": "Target.DeregistrationInProgress",
+          "Description": "Target deregistration is in progress"
+        },
+        "AdministrativeOverride": {
+          "State": "no_override",
+          "Reason": "AdministrativeOverride.NoOverride",
+          "Description": "No override is currently active on target"
+        }
+      },
+      {
+        "Target": {
+          "Id": "172.31.95.87",
+          "Port": 8000,
+          "AvailabilityZone": "us-east-1d"
+        },
+        "HealthCheckPort": "8000",
+        "TargetHealth": {
+          "State": "healthy"
+        },
+        "AdministrativeOverride": {
+          "State": "no_override",
+          "Reason": "AdministrativeOverride.NoOverride",
+          "Description": "No override is currently active on target"
+        }
+      }
+    ]
+  },
+  "providers": {
+    "transcribe": {
+      "region": "us-east-1",
+      "service": "Amazon Transcribe Streaming",
+      "endpoint": "AWS-managed regional streaming API",
+      "mode": "native_streaming",
+      "enabled": true,
+      "hardware": "AWS managed; not exposed as a customer SageMaker instance",
+      "readiness": "No customer model deployment; ECS task-role StartStreamTranscription simulation allowed. Fresh runtime probe is coordinated by parent.",
+      "task_role_iam": {
+        "checked_at": "2026-10-28T21:01:13.404672+00:00",
+        "role_arn": "arn:aws:iam::913524902871:role/TransmeetStack-WsTaskRole4B337A19-JBueyIt7ZiW8",
+        "action": "transcribe:StartStreamTranscription",
+        "simulation": [
+          {
+            "EvalActionName": "transcribe:StartStreamTranscription",
+            "EvalResourceName": "*",
+            "EvalDecision": "allowed",
+            "MissingContextValues": []
+          }
+        ]
+      },
+      "new_runtime_probe_in_this_audit": false
+    },
+    "whisper": {
+      "observed_at": "2026-10-28T21:00:05.389550+00:00",
+      "region": "us-east-1",
+      "endpoint": "whisper-large",
+      "endpoint_arn": "arn:aws:sagemaker:us-east-1:913524902871:endpoint/whisper-large",
+      "status": "InService",
+      "endpoint_config": "whisper-large-1770857274414",
+      "hardware": [
+        {
+          "instance_type": "ml.g5.2xlarge",
+          "current_instance_count": 1
+        }
+      ],
+      "current_host_count": 1,
+      "desired_host_count": 1,
+      "models": [
+        {
+          "model_name": "whisper-large-v3-turbo-004709",
+          "image": "763104351884.dkr.ecr.us-east-1.amazonaws.com/huggingface-pytorch-inference:2.1.0-transformers4.37.0-gpu-py310-cu118-ubuntu20.04",
+          "artifact": {
+            "S3DataSource": {
+              "S3Uri": "s3://jumpstart-cache-prod-us-east-1/huggingface-asr/huggingface-asr-whisper-large-v3-turbo/artifacts/inference-prepack/v1.0.0/",
+              "S3DataType": "S3Prefix",
+              "CompressionType": "None"
+            }
+          },
+          "mode": "SingleModel"
+        }
+      ],
+      "inference_component": null,
+      "inference_component_status": null,
+      "current_component_copies": null,
+      "desired_component_copies": null,
+      "scalable_targets": [],
+      "error": null,
+      "model_copy_note": "Standard single-model endpoint; inference-component copy counters do not apply. Current/desired host counts are reported above.",
+      "mode": "buffered_request_response",
+      "enabled": true,
+      "chunk_configuration": "Application buffering, not a persistent model bidirectional stream; final harness must record the effective buffering and real-time pacing.",
+      "new_runtime_probe_in_this_audit": false
+    },
+    "qwen3-asr": {
+      "observed_at": "2026-10-28T21:00:05.394308+00:00",
+      "region": "ap-northeast-2",
+      "endpoint": "transmeet-qwen-streaming",
+      "endpoint_arn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen-streaming",
+      "status": "InService",
+      "endpoint_config": "transmeet-qwen-streaming-c0a866de6144-cfg",
+      "hardware": [
+        {
+          "instance_type": "ml.g6.xlarge",
+          "current_instance_count": 1
+        }
+      ],
+      "current_host_count": 1,
+      "desired_host_count": 1,
+      "models": [
+        {
+          "model_name": "transmeet-qwen-streaming-c0a866de6144",
+          "image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming@sha256:31fd09210793be44424f5d45270d99ceb26c2dc4bcd5e8ff962048631def63d3",
+          "artifact": {
+            "S3DataSource": {
+              "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/",
+              "S3DataType": "S3Prefix",
+              "CompressionType": "None"
+            }
+          },
+          "mode": "SingleModel"
+        }
+      ],
+      "inference_component": null,
+      "inference_component_status": null,
+      "current_component_copies": null,
+      "desired_component_copies": null,
+      "scalable_targets": [],
+      "error": null,
+      "model_copy_note": "Standard single-model endpoint; inference-component copy counters do not apply. Current/desired host counts are reported above.",
+      "mode": "native_streaming",
+      "enabled": true,
+      "model_chunk_ms": 1000,
+      "new_runtime_probe_in_this_audit": false,
+      "runtime_probe_owner": "Parent agent"
+    },
+    "nemotron": {
+      "observed_at": "2026-10-28T21:00:05.397008+00:00",
+      "region": "ap-northeast-2",
+      "endpoint": "transmeet-nemotron-streaming",
+      "endpoint_arn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-streaming",
+      "status": "InService",
+      "endpoint_config": "transmeet-nemotron-streaming-859ae8f54c75-cfg",
+      "hardware": [
+        {
+          "instance_type": "ml.g5.xlarge",
+          "current_instance_count": 1
+        }
+      ],
+      "current_host_count": 1,
+      "desired_host_count": 1,
+      "models": [
+        {
+          "model_name": "transmeet-nemotron-streaming-859ae8f54c75",
+          "image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-nemotron-streaming@sha256:c20c3f92bf90b7786e4a5122e4404e682c418fca8f2d7442601595a7261e6c23",
+          "artifact": {
+            "S3DataSource": {
+              "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-nvidia-nemotron-3-5-asr-streaming-0-6b/artifacts/inference-prepack/v1.0.2/",
+              "S3DataType": "S3Prefix",
+              "CompressionType": "None"
+            }
+          },
+          "mode": "SingleModel"
+        }
+      ],
+      "inference_component": null,
+      "inference_component_status": null,
+      "current_component_copies": null,
+      "desired_component_copies": null,
+      "scalable_targets": [],
+      "error": null,
+      "model_copy_note": "Standard single-model endpoint; inference-component copy counters do not apply. Current/desired host counts are reported above.",
+      "mode": "native_streaming",
+      "enabled": true,
+      "model_chunk_ms": 560,
+      "new_runtime_probe_in_this_audit": false,
+      "previous_real_payload_runs": 40,
+      "previous_payload_failures": 0,
+      "previous_source_and_image_provenance_match": true,
+      "task_role_required_actions_allowed": true
+    }
+  },
+  "legacy_batch_endpoints": {
+    "qwen3-asr": {
+      "observed_at": "2026-10-28T21:00:05.392791+00:00",
+      "region": "ap-northeast-2",
+      "endpoint": "transmeet-qwen3-asr",
+      "endpoint_arn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen3-asr",
+      "status": "InService",
+      "endpoint_config": "transmeet-qwen3-asr-warm-v1",
+      "hardware": [
+        {
+          "instance_type": "ml.g6.2xlarge",
+          "current_instance_count": 1
+        }
+      ],
+      "current_host_count": 1,
+      "desired_host_count": 1,
+      "models": [
+        {
+          "model_name": "transmeet-qwen3-asr-model-offline",
+          "image": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/vllm:server-sagemaker-cuda-v1",
+          "artifact": {
+            "S3DataSource": {
+              "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/",
+              "S3DataType": "S3Prefix",
+              "CompressionType": "None"
+            }
+          },
+          "mode": "SingleModel"
+        }
+      ],
+      "inference_component": "transmeet-qwen3-asr-ic-v2",
+      "inference_component_status": "InService",
+      "current_component_copies": 1,
+      "desired_component_copies": 1,
+      "scalable_targets": [
+        {
+          "resource": "inference-component/transmeet-qwen3-asr-ic-v2",
+          "min": 1,
+          "max": 1
+        }
+      ],
+      "error": null,
+      "selected_for_production_stt": false,
+      "cleanup_owner": "Parent after Qwen application validation",
+      "modified_by_this_audit": false
+    },
+    "nemotron": {
+      "observed_at": "2026-10-28T21:00:05.385578+00:00",
+      "region": "ap-northeast-2",
+      "endpoint": "transmeet-nemotron-asr",
+      "endpoint_arn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-asr",
+      "status": "InService",
+      "endpoint_config": "transmeet-nemotron-asr-warm-v1",
+      "hardware": [
+        {
+          "instance_type": "ml.g5.2xlarge",
+          "current_instance_count": 1
+        }
+      ],
+      "current_host_count": 1,
+      "desired_host_count": 1,
+      "models": [
+        {
+          "model_name": "transmeet-nemotron-asr-model",
+          "image": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311",
+          "artifact": {
+            "S3DataSource": {
+              "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-nvidia-nemotron-3-5-asr-streaming-0-6b/artifacts/inference-prepack/v1.0.2/",
+              "S3DataType": "S3Prefix",
+              "CompressionType": "None"
+            }
+          },
+          "mode": "SingleModel"
+        }
+      ],
+      "inference_component": "transmeet-nemotron-asr-ic-v2",
+      "inference_component_status": "InService",
+      "current_component_copies": 1,
+      "desired_component_copies": 1,
+      "scalable_targets": [
+        {
+          "resource": "inference-component/transmeet-nemotron-asr-ic-v2",
+          "min": 1,
+          "max": 1
+        }
+      ],
+      "error": null,
+      "selected_for_production_stt": false,
+      "cleanup_owner": "Nemotron deployment owner; coordinate before cleanup",
+      "modified_by_this_audit": false
+    }
+  },
+  "host_totals": {
+    "selected_sagemaker_provider_hosts": 3,
+    "legacy_batch_hosts": 2,
+    "qwen_native_plus_legacy_hosts": 2,
+    "nemotron_native_plus_legacy_hosts": 2,
+    "total_sagemaker_hosts_in_this_audit": 5,
+    "keep_one_per_model_complete": false
+  },
+  "same_inputs": [
+    {
+      "language": "ko",
+      "manifest": "benchmarks/stt-ko-en-2026-10-28/manifest-ko.json",
+      "sha256": "5d61914cdf01e27d3e266557bd3295624023efb6396b2b0a2f37e9c5b5606ee0",
+      "sample_count": 10,
+      "total_audio_seconds": 111.12,
+      "all_audio_sha256_verified": true
+    },
+    {
+      "language": "en",
+      "manifest": "benchmarks/stt-ko-en-2026-10-28/manifest-en.json",
+      "sha256": "09d2c6e77bb6d075a0d1f70560855dc94e8899cb3615c4b50092f51eeac001d6",
+      "sample_count": 10,
+      "total_audio_seconds": 90.98,
+      "all_audio_sha256_verified": true
+    }
+  ],
+  "previous_native_payload_evidence": {
+    "folder": "benchmarks/nemotron-streaming-2026-10-28",
+    "40_of_40_complete": true,
+    "all_partials_arrived_before_audio_end": true,
+    "auto_ko_en_completed": true,
+    "35_second_silence_then_language_switch_completed": true,
+    "simultaneous_session_overlap_independently_proven_by_saved_timestamps": false,
+    "note": "Historical payload checks are evidence of endpoint readiness; final performance comparisons must be fresh after the current application deployment validation."
+  },
+  "deployment_gates": {
+    "ecs_rollout_completed": true,
+    "final_running_revision": 35,
+    "both_native_streaming_enabled": true,
+    "selected_sagemaker_endpoints_in_service": true,
+    "healthy_backend_target": true,
+    "native_nemotron_required_iam_actions_allowed": true,
+    "remaining": [
+      "Parent verifies actual Qwen/Nemotron application/ECS-role partial/final exchanges against the final selected endpoints.",
+      "Parent runs the fresh common four-provider comparison on these same 20 inputs and records one consistent pacing and language policy.",
+      "Coordinate retirement of the two legacy batch hosts after native application success to achieve one retained GPU host per model."
+    ]
+  },
+  "fair_comparison_caveats": [
+    "Use all 20 hash-identical FLEURS PCM16/16kHz/mono files with the same references; no trimming, VAD-based input loss, augmentation, or number rewriting.",
+    "Use the deployed production settings: Nemotron 560 ms and Qwen 1000 ms; record them explicitly. Model chunk duration is separate from common 160 ms real-time capture pacing.",
+    "Use identical language-mode policy for the final corpus. Prior native accuracy used explicit manifest language; AUTO checks are separate and must not be silently mixed into that corpus.",
+    "Measure startup separately; measure first nonempty displayed text from audio capture start after readiness. Keep leading silence in all models and score finalized text only.",
+    "Record whether the first displayed text is partial or final. Preserve startup, first-partial/first-text, final lag, full capture duration, and transport errors as separate metrics.",
+    "Do not treat real-time replay end-to-end time or the earlier unpaced full-clip/batch wall time as the same latency metric. Final lag can be negative because of trailing silence.",
+    "Record provider regions and client location/path; native endpoints are Seoul while existing Transcribe/Whisper configuration is us-east-1. Direct endpoint timings exclude browser/microphone, translation, and meeting persistence.",
+    "Any failed or incomplete condition retains events/errors and cannot receive a rankable corpus score. Twenty clean read-speech clips do not establish performance under noisy, overlapping meeting speech.",
+    "backend/scripts/benchmark_stt.py still calls transcribe_audio for Qwen/Nemotron, which is the batch adapter even if streaming flags are enabled. Use the native stream runners or the shared application harness for the fresh native comparison."
+  ],
+  "evidence_files": [
+    "all-providers-preflight-live.json",
+    "all-providers-preflight-runtime.json",
+    "nemotron-preflight.json",
+    "nemotron-preflight-iam.json",
+    "nemotron-preflight-inputs.json"
+  ]
+}

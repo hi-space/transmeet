@@ -1,0 +1,74 @@
+{
+  "model": {
+    "ModelName": "transmeet-qwen-streaming-c0a866de6144",
+    "ExecutionRoleArn": "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+    "EnableNetworkIsolation": true,
+    "PrimaryContainer": {
+      "Image": "913524902871.dkr.ecr.ap-northeast-2.amazonaws.com/transmeet-qwen-streaming@sha256:31fd09210793be44424f5d45270d99ceb26c2dc4bcd5e8ff962048631def63d3",
+      "ModelDataSource": {
+        "S3DataSource": {
+          "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/",
+          "S3DataType": "S3Prefix",
+          "CompressionType": "None"
+        }
+      },
+      "Environment": {
+        "MODEL_DIR": "/opt/ml/model",
+        "NVIDIA_VISIBLE_DEVICES": "all",
+        "NVIDIA_DRIVER_CAPABILITIES": "compute,utility",
+        "HF_HUB_OFFLINE": "1",
+        "TRANSFORMERS_OFFLINE": "1",
+        "VLLM_WORKER_MULTIPROC_METHOD": "spawn"
+      }
+    },
+    "Tags": [
+      {
+        "Key": "Application",
+        "Value": "TransMeet"
+      },
+      {
+        "Key": "SttProvider",
+        "Value": "qwen-streaming"
+      }
+    ]
+  },
+  "endpoint_config": {
+    "EndpointConfigName": "transmeet-qwen-streaming-c0a866de6144-cfg",
+    "ProductionVariants": [
+      {
+        "VariantName": "AllTraffic",
+        "ModelName": "transmeet-qwen-streaming-c0a866de6144",
+        "InitialInstanceCount": 1,
+        "InitialVariantWeight": 1.0,
+        "InstanceType": "ml.g6.xlarge",
+        "InferenceAmiVersion": "al2023-ami-sagemaker-inference-gpu-4-1",
+        "ModelDataDownloadTimeoutInSeconds": 1800,
+        "ContainerStartupHealthCheckTimeoutInSeconds": 1800
+      }
+    ],
+    "Tags": [
+      {
+        "Key": "Application",
+        "Value": "TransMeet"
+      },
+      {
+        "Key": "SttProvider",
+        "Value": "qwen-streaming"
+      }
+    ]
+  },
+  "endpoint": {
+    "EndpointName": "transmeet-qwen-streaming",
+    "EndpointConfigName": "transmeet-qwen-streaming-c0a866de6144-cfg",
+    "Tags": [
+      {
+        "Key": "Application",
+        "Value": "TransMeet"
+      },
+      {
+        "Key": "SttProvider",
+        "Value": "qwen-streaming"
+      }
+    ]
+  }
+}

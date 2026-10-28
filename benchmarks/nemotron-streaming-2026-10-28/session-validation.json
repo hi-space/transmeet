@@ -1,0 +1,952 @@
+[
+  {
+    "sample_id": "fleurs-ko-test-row-9",
+    "language": "ko",
+    "requested_language": "auto",
+    "reference": "교전이 발발한 직후 영국은 독일에 대한 해상 봉쇄를 시작한다",
+    "audio_seconds": 4.8,
+    "text": "교전이 발발한 짓고 영국은 독일에 대한 해상 공세를 시작한다.",
+    "detected_languages": [
+      "ko-KR"
+    ],
+    "startup_seconds": 0.3488,
+    "first_partial_seconds": 1.365476,
+    "final_lag_seconds": 0.051689,
+    "end_to_end_seconds": 4.912822,
+    "audio_send_seconds": 4.800965,
+    "total_seconds": 5.261647,
+    "partial_count": 24,
+    "final_count": 1,
+    "partial_before_audio_end": true,
+    "error_count": 0,
+    "events": [
+      {
+        "type": "ready",
+        "stream_id": 1,
+        "elapsed_seconds": 0.3488,
+        "audio_elapsed_seconds": null
+      },
+      {
+        "type": "final",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "",
+        "language": "",
+        "elapsed_seconds": 1.235597,
+        "audio_elapsed_seconds": 0.886772
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교",
+        "language": "",
+        "elapsed_seconds": 1.7143,
+        "audio_elapsed_seconds": 1.365476
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전",
+        "language": "",
+        "elapsed_seconds": 2.340858,
+        "audio_elapsed_seconds": 1.992033
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이",
+        "language": "",
+        "elapsed_seconds": 2.346653,
+        "audio_elapsed_seconds": 1.997828
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발",
+        "language": "",
+        "elapsed_seconds": 2.35529,
+        "audio_elapsed_seconds": 2.006465
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발",
+        "language": "",
+        "elapsed_seconds": 2.360508,
+        "audio_elapsed_seconds": 2.011683
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한",
+        "language": "",
+        "elapsed_seconds": 2.81835,
+        "audio_elapsed_seconds": 2.469525
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓",
+        "language": "",
+        "elapsed_seconds": 2.825495,
+        "audio_elapsed_seconds": 2.47667
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고",
+        "language": "",
+        "elapsed_seconds": 2.833409,
+        "audio_elapsed_seconds": 2.484584
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고 영",
+        "language": "",
+        "elapsed_seconds": 2.839332,
+        "audio_elapsed_seconds": 2.490507
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고 영국",
+        "language": "",
+        "elapsed_seconds": 3.456122,
+        "audio_elapsed_seconds": 3.107297
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고 영국은",
+        "language": "",
+        "elapsed_seconds": 3.46067,
+        "audio_elapsed_seconds": 3.111845
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고 영국은 독",
+        "language": "",
+        "elapsed_seconds": 3.469072,
+        "audio_elapsed_seconds": 3.120248
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고 영국은 독일",
+        "language": "",
+        "elapsed_seconds": 3.474129,
+        "audio_elapsed_seconds": 3.125305
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고 영국은 독일에",
+        "language": "",
+        "elapsed_seconds": 3.947742,
+        "audio_elapsed_seconds": 3.598917
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고 영국은 독일에 대한",
+        "language": "",
+        "elapsed_seconds": 3.952983,
+        "audio_elapsed_seconds": 3.604158
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고 영국은 독일에 대한 해",
+        "language": "",
+        "elapsed_seconds": 3.96151,
+        "audio_elapsed_seconds": 3.612685
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고 영국은 독일에 대한 해상",
+        "language": "",
+        "elapsed_seconds": 4.576481,
+        "audio_elapsed_seconds": 4.227656
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고 영국은 독일에 대한 해상 공",
+        "language": "",
+        "elapsed_seconds": 4.582482,
+        "audio_elapsed_seconds": 4.233657
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고 영국은 독일에 대한 해상 공세",
+        "language": "",
+        "elapsed_seconds": 4.590723,
+        "audio_elapsed_seconds": 4.241899
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고 영국은 독일에 대한 해상 공세를",
+        "language": "",
+        "elapsed_seconds": 4.595324,
+        "audio_elapsed_seconds": 4.246499
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고 영국은 독일에 대한 해상 공세를 시작",
+        "language": "",
+        "elapsed_seconds": 5.058632,
+        "audio_elapsed_seconds": 4.709807
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고 영국은 독일에 대한 해상 공세를 시작한다",
+        "language": "",
+        "elapsed_seconds": 5.0721,
+        "audio_elapsed_seconds": 4.723276
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고 영국은 독일에 대한 해상 공세를 시작한다.",
+        "language": "",
+        "elapsed_seconds": 5.07664,
+        "audio_elapsed_seconds": 4.727815
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고 영국은 독일에 대한 해상 공세를 시작한다.",
+        "language": "ko-KR",
+        "elapsed_seconds": 5.082369,
+        "audio_elapsed_seconds": 4.733544
+      },
+      {
+        "type": "final",
+        "stream_id": 1,
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고 영국은 독일에 대한 해상 공세를 시작한다.",
+        "language": "ko-KR",
+        "elapsed_seconds": 5.200513,
+        "audio_elapsed_seconds": 4.851689
+      },
+      {
+        "type": "ended",
+        "stream_id": 1,
+        "elapsed_seconds": 5.20056,
+        "audio_elapsed_seconds": 4.851735
+      }
+    ],
+    "errors": 4,
+    "reference_chars": 25,
+    "cer": 0.16
+  },
+  {
+    "sample_id": "fleurs-en-test-row-9",
+    "language": "en",
+    "requested_language": "auto",
+    "reference": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses, easier to reach than those built in modern times.",
+    "audio_seconds": 9.9,
+    "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach than those built in modern times",
+    "detected_languages": [],
+    "startup_seconds": 0.340826,
+    "first_partial_seconds": 1.804341,
+    "final_lag_seconds": 0.053253,
+    "end_to_end_seconds": 10.011819,
+    "audio_send_seconds": 9.900485,
+    "total_seconds": 10.352699,
+    "partial_count": 67,
+    "final_count": 1,
+    "partial_before_audio_end": true,
+    "error_count": 0,
+    "events": [
+      {
+        "type": "ready",
+        "stream_id": 1,
+        "elapsed_seconds": 0.340826,
+        "audio_elapsed_seconds": null
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "A",
+        "language": "",
+        "elapsed_seconds": 2.145222,
+        "audio_elapsed_seconds": 1.804341
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As",
+        "language": "",
+        "elapsed_seconds": 2.146417,
+        "audio_elapsed_seconds": 1.805537
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As l",
+        "language": "",
+        "elapsed_seconds": 2.152923,
+        "audio_elapsed_seconds": 1.812043
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light",
+        "language": "",
+        "elapsed_seconds": 2.154563,
+        "audio_elapsed_seconds": 1.813683
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light po",
+        "language": "",
+        "elapsed_seconds": 2.625363,
+        "audio_elapsed_seconds": 2.284483
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light poll",
+        "language": "",
+        "elapsed_seconds": 2.627712,
+        "audio_elapsed_seconds": 2.286832
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollu",
+        "language": "",
+        "elapsed_seconds": 2.629111,
+        "audio_elapsed_seconds": 2.288231
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution",
+        "language": "",
+        "elapsed_seconds": 2.631654,
+        "audio_elapsed_seconds": 2.290774
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in",
+        "language": "",
+        "elapsed_seconds": 2.635686,
+        "audio_elapsed_seconds": 2.294806
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in the",
+        "language": "",
+        "elapsed_seconds": 2.638353,
+        "audio_elapsed_seconds": 2.297473
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their",
+        "language": "",
+        "elapsed_seconds": 2.639822,
+        "audio_elapsed_seconds": 2.298942
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their he",
+        "language": "",
+        "elapsed_seconds": 3.266312,
+        "audio_elapsed_seconds": 2.925432
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their hey",
+        "language": "",
+        "elapsed_seconds": 3.26827,
+        "audio_elapsed_seconds": 2.92739
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday",
+        "language": "",
+        "elapsed_seconds": 3.270524,
+        "audio_elapsed_seconds": 2.929644
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was",
+        "language": "",
+        "elapsed_seconds": 3.275713,
+        "audio_elapsed_seconds": 2.934833
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not",
+        "language": "",
+        "elapsed_seconds": 3.278136,
+        "audio_elapsed_seconds": 2.937256
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the",
+        "language": "",
+        "elapsed_seconds": 3.745323,
+        "audio_elapsed_seconds": 3.404443
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kin",
+        "language": "",
+        "elapsed_seconds": 3.749182,
+        "audio_elapsed_seconds": 3.408302
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind",
+        "language": "",
+        "elapsed_seconds": 3.752044,
+        "audio_elapsed_seconds": 3.411164
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of",
+        "language": "",
+        "elapsed_seconds": 3.753637,
+        "audio_elapsed_seconds": 3.412757
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem",
+        "language": "",
+        "elapsed_seconds": 3.757427,
+        "audio_elapsed_seconds": 3.416547
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it",
+        "language": "",
+        "elapsed_seconds": 4.387874,
+        "audio_elapsed_seconds": 4.046994
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is",
+        "language": "",
+        "elapsed_seconds": 4.391041,
+        "audio_elapsed_seconds": 4.050161
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today",
+        "language": "",
+        "elapsed_seconds": 4.393876,
+        "audio_elapsed_seconds": 4.052996
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today,",
+        "language": "",
+        "elapsed_seconds": 4.866403,
+        "audio_elapsed_seconds": 4.525523
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they",
+        "language": "",
+        "elapsed_seconds": 4.870018,
+        "audio_elapsed_seconds": 4.529138
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are",
+        "language": "",
+        "elapsed_seconds": 4.874245,
+        "audio_elapsed_seconds": 4.533365
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are us",
+        "language": "",
+        "elapsed_seconds": 4.878661,
+        "audio_elapsed_seconds": 4.537781
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usu",
+        "language": "",
+        "elapsed_seconds": 5.506391,
+        "audio_elapsed_seconds": 5.16551
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually",
+        "language": "",
+        "elapsed_seconds": 5.507544,
+        "audio_elapsed_seconds": 5.166664
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually lo",
+        "language": "",
+        "elapsed_seconds": 5.511911,
+        "audio_elapsed_seconds": 5.171031
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually loca",
+        "language": "",
+        "elapsed_seconds": 5.514759,
+        "audio_elapsed_seconds": 5.173878
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually locate",
+        "language": "",
+        "elapsed_seconds": 5.516516,
+        "audio_elapsed_seconds": 5.175636
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located",
+        "language": "",
+        "elapsed_seconds": 5.519558,
+        "audio_elapsed_seconds": 5.178678
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in",
+        "language": "",
+        "elapsed_seconds": 5.986348,
+        "audio_elapsed_seconds": 5.645468
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in ci",
+        "language": "",
+        "elapsed_seconds": 5.992489,
+        "audio_elapsed_seconds": 5.651609
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities",
+        "language": "",
+        "elapsed_seconds": 5.997271,
+        "audio_elapsed_seconds": 5.656391
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or",
+        "language": "",
+        "elapsed_seconds": 6.627214,
+        "audio_elapsed_seconds": 6.286334
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at",
+        "language": "",
+        "elapsed_seconds": 6.630896,
+        "audio_elapsed_seconds": 6.290016
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at c",
+        "language": "",
+        "elapsed_seconds": 6.635376,
+        "audio_elapsed_seconds": 6.294495
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at cam",
+        "language": "",
+        "elapsed_seconds": 6.636837,
+        "audio_elapsed_seconds": 6.295957
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campu",
+        "language": "",
+        "elapsed_seconds": 7.105466,
+        "audio_elapsed_seconds": 6.764586
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuse",
+        "language": "",
+        "elapsed_seconds": 7.10896,
+        "audio_elapsed_seconds": 6.76808
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses",
+        "language": "",
+        "elapsed_seconds": 7.110802,
+        "audio_elapsed_seconds": 6.769922
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses e",
+        "language": "",
+        "elapsed_seconds": 7.747454,
+        "audio_elapsed_seconds": 7.406574
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses ea",
+        "language": "",
+        "elapsed_seconds": 7.748759,
+        "audio_elapsed_seconds": 7.407879
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easi",
+        "language": "",
+        "elapsed_seconds": 7.752388,
+        "audio_elapsed_seconds": 7.411508
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier",
+        "language": "",
+        "elapsed_seconds": 7.755776,
+        "audio_elapsed_seconds": 7.414896
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier t",
+        "language": "",
+        "elapsed_seconds": 7.759989,
+        "audio_elapsed_seconds": 7.419109
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to",
+        "language": "",
+        "elapsed_seconds": 7.762255,
+        "audio_elapsed_seconds": 7.421375
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to re",
+        "language": "",
+        "elapsed_seconds": 7.767476,
+        "audio_elapsed_seconds": 7.426596
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach",
+        "language": "",
+        "elapsed_seconds": 7.770406,
+        "audio_elapsed_seconds": 7.429526
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach t",
+        "language": "",
+        "elapsed_seconds": 8.226009,
+        "audio_elapsed_seconds": 7.885129
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach th",
+        "language": "",
+        "elapsed_seconds": 8.226988,
+        "audio_elapsed_seconds": 7.886108
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach than",
+        "language": "",
+        "elapsed_seconds": 8.228745,
+        "audio_elapsed_seconds": 7.887865
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach than t",
+        "language": "",
+        "elapsed_seconds": 8.234509,
+        "audio_elapsed_seconds": 7.893629
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach than tho",
+        "language": "",
+        "elapsed_seconds": 8.236371,
+        "audio_elapsed_seconds": 7.895491
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach than those",
+        "language": "",
+        "elapsed_seconds": 8.238142,
+        "audio_elapsed_seconds": 7.897262
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach than those bu",
+        "language": "",
+        "elapsed_seconds": 8.865544,
+        "audio_elapsed_seconds": 8.524664
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach than those buil",
+        "language": "",
+        "elapsed_seconds": 8.866792,
+        "audio_elapsed_seconds": 8.525912
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach than those built",
+        "language": "",
+        "elapsed_seconds": 8.870112,
+        "audio_elapsed_seconds": 8.529232
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach than those built in",
+        "language": "",
+        "elapsed_seconds": 8.875929,
+        "audio_elapsed_seconds": 8.535049
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach than those built in mo",
+        "language": "",
+        "elapsed_seconds": 8.882196,
+        "audio_elapsed_seconds": 8.541316
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach than those built in moder",
+        "language": "",
+        "elapsed_seconds": 8.885214,
+        "audio_elapsed_seconds": 8.544334
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach than those built in modern",
+        "language": "",
+        "elapsed_seconds": 9.344917,
+        "audio_elapsed_seconds": 9.004037
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach than those built in modern time",
+        "language": "",
+        "elapsed_seconds": 9.34961,
+        "audio_elapsed_seconds": 9.008729
+      },
+      {
+        "type": "partial",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach than those built in modern times",
+        "language": "",
+        "elapsed_seconds": 9.352633,
+        "audio_elapsed_seconds": 9.011753
+      },
+      {
+        "type": "final",
+        "stream_id": 1,
+        "utterance_id": 1,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach than those built in modern times",
+        "language": "",
+        "elapsed_seconds": 10.294133,
+        "audio_elapsed_seconds": 9.953253
+      },
+      {
+        "type": "ended",
+        "stream_id": 1,
+        "elapsed_seconds": 10.294181,
+        "audio_elapsed_seconds": 9.953301
+      }
+    ],
+    "errors": 0,
+    "reference_chars": 141,
+    "cer": 0.0,
+    "word_errors": 0,
+    "reference_words": 33,
+    "wer": 0.0
+  },
+  {
+    "test": "35-second silence and AUTO language switch",
+    "errors": [],
+    "finals": [
+      {
+        "elapsed": 5.353568071033806,
+        "type": "final",
+        "utterance_id": 2,
+        "text": "교전이 발발한 짓고 영국은 독일에 대한 해상 공세를 시작한다.",
+        "language": "ko-KR",
+        "stream_id": 1
+      },
+      {
+        "elapsed": 50.140851775184274,
+        "type": "final",
+        "utterance_id": 3,
+        "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses easier to reach than those built in modern times",
+        "language": "",
+        "stream_id": 1
+      }
+    ],
+    "resolved_languages": [
+      "en",
+      "ko"
+    ],
+    "elapsed_seconds": 50.20108276233077
+  }
+]

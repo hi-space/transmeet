@@ -80,20 +80,35 @@ def pcm_rms(pcm: bytes) -> float:
 
 
 class UtteranceSegmenter:
-    """Start on speech, preserve pre-roll, and include silence in active streams."""
+    """Preserve nonzero audio; use relative energy only for utterance boundaries."""
 
     def __init__(self, threshold: float = 0.01):
         self.threshold = threshold
         self._pending = bytearray()
         self._preroll = deque(maxlen=10)  # 200 ms
         self._active = False
-        self._voiced_frames = 0
+        self._speech_seen = False
+        self._noise_levels = deque(maxlen=50)
+        self._energy_threshold = threshold
         self._quiet_samples = 0
         self._utterance_samples = 0
 
     @property
     def buffered_bytes(self):
         return len(self._pending) + sum(len(frame) for frame in self._preroll)
+
+    def _voiced(self, energy):
+        if energy == 0:
+            return False
+        if not self._speech_seen:
+            self._noise_levels.append(energy)
+            levels = sorted(self._noise_levels)
+            noise_floor = levels[len(levels) // 5]
+            self._energy_threshold = max(1 / 32768, min(self.threshold, 2 * noise_floor))
+            # Calibration affects boundaries, never whether audio is admitted.
+            if len(levels) < 10 and energy < self.threshold:
+                return False
+        return energy >= self._energy_threshold
 
     def feed(self, pcm: bytes) -> list[tuple[str, bytes]]:
         if len(pcm) % 2:
@@ -106,21 +121,26 @@ class UtteranceSegmenter:
         events = []
         for offset in range(0, complete, frame_bytes):
             frame = frames[offset:offset + frame_bytes]
-            voiced = pcm_rms(frame) >= self.threshold
+            energy = pcm_rms(frame)
+            voiced = self._voiced(energy)
             if not self._active:
                 self._preroll.append(frame)
-                self._voiced_frames = self._voiced_frames + 1 if voiced else 0
-                if self._voiced_frames >= 2:
+                if energy > 0:
                     initial = b"".join(self._preroll)
                     self._preroll.clear()
                     self._active = True
+                    self._speech_seen = voiced
                     self._quiet_samples = 0
                     self._utterance_samples = len(initial) // 2
                     events.append(("start", initial))
                 continue
             events.append(("audio", frame))
             self._utterance_samples += FRAME_SAMPLES
-            self._quiet_samples = 0 if voiced else self._quiet_samples + FRAME_SAMPLES
+            self._speech_seen = self._speech_seen or voiced
+            if voiced or (energy > 0 and not self._speech_seen):
+                self._quiet_samples = 0
+            else:
+                self._quiet_samples += FRAME_SAMPLES
             if should_finalize(
                 self._quiet_samples * 1000 // SAMPLE_RATE,
                 self._utterance_samples * 1000 // SAMPLE_RATE,
@@ -131,7 +151,7 @@ class UtteranceSegmenter:
 
     def _reset(self):
         self._active = False
-        self._voiced_frames = 0
+        self._speech_seen = False
         self._quiet_samples = 0
         self._utterance_samples = 0
         self._preroll.clear()
@@ -146,14 +166,13 @@ class UtteranceSegmenter:
             events.append(("end", b""))
         else:
             pending = b"".join(self._preroll) + tail
-            # Explicit stop can happen before the two-frame start debounce.
-            if pending and (self._voiced_frames or (tail and pcm_rms(tail) >= self.threshold)):
+            if any(pending):
                 events.extend((("start", pending), ("end", b"")))
         self._reset()
         return events
 
 
-_LANGUAGE_TAG = re.compile(r"\s*<([a-z]{2,3}-[A-Za-z]{2,4})>\s*$")
+_LANGUAGE_TAG = re.compile(r"<([a-z]{2,3}-[A-Za-z]{2,4})>")
 
 
 def clean_transcript(text, language, special_tokens):
@@ -163,10 +182,10 @@ def clean_transcript(text, language, special_tokens):
     for token in special_tokens:
         if not _LANGUAGE_TAG.fullmatch(token):
             text = text.replace(token, "")
-    match = _LANGUAGE_TAG.search(text)
-    if match:
-        language = match[1]
-        text = text[:match.start()]
+    tags = _LANGUAGE_TAG.findall(text)
+    if tags:
+        language = tags[-1]
+        text = _LANGUAGE_TAG.sub("", text)
     return text.strip(), language
 
 

@@ -116,7 +116,7 @@ export default function SettingsPanel({
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canUseSystemAudio, setCanUseSystemAudio] = useState(true)
   const streamingStt = isStreamingStt(settings.sttProvider, sttStatus)
-  const nemotronStreaming = settings.sttProvider === 'nemotron' && streamingStt
+  const modelStreaming = settings.sttProvider !== 'transcribe' && streamingStt
 
   useEffect(() => {
     setCanUseSystemAudio(supportsSystemAudio())
@@ -310,14 +310,14 @@ export default function SettingsPanel({
                   hint={
                     settings.sttProvider === 'transcribe'
                       ? '발화 중에도 인식 결과를 표시합니다.'
-                      : nemotronStreaming
+                      : modelStreaming
                         ? '실시간으로 원문을 표시합니다. 번역은 확정된 발화를 기준으로 합니다.'
                         : settings.sttProvider === 'qwen3-asr'
                           ? '입력 언어는 자동으로 감지합니다. 번역 대상은 상단에서 따로 선택하세요.'
                           : `음성을 약 ${sttChunkDuration(settings.sttProvider, settings.sttChunkSeconds, sttStatus) / 1000}초씩 모아 인식하므로 첫 결과까지 시간이 걸릴 수 있습니다.`
                   }
                 />
-                {isManagedStt(settings.sttProvider) && (
+                {isManagedStt(settings.sttProvider, sttStatus) && (
                   <SttStatusPanel
                     state={sttStatus}
                     connected={sttConnected}
@@ -336,7 +336,7 @@ export default function SettingsPanel({
                     hint="기본 6초. 짧게 잡으면 반응이 빨라지고, 길게 잡으면 문맥을 더 확보할 수 있습니다."
                   />
                 )}
-                {!nemotronStreaming && (
+                {!modelStreaming && (
                   <>
                     <Choices
                       label="발화 중 번역"

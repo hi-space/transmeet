@@ -11,6 +11,7 @@ import type { SttProvider } from '@/lib/sttProviders'
 
 interface Props {
   provider: SttProvider
+  streaming?: boolean
   sourceLang: SourceLanguage
   translationTarget: TranslationTarget
   detectedLang?: Language | null
@@ -21,6 +22,7 @@ interface Props {
 
 export default function SpeechLanguageControls({
   provider,
+  streaming = false,
   sourceLang,
   translationTarget,
   detectedLang,
@@ -29,7 +31,7 @@ export default function SpeechLanguageControls({
   compact = false,
 }: Props) {
   const hintId = useId()
-  const automaticOnly = provider === 'qwen3-asr'
+  const automaticOnly = provider === 'qwen3-asr' && !streaming
   const selectClass =
     'min-w-0 rounded-lg border border-subtle bg-subtle px-2 text-xs text-ink disabled:cursor-not-allowed disabled:opacity-60 ' +
     (compact ? 'h-11 w-full' : 'h-9')
@@ -43,7 +45,7 @@ export default function SpeechLanguageControls({
           aria-label="음성 언어"
           aria-describedby={automaticOnly ? hintId : undefined}
           title={automaticOnly ? 'Qwen3-ASR는 입력 언어를 자동으로 감지합니다' : '음성 입력 언어'}
-          value={effectiveSourceLanguage(provider, sourceLang)}
+          value={effectiveSourceLanguage(provider, sourceLang, streaming)}
           disabled={automaticOnly}
           onChange={(event) => onChangeSourceLang(event.target.value as SourceLanguage)}
           className={`${selectClass} ${compact ? '' : 'w-[8.5rem]'}`}
