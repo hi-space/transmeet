@@ -158,3 +158,15 @@ def test_ws_with_valid_token_is_accepted(signing_key, monkeypatch):
         ws.send_json({"action": "auth", "token": make_token(signing_key)})
         ws.send_json({"action": "ping"})
         assert ws.receive_json()["type"] == "pong"
+
+
+# ─── verify_id_token_async: 메일 수신자는 검증된 email 클레임만 ───────────────
+
+async def test_async_returns_verified_email(signing_key):
+    token = make_token(signing_key, email="me@amazon.com", email_verified=True)
+    assert await auth.verify_id_token_async(token) == (SUB, "me@amazon.com")
+
+
+async def test_async_drops_unverified_email(signing_key):
+    token = make_token(signing_key, email="me@amazon.com", email_verified=False)
+    assert await auth.verify_id_token_async(token) == (SUB, "")

@@ -30,8 +30,8 @@ def _jwks_client() -> jwt.PyJWKClient:
     return jwt.PyJWKClient(f"{_issuer()}/.well-known/jwks.json", cache_keys=True)
 
 
-def verify_id_token(token: str) -> str:
-    """Cognito ID 토큰을 검증하고 사용자 ID(sub)를 돌려준다. 실패하면 AuthError."""
+def verify_id_token_claims(token: str) -> dict:
+    """Cognito ID 토큰을 검증하고 클레임을 돌려준다. 실패하면 AuthError."""
     if not config.COGNITO_USER_POOL_ID or not config.COGNITO_CLIENT_ID:
         raise AuthError("Cognito is not configured")
     if not token:
@@ -50,12 +50,22 @@ def verify_id_token(token: str) -> str:
         raise AuthError(str(e)) from e
     if claims.get("token_use") != "id":
         raise AuthError("not an ID token")
-    return claims["sub"]
+    return claims
 
 
-async def verify_id_token_async(token: str) -> str:
-    # JWKS 첫 조회는 동기 HTTP 라 이벤트 루프를 막지 않게 스레드에서 돌린다.
-    return await asyncio.to_thread(verify_id_token, token)
+def verify_id_token(token: str) -> str:
+    """Cognito ID 토큰을 검증하고 사용자 ID(sub)를 돌려준다. 실패하면 AuthError."""
+    return verify_id_token_claims(token)["sub"]
+
+
+async def verify_id_token_async(token: str) -> tuple[str, str]:
+    """(sub, email). 메일은 이 email 클레임으로만 보낸다 — 클라이언트가 주는 주소는 믿지 않는다.
+
+    JWKS 첫 조회는 동기 HTTP 라 이벤트 루프를 막지 않게 스레드에서 돌린다.
+    """
+    claims = await asyncio.to_thread(verify_id_token_claims, token)
+    email = claims.get("email") if claims.get("email_verified") in (True, "true") else ""
+    return claims["sub"], email or ""
 
 
 async def owns_meeting(user_id: str, meeting_id: str) -> bool:

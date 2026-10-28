@@ -45,6 +45,7 @@ import asyncio
 import base64
 import json
 import logging
+import re
 import struct
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -69,6 +70,7 @@ from .aws_clients import (
     resolve_detected_language,
     sagemaker_client,
 )
+from . import audio_store, mailer
 from .auth import AuthError, owns_meeting, verify_id_token_async
 from .config import config
 from .page_agent import (
@@ -93,6 +95,11 @@ SEGMENT_MERGE_DELAY_SECS = 2.0  # Transcribe: wait this long before translating 
 # 무한 반복되어 0.5 vCPU 태스크를 태우고, 같은 태스크를 쓰는 다른 연결까지 느려진다.
 TRANSCRIBE_MAX_START_FAILURES = 3
 TRANSCRIBE_RETRY_COOLDOWN_SECS = 2.0
+
+# 녹음 오디오를 S3 구간으로 올리는 크기. 16 kHz × 2 바이트 × 60초 — 예기치 않게 죽어도 잃는 건 1분 이내.
+AUDIO_PART_BYTES = 1_920_000
+# 다운로드 버튼이 받는 서명 URL. 누르자마자 쓰므로 짧게 둔다.
+DOWNLOAD_URL_EXPIRES = 300
 
 # Transcribe language code mapping
 LANG_CODE_MAP: dict = {
@@ -153,6 +160,11 @@ class ConnectionState:
     translation_timing: str = "sentence"
     # 미팅 페이지 생성 태스크 — 연결당 동시에 하나만
     page_task: Optional[asyncio.Task] = None
+    # ID 토큰의 email 클레임(검증된 주소만). 미팅 종료 메일 수신자.
+    user_email: str = ""
+    # 아직 S3 에 올리지 않은 녹음 PCM 과 그 PCM 이 속한 미팅. 미팅을 바꾸면 이전 미팅 몫을 먼저 올린다.
+    audio_pcm: bytearray = field(default_factory=bytearray)
+    audio_meeting_id: Optional[str] = None
 
 
 # In-memory connection registry (single-process; scales with one Fargate task)
@@ -160,6 +172,66 @@ active_connections: Dict[str, ConnectionState] = {}
 
 
 _ws_send_locks: Dict[int, asyncio.Lock] = {}
+
+# 미팅별로 진행 중인 구간 업로드. 합치기 전에 기다려야 방금 올린 구간이 빠지지 않는다.
+_pending_uploads: Dict[str, set] = {}
+
+
+# ─── 녹음 오디오 보관 ─────────────────────────────────────────────────────────
+
+def _start_flush(state: "ConnectionState", conn_id: str) -> None:
+    """버퍼를 비우고 업로드를 백그라운드로 건다 — 녹음·번역 경로를 막지 않는다."""
+    meeting_id = state.audio_meeting_id
+    if not meeting_id or not state.audio_pcm:
+        return
+    pcm = bytes(state.audio_pcm)
+    state.audio_pcm.clear()
+
+    async def _upload() -> None:
+        try:
+            await audio_store.upload_part(meeting_id, conn_id, pcm)
+        except Exception:
+            logger.exception("[audio] part upload failed meeting_id=%s bytes=%d", meeting_id, len(pcm))
+
+    task = asyncio.create_task(_upload())
+    pending = _pending_uploads.setdefault(meeting_id, set())
+    pending.add(task)
+    task.add_done_callback(pending.discard)
+
+
+def _buffer_audio(state: "ConnectionState", conn_id: str, pcm: bytes) -> None:
+    """소유가 확인된 미팅의 녹음만 모은다 (발언 저장과 같은 규칙)."""
+    if not state.meeting_id or not pcm:
+        return
+    if state.audio_meeting_id != state.meeting_id:
+        _start_flush(state, conn_id)
+        state.audio_meeting_id = state.meeting_id
+    state.audio_pcm.extend(pcm)
+    if len(state.audio_pcm) >= AUDIO_PART_BYTES:
+        _start_flush(state, conn_id)
+
+
+async def _await_uploads(meeting_id: str) -> None:
+    tasks = list(_pending_uploads.get(meeting_id, ()))
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
+
+
+async def _flush_meeting_audio(meeting_id: str) -> None:
+    """이 미팅을 녹음 중인 모든 연결의 버퍼를 올리고 끝날 때까지 기다린다."""
+    for conn_id, st in list(active_connections.items()):
+        if st.audio_meeting_id == meeting_id:
+            _start_flush(st, conn_id)
+    await _await_uploads(meeting_id)
+
+
+async def flush_all_audio() -> None:
+    """프로세스 종료(SIGTERM) 때 main.py lifespan 이 부른다. ECS 는 기본 30초를 기다려 준다."""
+    for conn_id, st in list(active_connections.items()):
+        _start_flush(st, conn_id)
+    tasks = [t for pending in _pending_uploads.values() for t in pending]
+    if tasks:
+        await asyncio.gather(*tasks, return_exceptions=True)
 
 
 def _meeting_broadcaster(meeting_id: str):
@@ -1051,8 +1123,8 @@ async def _stream_summary(
     model_id: str,
     *,
     inline_messages: Optional[list] = None,
-) -> None:
-    """Fetch meeting messages and stream a summary via converse_stream.
+) -> Optional[str]:
+    """Fetch meeting messages and stream a summary via converse_stream. 만든 요약을 돌려주고, 실패하면 None.
 
     If inline_messages is provided (from frontend), use those directly
     instead of reading from DynamoDB. This ensures summaries work during
@@ -1092,7 +1164,7 @@ async def _stream_summary(
 
         if not lines:
             await send({"type": "summary_stream", "phase": "error", "meetingId": meeting_id, "error": "No messages to summarize"})
-            return
+            return None
         transcript = "\n".join(lines)
 
         user_prompt = build_summary_prompt(current_title, transcript)
@@ -1160,6 +1232,7 @@ async def _stream_summary(
             done_payload["title"] = new_title
         await send(done_payload)
         logger.info("[ws] summary done meeting_id=%s chars=%d", meeting_id, len(summary))
+        return summary
 
     except SummaryModelUnavailable as e:
         logger.error("[ws] _stream_summary models unavailable for meeting_id=%s: %s", meeting_id, e)
@@ -1168,6 +1241,131 @@ async def _stream_summary(
     except Exception:
         logger.exception("[ws] _stream_summary failed for meeting_id=%s", meeting_id)
         await send({"type": "summary_stream", "phase": "error", "meetingId": meeting_id, "error": "Summary generation failed"})
+    return None
+
+
+# ─── 녹음 다운로드 · 미팅 종료 ────────────────────────────────────────────────
+
+async def _meeting_meta(meeting_id: str) -> tuple[str, str]:
+    """(제목, 생성 시각)."""
+    async with dynamodb_client() as ddb:
+        result = await ddb.get_item(
+            TableName=config.MEETINGS_TABLE,
+            Key={"meetingId": {"S": meeting_id}},
+            ProjectionExpression="title, createdAt",
+        )
+    item = result.get("Item", {})
+    return item.get("title", {}).get("S", ""), item.get("createdAt", {}).get("S", "")
+
+
+def _audio_filename(title: str) -> str:
+    # 파일 이름에 못 쓰는 문자만 바꾼다. 한글 제목은 그대로 둔다.
+    safe = re.sub(r'[\\/:*?"<>|\r\n]+', "_", title or "").strip() or "meeting"
+    return f"{safe[:80]}.mp3"
+
+
+async def _merged_audio_url(meeting_id: str, title: str, expires: int) -> Optional[str]:
+    """그 순간까지의 녹음을 합친 MP3 의 서명 URL. 녹음이 없거나 합치기에 실패하면 None."""
+    await _flush_meeting_audio(meeting_id)
+    try:
+        key = await audio_store.ensure_merged(meeting_id)
+        if not key:
+            return None
+        return await audio_store.presign(key, expires, _audio_filename(title))
+    except Exception:
+        logger.exception("[audio] merge/presign failed meeting_id=%s", meeting_id)
+        return None
+
+
+async def _prepare_audio(send, meeting_id: str) -> None:
+    title, _ = await _meeting_meta(meeting_id)
+    url = await _merged_audio_url(meeting_id, title, DOWNLOAD_URL_EXPIRES)
+    if url:
+        await send({"type": "audio_ready", "meetingId": meeting_id, "url": url})
+    else:
+        await send({"type": "audio_ready", "meetingId": meeting_id, "error": "저장된 녹음이 없습니다"})
+
+
+async def _claim_email_send(meeting_id: str) -> bool:
+    """메일 '발송권'. 종료 연타·여러 연결에서 동시에 종료해도 한 쪽만 True 를 받는다."""
+    async with dynamodb_client() as ddb:
+        try:
+            await ddb.update_item(
+                TableName=config.MEETINGS_TABLE,
+                Key={"meetingId": {"S": meeting_id}},
+                UpdateExpression="SET emailSentAt = :t",
+                ConditionExpression="attribute_not_exists(emailSentAt)",
+                ExpressionAttributeValues={":t": {"S": _iso_now()}},
+            )
+        except ClientError as e:
+            if e.response.get("Error", {}).get("Code") == "ConditionalCheckFailedException":
+                return False
+            raise
+    return True
+
+
+async def _release_email_send(meeting_id: str) -> None:
+    """발송이 실패하면 발송권을 돌려놓아 다음 종료 때 다시 보낼 수 있게 한다."""
+    async with dynamodb_client() as ddb:
+        await ddb.update_item(
+            TableName=config.MEETINGS_TABLE,
+            Key={"meetingId": {"S": meeting_id}},
+            UpdateExpression="REMOVE emailSentAt",
+        )
+
+
+async def _send_end_email(state: ConnectionState, meeting_id: str, summary: Optional[str]) -> str:
+    """메일 단계의 결과 상태: sent | already_sent | unverified | no_email | failed."""
+    if not state.user_email:
+        return "no_email"
+    if not await mailer.email_verified(state.user_email):
+        return "unverified"
+    if not await _claim_email_send(meeting_id):
+        return "already_sent"
+    try:
+        title, created_at = await _meeting_meta(meeting_id)
+        audio_url = await _merged_audio_url(meeting_id, title, mailer.EMAIL_AUDIO_URL_EXPIRES)
+        mail = mailer.build_meeting_email(
+            title=title,
+            started_at=created_at,
+            summary=summary,
+            audio_url=audio_url,
+            meeting_url=f"{config.APP_BASE_URL}/?meeting={meeting_id}",
+        )
+        await mailer.send_meeting_email(state.user_email, mail)
+    except Exception:
+        logger.exception("[mail] send failed meeting_id=%s", meeting_id)
+        await _release_email_send(meeting_id)
+        return "failed"
+    logger.info("[mail] sent meeting_id=%s", meeting_id)
+    return "sent"
+
+
+async def _end_meeting(send, state: ConnectionState, meeting_id: str, *, email_on_end: bool) -> None:
+    """오디오 마무리 → 요약 → 메일. `send` 는 미팅 브로드캐스터라 소켓이 바뀌어도 끝까지 간다."""
+    try:
+        await send({"type": "meeting_end", "meetingId": meeting_id, "phase": "audio"})
+        # 메일을 안 보내도 합쳐 둔다 — 다운로드 버튼이 기다리지 않게
+        title, _ = await _meeting_meta(meeting_id)
+        await _merged_audio_url(meeting_id, title, DOWNLOAD_URL_EXPIRES)
+        async with dynamodb_client() as ddb:
+            await ddb.update_item(
+                TableName=config.MEETINGS_TABLE,
+                Key={"meetingId": {"S": meeting_id}},
+                UpdateExpression="SET endedAt = :t",
+                ExpressionAttributeValues={":t": {"S": _iso_now()}},
+            )
+
+        await send({"type": "meeting_end", "meetingId": meeting_id, "phase": "summary"})
+        summary = await _stream_summary(send, meeting_id, state.model_id)
+
+        status = await _send_end_email(state, meeting_id, summary) if email_on_end else "skipped"
+        await send({"type": "meeting_end", "meetingId": meeting_id, "phase": "email", "status": status})
+        await send({"type": "meeting_end", "meetingId": meeting_id, "phase": "done"})
+    except Exception:
+        logger.exception("[ws] end meeting failed meeting_id=%s", meeting_id)
+        await send({"type": "meeting_end", "meetingId": meeting_id, "phase": "error",
+                    "error": "미팅 종료 처리에 실패했습니다. 다시 시도해 주세요."})
 
 
 # ─── Q&A streaming ─────────────────────────────────────────────────────────
@@ -1235,8 +1433,8 @@ WS_CLOSE_UNAUTHORIZED = 4401
 WS_AUTH_TIMEOUT_SECS = 10.0
 
 
-async def _authenticate(ws: WebSocket) -> str:
-    """첫 메시지의 Cognito ID 토큰을 검증해 사용자 ID(sub)를 돌려준다. 실패하면 AuthError."""
+async def _authenticate(ws: WebSocket) -> tuple[str, str]:
+    """첫 메시지의 Cognito ID 토큰을 검증해 (sub, email)을 돌려준다. 실패하면 AuthError."""
     try:
         first = await asyncio.wait_for(ws.receive_json(), timeout=WS_AUTH_TIMEOUT_SECS)
     except asyncio.TimeoutError as e:
@@ -1266,6 +1464,31 @@ async def _claim_meeting(state: ConnectionState, meeting_id: Optional[str]) -> O
     return meeting_id
 
 
+async def _stop_recording(state: ConnectionState, ws: WebSocket, connection_id: str) -> None:
+    """녹음 정지: STT 를 마무리하고 아직 안 올린 녹음을 S3 로 올린다."""
+    if state.stt_provider == "transcribe":
+        if state.transcribe_task and not state.transcribe_task.done():
+            # Signal end-of-stream; wait up to 8 s for final results
+            await state.audio_queue.put(None)
+            try:
+                await asyncio.wait_for(state.transcribe_task, timeout=8.0)
+            except (asyncio.TimeoutError, asyncio.CancelledError):
+                state.transcribe_task.cancel()
+            state.transcribe_task = None
+        # Flush any segments still pending in the buffer (bypass 1.5s delay)
+        if state.seg_flush_task and not state.seg_flush_task.done():
+            state.seg_flush_task.cancel()
+            state.seg_flush_task = None
+        await _flush_seg_buffer(state, ws)
+    else:
+        # Whisper: flush remaining buffered audio
+        if state.flush_task and not state.flush_task.done():
+            state.flush_task.cancel()
+        state.flush_task = None
+        await _flush_audio_buffer(state, ws, connection_id)
+    _start_flush(state, connection_id)
+
+
 @router.websocket("/ws")
 async def ws_endpoint(
     ws: WebSocket,
@@ -1274,7 +1497,7 @@ async def ws_endpoint(
     # 먼저 수락해야 브라우저가 닫힘 코드(4401)를 받는다 — 수락 전에 닫으면 1006 만 보인다
     await ws.accept()
     try:
-        user_id = await _authenticate(ws)
+        user_id, user_email = await _authenticate(ws)
     except WebSocketDisconnect:
         return
     except AuthError as e:
@@ -1282,7 +1505,7 @@ async def ws_endpoint(
         await ws.close(code=WS_CLOSE_UNAUTHORIZED, reason="unauthorized")
         return
     connection_id = str(uuid4())
-    state = ConnectionState(ws=ws, user_id=user_id)
+    state = ConnectionState(ws=ws, user_id=user_id, user_email=user_email)
     state.meeting_id = await _claim_meeting(state, meetingId)
     active_connections[connection_id] = state
     logger.info("[ws] Connected: connection_id=%s meetingId=%s", connection_id, meetingId)
@@ -1347,26 +1570,25 @@ async def ws_endpoint(
                     )
 
             elif action == "stopRecording":
-                if state.stt_provider == "transcribe":
-                    if state.transcribe_task and not state.transcribe_task.done():
-                        # Signal end-of-stream; wait up to 8 s for final results
-                        await state.audio_queue.put(None)
-                        try:
-                            await asyncio.wait_for(state.transcribe_task, timeout=8.0)
-                        except (asyncio.TimeoutError, asyncio.CancelledError):
-                            state.transcribe_task.cancel()
-                        state.transcribe_task = None
-                    # Flush any segments still pending in the buffer (bypass 1.5s delay)
-                    if state.seg_flush_task and not state.seg_flush_task.done():
-                        state.seg_flush_task.cancel()
-                        state.seg_flush_task = None
-                    await _flush_seg_buffer(state, ws)
+                await _stop_recording(state, ws, connection_id)
+
+            elif action == "endMeeting":
+                mid = await _claim_meeting(state, data.get("meetingId") or state.meeting_id)
+                if not mid:
+                    await _safe_send(ws, {"type": "meeting_end", "phase": "error", "error": "미팅이 선택되지 않았습니다"})
                 else:
-                    # Whisper: flush remaining buffered audio
-                    if state.flush_task and not state.flush_task.done():
-                        state.flush_task.cancel()
-                    state.flush_task = None
-                    await _flush_audio_buffer(state, ws, connection_id)
+                    await _stop_recording(state, ws, connection_id)
+                    asyncio.create_task(_end_meeting(
+                        _meeting_broadcaster(mid), state, mid, email_on_end=bool(data.get("emailOnEnd")),
+                    ))
+
+            elif action == "prepare_audio":
+                mid = await _claim_meeting(state, data.get("meetingId") or state.meeting_id)
+                if mid:
+                    async def _send_audio(payload: dict, _ws=ws) -> None:
+                        await _safe_send(_ws, payload)
+
+                    asyncio.create_task(_prepare_audio(_send_audio, mid))
 
             elif action == "summarize":
                 mid = await _claim_meeting(state, data.get("meetingId") or state.meeting_id)
@@ -1466,6 +1688,8 @@ async def ws_endpoint(
                 audio_data: Optional[str] = data.get("audioData")
                 if audio_data:
                     audio_bytes = base64.b64decode(audio_data)
+                    # 브라우저가 보내는 조각은 44바이트 헤더가 붙은 16 kHz mono 16-bit WAV 다
+                    _buffer_audio(state, connection_id, audio_bytes[44:])
 
                     if state.stt_provider == "transcribe":
                         # Streaming: feed PCM directly into Transcribe session
@@ -1520,5 +1744,6 @@ async def ws_endpoint(
             state.flush_task.cancel()
         if state.seg_flush_task and not state.seg_flush_task.done():
             state.seg_flush_task.cancel()
+        _start_flush(state, connection_id)
         active_connections.pop(connection_id, None)
         _cleanup_ws_lock(ws)
