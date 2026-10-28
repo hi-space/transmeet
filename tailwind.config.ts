@@ -15,21 +15,39 @@ const config: Config = {
         xs: '400px',
       },
       fontFamily: {
-        sans: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
+        sans: ['var(--app-font)'],
         mono: ['var(--font-geist-mono)', 'monospace'],
+      },
+      colors: {
+        accent: Object.fromEntries(
+          [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950].map((shade) => [
+            shade,
+            `rgb(var(--accent-${shade}) / <alpha-value>)`,
+          ])
+        ),
+        primary: {
+          DEFAULT: 'rgb(var(--primary) / <alpha-value>)',
+          hover: 'rgb(var(--primary-hover) / <alpha-value>)',
+          foreground: 'rgb(var(--primary-foreground) / <alpha-value>)',
+        },
+      },
+      lineHeight: {
+        reading: 'var(--reading-line-height)',
       },
       typography: ({ theme }: { theme: (path: string) => string }) => ({
         DEFAULT: {
           css: {
             '--tw-prose-body': theme('colors.slate.600'),
-            '--tw-prose-headings': theme('colors.cyan.700'),
+            '--tw-prose-headings': 'rgb(var(--accent-700))',
+            '--tw-prose-links': 'rgb(var(--accent-700))',
             '--tw-prose-bold': theme('colors.slate.700'),
-            '--tw-prose-bullets': theme('colors.cyan.500'),
-            '--tw-prose-counters': theme('colors.cyan.600'),
+            '--tw-prose-bullets': 'rgb(var(--accent-500))',
+            '--tw-prose-counters': 'rgb(var(--accent-600))',
             '--tw-prose-th-borders': theme('colors.slate.200'),
             '--tw-prose-td-borders': theme('colors.slate.100'),
             '--tw-prose-hr': theme('colors.slate.200'),
-            'h1': {
+            lineHeight: 'var(--reading-line-height)',
+            h1: {
               fontSize: '1rem',
               fontWeight: '700',
               letterSpacing: '0.025em',
@@ -38,7 +56,7 @@ const config: Config = {
               color: 'var(--tw-prose-headings)',
               '&:first-child': { marginTop: '0' },
             },
-            'h2': {
+            h2: {
               fontSize: '0.9375rem',
               fontWeight: '700',
               letterSpacing: '0.025em',
@@ -47,7 +65,7 @@ const config: Config = {
               color: 'var(--tw-prose-headings)',
               '&:first-child': { marginTop: '0' },
             },
-            'h3': {
+            h3: {
               fontSize: '0.8125rem',
               fontWeight: '600',
               letterSpacing: '0.01em',
@@ -55,23 +73,23 @@ const config: Config = {
               marginBottom: '0.25rem',
               color: 'var(--tw-prose-headings)',
             },
-            'p': {
+            p: {
               marginTop: '0.25rem',
               marginBottom: '0.25rem',
             },
-            'ul': {
+            ul: {
               listStyleType: 'disc',
               marginTop: '0.25rem',
               marginBottom: '0.25rem',
               paddingLeft: '1.25rem',
             },
-            'ol': {
+            ol: {
               listStyleType: 'decimal',
               marginTop: '0.25rem',
               marginBottom: '0.25rem',
               paddingLeft: '1.25rem',
             },
-            'li': {
+            li: {
               marginTop: '0.125rem',
               marginBottom: '0.125rem',
               paddingLeft: '0.25rem',
@@ -91,23 +109,23 @@ const config: Config = {
               marginTop: '0.125rem',
               marginBottom: '0.125rem',
             },
-            'strong': {
+            strong: {
               fontWeight: '600',
               color: 'var(--tw-prose-bold)',
             },
-            'hr': {
+            hr: {
               marginTop: '0.75rem',
               marginBottom: '0.75rem',
               borderColor: 'var(--tw-prose-hr)',
             },
-            'table': {
+            table: {
               fontSize: '0.75rem',
               lineHeight: '1.5',
               marginTop: '0.5rem',
               marginBottom: '0.5rem',
               width: '100%',
             },
-            'thead': {
+            thead: {
               borderBottomWidth: '1px',
               borderColor: 'var(--tw-prose-th-borders)',
             },
@@ -132,10 +150,11 @@ const config: Config = {
         invert: {
           css: {
             '--tw-prose-body': theme('colors.slate.300'),
-            '--tw-prose-headings': theme('colors.cyan.400'),
+            '--tw-prose-headings': 'rgb(var(--accent-400))',
+            '--tw-prose-links': 'rgb(var(--accent-300))',
             '--tw-prose-bold': theme('colors.slate.200'),
-            '--tw-prose-bullets': theme('colors.cyan.400'),
-            '--tw-prose-counters': theme('colors.cyan.400'),
+            '--tw-prose-bullets': 'rgb(var(--accent-400))',
+            '--tw-prose-counters': 'rgb(var(--accent-400))',
             '--tw-prose-th-borders': theme('colors.slate.700'),
             '--tw-prose-td-borders': theme('colors.slate.800'),
             '--tw-prose-hr': theme('colors.slate.800'),

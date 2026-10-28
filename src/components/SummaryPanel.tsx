@@ -45,7 +45,7 @@ function formatConversation(messages: Message[], meetingTitle?: string): string 
 
 function MarkdownSummary({ text }: { text: string }) {
   return (
-    <div className="prose text-sm dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 prose-strong:text-cyan-700 dark:prose-strong:text-cyan-300 prose-blockquote:not-italic prose-blockquote:border-amber-400 prose-td:align-top">
+    <div className="prose text-sm leading-reading dark:prose-invert max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 prose-strong:text-accent-700 dark:prose-strong:text-accent-300 prose-blockquote:not-italic prose-blockquote:border-amber-400 prose-td:align-top">
       <ReactMarkdown remarkPlugins={[remarkGfm]}>{text}</ReactMarkdown>
     </div>
   )
@@ -89,7 +89,7 @@ export default function SummaryPanel({
   }
 
   return (
-    <div className="flex flex-col h-full w-full glass-sidebar border-l border-slate-200/60 dark:border-cyan-500/10">
+    <div className="flex flex-col h-full w-full glass-sidebar border-l border-slate-200/60 dark:border-accent-500/10">
       {/* Header */}
       <div className="px-4 h-12 flex items-center justify-between flex-shrink-0 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center gap-2">
@@ -106,7 +106,7 @@ export default function SummaryPanel({
             <line x1="16" x2="8" y1="13" y2="13" />
             <line x1="16" x2="8" y1="17" y2="17" />
           </svg>
-          <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+          <span className="text-[0.6875rem] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
             요약
           </span>
         </div>
@@ -116,7 +116,7 @@ export default function SummaryPanel({
             <button
               onClick={handleCopyAll}
               title="전체 대화 복사"
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600/50 transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[0.625rem] font-semibold bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600/50 transition-colors"
             >
               {copiedAll ? (
                 <>
@@ -154,7 +154,7 @@ export default function SummaryPanel({
             <button
               onClick={handleCopy}
               title="요약 Markdown 복사"
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600/50 transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[0.625rem] font-semibold bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600/50 transition-colors"
             >
               {copied ? (
                 <>
@@ -193,7 +193,7 @@ export default function SummaryPanel({
             <button
               onClick={onSummarize}
               title={isSummarizing ? '다시 시도 (강제 재시작)' : '요약 생성'}
-              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-semibold bg-cyan-50 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/25 transition-colors"
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[0.625rem] font-semibold bg-accent-50 dark:bg-accent-500/15 text-accent-600 dark:text-accent-400 hover:bg-accent-100 dark:hover:bg-accent-500/25 transition-colors"
             >
               {isSummarizing ? (
                 <>
@@ -251,7 +251,7 @@ export default function SummaryPanel({
       <div className="flex-1 overflow-y-auto scrollbar-thin p-4">
         {isSummarizing && !summary ? (
           <div className="flex flex-col items-center justify-center h-full text-center select-none">
-            <div className="w-10 h-10 rounded-xl bg-cyan-50 dark:bg-cyan-900/30 text-cyan-500 flex items-center justify-center mb-3">
+            <div className="w-10 h-10 rounded-xl bg-accent-50 dark:bg-accent-900/30 text-accent-500 flex items-center justify-center mb-3">
               <svg
                 className="w-5 h-5 animate-spin"
                 viewBox="0 0 24 24"
@@ -270,7 +270,7 @@ export default function SummaryPanel({
           <div>
             <MarkdownSummary text={summary} />
             {isSummarizing && (
-              <span className="inline-block w-[2px] h-3 bg-cyan-400 dark:bg-cyan-500 rounded-sm animate-pulse ml-0.5 mt-1" />
+              <span className="inline-block w-[2px] h-3 bg-accent-400 dark:bg-accent-500 rounded-sm animate-pulse ml-0.5 mt-1" />
             )}
           </div>
         ) : (

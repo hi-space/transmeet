@@ -1794,7 +1794,7 @@ export default function Home() {
 
         <aside
           className={`
-            fixed lg:relative top-12 lg:top-auto bottom-0 left-0
+            fixed lg:relative top-20 sm:top-12 lg:top-auto bottom-0 left-0
             z-40 lg:z-auto flex-shrink-0
             transition-transform duration-300 ease-in-out
             ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
@@ -1818,11 +1818,11 @@ export default function Home() {
           {/* 현재 회의 제목 */}
           {activeMeeting && (
             <div className="px-4 h-10 flex items-center gap-2 flex-shrink-0 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-              <span className="w-2 h-2 rounded-full bg-cyan-400 flex-shrink-0" />
+              <span className="w-2 h-2 rounded-full bg-accent-400 flex-shrink-0" />
               <EditableTitle
                 title={activeMeeting.title}
                 onSave={(newTitle) => handleUpdateTitle(activeMeeting.id, newTitle)}
-                className="text-sm font-semibold text-cyan-700 dark:text-cyan-300 truncate cursor-default"
+                className="text-sm font-semibold text-accent-700 dark:text-accent-300 truncate cursor-default"
               />
             </div>
           )}
@@ -1851,7 +1851,7 @@ export default function Home() {
             {/* 음성 입력 영역 */}
             <div className="flex-1 flex flex-col border-r border-slate-200 dark:border-slate-800 min-w-0">
               <div className="px-3 py-1.5 border-b border-slate-200 dark:border-slate-800 flex-shrink-0 flex items-center justify-between">
-                <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 tracking-wide uppercase">
+                <span className="text-[0.6875rem] font-medium text-slate-400 dark:text-slate-500 tracking-wide uppercase">
                   음성 입력
                 </span>
                 <div className="flex items-center gap-1">
@@ -1864,7 +1864,7 @@ export default function Home() {
                     <button
                       onClick={() => setNotesCollapsed(false)}
                       title="내 메모 펼치기"
-                      className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium text-slate-400 dark:text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                      className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[0.6875rem] font-medium text-slate-400 dark:text-slate-500 hover:text-accent-600 dark:hover:text-accent-500 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
                     >
                       <svg
                         viewBox="0 0 24 24"
@@ -1890,10 +1890,10 @@ export default function Home() {
                       }
                     }}
                     title="요약 보기"
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors ${
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[0.6875rem] font-medium transition-colors ${
                       summaryOpen && rightPanel === 'summary'
-                        ? 'text-cyan-600 dark:text-cyan-500 bg-cyan-50 dark:bg-cyan-500/10'
-                        : 'text-slate-400 dark:text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                        ? 'text-accent-600 dark:text-accent-500 bg-accent-50 dark:bg-accent-500/10'
+                        : 'text-slate-400 dark:text-slate-500 hover:text-accent-600 dark:hover:text-accent-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                     }`}
                   >
                     <svg
@@ -1920,10 +1920,10 @@ export default function Home() {
                       }
                     }}
                     title="미팅 페이지"
-                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors ${
+                    className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[0.6875rem] font-medium transition-colors ${
                       summaryOpen && rightPanel === 'page'
-                        ? 'text-cyan-600 dark:text-cyan-500 bg-cyan-50 dark:bg-cyan-500/10'
-                        : 'text-slate-400 dark:text-slate-500 hover:text-cyan-600 dark:hover:text-cyan-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'
+                        ? 'text-accent-600 dark:text-accent-500 bg-accent-50 dark:bg-accent-500/10'
+                        : 'text-slate-400 dark:text-slate-500 hover:text-accent-600 dark:hover:text-accent-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                     }`}
                   >
                     <svg
@@ -1939,7 +1939,7 @@ export default function Home() {
                     </svg>
                     페이지
                     {pageGen.status === 'generating' && (
-                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent-500 animate-pulse" />
                     )}
                   </button>
                 </div>
@@ -1974,7 +1974,7 @@ export default function Home() {
                       <path d="M12 20h9" />
                       <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
                     </svg>
-                    <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                    <span className="text-[0.6875rem] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
                       내 메모
                     </span>
                   </div>

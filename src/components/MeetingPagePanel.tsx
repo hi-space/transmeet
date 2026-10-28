@@ -107,9 +107,9 @@ async function fetchPageHtml(url: string, signal: AbortSignal): Promise<string> 
 }
 
 const btn =
-  'flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
+  'flex items-center gap-1 px-2 py-1 rounded-lg text-[0.6875rem] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
 const btnNeutral = `${btn} bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600/50`
-const btnPrimary = `${btn} bg-cyan-600 text-white hover:bg-cyan-500`
+const btnPrimary = `${btn} bg-primary text-primary-foreground hover:bg-primary-hover`
 
 export default function MeetingPagePanel({
   page,
@@ -217,7 +217,7 @@ export default function MeetingPagePanel({
   const canGenerate = hasMessages && wsConnected && !generating
 
   return (
-    <div className="flex flex-col h-full w-full glass-sidebar border-l border-slate-200/60 dark:border-cyan-500/10">
+    <div className="flex flex-col h-full w-full glass-sidebar border-l border-slate-200/60 dark:border-accent-500/10">
       {/* Header */}
       <div className="px-4 h-12 flex items-center justify-between flex-shrink-0 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center gap-2">
@@ -232,7 +232,7 @@ export default function MeetingPagePanel({
             <rect x="3" y="3" width="18" height="18" rx="2" />
             <path d="M3 9h18M9 21V9" />
           </svg>
-          <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+          <span className="text-[0.6875rem] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
             미팅 페이지
           </span>
         </div>
@@ -288,7 +288,7 @@ export default function MeetingPagePanel({
         {generating && (
           <div className="p-4 flex flex-col gap-3 overflow-y-auto">
             <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-              <span className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
+              <span className="w-2 h-2 rounded-full bg-accent-500 animate-pulse" />
               페이지를 만들고 있습니다{' '}
               {elapsed && <span className="font-mono text-xs text-slate-400">{elapsed}</span>}
             </div>
@@ -299,7 +299,7 @@ export default function MeetingPagePanel({
                 </li>
               ))}
             </ol>
-            <p className="text-[11px] text-slate-400">
+            <p className="text-[0.6875rem] text-slate-400">
               보통 2~5분 걸립니다. 창을 닫아도 완료되면 저장됩니다.
             </p>
           </div>
@@ -326,10 +326,12 @@ export default function MeetingPagePanel({
               미팅 페이지 만들기
             </button>
             {!hasMessages && (
-              <p className="text-[11px] text-slate-400">대화 기록이 있어야 만들 수 있습니다.</p>
+              <p className="text-[0.6875rem] text-slate-400">
+                대화 기록이 있어야 만들 수 있습니다.
+              </p>
             )}
             {hasMessages && !wsConnected && (
-              <p className="text-[11px] text-slate-400">서버 연결을 기다리고 있습니다.</p>
+              <p className="text-[0.6875rem] text-slate-400">서버 연결을 기다리고 있습니다.</p>
             )}
           </div>
         )}
@@ -343,11 +345,11 @@ export default function MeetingPagePanel({
               className="flex-1 w-full bg-white dark:bg-slate-950 border-0"
             />
             {unpublishError && (
-              <p className="px-4 pt-2 text-[11px] text-red-600 dark:text-red-400 border-t border-slate-200 dark:border-slate-800">
+              <p className="px-4 pt-2 text-[0.6875rem] text-red-600 dark:text-red-400 border-t border-slate-200 dark:border-slate-800">
                 {unpublishError}
               </p>
             )}
-            <div className="px-4 py-2 flex items-center justify-between gap-2 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-400">
+            <div className="px-4 py-2 flex items-center justify-between gap-2 border-t border-slate-200 dark:border-slate-800 text-[0.6875rem] text-slate-400">
               <span className="truncate">
                 {new Date(page.generatedAt).toLocaleString('ko-KR')} 생성
               </span>

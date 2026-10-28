@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test:theme": "node --experimental-strip-types --experimental-default-type=module --test tests/theme.test.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

@@ -68,7 +68,7 @@ export default function ControlPanel({
                 ${
                   isRecording
                     ? 'bg-red-500 hover:bg-red-600 shadow-red-500/20 scale-105'
-                    : 'bg-cyan-600 hover:bg-cyan-700 shadow-cyan-500/20 hover:scale-105 active:scale-95'
+                    : 'bg-primary hover:bg-primary-hover text-primary-foreground shadow-accent-500/20 hover:scale-105 active:scale-95'
                 }
               `}
             >
@@ -85,7 +85,7 @@ export default function ControlPanel({
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
-                  stroke="white"
+                  stroke="currentColor"
                   strokeWidth="2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -135,7 +135,7 @@ export default function ControlPanel({
             }}
             disabled={isTtsPending}
             placeholder="한글로 입력하면 영어로 번역됩니다..."
-            className="flex-1 min-w-0 px-3.5 py-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-cyan-400/50 focus:border-cyan-300/70 dark:focus:border-cyan-500/40 transition-colors disabled:opacity-60"
+            className="flex-1 min-w-0 px-3.5 py-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:ring-1 focus:ring-accent-400/50 focus:border-accent-300/70 dark:focus:border-accent-500/40 transition-colors disabled:opacity-60"
           />
 
           {/* Send button */}
@@ -143,7 +143,7 @@ export default function ControlPanel({
             onClick={onSend}
             disabled={!ttsInput.trim() || isTtsPending}
             aria-label="전송"
-            className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center bg-cyan-600 hover:bg-cyan-700 text-white shadow-md shadow-cyan-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none active:scale-95 transition-all"
+            className="flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center bg-primary hover:bg-primary-hover text-primary-foreground shadow-md shadow-accent-500/20 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none active:scale-95 transition-all"
           >
             {isTtsPending ? (
               <svg

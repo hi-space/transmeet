@@ -14,7 +14,7 @@ const SPEAKER_CONFIG: Record<
 > = {
   speaker1: {
     label: 'Speaker 1',
-    nameColor: 'text-cyan-600 dark:text-cyan-400',
+    nameColor: 'text-accent-600 dark:text-accent-400',
     cardBg:
       'bg-white/60 dark:bg-slate-800/60 glass border border-slate-200/50 dark:border-slate-700/50',
     translationColor: 'text-slate-500 dark:text-slate-400',
@@ -58,9 +58,9 @@ const SIZE_TOKENS: Record<VoiceFontSize, StyleTokens> = {
     inner: 'px-4 py-3',
     header: 'mb-1.5',
     label: 'text-xs',
-    time: 'text-[10px]',
-    original: 'text-sm leading-relaxed',
-    translation: 'mt-1.5 text-sm leading-relaxed',
+    time: 'text-[0.625rem]',
+    original: 'text-sm leading-reading',
+    translation: 'mt-1.5 text-sm leading-reading',
     btn: 'w-5 h-5',
     btnIcon: 'w-2.5 h-2.5',
     btnStop: 'w-2 h-2',
@@ -74,8 +74,8 @@ const SIZE_TOKENS: Record<VoiceFontSize, StyleTokens> = {
     header: 'mb-2',
     label: 'text-sm',
     time: 'text-xs',
-    original: 'text-xl sm:text-2xl leading-snug font-medium',
-    translation: 'mt-2 text-lg sm:text-xl leading-snug',
+    original: 'text-xl sm:text-2xl leading-reading sm:leading-reading font-medium',
+    translation: 'mt-2 text-lg sm:text-xl leading-reading sm:leading-reading',
     btn: 'w-8 h-8',
     btnIcon: 'w-4 h-4',
     btnStop: 'w-3 h-3',
@@ -89,8 +89,8 @@ const SIZE_TOKENS: Record<VoiceFontSize, StyleTokens> = {
     header: 'mb-3',
     label: 'text-base',
     time: 'text-sm',
-    original: 'text-3xl sm:text-4xl leading-tight font-semibold',
-    translation: 'mt-3 text-2xl sm:text-3xl leading-snug',
+    original: 'text-3xl sm:text-4xl leading-reading sm:leading-reading font-semibold',
+    translation: 'mt-3 text-2xl sm:text-3xl leading-reading sm:leading-reading',
     btn: 'w-10 h-10',
     btnIcon: 'w-5 h-5',
     btnStop: 'w-4 h-4',
@@ -104,8 +104,8 @@ const SIZE_TOKENS: Record<VoiceFontSize, StyleTokens> = {
     header: 'mb-4',
     label: 'text-lg',
     time: 'text-base',
-    original: 'text-5xl sm:text-6xl leading-tight font-bold',
-    translation: 'mt-5 text-3xl sm:text-4xl leading-snug',
+    original: 'text-5xl sm:text-6xl leading-reading sm:leading-reading font-bold',
+    translation: 'mt-5 text-3xl sm:text-4xl leading-reading sm:leading-reading',
     btn: 'w-12 h-12',
     btnIcon: 'w-6 h-6',
     btnStop: 'w-5 h-5',
@@ -123,10 +123,10 @@ const FONT_SIZE_TITLE: Record<VoiceFontSize, string> = {
 }
 // 버튼 자체의 글자 크기로 단계를 직관적으로 보여준다
 const FONT_SIZE_BTN_TEXT: Record<VoiceFontSize, string> = {
-  compact: 'text-[9px]',
-  md: 'text-[11px]',
-  lg: 'text-[13px]',
-  xl: 'text-[15px]',
+  compact: 'text-[0.5625rem]',
+  md: 'text-[0.6875rem]',
+  lg: 'text-[0.8125rem]',
+  xl: 'text-[0.9375rem]',
 }
 
 /**
@@ -157,7 +157,7 @@ export function VoiceFontSizeControl({
             aria-pressed={active}
             className={`w-5 h-5 flex items-center justify-center rounded font-bold leading-none transition-colors ${FONT_SIZE_BTN_TEXT[size]} ${
               active
-                ? 'bg-white dark:bg-slate-700 text-cyan-700 dark:text-cyan-300 shadow-sm'
+                ? 'bg-white dark:bg-slate-700 text-accent-700 dark:text-accent-300 shadow-sm'
                 : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
             }`}
           >
@@ -294,7 +294,7 @@ export default function VoiceArea({
                   onTranslateMessage?.(msg.id, msg.original, msg.speaker, msg.detectedLanguage)
                 }
                 className={`group relative cursor-pointer transition-all hover:opacity-100 active:opacity-70 ${t.card} ${cfg.cardBg} ${
-                  isLatest ? 'ring-2 ring-cyan-400/50 dark:ring-cyan-500/40' : 'opacity-75'
+                  isLatest ? 'ring-2 ring-accent-400/50 dark:ring-accent-500/40' : 'opacity-75'
                 }`}
               >
                 <div className={t.inner}>
@@ -368,7 +368,7 @@ export default function VoiceArea({
                   </div>
 
                   {/* 원문 */}
-                  <p className={`${t.original} text-slate-700 dark:text-slate-200`}>
+                  <p className={`${t.original} break-words text-slate-700 dark:text-slate-200`}>
                     {msg.original}
                     {isTranslating && !msg.translation && (
                       <span
@@ -379,7 +379,7 @@ export default function VoiceArea({
 
                   {/* 번역 */}
                   {(msg.translation || isTranslating) && (
-                    <p className={`${t.translation} ${cfg.translationColor}`}>
+                    <p className={`${t.translation} break-words ${cfg.translationColor}`}>
                       {msg.translation}
                       {isTranslating && (
                         <span
@@ -400,7 +400,7 @@ export default function VoiceArea({
               const cfg = SPEAKER_CONFIG[sp] ?? SPEAKER_CONFIG.speaker1
               return (
                 <div
-                  className={`relative border border-dashed border-slate-300 dark:border-slate-700 bg-white/40 dark:bg-slate-800/30 ring-2 ring-cyan-400/30 dark:ring-cyan-500/25 ${t.card}`}
+                  className={`relative border border-dashed border-slate-300 dark:border-slate-700 bg-white/40 dark:bg-slate-800/30 ring-2 ring-accent-400/30 dark:ring-accent-500/25 ${t.card}`}
                 >
                   <div className={t.inner}>
                     <div className={t.header}>
@@ -408,14 +408,18 @@ export default function VoiceArea({
                         {cfg.label}
                       </span>
                     </div>
-                    <p className={`${t.original} text-slate-500 dark:text-slate-400 italic`}>
+                    <p
+                      className={`${t.original} break-words text-slate-500 dark:text-slate-400 italic`}
+                    >
                       {pendingTranscript!.text}
                       <span
                         className={`inline-block bg-current align-middle animate-pulse ${t.caret}`}
                       />
                     </p>
                     {pendingTranscript!.translation && (
-                      <p className={`${t.translation} ${cfg.translationColor} opacity-80`}>
+                      <p
+                        className={`${t.translation} break-words ${cfg.translationColor} opacity-80`}
+                      >
                         {pendingTranscript!.translation}
                         <span
                           className={`inline-block bg-current align-middle animate-pulse ${t.caret}`}
@@ -439,7 +443,7 @@ export default function VoiceArea({
                   />
                 ))}
               </span>
-              <span className="text-[11px] text-red-500 dark:text-red-400 font-medium">
+              <span className="text-[0.6875rem] text-red-500 dark:text-red-400 font-medium">
                 {isProcessing ? '번역 중...' : '음성 인식 중...'}
               </span>
             </div>

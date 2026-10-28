@@ -67,9 +67,9 @@ const SPEAKER_CONFIG: Record<
     label: 'Speaker 1',
     abbr: 'S1',
     side: 'left',
-    nameColor: 'text-cyan-600 dark:text-cyan-400',
-    avatarBg: 'bg-cyan-100 dark:bg-cyan-900',
-    avatarText: 'text-cyan-600 dark:text-cyan-400',
+    nameColor: 'text-accent-600 dark:text-accent-400',
+    avatarBg: 'bg-accent-100 dark:bg-accent-900',
+    avatarText: 'text-accent-600 dark:text-accent-400',
     bubbleBg: 'bg-white/60 dark:bg-slate-800/60 glass',
     translationColor: 'text-slate-500 dark:text-slate-400',
     dividerColor: 'border-slate-200 dark:border-slate-700',
@@ -115,7 +115,7 @@ function PendingBubble({
       className={`flex items-start gap-2.5 ${isRight ? 'flex-row-reverse ml-10 sm:ml-16' : 'mr-10 sm:mr-16'}`}
     >
       <div
-        className={`flex-shrink-0 w-8 h-8 rounded-full ${cfg.avatarBg} ${cfg.avatarText} flex items-center justify-center text-[10px] font-bold opacity-60`}
+        className={`flex-shrink-0 w-8 h-8 rounded-full ${cfg.avatarBg} ${cfg.avatarText} flex items-center justify-center text-[0.625rem] font-bold opacity-60`}
       >
         {cfg.abbr}
       </div>
@@ -266,7 +266,7 @@ export default function ChatArea({
           >
             {/* Avatar */}
             <div
-              className={`flex-shrink-0 w-8 h-8 rounded-full ${cfg.avatarBg} ${cfg.avatarText} flex items-center justify-center text-[10px] font-bold`}
+              className={`flex-shrink-0 w-8 h-8 rounded-full ${cfg.avatarBg} ${cfg.avatarText} flex items-center justify-center text-[0.625rem] font-bold`}
             >
               {cfg.abbr}
             </div>
@@ -278,7 +278,7 @@ export default function ChatArea({
                 className={`flex items-baseline gap-1.5 mb-1 ${isRight ? 'flex-row-reverse' : ''}`}
               >
                 <span className={`text-xs font-semibold ${cfg.nameColor}`}>{cfg.label}</span>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500">
+                <span className="text-[0.625rem] text-slate-400 dark:text-slate-500">
                   {formatTime(msg.timestamp)}
                 </span>
               </div>
@@ -369,7 +369,7 @@ export default function ChatArea({
                       title="번역"
                       className={`flex items-center justify-center w-5 h-5 rounded-full transition-all ${
                         msg.streamPhase === 'translating'
-                          ? 'bg-cyan-100 dark:bg-cyan-900 text-cyan-600 dark:text-cyan-400'
+                          ? 'bg-accent-100 dark:bg-accent-900 text-accent-600 dark:text-accent-400'
                           : 'opacity-0 group-hover:opacity-100 bg-slate-100/80 dark:bg-white/6 text-slate-400 dark:text-slate-500 hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-600 dark:hover:text-slate-300'
                       }`}
                     >
@@ -415,7 +415,7 @@ export default function ChatArea({
               />
             ))}
           </span>
-          <span className="text-[11px] text-red-500 dark:text-red-400 font-medium">
+          <span className="text-[0.6875rem] text-red-500 dark:text-red-400 font-medium">
             {isProcessing ? '번역 중...' : '음성 인식 중...'}
           </span>
         </div>

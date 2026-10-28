@@ -1,8 +1,9 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter, JetBrains_Mono } from 'next/font/google'
+import { IBM_Plex_Sans_KR, Inter, JetBrains_Mono, Noto_Sans_KR } from 'next/font/google'
 import './globals.css'
 import ThemeProvider from '@/components/ThemeProvider'
 import { AuthProvider } from '@/context/AuthContext'
+import { THEME_BOOTSTRAP_SCRIPT } from '@/lib/theme'
 
 const inter = Inter({
   variable: '--font-geist-sans',
@@ -12,6 +13,21 @@ const inter = Inter({
 const jetbrainsMono = JetBrains_Mono({
   variable: '--font-geist-mono',
   subsets: ['latin'],
+})
+
+const notoSans = Noto_Sans_KR({
+  variable: '--font-noto-sans',
+  subsets: ['latin'],
+  display: 'swap',
+  preload: false,
+})
+
+const ibmPlex = IBM_Plex_Sans_KR({
+  variable: '--font-ibm-plex',
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+  preload: false,
 })
 
 export const metadata: Metadata = {
@@ -36,8 +52,6 @@ export const viewport: Viewport = {
   ],
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
 }
 
 export default function RootLayout({
@@ -46,12 +60,17 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="ko" suppressHydrationWarning>
+    <html
+      lang="ko"
+      className={`${inter.variable} ${jetbrainsMono.variable} ${notoSans.variable} ${ibmPlex.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        <script id="theme-init" dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP_SCRIPT }} />
+      </head>
       <body>
         <ThemeProvider>
-          <AuthProvider>
-            <div className={`${inter.variable} ${jetbrainsMono.variable}`}>{children}</div>
-          </AuthProvider>
+          <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>
       </body>
     </html>

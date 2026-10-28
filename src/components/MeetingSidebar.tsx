@@ -228,11 +228,11 @@ export default function MeetingSidebar({
   // ---- 접힌 레일 ----
   if (isRail) {
     return (
-      <div className="flex flex-col h-full w-14 glass-sidebar border-r border-slate-200/60 dark:border-cyan-500/10">
+      <div className="flex flex-col h-full w-14 glass-sidebar border-r border-slate-200/60 dark:border-accent-500/10">
         <div className="h-12 flex items-center justify-center flex-shrink-0 border-b border-slate-100 dark:border-slate-800">
           <button
             onClick={toggleRail}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-accent-600 dark:hover:text-accent-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
             aria-label="회의 목록 펼치기"
             title="회의 목록 펼치기"
           >
@@ -254,7 +254,7 @@ export default function MeetingSidebar({
           <button
             onClick={onNewMeeting}
             disabled={isCreating}
-            className="w-9 h-9 flex items-center justify-center rounded-lg text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-500/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-accent-600 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-500/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             aria-label="새 회의"
             title="새 회의"
           >
@@ -292,7 +292,7 @@ export default function MeetingSidebar({
           title="회의 목록 펼치기"
         >
           <span
-            className="text-[11px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-600 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors select-none"
+            className="text-[0.6875rem] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-600 group-hover:text-accent-600 dark:group-hover:text-accent-400 transition-colors select-none"
             style={{ writingMode: 'vertical-rl' }}
           >
             회의 목록
@@ -304,14 +304,14 @@ export default function MeetingSidebar({
 
   // ---- 펼친 목록 ----
   return (
-    <div className="flex flex-col h-full w-[19rem] glass-sidebar border-r border-slate-200/60 dark:border-cyan-500/10">
+    <div className="flex flex-col h-full w-[19rem] max-w-[calc(100vw-1rem)] glass-sidebar border-r border-slate-200/60 dark:border-accent-500/10">
       {/* Header */}
       <div className="px-3 h-12 flex items-center justify-between flex-shrink-0 border-b border-slate-100 dark:border-slate-800">
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-xs font-bold tracking-tight text-slate-700 dark:text-slate-200">
             회의 목록
           </span>
-          <span className="px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] font-semibold text-slate-500 dark:text-slate-400 tabular-nums">
+          <span className="px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-[0.625rem] font-semibold text-slate-500 dark:text-slate-400 tabular-nums">
             {meetings.length}
           </span>
         </div>
@@ -320,7 +320,7 @@ export default function MeetingSidebar({
           <button
             onClick={onNewMeeting}
             disabled={isCreating}
-            className="w-7 h-7 flex items-center justify-center rounded-lg text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-500/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-accent-600 dark:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-500/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             aria-label="새 회의"
             title="새 회의"
           >
@@ -418,14 +418,14 @@ export default function MeetingSidebar({
                   >
                     <path d="m6 9 6 6 6-6" />
                   </svg>
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                  <span className="text-[0.6875rem] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
                     {groupItem.label}
                   </span>
-                  <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 tabular-nums">
+                  <span className="text-[0.625rem] font-semibold text-slate-400 dark:text-slate-500 tabular-nums">
                     {groupItem.meetings.length}
                   </span>
                   {isCollapsed && hasActive && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-500" aria-hidden />
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent-500" aria-hidden />
                   )}
                 </button>
 
@@ -445,7 +445,7 @@ export default function MeetingSidebar({
                           key={meeting.id}
                           className={`group relative border-b border-slate-100 dark:border-slate-800/70 transition-colors ${
                             isActive
-                              ? 'bg-cyan-50/70 dark:bg-cyan-500/10'
+                              ? 'bg-accent-50/70 dark:bg-accent-500/10'
                               : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
                           }`}
                         >
@@ -473,7 +473,7 @@ export default function MeetingSidebar({
                                 }}
                                 onBlur={() => commitEdit(meeting)}
                                 onClick={(e) => e.stopPropagation()}
-                                className="w-full text-sm font-semibold bg-white dark:bg-slate-900 border border-cyan-300 dark:border-cyan-500/40 rounded-md px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-cyan-400 text-slate-800 dark:text-slate-100"
+                                className="w-full text-sm font-semibold bg-white dark:bg-slate-900 border border-accent-300 dark:border-accent-500/40 rounded-md px-1.5 py-0.5 outline-none focus:ring-1 focus:ring-accent-400 text-slate-800 dark:text-slate-100"
                               />
                             ) : (
                               <div
@@ -483,7 +483,7 @@ export default function MeetingSidebar({
                                 }}
                                 className={`text-sm font-semibold leading-snug truncate pr-16 ${
                                   isActive
-                                    ? 'text-cyan-900 dark:text-cyan-100'
+                                    ? 'text-accent-900 dark:text-accent-100'
                                     : 'text-slate-800 dark:text-slate-100'
                                 }`}
                                 title={meeting.title}
@@ -497,7 +497,7 @@ export default function MeetingSidebar({
                               <span
                                 className={`font-medium ${
                                   isActive
-                                    ? 'text-cyan-700 dark:text-cyan-300'
+                                    ? 'text-accent-700 dark:text-accent-300'
                                     : 'text-slate-500 dark:text-slate-400'
                                 }`}
                               >
@@ -512,7 +512,7 @@ export default function MeetingSidebar({
                                   <span
                                     className={`font-semibold ${
                                       isActive
-                                        ? 'text-cyan-700 dark:text-cyan-300'
+                                        ? 'text-accent-700 dark:text-accent-300'
                                         : 'text-slate-600 dark:text-slate-300'
                                     }`}
                                   >
@@ -536,7 +536,7 @@ export default function MeetingSidebar({
                                   e.stopPropagation()
                                   startEditing(meeting)
                                 }}
-                                className="w-6 h-6 flex items-center justify-center rounded-md bg-white/80 dark:bg-slate-900/80 text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-500/10 transition-colors"
+                                className="w-6 h-6 flex items-center justify-center rounded-md bg-white/80 dark:bg-slate-900/80 text-slate-400 hover:text-accent-600 dark:hover:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-500/10 transition-colors"
                                 aria-label="제목 편집"
                                 title="제목 편집"
                               >
@@ -560,7 +560,7 @@ export default function MeetingSidebar({
                                   onGenerateTitle(meeting.id)
                                 }}
                                 disabled={generatingTitleId === meeting.id}
-                                className="w-6 h-6 flex items-center justify-center rounded-md bg-white/80 dark:bg-slate-900/80 text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                className="w-6 h-6 flex items-center justify-center rounded-md bg-white/80 dark:bg-slate-900/80 text-slate-400 hover:text-accent-600 dark:hover:text-accent-400 hover:bg-accent-50 dark:hover:bg-accent-500/10 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 aria-label="제목 생성"
                                 title="AI로 제목 생성"
                               >

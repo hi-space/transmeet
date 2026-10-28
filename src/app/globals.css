@@ -6,6 +6,135 @@
   :root {
     --bg-primary: 255 255 255;
     --bg-secondary: 248 250 252;
+    --app-font: var(--font-geist-sans), system-ui, sans-serif;
+    --reading-line-height: 1.625;
+    --accent-50: 240 247 246;
+    --accent-100: 220 237 235;
+    --accent-200: 184 217 213;
+    --accent-300: 141 189 183;
+    --accent-400: 102 161 156;
+    --accent-500: 77 142 136;
+    --accent-600: 52 117 111;
+    --accent-700: 40 94 89;
+    --accent-800: 34 76 73;
+    --accent-900: 29 63 61;
+    --accent-950: 16 39 37;
+    --primary: 52 117 111;
+    --primary-hover: 40 94 89;
+    --primary-foreground: 255 255 255;
+  }
+
+  :root[data-accent='amazon'] {
+    --accent-50: 255 248 235;
+    --accent-100: 255 237 204;
+    --accent-200: 255 216 153;
+    --accent-300: 255 195 102;
+    --accent-400: 255 174 51;
+    --accent-500: 255 153 0;
+    --accent-600: 180 83 9;
+    --accent-700: 146 64 14;
+    --accent-800: 120 53 15;
+    --accent-900: 96 40 14;
+    --accent-950: 69 26 3;
+    --primary: 255 153 0;
+    --primary-hover: 232 139 0;
+    --primary-foreground: 35 47 62;
+  }
+
+  :root[data-accent='blue'] {
+    --accent-50: 243 246 251;
+    --accent-100: 228 235 245;
+    --accent-200: 201 216 236;
+    --accent-300: 166 190 221;
+    --accent-400: 130 159 204;
+    --accent-500: 103 138 185;
+    --accent-600: 75 111 158;
+    --accent-700: 59 88 127;
+    --accent-800: 50 74 105;
+    --accent-900: 43 63 87;
+    --accent-950: 27 39 55;
+    --primary: 75 111 158;
+    --primary-hover: 59 88 127;
+  }
+
+  :root[data-accent='violet'] {
+    --accent-50: 247 245 250;
+    --accent-100: 238 233 244;
+    --accent-200: 222 212 233;
+    --accent-300: 199 181 218;
+    --accent-400: 170 148 196;
+    --accent-500: 148 121 176;
+    --accent-600: 124 97 151;
+    --accent-700: 100 77 123;
+    --accent-800: 82 64 100;
+    --accent-900: 70 55 86;
+    --accent-950: 43 34 54;
+    --primary: 124 97 151;
+    --primary-hover: 100 77 123;
+  }
+
+  :root[data-accent='emerald'] {
+    --accent-50: 243 247 243;
+    --accent-100: 229 238 229;
+    --accent-200: 207 222 207;
+    --accent-300: 172 202 175;
+    --accent-400: 141 173 145;
+    --accent-500: 115 148 120;
+    --accent-600: 85 118 92;
+    --accent-700: 68 94 74;
+    --accent-800: 57 77 62;
+    --accent-900: 48 64 53;
+    --accent-950: 29 41 32;
+    --primary: 85 118 92;
+    --primary-hover: 68 94 74;
+  }
+
+  :root[data-accent='rose'] {
+    --accent-50: 251 244 245;
+    --accent-100: 245 230 233;
+    --accent-200: 235 206 213;
+    --accent-300: 221 169 181;
+    --accent-400: 203 138 156;
+    --accent-500: 186 113 135;
+    --accent-600: 162 86 112;
+    --accent-700: 133 67 90;
+    --accent-800: 112 59 77;
+    --accent-900: 95 52 67;
+    --accent-950: 56 28 38;
+    --primary: 162 86 112;
+    --primary-hover: 133 67 90;
+  }
+
+  :root[data-font='sans'] {
+    --app-font: var(--font-noto-sans), system-ui, sans-serif;
+  }
+
+  :root[data-font='plex'] {
+    --app-font: var(--font-ibm-plex), system-ui, sans-serif;
+  }
+
+  :root[data-font='mono'] {
+    --app-font: var(--font-geist-mono), var(--font-noto-sans), monospace;
+  }
+
+  :root[data-scale='90'] {
+    font-size: 90%;
+  }
+
+  :root[data-scale='110'] {
+    font-size: 110%;
+  }
+
+  :root[data-scale='120'] {
+    font-size: 120%;
+  }
+
+  :root[data-line-spacing='compact'] {
+    --reading-line-height: 1.4;
+  }
+
+  :root[data-line-spacing='relaxed'] {
+    --reading-line-height: 1.9;
   }
 
   .dark {
@@ -31,7 +160,7 @@
   }
 
   body {
-    font-family: var(--font-geist-sans), system-ui, sans-serif;
+    font-family: var(--app-font);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -70,37 +199,37 @@
 
   .dark .glass-panel {
     background: rgba(2, 6, 23, 0.55);
-    border: 1px solid rgba(6, 182, 212, 0.15);
+    border: 1px solid rgb(var(--accent-500) / 0.15);
   }
 
   .glass-header {
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
-    background: rgba(255, 255, 255, 0.80);
+    background: rgba(255, 255, 255, 0.8);
     border-bottom: 1px solid rgba(255, 255, 255, 0.9);
   }
 
   .dark .glass-header {
     background: rgba(2, 6, 23, 0.75);
-    border-bottom: 1px solid rgba(6, 182, 212, 0.12);
+    border-bottom: 1px solid rgb(var(--accent-500) / 0.12);
   }
 
   .glass-footer {
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
-    background: rgba(255, 255, 255, 0.80);
+    background: rgba(255, 255, 255, 0.8);
     border-top: 1px solid rgba(255, 255, 255, 0.9);
   }
 
   .dark .glass-footer {
     background: rgba(2, 6, 23, 0.75);
-    border-top: 1px solid rgba(6, 182, 212, 0.12);
+    border-top: 1px solid rgb(var(--accent-500) / 0.12);
   }
 
   .glass-sidebar {
     backdrop-filter: blur(20px) saturate(175%);
     -webkit-backdrop-filter: blur(20px) saturate(175%);
-    background: rgba(255, 255, 255, 0.90);
+    background: rgba(255, 255, 255, 0.9);
     height: 100%;
   }
 
@@ -176,4 +305,10 @@
 
 .blink-dot {
   animation: blink-dot 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide-up-fade {
+    animation: none;
+  }
 }

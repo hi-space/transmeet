@@ -324,9 +324,9 @@ export default function QuickTranslatePopup({
                   title={title}
                   aria-label={title}
                   aria-pressed={active}
-                  className={`flex items-center gap-0.5 px-2 py-1 rounded-md text-[11px] font-bold tracking-tight transition-all ${
+                  className={`flex items-center gap-0.5 px-2 py-1 rounded-md text-[0.6875rem] font-bold tracking-tight transition-all ${
                     active
-                      ? 'bg-white dark:bg-slate-700 text-cyan-700 dark:text-cyan-300 shadow-sm'
+                      ? 'bg-white dark:bg-slate-700 text-accent-700 dark:text-accent-300 shadow-sm'
                       : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
                   }`}
                 >
@@ -356,7 +356,7 @@ export default function QuickTranslatePopup({
               onKeyDown={handleKeyDown}
               placeholder={PLACEHOLDER[sourceLang]}
               rows={3}
-              className="w-full px-3 py-2.5 text-sm rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+              className="w-full px-3 py-2.5 text-sm rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-accent-500 resize-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500"
             />
           </div>
 
@@ -364,7 +364,7 @@ export default function QuickTranslatePopup({
           <button
             onClick={handleTranslate}
             disabled={!input.trim() || isTranslating || isLoadingTts}
-            className="w-full py-2 rounded-xl text-sm font-medium text-white bg-cyan-600 hover:bg-cyan-700 active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-2 rounded-xl text-sm font-medium text-primary-foreground bg-primary hover:bg-primary-hover active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isTranslating ? (
               <>
@@ -399,8 +399,8 @@ export default function QuickTranslatePopup({
 
           {/* Streaming result */}
           {isTranslating && stream && stream.text && (
-            <div className="mt-3 p-3 rounded-xl bg-cyan-50 dark:bg-cyan-950 border border-cyan-200 dark:border-cyan-800">
-              <p className="text-sm text-cyan-700 dark:text-cyan-300 leading-relaxed">
+            <div className="mt-3 p-3 rounded-xl bg-accent-50 dark:bg-accent-950 border border-accent-200 dark:border-accent-800">
+              <p className="text-sm text-accent-700 dark:text-accent-300 leading-relaxed">
                 {stream.text}
                 <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
               </p>
@@ -409,11 +409,11 @@ export default function QuickTranslatePopup({
 
           {/* TTS 로딩 */}
           {isLoadingTts && stream?.phase === 'done' && (
-            <div className="mt-3 p-3 rounded-xl bg-cyan-50 dark:bg-cyan-950 border border-cyan-200 dark:border-cyan-800">
+            <div className="mt-3 p-3 rounded-xl bg-accent-50 dark:bg-accent-950 border border-accent-200 dark:border-accent-800">
               <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
                 {stream.text}
               </p>
-              <div className="flex items-center gap-1 mt-2 text-[11px] text-cyan-600 dark:text-cyan-400">
+              <div className="flex items-center gap-1 mt-2 text-[0.6875rem] text-accent-600 dark:text-accent-400">
                 <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
                   <circle
                     className="opacity-25"
@@ -436,7 +436,7 @@ export default function QuickTranslatePopup({
 
           {/* Final result */}
           {result && !isTranslating && !isLoadingTts && (
-            <div className="mt-3 p-3 rounded-xl bg-cyan-50 dark:bg-cyan-950 border border-cyan-200 dark:border-cyan-800">
+            <div className="mt-3 p-3 rounded-xl bg-accent-50 dark:bg-accent-950 border border-accent-200 dark:border-accent-800">
               <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
                 {result.text}
               </p>
@@ -445,7 +445,7 @@ export default function QuickTranslatePopup({
                 <button
                   onClick={() => handlePlay(result.audioData)}
                   disabled={isPlaying || !result.audioData}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-cyan-700 dark:text-cyan-300 bg-cyan-100 dark:bg-cyan-500/20 hover:bg-cyan-200 dark:hover:bg-cyan-500/30 transition-all disabled:opacity-40"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[0.6875rem] font-medium text-accent-700 dark:text-accent-300 bg-accent-100 dark:bg-accent-500/20 hover:bg-accent-200 dark:hover:bg-accent-500/30 transition-all disabled:opacity-40"
                 >
                   {isPlaying ? (
                     <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
@@ -474,7 +474,7 @@ export default function QuickTranslatePopup({
                 {/* Copy */}
                 <button
                   onClick={() => handleCopy(result.text)}
-                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                  className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[0.6875rem] font-medium text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
                 >
                   {copied ? (
                     <>
@@ -517,12 +517,12 @@ export default function QuickTranslatePopup({
           {history.length > 0 && (
             <div className="mt-5">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500 tracking-wide uppercase">
+                <span className="text-[0.6875rem] font-medium text-slate-400 dark:text-slate-500 tracking-wide uppercase">
                   최근 번역
                 </span>
                 <button
                   onClick={clearAll}
-                  className="text-[10px] text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
+                  className="text-[0.625rem] text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 transition-colors"
                 >
                   전체 삭제
                 </button>
@@ -544,7 +544,7 @@ export default function QuickTranslatePopup({
                         <button
                           onClick={() => handleHistoryPlay(record)}
                           disabled={isPlaying}
-                          className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium text-cyan-600 dark:text-cyan-400 hover:bg-cyan-100 dark:hover:bg-cyan-500/10 transition-all disabled:opacity-40"
+                          className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[0.625rem] font-medium text-accent-600 dark:text-accent-400 hover:bg-accent-100 dark:hover:bg-accent-500/10 transition-all disabled:opacity-40"
                         >
                           <svg viewBox="0 0 24 24" fill="currentColor" className="w-2.5 h-2.5">
                             <path d="M8 5v14l11-7z" />
@@ -554,7 +554,7 @@ export default function QuickTranslatePopup({
                       )}
                       <button
                         onClick={() => handleCopy(record.targetText)}
-                        className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
+                        className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[0.625rem] font-medium text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 transition-all"
                       >
                         <svg
                           viewBox="0 0 24 24"
@@ -572,7 +572,7 @@ export default function QuickTranslatePopup({
                       </button>
                       <button
                         onClick={() => deleteRecord(record.id)}
-                        className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                        className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded-md text-[0.625rem] font-medium text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
                       >
                         <svg
                           viewBox="0 0 24 24"

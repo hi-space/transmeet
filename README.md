@@ -26,7 +26,7 @@ TransMeet은 **실시간 음성 번역 웹앱**입니다. 영어 화자의 발�
 - **회의 기록** — 생성, 조회, 삭제 + 자동 제목 생성
 - **설정 패널** — 오디오 소스, STT 프로바이더, 번역 타이밍, Polly 엔진 등 커스터마이징
 - **인증** — AWS Cognito 기반 로그인/회원가입 (선택)
-- **다크 모드** — 시스템 설정 감지 + 수동 전환
+- **테마 설정** — 시스템/라이트/다크, 오렌지 등 포인트 색상 6종, 글꼴 4종, 화면·말풍선 크기와 줄 간격 조절
 - **PWA** — 모바일 설치 가능, 오프라인 UI 지원
 
 ## Tech Stack
@@ -61,6 +61,14 @@ npm run lint
 npm run format
 ```
 
+### 테마 변경
+
+상단의 **설정 → 테마**에서 색상, 글꼴, 화면 크기(90–120%), 말풍선 글자 크기와 본문 줄 간격을 바꿀 수 있습니다. 포인트 색상으로 **오렌지**를 선택하면 버튼, 선택 표시, 요약 제목 등이 함께 바뀝니다.
+
+변경사항은 즉시 적용되며 브라우저에 저장됩니다. 헤더의 라이트/다크 전환도 같은 설정을 사용합니다. **테마 초기화**는 화면 관련 설정만 되돌리며 음성·번역 설정은 유지합니다.
+
+테마 저장값 검증과 초기 화면 적용 테스트는 Node.js 22.6 이상에서 `npm run test:theme`로 실행합니다.
+
 ## Project Structure
 
 ```
@@ -82,7 +90,8 @@ src/
     AuthScreen.tsx              # Cognito 로그인/회원가입
     MobileTabBar.tsx            # 모바일 탭 네비게이션
     SubtitleArea.tsx            # 자막 표시 (레거시)
-    ThemeProvider.tsx           # 다크 모드 프로바이더
+    ThemeProvider.tsx           # 테마 상태·저장·시스템 모드 동기화
+    ThemeSettings.tsx           # 색상·글꼴·크기 설정 및 미리보기
   hooks/
     useWebSocket.ts             # WebSocket 연결 관리 (재연결, keepalive)
     useAudioCapture.ts          # 오디오 캡처 (마이크/시스템/둘 다)
@@ -94,6 +103,7 @@ src/
     api.ts                      # REST API 클라이언트
     websocket.ts                # WebSocket 메시지 타입 정의
     cognito.ts                  # Cognito 인증 유틸리티
+    theme.ts                    # 테마 기본값·검증·첫 화면 초기화
   context/
     AuthContext.tsx              # 인증 상태 Context
   types/

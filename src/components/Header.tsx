@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import type { WsStatus } from '@/lib/websocket'
+import { useTheme } from '@/components/ThemeProvider'
 
 interface Props {
   isRecording: boolean
@@ -30,22 +30,13 @@ export default function Header({
   onChangeLangDirection,
   detectedLang,
 }: Props) {
-  const [isDark, setIsDark] = useState(false)
-
-  useEffect(() => {
-    setIsDark(document.documentElement.classList.contains('dark'))
-    const observer = new MutationObserver(() => {
-      setIsDark(document.documentElement.classList.contains('dark'))
-    })
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-    return () => observer.disconnect()
-  }, [])
+  const { isDark, updateTheme } = useTheme()
 
   return (
-    <header className="glass-header relative z-50 h-12 flex items-center px-4 flex-shrink-0">
-      <div className="flex items-center justify-between w-full">
+    <header className="glass-header relative z-50 h-20 sm:h-12 flex items-center px-4 flex-shrink-0">
+      <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-1.5 gap-y-1.5 sm:gap-0 w-full">
         {/* Left: hamburger (mobile) + logo */}
-        <div className="flex items-center gap-1.5">
+        <div className="contents sm:flex sm:items-center sm:gap-1.5">
           {/* Hamburger - mobile only */}
           <button
             onClick={onToggleSidebar}
@@ -68,11 +59,11 @@ export default function Header({
 
           {/* Logo */}
           <div className="flex items-center gap-2">
-            <div className="relative w-7 h-7 rounded-lg bg-cyan-600 flex items-center justify-center shadow-md flex-shrink-0">
+            <div className="relative w-7 h-7 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-md flex-shrink-0">
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke="white"
+                stroke="currentColor"
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -84,13 +75,13 @@ export default function Header({
               </svg>
             </div>
             {/* 언어 토글이 3개로 늘어나 좁은 화면에서는 워드마크를 접는다 (아이콘은 유지) */}
-            <span className="hidden xs:inline text-sm font-bold text-slate-900 dark:text-slate-100">
+            <span className="hidden sm:inline text-sm font-bold text-slate-900 dark:text-slate-100">
               TransMeet
             </span>
           </div>
 
           {/* 언어 방향 — 자주 바꾸는 설정이라 설정 다이얼로그 대신 헤더에 노출 */}
-          <div className="ml-1 sm:ml-3 flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800/80">
+          <div className="order-last sm:order-none w-full sm:w-auto sm:ml-3 flex items-center justify-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800/80">
             {(
               [
                 ['en', 'EN', '한', 'English → 한국어'],
@@ -105,9 +96,9 @@ export default function Header({
                   title={title}
                   aria-label={title}
                   aria-pressed={active}
-                  className={`flex items-center gap-0.5 px-2 py-1 rounded-md text-[11px] font-bold tracking-tight transition-all ${
+                  className={`flex items-center gap-0.5 px-2 py-1 rounded-md text-[0.6875rem] font-bold tracking-tight transition-all ${
                     active
-                      ? 'bg-white dark:bg-slate-700 text-cyan-700 dark:text-cyan-300 shadow-sm'
+                      ? 'bg-white dark:bg-slate-700 text-accent-700 dark:text-accent-300 shadow-sm'
                       : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
                   }`}
                 >
@@ -135,16 +126,16 @@ export default function Header({
               title="자동 감지 — 들어오는 언어의 반대편으로 번역 (화자 구분 미지원)"
               aria-label="자동 감지 번역"
               aria-pressed={sourceLang === 'auto'}
-              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold tracking-tight transition-all ${
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-[0.6875rem] font-bold tracking-tight transition-all ${
                 sourceLang === 'auto'
-                  ? 'bg-white dark:bg-slate-700 text-cyan-700 dark:text-cyan-300 shadow-sm'
+                  ? 'bg-white dark:bg-slate-700 text-accent-700 dark:text-accent-300 shadow-sm'
                   : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
               }`}
             >
               <span>AUTO</span>
               {sourceLang === 'auto' && detectedLang && (
                 <span
-                  className="px-1 rounded bg-cyan-100 dark:bg-cyan-900/60 text-cyan-700 dark:text-cyan-300 text-[10px] leading-[14px] tabular-nums"
+                  className="px-1 rounded bg-accent-100 dark:bg-accent-900/60 text-accent-700 dark:text-accent-300 text-[0.625rem] leading-[14px] tabular-nums"
                   title={`마지막 감지: ${detectedLang === 'ko' ? '한국어' : 'English'}`}
                 >
                   {detectedLang === 'ko' ? '한' : 'EN'}
@@ -155,12 +146,14 @@ export default function Header({
         </div>
 
         {/* Right: recording status + summary toggle + theme toggle */}
-        <div className="flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-1">
           {/* Recording indicator */}
           {isRecording && (
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-red-50 dark:bg-red-950 mr-1">
               <span className="blink-dot w-1.5 h-1.5 rounded-full bg-red-500" />
-              <span className="text-[10px] font-semibold text-red-500 tracking-wide">녹음 중</span>
+              <span className="sr-only md:not-sr-only text-[0.625rem] font-semibold text-red-500 tracking-wide">
+                녹음 중
+              </span>
             </div>
           )}
 
@@ -168,7 +161,7 @@ export default function Header({
           {!isRecording && wsStatus === 'connecting' && (
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-50 dark:bg-amber-950 mr-1">
               <span className="blink-dot w-1.5 h-1.5 rounded-full bg-amber-500" />
-              <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 tracking-wide">
+              <span className="sr-only md:not-sr-only text-[0.625rem] font-semibold text-amber-600 dark:text-amber-400 tracking-wide">
                 연결 중
               </span>
             </div>
@@ -176,7 +169,7 @@ export default function Header({
           {wsStatus === 'error' && (
             <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-red-50 dark:bg-red-950 mr-1">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-              <span className="text-[10px] font-semibold text-red-500 tracking-wide">
+              <span className="sr-only md:not-sr-only text-[0.625rem] font-semibold text-red-500 tracking-wide">
                 연결 오류
               </span>
             </div>
@@ -188,7 +181,7 @@ export default function Header({
             aria-label="빠른 번역"
             className={`w-8 h-8 flex items-center justify-center rounded-lg transition-all duration-200 ${
               quickTranslateOpen
-                ? 'text-cyan-600 dark:text-cyan-500 bg-cyan-50 dark:bg-cyan-500/10'
+                ? 'text-accent-600 dark:text-accent-500 bg-accent-50 dark:bg-accent-500/10'
                 : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
@@ -253,8 +246,9 @@ export default function Header({
 
           {/* Theme toggle */}
           <button
-            onClick={() => document.documentElement.classList.toggle('dark')}
+            onClick={() => updateTheme({ mode: isDark ? 'light' : 'dark' })}
             aria-label="테마 전환"
+            title={isDark ? '밝은 화면으로 전환' : '어두운 화면으로 전환'}
             className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all duration-200"
           >
             {isDark ? (

@@ -94,7 +94,7 @@ export default function NotesArea({
         return (
           <div key={msg.id}>
             {/* 타임스탬프 — 카드 바깥 상단 */}
-            <span className="block text-[10px] text-slate-400 dark:text-slate-500 tabular-nums mb-1 px-1">
+            <span className="block text-[0.625rem] text-slate-400 dark:text-slate-500 tabular-nums mb-1 px-1">
               {formatTime(msg.timestamp)}
             </span>
 
@@ -106,7 +106,7 @@ export default function NotesArea({
               title="클릭하여 재번역"
             >
               {/* 한글 원문 */}
-              <p className="text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+              <p className="text-sm text-slate-700 dark:text-slate-200 leading-reading">
                 {msg.translation || (
                   <span className="text-slate-400 dark:text-slate-500 italic text-xs">
                     번역 중...
@@ -115,7 +115,7 @@ export default function NotesArea({
               </p>
 
               {/* 영어 번역 */}
-              <p className="mt-1.5 text-sm text-cyan-600 dark:text-cyan-500 leading-relaxed">
+              <p className="mt-1.5 text-sm text-accent-700 dark:text-accent-400 leading-reading">
                 {msg.original}
                 {isTranslating && (
                   <span className="inline-block w-[2px] h-[0.7em] bg-current ml-[2px] align-middle animate-pulse" />
