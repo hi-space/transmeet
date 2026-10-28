@@ -4,8 +4,9 @@ from pydantic_settings import BaseSettings
 class Config(BaseSettings):
     REGION: str = "us-east-1"
     MEETINGS_TABLE: str = "transmeet-meetings"
-    # 발행된 페이지 기록(pageId·url·title·shareSummary·generatedAt). 미팅 항목은 발언 전체를 인라인으로 담아
-    # 400 KB 한도에 닿을 수 있으므로 페이지 기록은 별도 테이블에 둔다.
+    # 회의 대화(발언). 항목 단위로 저장한다(PK meetingId, SK sk). 미팅 항목에 인라인으로 담으면 400 KB 한도에 닿는다.
+    MESSAGES_TABLE: str = "transmeet-messages"
+    # 발행된 페이지 기록(pageId·url·title·shareSummary·generatedAt). 미팅 항목에 얹지 않고 별도 테이블에 둔다.
     PAGES_TABLE: str = "transmeet-pages"
     # 내 양식 사본(meetingId 키). 회의 항목은 400 KB 한도에 가까워 따로 둔다.
     SUMMARY_SNAPSHOTS_TABLE: str = "transmeet-summary-snapshots"

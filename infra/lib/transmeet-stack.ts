@@ -27,8 +27,9 @@ const REGION = 'us-east-1';
 const MEETINGS_TABLE = 'transmeet-meetings';
 const SUMMARY_TEMPLATES_TABLE = 'transmeet-summary-templates';
 const SUMMARY_SNAPSHOTS_TABLE = 'transmeet-summary-snapshots';
-// 발행된 미팅 페이지 기록. 미팅 항목은 발언 전체를 인라인으로 담아 긴 미팅은 400 KB 한도에 닿으므로
-// 페이지 기록(수백 바이트)은 미팅 항목에 얹지 않고 별도 테이블에 둔다.
+// 회의 대화(발언). 미팅 항목의 messages 리스트는 긴 미팅에서 400 KB 한도에 닿으므로 발언을 항목 단위로 별도 테이블에 둔다.
+const MESSAGES_TABLE = 'transmeet-messages';
+// 발행된 미팅 페이지 기록. 페이지 기록(수백 바이트)은 미팅 항목에 얹지 않고 별도 테이블에 둔다.
 const PAGES_TABLE = 'transmeet-pages';
 const ROOT_DOMAIN = 'hi-yoo.com';
 const APP_DOMAIN = 'transmeet.hi-yoo.com';
@@ -93,6 +94,16 @@ export class TransmeetStack extends cdk.Stack {
       partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
       projectionType: dynamodb.ProjectionType.INCLUDE,
       nonKeyAttributes: ['title', 'createdAt', 'status', 'messageCount'],
+    });
+
+    // 회의 대화. 미팅 하나의 발언을 sk 로 정렬해 항목마다 저장한다.
+    const messagesTable = new dynamodb.Table(this, 'MessagesTable', {
+      tableName: MESSAGES_TABLE,
+      partitionKey: { name: 'meetingId', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      pointInTimeRecovery: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
     });
 
     const pagesTable = new dynamodb.Table(this, 'PagesTable', {
@@ -184,6 +195,7 @@ export class TransmeetStack extends cdk.Stack {
     pagesTable.grantReadWriteData(lambdaRole);
     summaryTemplatesTable.grantReadWriteData(lambdaRole);
     summarySnapshotsTable.grantReadWriteData(lambdaRole);
+    messagesTable.grantReadWriteData(lambdaRole);
 
     // ─── Shared Lambda Config ───────────────────────────────────────────────────
 
@@ -192,6 +204,7 @@ export class TransmeetStack extends cdk.Stack {
       PAGES_TABLE: pagesTable.tableName,
       SUMMARY_TEMPLATES_TABLE: summaryTemplatesTable.tableName,
       SUMMARY_SNAPSHOTS_TABLE: summarySnapshotsTable.tableName,
+      MESSAGES_TABLE: messagesTable.tableName,
       WHISPER_ENDPOINT,
       BEDROCK_MODEL_ID,
       REGION,
@@ -553,6 +566,7 @@ export class TransmeetStack extends cdk.Stack {
     pagesTable.grantReadWriteData(wsTaskRole);
     // 요약은 사본만 읽는다(양식 테이블 권한은 주지 않는다)
     summarySnapshotsTable.grantReadData(wsTaskRole);
+    messagesTable.grantReadWriteData(wsTaskRole);
 
     // ─── AgentCore Gateway: Web Search connector ───────────────────────────────
 
@@ -754,6 +768,7 @@ export class TransmeetStack extends cdk.Stack {
         MEETINGS_TABLE,
         PAGES_TABLE,
         SUMMARY_SNAPSHOTS_TABLE,
+        MESSAGES_TABLE,
         WHISPER_ENDPOINT,
         WHISPER_STREAMING_ENDPOINT: whisperStreamingEndpoint,
         WHISPER_STREAMING_REGION: whisperStreamingRegion,
