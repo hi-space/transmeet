@@ -46,6 +46,7 @@ class FakeDdb:
 
     def scan(self, **kw):
         self._log("scan", kw)
+        assert kw["ConsistentRead"] is True
         if kw["TableName"] == config.MESSAGES_TABLE:
             return self._scan_messages(kw)
         assert kw["TableName"] == config.MEETINGS_TABLE
@@ -79,6 +80,7 @@ class FakeDdb:
 
     def get_item(self, **kw):
         self._log("get_item", kw)
+        assert kw["ConsistentRead"] is True
         item = self.meetings.get(kw["Key"]["meetingId"]["S"])
         return {"Item": self._project(item)} if item else {}
 
@@ -102,6 +104,11 @@ class FakeDdb:
         self._log("batch_write_item", kw)
         reqs = kw["RequestItems"][config.MESSAGES_TABLE]
         assert 1 <= len(reqs) <= 25
+        # 실제 BatchWriteItem 은 한 요청 안의 중복 키를 ValidationException 으로 거부한다
+        keys = [
+            (r.get("PutRequest", {}).get("Item") or r["DeleteRequest"]["Key"])["sk"]["S"] for r in reqs
+        ]
+        assert len(keys) == len(set(keys)), "한 배치에 같은 sk 가 두 번"
         if self.unprocessed_rounds > 0:
             # 앞 절반만 처리하고 나머지는 미처리로 돌려준다
             self.unprocessed_rounds -= 1
@@ -230,6 +237,41 @@ def test_verify_detects_different_ids_with_same_count():
     sk = sorted(ddb.messages["a"])[0]
     ddb.messages["a"][sk] = {**ddb.messages["a"][sk], "id": {"S": "other"}}
     assert mm.verify_meeting(ddb, meeting) == (False, 3, 3)
+
+
+def test_verify_treats_message_without_id_as_mismatch():
+    for broken in ({}, {"id": {"S": ""}}):
+        meeting = _meeting("a", 2)
+        ddb = FakeDdb([meeting])
+        mm.copy_meeting(ddb, meeting)
+        # 테이블에도 id 없는 항목이 있어 빈 문자열끼리 맞아떨어지는 경우까지 불일치로 본다
+        ddb.messages["a"]["x#"] = {"meetingId": {"S": "a"}, "sk": {"S": "x#"}}
+        bad = {k: v for k, v in _msg(5)["M"].items() if k != "id"}
+        bad.update(broken)
+        meeting["messages"]["L"].append({"M": bad})
+        assert mm.verify_meeting(ddb, meeting) == (False, 3, 3)
+
+
+def test_copy_dedupes_same_sk_and_reports():
+    meeting = _meeting("a", 30)
+    # 같은 id·timestamp 가 두 번 들어간 원본(같은 배치에 들어가도록 앞쪽에)
+    first = meeting["messages"]["L"][0]
+    later = {"M": {**first["M"], "translatedText": {"S": "나중 값"}}}
+    meeting["messages"]["L"].insert(1, later)
+    ddb = FakeDdb([meeting])
+    assert mm.copy_meeting(ddb, meeting) == 30
+    assert len(ddb.messages["a"]) == 30
+    sizes = [len(kw["RequestItems"][config.MESSAGES_TABLE]) for op, kw in ddb.writes()]
+    assert sizes == [25, 5]
+    # 리스트에 나중에 나온 값이 남는다(덮어쓰기 순서와 같다)
+    sk = sort_key(first["M"]["timestamp"]["S"], first["M"]["id"]["S"])
+    assert ddb.messages["a"][sk]["translatedText"] == {"S": "나중 값"}
+
+    lines = []
+    for execute in (False, True):
+        summary = mm.run(ddb, "copy", execute=execute, out=lambda *a: lines.append(" ".join(map(str, a))))
+        assert summary["duplicate_sk_ids"] == ["a"]
+    assert any("중복" in line for line in lines)
 
 
 def test_verify_treats_missing_list_as_zero():
@@ -425,7 +467,10 @@ def test_orphans_cli_dispatch(monkeypatch):
     ddb = _orphan_setup()
     monkeypatch.setattr(mm.boto3, "client", lambda *a, **kw: ddb)
     monkeypatch.setattr("builtins.print", lambda *a, **kw: None)
-    assert mm.main(["orphans"]) == 0
+    # 드라이런에서 고아가 보이면 1 로 끝내 정리가 남았음을 알린다
+    assert mm.main(["orphans"]) == 1
     assert ddb.writes() == []
     assert mm.main(["orphans", "--execute"]) == 0
     assert "gone" not in ddb.messages and len(ddb.messages["live"]) == 3
+    # 정리한 뒤에는 드라이런도 0
+    assert mm.main(["orphans"]) == 0

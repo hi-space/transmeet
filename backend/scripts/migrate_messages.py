@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 """회의 대화 이전 — transmeet-meetings 의 messages 리스트를 transmeet-messages 테이블로 옮긴다.
 
-  copy    원본 messages 를 메시지 테이블에 BatchWrite(덮어쓰기라 여러 번 돌려도 같다)
+  copy    원본 messages 를 메시지 테이블에 BatchWrite(덮어쓰기라 여러 번 돌려도 같다).
+          원본에 같은 sk(timestamp#id) 가 여러 번 있으면 나중 것 하나만 쓰고 중복으로 보고한다
   verify  원본 messages 의 id 가 모두 메시지 테이블에 있는지 확인(읽기 전용).
+          id 가 없거나 빈 원본 메시지가 있으면 불일치로 본다.
           전환 뒤 새 발언은 테이블에만 들어가므로 테이블에 id 가 더 있어도 일치로 본다.
           messageCount 가 테이블 개수와 다르면 경고만 한다(막지 않음)
   remove  회의마다 다시 검증하고, 일치한 회의만 원본 messages 를 지운다(조건 size(messages) = 검증한 개수).
           messageCount 는 앱이 트랜잭션 ADD 로 올리므로 건드리지 않는다
   orphans 메시지 테이블 키만 스캔해 회의 항목이 없는 meetingId(고아)를 회의별 개수로 보고한다.
           --execute 면 그 메시지를 지운다(BatchWrite 25개씩)
+
+종료 코드: copy·verify·remove 는 불일치·조건 실패가 있으면 1.
+orphans 는 드라이런에서 고아가 있으면 1(정리할 것이 남음), 없거나 --execute 로 다 지웠으면 0.
 
 기본은 드라이런이다(할 일만 출력, 쓰기 0회). 실제로 쓰려면 --execute 를 붙인다.
 backend/ 에서 실행: python -m scripts.migrate_messages {copy,verify,remove,orphans} [--execute] [--meeting-id ID]
@@ -70,10 +75,26 @@ def _batch_put(ddb, requests: List[Dict]) -> None:
     raise RuntimeError(f"BatchWriteItem 미처리 {len(pending)}건이 {MAX_ATTEMPTS}번 시도 뒤에도 남음")
 
 
-def copy_meeting(ddb, meeting: Dict) -> int:
-    """원본 messages 를 메시지 테이블에 Put 한다(25개씩). 복사한 개수를 돌려준다."""
+def _unique_items(meeting: Dict) -> Tuple[List[Dict], int]:
+    """원본 messages 를 테이블 항목으로 바꾸고 sk 가 겹치면 나중 것만 남긴다. (항목, 버린 중복 수).
+
+    한 BatchWriteItem 안에 같은 키가 두 번 있으면 요청 전체가 거부되므로 나누기 전에 걸러 낸다.
+    순서대로 덮어쓰던 결과와 같도록 리스트에서 나중에 나온 값을 남긴다.
+    """
     meeting_id = _meeting_id(meeting)
-    items = [_to_item(meeting_id, m) for m in _original_messages(meeting)]
+    by_sk: Dict[str, Dict] = {}
+    total = 0
+    for m in _original_messages(meeting):
+        item = _to_item(meeting_id, m)
+        by_sk.pop(item["sk"]["S"], None)  # 나중 값의 위치로 옮긴다
+        by_sk[item["sk"]["S"]] = item
+        total += 1
+    return list(by_sk.values()), total - len(by_sk)
+
+
+def copy_meeting(ddb, meeting: Dict) -> int:
+    """원본 messages 를 메시지 테이블에 Put 한다(25개씩, 같은 sk 는 하나로). 쓴 개수를 돌려준다."""
+    items, _ = _unique_items(meeting)
     for start in range(0, len(items), BATCH_SIZE):
         chunk = items[start:start + BATCH_SIZE]
         _batch_put(ddb, [{"PutRequest": {"Item": item}} for item in chunk])
@@ -103,13 +124,14 @@ def _table_ids(ddb, meeting_id: str) -> List[str]:
 
 
 def verify_meeting(ddb, meeting: Dict) -> Tuple[bool, int, int]:
-    """(일치 여부, 원본 개수, 테이블 개수). 일치 = 원본의 모든 id 가 테이블에 있음.
+    """(일치 여부, 원본 개수, 테이블 개수). 일치 = 원본의 모든 id 가 비어 있지 않고 테이블에 있음.
 
     전환 뒤 앱은 새 발언을 테이블에만 쓰므로 테이블에 id 가 더 있는 것은 정상이다.
     """
     original = [m.get("id", {}).get("S", "") for m in _original_messages(meeting)]
     table = _table_ids(ddb, _meeting_id(meeting))
-    matched = set(original) <= set(table)
+    # id 없는 원본은 옮길 수 없으므로(빈 문자열끼리 우연히 맞아도) 불일치
+    matched = all(original) and set(original) <= set(table)
     return matched, len(original), len(table)
 
 
@@ -196,6 +218,7 @@ def run(
         "condition_failed_ids": [],
         "no_messages_ids": [],
         "message_count_mismatch_ids": [],
+        "duplicate_sk_ids": [],
         "removed": 0,
     }
     for meeting in iter_meetings(ddb, meeting_id):
@@ -210,11 +233,16 @@ def run(
         if command == "copy":
             if not has_list:
                 out(f"[{mode}] {mid}: messages 없음 — 복사할 것 없음")
-            elif execute:
+                continue
+            unique, duplicates = _unique_items(meeting)
+            if duplicates:
+                summary["duplicate_sk_ids"].append(mid)
+                out(f"[{mode}] {mid}: 경고 — 원본에 같은 sk 중복 {duplicates}건(나중 값 하나만 씀)")
+            if execute:
                 copied = copy_meeting(ddb, meeting)
                 out(f"[{mode}] {mid}: {copied}건 복사")
             else:
-                out(f"[{mode}] {mid}: {count}건 복사 예정")
+                out(f"[{mode}] {mid}: {len(unique)}건 복사 예정")
             continue
 
         # verify·remove 는 모두 검증부터(읽기만)
@@ -262,6 +290,8 @@ def run(
         out("messages 없는 회의: " + ", ".join(summary["no_messages_ids"]))
     if summary["message_count_mismatch_ids"]:
         out("경고 — messageCount 불일치 회의: " + ", ".join(summary["message_count_mismatch_ids"]))
+    if summary["duplicate_sk_ids"]:
+        out("경고 — 원본에 sk 중복이 있는 회의: " + ", ".join(summary["duplicate_sk_ids"]))
     if not execute and command != "verify":
         out("드라이런이라 아무것도 쓰지 않았다. 실제로 하려면 --execute 를 붙인다.")
     return summary
@@ -353,8 +383,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     args = parser.parse_args(argv)
     ddb = boto3.client("dynamodb", region_name=config.REGION)
     if args.command == "orphans":
-        run_orphans(ddb, execute=args.execute, meeting_id=args.meeting_id)
-        return 0
+        result = run_orphans(ddb, execute=args.execute, meeting_id=args.meeting_id)
+        # 드라이런에서 고아가 보이면 1 — 정리할 것이 남았다. --execute 는 실패하면 예외로 끝난다
+        return 1 if result["orphans"] and not args.execute else 0
     summary = run(ddb, args.command, execute=args.execute, meeting_id=args.meeting_id)
     # 불일치·조건 실패가 있으면 0 이 아닌 코드로 끝내 다음 단계로 넘어가지 않게 한다
     return 1 if summary["mismatched_ids"] or summary["condition_failed_ids"] else 0
