@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Create retained STT inference components with zero idle GPU capacity.
+"""Create retained STT inference components with one warm copy by default.
 
 Default: validate and print the plan. --apply creates resources. --wait completes
 component/autoscaling setup after endpoint provisioning. No resources are deleted.
 --migrate explicitly permits updating an existing endpoint's configuration.
+--scale-to-zero opts into idle GPU release instead of retaining a warm copy.
 """
 import argparse
 import json
@@ -48,12 +49,12 @@ def wait_ready(client, method, name_key, name, status_key, seconds=2700):
     raise TimeoutError(f"{name} is still provisioning; rerun --apply --wait to finish setup.")
 
 
-def configure_autoscaling(session, component, endpoint):
+def configure_autoscaling(session, component, endpoint, keep_warm=True):
     scaling = session.client("application-autoscaling")
     resource = f"inference-component/{component}"
     dimension = "sagemaker:inference-component:DesiredCopyCount"
     identity = dict(ServiceNamespace="sagemaker", ResourceId=resource, ScalableDimension=dimension)
-    scaling.register_scalable_target(**identity, MinCapacity=0, MaxCapacity=1)
+    scaling.register_scalable_target(**identity, MinCapacity=int(keep_warm), MaxCapacity=1)
     scaling.put_scaling_policy(
         **identity, PolicyName=f"{component}-traffic", PolicyType="TargetTrackingScaling",
         TargetTrackingScalingPolicyConfiguration={
@@ -116,7 +117,7 @@ def configure_autoscaling(session, component, endpoint):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("provider", choices=MODELS)
-    parser.add_argument("--region", default="us-east-1")
+    parser.add_argument("--region", default="ap-northeast-2")
     parser.add_argument("--endpoint")
     parser.add_argument("--component")
     parser.add_argument("--model-name", help="Reuse a compatible existing SageMaker model")
@@ -124,14 +125,22 @@ def main():
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--wait", action="store_true")
     parser.add_argument("--migrate", action="store_true")
-    parser.add_argument("--keep-warm", action="store_true", help="Keep one copy for immediate validation")
+    retention = parser.add_mutually_exclusive_group()
+    retention.add_argument(
+        "--keep-warm", dest="keep_warm", action="store_true", default=True,
+        help="Keep one model copy ready, including while idle (default)",
+    )
+    retention.add_argument(
+        "--scale-to-zero", dest="keep_warm", action="store_false",
+        help="Allow idle copies and GPU instances to scale to zero",
+    )
     args = parser.parse_args()
     spec = MODELS[args.provider]
     endpoint = args.endpoint or spec["endpoint"]
     component = args.component or spec["component"]
     model_name = args.model_name or spec.get("model_name") or f"{spec['endpoint']}-model"
     model_env = dict(spec.get("model_env", {}))
-    config_name = f"{endpoint}-zero-v3"
+    config_name = f"{endpoint}-{'warm-v1' if args.keep_warm else 'zero-v3'}"
     session = boto3.Session(region_name=args.region)
     client = session.client("sagemaker")
     metadata = client.describe_hub_content(
@@ -141,12 +150,14 @@ def main():
     document = json.loads(metadata["HubContentDocument"])
     instances = (["ml.g6.xlarge", "ml.g6.2xlarge"]
                  if args.provider == "qwen3-asr" else ["ml.g5.2xlarge"])
+    if args.keep_warm and args.provider == "qwen3-asr":
+        instances.reverse()
     if any(instance not in document["SupportedInferenceInstanceTypes"] for instance in instances):
         parser.error("An instance is no longer supported by the pinned model in this region.")
     variant = {
         "VariantName": "AllTraffic", "InitialInstanceCount": 1,
         "ManagedInstanceScaling": {
-            "Status": "ENABLED", "MinInstanceCount": 0, "MaxInstanceCount": 1,
+            "Status": "ENABLED", "MinInstanceCount": int(args.keep_warm), "MaxInstanceCount": 1,
             "ScaleInPolicy": {"Strategy": "IDLE_RELEASE"},
         },
     }
@@ -202,6 +213,8 @@ def main():
         "environment": {
             spec["setting"]: endpoint,
             spec["setting"].replace("_ENDPOINT", "_INFERENCE_COMPONENT"): component,
+            spec["setting"].replace("_ENDPOINT", "_REGION"): args.region,
+            "STT_IDLE_SECONDS": "0" if args.keep_warm else "300",
         },
     }, indent=2), flush=True)
     if not args.apply:
@@ -255,10 +268,15 @@ def main():
                     print("Wait until the existing endpoint is InService before updating it.", flush=True)
                     return
                 wait_ready(client, "describe_endpoint", "EndpointName", endpoint, "EndpointStatus")
-            client.update_endpoint(
-                EndpointName=endpoint, EndpointConfigName=config_name,
-                RetainAllVariantProperties=True,
-            )
+            update = {
+                "EndpointName": endpoint, "EndpointConfigName": config_name,
+                "RetainAllVariantProperties": True,
+            }
+            if args.keep_warm:
+                update["ExcludeRetainedVariantProperties"] = [
+                    {"VariantPropertyType": "DesiredInstanceCount"},
+                ]
+            client.update_endpoint(**update)
             print("Existing endpoint configuration update accepted.", flush=True)
     except ClientError as exc:
         if not missing(exc):
@@ -268,10 +286,20 @@ def main():
             {"Key": "SttProvider", "Value": args.provider},
         ])
     if args.wait:
-        wait_ready(client, "describe_endpoint", "EndpointName", endpoint, "EndpointStatus")
-    elif client.describe_endpoint(EndpointName=endpoint)["EndpointStatus"] != "InService":
-        print("Endpoint provisioning started; rerun with --apply --wait to finish.", flush=True)
-        return
+        current_endpoint = wait_ready(
+            client, "describe_endpoint", "EndpointName", endpoint, "EndpointStatus"
+        )
+    else:
+        current_endpoint = client.describe_endpoint(EndpointName=endpoint)
+        if current_endpoint["EndpointStatus"] != "InService":
+            print("Endpoint provisioning started; rerun with --apply --wait to finish.", flush=True)
+            return
+    if current_endpoint["EndpointConfigName"] != config_name:
+        raise RuntimeError(
+            f"Endpoint configuration update did not apply {config_name!r}; "
+            f"active configuration is {current_endpoint['EndpointConfigName']!r}. "
+            + current_endpoint.get("FailureReason", "")
+        )
     try:
         existing = client.describe_inference_component(InferenceComponentName=component)
         if existing["EndpointName"] != endpoint:
@@ -308,12 +336,16 @@ def main():
     elif client.describe_inference_component(InferenceComponentName=component)["InferenceComponentStatus"] != "InService":
         print("Component provisioning started; rerun with --apply --wait to finish.", flush=True)
         return
-    configure_autoscaling(session, component, endpoint)
+    configure_autoscaling(session, component, endpoint, args.keep_warm)
     if not args.keep_warm:
         client.update_inference_component_runtime_config(
             InferenceComponentName=component, DesiredRuntimeConfig={"CopyCount": 0},
         )
-    print("Retained component and native autoscaling configured; idle target is zero copies.", flush=True)
+    print(
+        "Retained component and native autoscaling configured; "
+        f"idle target is {1 if args.keep_warm else 0} copies.",
+        flush=True,
+    )
 
 
 if __name__ == "__main__":

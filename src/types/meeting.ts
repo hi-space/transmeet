@@ -10,6 +10,8 @@ export interface Message {
   detectedLanguage?: 'ko' | 'en'
   targetLanguage?: 'ko' | 'en'
   streamPhase?: 'stt' | 'translating' | 'done'
+  /** Client-only completion ID; undefined means this bubble has no pending STT translation. */
+  pendingSttMessageId?: string
   timestamp: string
   qaResponse?: string
   qaStreamPhase?: 'streaming' | 'done' | 'error'

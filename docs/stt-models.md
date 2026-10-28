@@ -1,41 +1,93 @@
-# STT 엔진 선택과 한국어 비교
+# STT 엔진 선택과 한국어·영어 비교
+
+한국어·영어 각 10개 음성의 전체 문장·6초 분할 실측은 [2026-10-28 비교 보고서](../benchmarks/stt-ko-en-2026-10-28/README.md)에 있다. Qwen과 Nemotron 배치 엔진은 서울(`ap-northeast-2`)에 각각 GPU·모델 복제본 1개를 유지한다.
 
 설정 → 음성·번역 → 고급 설정 → **음성 인식 엔진**에서 선택한다.
 
+상단의 **입력 · …**에서 음성 언어를, **번역 · …**에서 번역 대상을 독립적으로 선택한다. 선택창 위의 고정 라벨 없이 두 메뉴와 감지 상태를 한 줄로 표시하며, 좁은 화면에서는 이 행이 헤더 바로 아래에 놓인다.
+
+- **음성 언어:** 자동 감지(한·영), 한국어, English.
+- **번역 대상:** 감지 언어의 반대편, 한국어, English.
+- 자동 감지 + 한국어를 선택하면 한국어·영어 입력 모두 한국어 결과를 제공한다. 이미 한국어인 발화는 모델로 재작성하지 않고 원문을 유지한다.
+- 감지 언어의 반대편을 선택하면 한국어 발화는 영어로, 영어 발화는 한국어로 번역한다.
+- 신규 설정의 기본값은 영어 입력 → 한국어 번역이다. 기존 AUTO 설정은 반대편 언어 번역으로 이전되며, 기존 고정 방향도 보존된다.
+- `감지: 한국어` / `감지: English`는 실제 인식 결과다. 선택한 입력 언어와 다른 결과도 그 언어를 덮어쓰지 않는다.
+
 | 화면 이름 | 내부 ID | 연결 방식 | 언어 처리 |
 |---|---|---|---|
-| Transcribe | `transcribe` | Amazon Transcribe의 지속 스트리밍 세션 | 선택 언어 또는 자동 감지 |
-| Whisper | `whisper` | 기존 SageMaker Whisper large-v3-turbo | 기존 바이너리 WAV 요청, 모델의 자동 감지 |
-| Qwen3-ASR | `qwen3-asr` | SageMaker Inference Component / Qwen3-ASR-1.7B | JumpStart 기본 채팅 인터페이스의 자동 감지 |
-| Nemotron 3.5 | `nemotron` | SageMaker Inference Component / Nemotron 3.5 ASR 0.6B | `ko-KR`, `en-US`, `auto`를 모델에 전달 |
+| Transcribe | `transcribe` | Amazon Transcribe의 지속 스트리밍 세션 | 고정 언어 또는 한·영 다국어 자동 식별 |
+| Whisper | `whisper` | 기존 SageMaker Whisper large-v3-turbo | 자동은 바이너리 WAV, 고정 언어는 JSON 요청으로 `korean` / `english` 전달 |
+| Qwen3-ASR | `qwen3-asr` | SageMaker Inference Component / Qwen3-ASR-1.7B | 현재 연결은 자동 감지 전용. 번역 대상은 독립적으로 선택 |
+| Nemotron 3.5 | `nemotron` | 활성화 시 SageMaker 양방향 스트리밍 / Nemotron 3.5 ASR 0.6B, 비활성화 시 기존 배치 경로 | `ko-KR`, `en-US`, `auto`를 모델에 전달 |
 
-Qwen과 Nemotron은 이번 연결에서 완성된 음성 구간을 인식한다. 모델 자체가 제공하는 캐시 기반 스트리밍 기능은 사용하지 않으며, 발화 중 부분 자막은 Transcribe 경로에서 제공한다. Qwen의 기본 JumpStart 채팅 요청에는 강제 언어 옵션을 넣지 않는다. 앱에서 한국어를 선택하면 번역 방향은 고정되지만, Qwen의 디코딩 언어를 강제하는 것은 아니다.
+Transcribe의 AUTO는 `identify_multiple_languages=True`, `language_options=["en-US", "ko-KR"]`를 사용한다. 단일 언어 식별인 `identify_language`와 동시에 보내지 않는다. 고정 언어에서는 `language_code`만 지정한다. 화자 구분은 두 방식 모두 유지한다.
 
-브라우저 전송 간격은 Transcribe 700ms, SageMaker 엔진(Whisper·Qwen·Nemotron) 기본 6초다. 설정 → 음성·번역 → 고급 설정 → **음성 처리 구간**에서 2·4·6·8·10초를 선택할 수 있으며, 선택은 이 브라우저에 저장된다. 이 항목은 Transcribe 외의 엔진을 선택하면 표시된다. 기존 설정에 값이 없거나 잘못된 값이면 6초를 사용한다.
+Whisper 고정 언어 요청은 기존 테스트 앱과 같은 `audio_input`(WAV의 hex 문자열), `language`, `task="transcribe"` JSON 형식을 사용한다. Whisper가 영어 번역까지 수행하게 하지 않고, 원문 인식 이후 별도의 번역 대상 설정을 적용한다.
 
-Transcribe는 전송 사이에도 하나의 스트리밍 세션을 유지하므로 이 선택을 적용하지 않는다. 서버는 수신 후 600ms 타이머로 버퍼를 처리하므로 SageMaker 모델에는 보통 선택한 길이의 구간이 들어간다. 이 타이머는 실제 오디오의 무음 길이를 측정하는 VAD가 아니다.
+Qwen과 Nemotron의 기존 배치 경로는 완성된 음성 구간을 인식한다. Nemotron 스트리밍을 활성화하면 모델의 캐시 기반 연속 인식을 사용하고, Transcribe와 마찬가지로 발화 중 부분 자막을 표시한다. Qwen의 현재 JumpStart 채팅 요청에는 강제 언어 옵션을 넣지 않는다. Qwen 선택 중에는 음성 언어 선택창이 자동 감지로 표시되고 비활성화되며, 다른 엔진으로 돌아오면 이전 입력 언어 선택을 복원한다. Qwen 모델 자체의 언어 지정 능력과 현재 앱의 요청 형식은 구분해야 한다.
+
+앱의 지원 범위는 한국어·영어다. AUTO는 선택한 엔진 안에서 언어를 처리하며 엔진을 자동 교체하지 않는다. 같은 음성 구간 안에서 두 언어가 섞인 경우의 단어별 분리나 인식 정확도까지 보장하는 설정은 아니다.
+
+클라이언트의 새 `translationTarget` 필드는 `auto | ko | en`이다. 이 필드가 없는 이전 WebSocket 요청은 기존 `sourceLang` / `targetLang` 의미를 유지한다. 각 발화의 실제 `detectedLanguage`와 `targetLanguage`를 결과와 저장 데이터에 남기고, 둘 중 하나라도 다르면 화면에서 말풍선을 합치지 않는다.
+
+브라우저 전송 간격은 Transcribe 700ms, 활성화된 Nemotron 스트리밍 160ms, 배치 엔진(Whisper·Qwen·기존 Nemotron) 기본 6초다. 배치 엔진에서는 설정 → 음성·번역 → 고급 설정 → **음성 처리 구간**에서 2·4·6·8·10초를 선택할 수 있으며, 선택은 이 브라우저에 저장된다. 기존 설정에 값이 없거나 잘못된 값이면 6초를 사용한다. 브라우저는 서버 상태의 `streaming: true`를 확인한 뒤에만 Nemotron을 짧은 전송 간격으로 전환하므로, 이전 백엔드나 비활성화된 환경에서는 기존 배치 설정이 유지된다.
+
+Transcribe와 활성화된 Nemotron은 전송 사이에도 스트리밍 세션을 유지하므로 배치 구간 선택을 적용하지 않는다. 배치 경로의 서버는 수신 후 600ms 타이머로 버퍼를 처리하므로 모델에는 보통 선택한 길이의 구간이 들어간다. 이 타이머는 실제 오디오의 무음 길이를 측정하는 VAD가 아니다.
 
 무음 판정은 수집 구간 전체의 평균 대신 기존 2초 단위 구간 중 가장 큰 RMS 에너지를 사용한다. 짧은 발화 뒤에 긴 무음이 붙어도, 기존 2초 입력에서 통과하던 발화가 긴 입력의 평균에 희석되어 누락되지 않도록 한다.
 
-SageMaker 엔진은 첫 결과가 나오기 전에 선택한 구간만큼의 입력 수집 시간과 추론 시간이 필요하다. 녹음 중지·회의 종료·언어 또는 엔진 변경 시에는 간격을 채우지 않고 남은 음성을 즉시 전송한다. 녹음 중 처리 구간을 변경할 때도 기존 음성을 먼저 전송한 뒤 새 간격을 적용한다. 문맥 길이의 영향을 비교하려면 전체 문장, 현재 기본값인 6초, 이전 기본값인 2초 조건을 함께 확인한다.
+배치 엔진은 첫 결과가 나오기 전에 선택한 구간만큼의 입력 수집 시간과 추론 시간이 필요하다. 녹음 중지·회의 종료·입력 언어·번역 대상·엔진 변경 시에는 간격을 채우지 않고 남은 음성을 즉시 전송한다. 녹음 중 처리 구간을 변경할 때도 기존 음성을 먼저 전송한 뒤 새 간격을 적용한다. 문맥 길이의 영향을 비교하려면 전체 문장, 기본값인 6초, 이전 기본값인 2초 조건을 함께 확인한다.
 
-엔진을 변경하면 브라우저에 남은 음성을 먼저 보내고, 이전 세션의 인식·번역을 마무리한 뒤 새 설정을 적용한다. 미설정 엔드포인트는 오류를 표시하며 다른 엔진으로 자동 대체하지 않는다.
+엔진·입력 언어·번역 대상을 변경하면 브라우저에 남은 음성을 먼저 보내고, 이전 세션의 인식·번역을 이전 설정으로 마무리한 뒤 새 설정을 적용한다. 미설정 엔드포인트는 오류를 표시하며 다른 엔진으로 자동 대체하지 않는다.
 
-## 사용하지 않을 때 GPU 0대
+언어 설정 변경의 회귀 검사는 `npm run test:speech`, `cd backend && python -m pytest -q`로 실행한다. `tests/speech_languages_browser.py`는 제어된 API/WebSocket 응답과 브라우저의 가상 마이크로 설정 이전, 모델 전환, 녹음 버퍼 전송 순서, 부분 자막·수동 재번역·늦은 응답, 모바일 화면을 검사한다. 이 검사는 실제 AWS 모델의 인식 정확도 측정과 구분한다.
 
-Qwen과 Nemotron은 엔드포인트·모델·Inference Component를 보존하면서 실행 복제본을 0개로 줄인다. 일반 모델 기반 엔드포인트의 인스턴스 수를 단순히 0으로 바꾸는 방식이 아니다.
+## Nemotron 연속 인식
 
-- 저장된 엔진을 불러오거나 페이지를 여는 것만으로 GPU를 기동하지 않는다.
-- 설정에서 새 엔진을 선택하거나 녹음 조작의 **엔진 준비**를 누르면 복제본 1개를 요청한다.
-- **준비 중**에는 녹음을 시작하지 않는다. **사용 가능**이 되면 녹음을 시작할 수 있다.
-- 마이크 권한이 거부되면 서버에 녹음 시작을 보내지 않는다.
-- 활성 녹음과 진행 중인 음성 처리가 모두 끝나고 `STT_IDLE_SECONDS`(기본 300초) 동안 사용하지 않으면 복제본을 0으로 내린다.
-- `IDLE_RELEASE` 정책이 빈 GPU 인스턴스를 반납한다. 복제본만 0이고 GPU가 아직 남았으면 **대기 상태로 전환 중**, 실제 인스턴스도 0이면 **대기 중 · GPU 0대**로 표시한다.
+원본 모델은 `nvidia/nemotron-3.5-asr-streaming-0.6b`, 모델 파일과 Transformers 실행 환경은 기존 JumpStart `1.0.2` 아티팩트다. `inference/nemotron_streaming/`의 별도 서버가 SageMaker 양방향 WebSocket 계약을 구현한다. 같은 발화의 특징·디코더 캐시는 다음 음성 조각에 이어서 사용한다. 서로 다른 녹음은 실행 상태를 공유하지 않으며, GPU 가중치만 공유한다.
+
+- 브라우저의 **160ms 전송 간격**과 모델의 **320/560ms 처리 설정**은 별개다. 첫 자막 지연에는 음성 내용, 네트워크, 추론 시간도 포함된다.
+- 20ms 단위 RMS로 발화 시작과 무음을 판정하고, 시작 전 최대 200ms를 보존한다. 기본 확정 기준은 700ms 무음이며, 30초 연속 발화에서도 구간을 확정해 상태 크기를 제한한다. 이 방식은 학습된 화자 분리나 잡음 제거 모델이 아니다.
+- 부분 자막은 현재 가설 전체를 갱신한다. 확정된 발화만 번역·저장하며, 녹음 정지와 설정 변경은 남은 짧은 오디오까지 배출한다. 이전 구간의 늦은 결과가 새 부분 자막을 지우지 않도록 스트림·발화 ID를 사용한다.
+- SageMaker 연결은 25분마다 기존 구간을 마무리하고 재연결한다. 입력과 결과 대기열에 상한이 있으며, 처리 실패는 녹음 중단 상태로 전달한다.
+- 스트리밍 API에는 추론 컴포넌트 선택 필드가 없어, `transmeet-nemotron-streaming-v2` 단일 모델 엔드포인트를 사용한다. 기존 배치 엔드포인트·컴포넌트는 별도로 보존한다.
+- 기존 Transcribe와 HTTP/2 SDK가 요구하는 `awscrt` 버전이 달라, HTTP/2 연결은 별도 Python 가상환경의 프로세스로 실행한다. 백엔드 Docker 이미지가 `/opt/nemotron-stream`을 구성한다.
+
+백엔드 활성화 설정:
+
+```dotenv
+NEMOTRON_STREAMING_ENABLED=true
+NEMOTRON_STREAMING_ENDPOINT=transmeet-nemotron-streaming-v2
+NEMOTRON_STREAMING_REGION=us-east-1
+NEMOTRON_STREAMING_CHUNK_MS=560
+NEMOTRON_STREAM_PYTHON=/opt/nemotron-stream/bin/python
+```
+
+로컬 실행에서는 `aws-sdk-sagemaker-runtime-http2[awscrt]==0.12.0`과 `boto3==1.43.106`을 별도 가상환경에 설치하고 그 Python 경로를 지정한다. `NEMOTRON_STREAMING_ENABLED=false`이면 기존 `NEMOTRON_ASR_ENDPOINT`를 사용한다.
+
+컨테이너를 빌드하고 ECR에 올린 뒤, 배포 계획을 먼저 조회한다. `--apply`를 추가해야 실제 리소스를 만들며 기존 스트리밍 엔드포인트의 교체에는 `--update`도 필요하다.
+
+```bash
+docker build --platform linux/amd64 -f inference/nemotron_streaming/Dockerfile -t nemotron-streaming .
+python backend/scripts/deploy_nemotron_streaming.py \
+  --image "$NEMOTRON_IMAGE_DIGEST_URI" --role "$SAGEMAKER_ROLE_ARN"
+```
+
+기본 호스트는 `ml.g5.xlarge` 한 대다. 첫 배포에서 `ml.g5.2xlarge`의 계정 할당량이 소진되어, 동일한 A10G GPU를 제공하는 유형으로 선택했다. 모델에 포함된 CUDA 12.4 PyTorch에 맞춰 `InferenceAmiVersion=al2-ami-sagemaker-inference-gpu-3-1`을 지정한다. G5 기본 AMI에서는 실제로 드라이버 버전 불일치가 발생했다. 스트리밍 서버는 최대 4개 연결과 최대 4개 실제 디코더 작업을 허용한다. 연결이 취소돼도 GPU 작업이 종료되기 전에는 작업 슬롯을 재사용하지 않는다.
+
+## GPU 1대씩 상시 유지
+
+배치 추론 구성의 Qwen과 Nemotron은 각각 모델 복제본 1개를 유지한다. GPU를 다시 확보하고 모델을 올리는 데 수분 이상 걸릴 수 있어, 기본 운영 정책을 상시 유지로 변경했다. 별도 Nemotron 스트리밍 엔드포인트도 GPU 한 대를 유지하므로, 배치 구성을 함께 보존하는 동안에는 그 호스팅 비용이 추가된다.
+
+- Application Auto Scaling의 복제본 최소·최대 용량과 SageMaker GPU 호스트의 최소·최대 수량을 모두 1로 설정한다. 상시 유지 배포 설정은 `warm-v1` 이름을 사용한다.
+- `STT_IDLE_SECONDS=0`이 기본값이다. 0 이하이면 백엔드는 유휴 상태에서 복제본을 내리지 않고, 구성된 엔진에 `ActiveUse=1`을 보낸다.
+- 페이지를 닫거나 녹음을 끝내도 두 모델은 준비 상태를 유지한다.
+- 실제 장애나 수동 중지 후에는 **엔진 준비**로 기동을 요청할 수 있다. **준비 중**에는 녹음을 시작하지 않으며, 실제 복제본·GPU 상태가 확인돼야 **사용 가능**으로 표시한다.
 - 일시적인 상태 조회 실패는 진행 중인 녹음을 중단하지 않는다. 확인된 용량 상실이나 서버의 녹음 거절은 별도로 처리한다.
 
-기동에는 수분 이상 걸릴 수 있으며 리전의 GPU 재고에 영향을 받는다. 최초 생성 때는 엔드포인트와 모델 복제본을 각각 1개로 시작해야 한다. 이 세션의 실제 API는 최초 `CreateInferenceComponent(CopyCount=0)`을 거절했으므로, 생성 완료 뒤 0으로 변경한다.
+배포 도구의 기본값과 `--keep-warm`은 이 정책을 사용한다. 비용 절약을 위해 다시 0대로 줄이려면 배포 도구에 **`--scale-to-zero`**를 명시하고, 백엔드에는 **`STT_IDLE_SECONDS=300`**처럼 양수의 유휴 시간을 함께 설정해야 한다. CDK도 같은 환경변수를 읽는다. 두 설정 중 하나만 바꾸면 상시 유지와 자동 종료 정책이 충돌할 수 있다.
 
-네이티브 자동 확장은 실제 호출량과 `TransMeet/STT`의 `ActiveUse` 지표 중 큰 값을 사용한다. 백엔드는 활성 녹음·진행 중인 작업·기동 대기 및 유휴 유예 기간에 `ActiveUse=1`을 보낸다. 따라서 대화 중 잠깐 조용해져도 모델을 내리지 않는다. 누락된 지표는 0으로 처리해 백엔드가 중단돼도 영구적으로 GPU가 남지 않게 한다. 별도의 `NoCapacityInvocationFailures > 0` 알람은 용량 없이 호출됐을 때 확장을 요청한다.
+0대 모드에서는 활성 녹음·진행 중인 음성 처리가 모두 끝난 뒤 유휴 시간이 지나면 복제본을 0으로 내린다. 이후 `IDLE_RELEASE`가 빈 GPU 호스트를 반납한다. 별도의 `NoCapacityInvocationFailures > 0` 알람은 용량 없는 호출의 재기동을 요청한다. 이 모드의 기동 시간은 리전의 GPU 재고와 모델 로딩에 영향을 받는다.
 
 ## 모델 지원 확인
 
@@ -54,12 +106,15 @@ Qwen의 라이선스는 Apache-2.0, Nemotron은 OpenMDW License Agreement로 카
 
 공식 근거:
 
+- [Transcribe 스트리밍 요청의 언어 식별 옵션](https://docs.aws.amazon.com/transcribe/latest/APIReference/API_streaming_StartStreamTranscription.html)
 - [AWS의 Qwen3-ASR JumpStart 출시 공지](https://aws.amazon.com/about-aws/whats-new/2026/05/speech-models-on-sagemaker-jumpstart/)
 - [Qwen3-ASR-1.7B 모델 카드](https://huggingface.co/Qwen/Qwen3-ASR-1.7B)
 - [Nemotron 3.5 ASR 모델 카드](https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b)
 - [FLEURS 데이터셋](https://huggingface.co/datasets/google/fleurs)
 - [SageMaker: Scale an endpoint to zero instances](https://docs.aws.amazon.com/sagemaker/latest/dg/endpoint-auto-scaling-zero-instances.html)
 - [SageMaker: Heterogeneous instance pools](https://docs.aws.amazon.com/sagemaker/latest/dg/realtime-endpoints-heterogeneous.html)
+- [SageMaker: 양방향 스트리밍 컨테이너 계약](https://docs.aws.amazon.com/sagemaker/latest/dg/your-algorithms-inference-code.html)
+- [SageMaker: GPU 드라이버와 Inference AMI 호환성](https://docs.aws.amazon.com/sagemaker/latest/dg/inference-gpu-drivers.html)
 
 ## 엔드포인트 배포와 앱 설정
 
@@ -76,30 +131,34 @@ JumpStart SDK는 지정한 환경변수를 우선하고 나머지 카탈로그 �
 먼저 계획을 조회한다. `--apply`가 없는 명령은 리소스를 만들지 않는다.
 
 ```bash
-python backend/scripts/deploy_stt_scaling.py qwen3-asr --role "$SAGEMAKER_ROLE_ARN"
-python backend/scripts/deploy_stt_scaling.py nemotron --role "$SAGEMAKER_ROLE_ARN"
+python backend/scripts/deploy_stt_scaling.py qwen3-asr --region ap-northeast-2 --role "$SAGEMAKER_ROLE_ARN"
+python backend/scripts/deploy_stt_scaling.py nemotron --region ap-northeast-2 --role "$SAGEMAKER_ROLE_ARN"
 ```
 
 실제 배포는 SageMaker 실행 역할을 지정한다. 리소스는 삭제하지 않는다. 기존 엔드포인트의 구성 변경에는 명시적인 `--migrate`가 필요하다.
 
 ```bash
 python backend/scripts/deploy_stt_scaling.py qwen3-asr \
-  --apply --wait --role "$SAGEMAKER_ROLE_ARN"
+  --region ap-northeast-2 --apply --wait --role "$SAGEMAKER_ROLE_ARN"
 python backend/scripts/deploy_stt_scaling.py nemotron \
-  --apply --wait --role "$SAGEMAKER_ROLE_ARN"
+  --region ap-northeast-2 --apply --wait --role "$SAGEMAKER_ROLE_ARN"
 ```
 
-기본 엔드포인트 이름은 `transmeet-qwen3-asr`, `transmeet-nemotron-asr`다. 컴포넌트 이름은 `transmeet-qwen3-asr-ic-v2`, `transmeet-nemotron-asr-ic-v2`다. Qwen은 `ml.g6.xlarge`, `ml.g6.2xlarge` 우선순위 풀을 사용한다. 스크립트는 리전의 모델 메타데이터로 지원 여부를 검사한다.
+기본 엔드포인트 이름은 `transmeet-qwen3-asr`, `transmeet-nemotron-asr`다. 컴포넌트 이름은 `transmeet-qwen3-asr-ic-v2`, `transmeet-nemotron-asr-ic-v2`다. Qwen의 상시 유지 모드는 이전에 동작한 `ml.g6.2xlarge`를 우선하고 `ml.g6.xlarge`를 대체 풀로 사용한다. 0대 모드는 이 우선순위를 반대로 사용한다. 스크립트는 리전의 모델 메타데이터로 지원 여부를 검사한다.
 
 ```bash
 export QWEN_ASR_ENDPOINT=transmeet-qwen3-asr
 export NEMOTRON_ASR_ENDPOINT=transmeet-nemotron-asr
 export QWEN_ASR_INFERENCE_COMPONENT=transmeet-qwen3-asr-ic-v2
 export NEMOTRON_ASR_INFERENCE_COMPONENT=transmeet-nemotron-asr-ic-v2
-export STT_IDLE_SECONDS=300
+export QWEN_ASR_REGION=ap-northeast-2
+export NEMOTRON_ASR_REGION=ap-northeast-2
+export STT_IDLE_SECONDS=0
 ```
 
-로컬 백엔드는 환경변수 또는 `.env`에서 읽는다. CDK는 같은 환경변수 또는 `qwenAsrEndpoint`, `nemotronAsrEndpoint`, `qwenAsrComponent`, `nemotronAsrComponent` 컨텍스트를 읽어 ECS에 반영한다. CDK 기본값은 위의 운영 이름이다. 실행 역할에는 해당 엔드포인트 조회·호출, 해당 컴포넌트 조회·복제본 수 변경, `TransMeet/STT` 네임스페이스의 지표 전송만 추가한다.
+로컬 백엔드는 환경변수 또는 `.env`에서 읽는다. CDK는 같은 환경변수 또는 `qwenAsrEndpoint`, `nemotronAsrEndpoint`, `qwenAsrComponent`, `nemotronAsrComponent`, `qwenAsrRegion`, `nemotronAsrRegion` 컨텍스트를 읽어 ECS에 반영한다. CDK의 배치 엔진 기본 리전은 서울이며, 백엔드의 리전 필드가 비어 있으면 `REGION`으로 돌아간다. 실행 역할에는 해당 리전의 엔드포인트 조회·호출, 해당 컴포넌트 조회·복제본 수 변경, `TransMeet/STT` 네임스페이스의 지표 전송만 추가한다.
+
+상태 조회와 유휴 지표도 모델의 리전을 사용한다. 별도의 Nemotron 스트리밍 엔드포인트를 사용할 때는 `NEMOTRON_STREAMING_REGION` / `nemotronStreamingRegion`으로 리전을 독립 지정한다. 이 값이 비어 있으면 `REGION`을 사용한다.
 
 ```bash
 cd infra
@@ -111,6 +170,8 @@ npx cdk diff \
 운영 반영에는 CDK 설정 변경, 백엔드 이미지 빌드·푸시와 ECS 재배포, 프런트엔드 배포가 필요하다. 기존 절차는 루트 README의 배포 섹션을 따른다. 엔드포인트를 설정한 환경변수나 CDK 컨텍스트는 이후 배포에도 유지해야 한다.
 
 AWS Pricing API의 `USE1-Host:ml.g6.xlarge`, `USE1-Host:ml.g5.2xlarge` 조회 기준 인스턴스 비용은 각각 시간당 `$1.1267`, `$1.5150`이다(2026-10-28, 온디맨드). 두 개가 실행 중이면 합계 시간당 `$2.6417`이며 스토리지·지표·알람·전송·기존 Whisper·Transcribe 비용은 제외한다. Qwen 대체 풀인 `ml.g6.2xlarge`는 시간당 `$1.2220`이다. 실제 GPU 인스턴스가 0대인 동안 해당 GPU 호스팅 비용은 발생하지 않는다.
+
+현재 서울 배포의 실제 호스트는 Qwen `ml.g6.2xlarge`(시간당 `$1.5026`), Nemotron `ml.g5.2xlarge`(시간당 `$1.8629`)다. 합계 시간당 `$3.3655`, 월 730시간이면 약 `$2,456.82`이며 기존 Whisper와 기타 비용은 별도다. [서울 Pricing API 원문](../benchmarks/stt-ko-en-2026-10-28/regional-pricing.json)에 근거를 보존했다.
 
 ## 같은 음성으로 비교하기
 

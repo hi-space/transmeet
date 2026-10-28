@@ -68,6 +68,10 @@ class SageMaker:
             "ProductionVariants": [{"CurrentInstanceCount": 1}],
         }
 
+    def update_endpoint(self, **kwargs):
+        self.writes.append(("UpdateEndpoint", kwargs))
+        self.endpoint["EndpointConfigName"] = kwargs["EndpointConfigName"]
+
     def describe_inference_component(self, **kwargs):
         if self.component is None:
             raise not_found("DescribeInferenceComponent")
@@ -146,6 +150,98 @@ def test_scaling_plan_discloses_offline_startup_before_apply(deployment, capsys)
     )
     assert deployment.client.writes == []
     assert deployment.constructed == []
+
+
+@pytest.mark.parametrize("flags,timeout,minimum", [
+    ((), "0", 1),
+    (("--scale-to-zero",), "300", 0),
+])
+def test_scaling_plan_exposes_matching_backend_idle_policy(deployment, capsys, flags, timeout, minimum):
+    deployment.run(deployment.scaling, "qwen3-asr", *flags)
+    plan = json.loads(capsys.readouterr().out)
+    assert plan["environment"]["STT_IDLE_SECONDS"] == timeout
+    variant = plan["endpoint_config"]["ProductionVariants"][0]
+    assert variant["ManagedInstanceScaling"]["MinInstanceCount"] == minimum
+    if minimum == 1:
+        assert variant["InstancePools"][0] == {"InstanceType": "ml.g6.2xlarge", "Priority": 1}
+    assert deployment.client.writes == []
+
+
+@pytest.mark.parametrize("provider,setting,region", [
+    ("qwen3-asr", "QWEN_ASR_REGION", "ap-northeast-2"),
+    ("nemotron", "NEMOTRON_ASR_REGION", "us-west-2"),
+])
+def test_scaling_plan_exposes_the_model_region(deployment, capsys, provider, setting, region):
+    deployment.run(deployment.scaling, provider, "--region", region)
+    assert json.loads(capsys.readouterr().out)["environment"][setting] == region
+
+
+@pytest.mark.parametrize("kwargs,minimum", [({}, 1), ({"keep_warm": False}, 0)])
+def test_native_scaling_floor_matches_retention_policy(monkeypatch, kwargs, minimum):
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "scripts"))
+    scaling = importlib.import_module("deploy_stt_scaling")
+    targets = []
+
+    class Scaling:
+        def register_scalable_target(self, **request):
+            targets.append(request)
+
+        def put_scaling_policy(self, **request):
+            return {"PolicyARN": "arn:aws:autoscaling:us-east-1:123456789012:scalingPolicy:test"}
+
+    class CloudWatch:
+        def put_metric_alarm(self, **request):
+            pass
+
+    clients = {"application-autoscaling": Scaling(), "cloudwatch": CloudWatch()}
+    scaling.configure_autoscaling(
+        SimpleNamespace(client=clients.__getitem__), "test-component", "test-endpoint", **kwargs,
+    )
+    assert targets == [{
+        "ServiceNamespace": "sagemaker",
+        "ResourceId": "inference-component/test-component",
+        "ScalableDimension": "sagemaker:inference-component:DesiredCopyCount",
+        "MinCapacity": minimum,
+        "MaxCapacity": 1,
+    }]
+
+
+def test_warm_migration_does_not_retain_zero_instance_count(deployment):
+    deployment.client.endpoint = {
+        "EndpointConfigName": "transmeet-qwen3-asr-zero-v3",
+        "EndpointStatus": "InService",
+        "ProductionVariants": [{"CurrentInstanceCount": 0, "DesiredInstanceCount": 0}],
+    }
+    deployment.client.component = {
+        "EndpointName": "transmeet-qwen3-asr",
+        "InferenceComponentStatus": "InService",
+    }
+    deployment.run(deployment.scaling, "qwen3-asr", "--apply", "--migrate")
+    update = next(
+        request for operation, request in deployment.client.writes if operation == "UpdateEndpoint"
+    )
+    assert update["RetainAllVariantProperties"] is True
+    assert update["ExcludeRetainedVariantProperties"] == [{
+        "VariantPropertyType": "DesiredInstanceCount",
+    }]
+
+
+def test_migration_reports_rollback_instead_of_success(deployment):
+    deployment.client.endpoint = {
+        "EndpointConfigName": "transmeet-qwen3-asr-zero-v3",
+        "EndpointStatus": "InService",
+        "FailureReason": "InsufficientInstanceCapacity",
+        "ProductionVariants": [{"CurrentInstanceCount": 0, "DesiredInstanceCount": 0}],
+    }
+    deployment.client.component = {
+        "EndpointName": "transmeet-qwen3-asr",
+        "InferenceComponentStatus": "InService",
+    }
+    deployment.client.update_endpoint = lambda **request: deployment.client.writes.append(
+        ("UpdateEndpoint", request)
+    )
+    with pytest.raises(RuntimeError, match="InsufficientInstanceCapacity"):
+        deployment.run(deployment.scaling, "qwen3-asr", "--apply", "--migrate", "--wait")
 
 
 def test_legacy_plan_discloses_offline_startup_before_deploy(deployment, capsys):

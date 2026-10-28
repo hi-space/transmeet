@@ -55,3 +55,45 @@ async def test_provider_failure_is_recorded_instead_of_dropping_sample(monkeypat
     row = await benchmark.measure("qwen3-asr", b"audio", "ko", "정답", 2, 1)
     assert "QWEN_ASR_ENDPOINT" in row["error"]
     assert "cer" not in row
+
+
+async def test_automatic_benchmark_uses_the_apps_multilingual_transcribe_mode(monkeypatch):
+    import io
+    import wave
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    import amazon_transcribe.client
+    from amazon_transcribe.model import Alternative, Result, Transcript, TranscriptEvent
+
+    audio = io.BytesIO()
+    with wave.open(audio, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(16000)
+        wav.writeframes(b"\x00\x20" * 1600)
+    requests = []
+
+    async def start_stream(**kwargs):
+        requests.append(kwargs)
+
+        async def events():
+            yield TranscriptEvent(Transcript([Result(
+                result_id="final", is_partial=False, language_code="ko-KR",
+                alternatives=[Alternative(transcript="검토를 시작합니다.", items=[], entities=[])],
+            )]))
+
+        return SimpleNamespace(
+            input_stream=SimpleNamespace(send_audio_event=AsyncMock(), end_stream=AsyncMock()),
+            output_stream=events(),
+        )
+
+    monkeypatch.setattr(amazon_transcribe.client, "TranscribeStreamingClient", lambda **kwargs: SimpleNamespace(
+        start_stream_transcription=start_stream,
+    ))
+    result = await benchmark.transcribe_clip(audio.getvalue(), "auto")
+    assert result.text == "검토를 시작합니다."
+    assert requests[0]["language_code"] is None
+    assert requests[0]["identify_multiple_languages"] is True
+    assert not requests[0].get("identify_language")
+    assert requests[0]["language_options"] == ["ko-KR", "en-US"]

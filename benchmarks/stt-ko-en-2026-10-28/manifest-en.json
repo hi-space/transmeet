@@ -1,0 +1,133 @@
+{
+  "source": {
+    "dataset": "google/fleurs",
+    "config": "en_us",
+    "split": "test",
+    "rows": "0-9",
+    "url": "https://huggingface.co/datasets/google/fleurs",
+    "parquet": "https://huggingface.co/datasets/google/fleurs/resolve/refs%2Fconvert%2Fparquet/en_us/test/0000.parquet"
+  },
+  "license": "CC-BY-4.0",
+  "samples": [
+    {
+      "id": "fleurs-en-test-row-0",
+      "dataset_id": 1904,
+      "row_index": 0,
+      "audio": "audio/en-00.wav",
+      "language": "en",
+      "reference": "However, due to the slow communication channels, styles in the west could lag behind by 25 to 30 year.",
+      "audio_seconds": 10.56,
+      "sha256": "b438b60eb4e9fddbcaa303e27070c2458c3daac42f0b08d5d8622c47335d24f7",
+      "source_audio_sha256": "33aca50159ec2e3cbcc894eb26faa916d6badb1b49fb75994973561540a7f012",
+      "source_audio_name": "1003119935936341070.wav"
+    },
+    {
+      "id": "fleurs-en-test-row-1",
+      "dataset_id": 1675,
+      "row_index": 1,
+      "audio": "audio/en-01.wav",
+      "language": "en",
+      "reference": "All nouns, alongside the word Sie for you, always begin with a capital letter, even in the middle of a sentence.",
+      "audio_seconds": 8.76,
+      "sha256": "fd99727983733f9771077fe1a030fcc44ea7e16be1e9396cff525db2886a8f0f",
+      "source_audio_sha256": "7603cae3294309ef70d234180cefccc3b13865ee525262228a636069b9b62841",
+      "source_audio_name": "10052240106321793346.wav"
+    },
+    {
+      "id": "fleurs-en-test-row-2",
+      "dataset_id": 1950,
+      "row_index": 2,
+      "audio": "audio/en-02.wav",
+      "language": "en",
+      "reference": "To the north and within easy reach is the romantic and fascinating town of Sintra and which was made famous to foreigners after a glowing account of its splendours recorded by Lord Byron.",
+      "audio_seconds": 11.46,
+      "sha256": "b4aea90be63667ffe68bd0c67fcc11b6a5bc334a4566df8153c074b37e2760d6",
+      "source_audio_sha256": "260bdd1a15e1d35bcc5d91667516ca3bc659285e10f94872182715bcd7880398",
+      "source_audio_name": "10167324587744183095.wav"
+    },
+    {
+      "id": "fleurs-en-test-row-3",
+      "dataset_id": 1728,
+      "row_index": 3,
+      "audio": "audio/en-03.wav",
+      "language": "en",
+      "reference": "The cabbage juice changes color depending on how acidic or basic (alkaline) the chemical is.",
+      "audio_seconds": 5.76,
+      "sha256": "1a2230cb99ec7ed59df1ad0cf43020b093c6536f9b4ca02636b8daa9c4577229",
+      "source_audio_sha256": "b174be7730f0aab6a26762130b66f2125392b50550645727bd057d8479fb6219",
+      "source_audio_name": "10197164397713068203.wav"
+    },
+    {
+      "id": "fleurs-en-test-row-4",
+      "dataset_id": 1972,
+      "row_index": 4,
+      "audio": "audio/en-04.wav",
+      "language": "en",
+      "reference": "Many people don't think about them as dinosaurs because they have feathers and can fly.",
+      "audio_seconds": 4.32,
+      "sha256": "5fda1c914915f9fcd856b11739eb88570deb747c0a492c841255f13383d00e82",
+      "source_audio_sha256": "bfa2f3fb72a05cbcb7c0000a460435f2d0eedca7c5cc90f01aacc89127df7f63",
+      "source_audio_name": "10233995782544396174.wav"
+    },
+    {
+      "id": "fleurs-en-test-row-5",
+      "dataset_id": 1938,
+      "row_index": 5,
+      "audio": "audio/en-05.wav",
+      "language": "en",
+      "reference": "The hospital has followed protocol for infection control, including separating the patient from others to prevent possible infection of others.",
+      "audio_seconds": 11.42,
+      "sha256": "c15df2cdf2811dde17f6086317a9aeb0f2cb4a9967204c6beac2cd87fadfb93b",
+      "source_audio_sha256": "3802ffc3e69c66e0d2e66652015bff0c6b1b8498bfb8670623eb4e34bc9e008d",
+      "source_audio_name": "10235738076911595987.wav"
+    },
+    {
+      "id": "fleurs-en-test-row-6",
+      "dataset_id": 1876,
+      "row_index": 6,
+      "audio": "audio/en-06.wav",
+      "language": "en",
+      "reference": "The Northern Marianas emergency management office said that there were no damages reported in the nation.",
+      "audio_seconds": 10.8,
+      "sha256": "b804e68fee5b002c5a6942a4dbefe4dba14b3f816e07404c80ee508527ecf956",
+      "source_audio_sha256": "6b3081a29a5bb6fc6434e8525690edc26b23844841e119c916183f4ba1863372",
+      "source_audio_name": "10323357556845456822.wav"
+    },
+    {
+      "id": "fleurs-en-test-row-7",
+      "dataset_id": 1914,
+      "row_index": 7,
+      "audio": "audio/en-07.wav",
+      "language": "en",
+      "reference": "Twentieth century research has shown that there are two pools of genetic variation: hidden and expressed.",
+      "audio_seconds": 6.96,
+      "sha256": "eecacd023023857f4a8fb8b86a5815a06c972ac49584d34fec14d71640a9c684",
+      "source_audio_sha256": "14c9f40d7087ed487823917a9bc1838a037d78d315a694f7ace632651c612a61",
+      "source_audio_name": "10335587906469246566.wav"
+    },
+    {
+      "id": "fleurs-en-test-row-8",
+      "dataset_id": 1846,
+      "row_index": 8,
+      "audio": "audio/en-08.wav",
+      "language": "en",
+      "reference": "The aspect ratio of this format (dividing by twelve to obtain the simplest whole-number ratio) is therefore said to be 3:2.",
+      "audio_seconds": 11.04,
+      "sha256": "409f227a6a0d463314a5b138931d658c69377b1684a134f2459aa698eb0fc8cd",
+      "source_audio_sha256": "8152d901627ad1bb88fee68b1f3adb706e33d2292bca02ef4d92465e2db4c84f",
+      "source_audio_name": "10344335557154974057.wav"
+    },
+    {
+      "id": "fleurs-en-test-row-9",
+      "dataset_id": 1806,
+      "row_index": 9,
+      "audio": "audio/en-09.wav",
+      "language": "en",
+      "reference": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses, easier to reach than those built in modern times.",
+      "audio_seconds": 9.9,
+      "sha256": "3f988cc9edf80f64bcb387e5d6353604fd7ef7b3d5016b495fc6f09a18847b2f",
+      "source_audio_sha256": "9514bffb9e0bd3397f2cf90041eff51b87e68293335f7ff904515a19f8d416e3",
+      "source_audio_name": "1036771894648013441.wav"
+    }
+  ]
+}

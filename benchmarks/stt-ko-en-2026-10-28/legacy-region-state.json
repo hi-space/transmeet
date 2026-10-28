@@ -1,0 +1,60 @@
+{
+  "region": "us-east-1",
+  "at": "2026-10-28T19:22:39.267266+00:00",
+  "endpoints": [
+    {
+      "endpoint": "transmeet-qwen3-asr",
+      "status": "InService",
+      "configuration": "transmeet-qwen3-asr-zero-v3",
+      "failure_reason": "Unable to provision requested ML compute capacity due to InsufficientInstanceCapacity error. Please retry using a different ML instance type or after some time.",
+      "variants": [
+        {
+          "VariantName": "AllTraffic",
+          "CurrentInstanceCount": 0,
+          "DesiredInstanceCount": 0,
+          "ManagedInstanceScaling": {
+            "Status": "ENABLED",
+            "MinInstanceCount": 0,
+            "MaxInstanceCount": 1,
+            "ScaleInPolicy": {
+              "Strategy": "IDLE_RELEASE"
+            }
+          }
+        }
+      ],
+      "component": "transmeet-qwen3-asr-ic-v2",
+      "component_status": "InService",
+      "runtime": {
+        "DesiredCopyCount": 0,
+        "CurrentCopyCount": 0
+      }
+    },
+    {
+      "endpoint": "transmeet-nemotron-asr",
+      "status": "InService",
+      "configuration": "transmeet-nemotron-asr-zero-v3",
+      "failure_reason": "Unable to provision all the requested ML compute capacity due to InsufficientInstanceCapacity error. We are working to provision the remaining capacity. You can check the CurrentInstanceCount status in the AWS Console or using DescribeEndpoint api.",
+      "variants": [
+        {
+          "VariantName": "AllTraffic",
+          "CurrentInstanceCount": 0,
+          "DesiredInstanceCount": 1,
+          "ManagedInstanceScaling": {
+            "Status": "ENABLED",
+            "MinInstanceCount": 0,
+            "MaxInstanceCount": 1,
+            "ScaleInPolicy": {
+              "Strategy": "IDLE_RELEASE"
+            }
+          }
+        }
+      ],
+      "component": "transmeet-nemotron-asr-ic-v2",
+      "component_status": "InService",
+      "runtime": {
+        "DesiredCopyCount": 0,
+        "CurrentCopyCount": 0
+      }
+    }
+  ]
+}

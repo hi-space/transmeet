@@ -1,0 +1,18 @@
+[
+  {
+    "at": "2026-10-28T18:38:13.109310+00:00",
+    "endpoint_status": "Updating",
+    "instances": 0,
+    "component_status": "InService",
+    "desired_copies": 0,
+    "current_copies": 0
+  },
+  {
+    "at": "2026-10-28T18:39:15.626486+00:00",
+    "endpoint_status": "Updating",
+    "instances": 0,
+    "component_status": "Updating",
+    "desired_copies": 1,
+    "current_copies": 0
+  }
+]

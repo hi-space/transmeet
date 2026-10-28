@@ -1,0 +1,80 @@
+{
+  "at": "2026-10-28T18:42:44.482245+00:00",
+  "reason": "User requested one retained copy per provider",
+  "targets": [
+    {
+      "component": "transmeet-qwen3-asr-ic-v2",
+      "before": [
+        {
+          "ServiceNamespace": "sagemaker",
+          "ResourceId": "inference-component/transmeet-qwen3-asr-ic-v2",
+          "ScalableDimension": "sagemaker:inference-component:DesiredCopyCount",
+          "MinCapacity": 0,
+          "MaxCapacity": 1,
+          "RoleARN": "arn:aws:iam::913524902871:role/aws-service-role/sagemaker.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_SageMakerEndpoint",
+          "CreationTime": "2026-10-28 11:49:57.190000+00:00",
+          "SuspendedState": {
+            "DynamicScalingInSuspended": false,
+            "DynamicScalingOutSuspended": false,
+            "ScheduledScalingSuspended": false
+          },
+          "ScalableTargetARN": "arn:aws:application-autoscaling:us-east-1:913524902871:scalable-target/056mc33a1741411f4a3e9bb85119478ff72c"
+        }
+      ],
+      "after": [
+        {
+          "ServiceNamespace": "sagemaker",
+          "ResourceId": "inference-component/transmeet-qwen3-asr-ic-v2",
+          "ScalableDimension": "sagemaker:inference-component:DesiredCopyCount",
+          "MinCapacity": 1,
+          "MaxCapacity": 1,
+          "RoleARN": "arn:aws:iam::913524902871:role/aws-service-role/sagemaker.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_SageMakerEndpoint",
+          "CreationTime": "2026-10-28 11:49:57.190000+00:00",
+          "SuspendedState": {
+            "DynamicScalingInSuspended": false,
+            "DynamicScalingOutSuspended": false,
+            "ScheduledScalingSuspended": false
+          },
+          "ScalableTargetARN": "arn:aws:application-autoscaling:us-east-1:913524902871:scalable-target/056mc33a1741411f4a3e9bb85119478ff72c"
+        }
+      ]
+    },
+    {
+      "component": "transmeet-nemotron-asr-ic-v2",
+      "before": [
+        {
+          "ServiceNamespace": "sagemaker",
+          "ResourceId": "inference-component/transmeet-nemotron-asr-ic-v2",
+          "ScalableDimension": "sagemaker:inference-component:DesiredCopyCount",
+          "MinCapacity": 0,
+          "MaxCapacity": 1,
+          "RoleARN": "arn:aws:iam::913524902871:role/aws-service-role/sagemaker.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_SageMakerEndpoint",
+          "CreationTime": "2026-10-28 11:02:18.086000+00:00",
+          "SuspendedState": {
+            "DynamicScalingInSuspended": false,
+            "DynamicScalingOutSuspended": false,
+            "ScheduledScalingSuspended": false
+          },
+          "ScalableTargetARN": "arn:aws:application-autoscaling:us-east-1:913524902871:scalable-target/056m1bdab5e0b0f043fa9f1e34c9d793dade"
+        }
+      ],
+      "after": [
+        {
+          "ServiceNamespace": "sagemaker",
+          "ResourceId": "inference-component/transmeet-nemotron-asr-ic-v2",
+          "ScalableDimension": "sagemaker:inference-component:DesiredCopyCount",
+          "MinCapacity": 1,
+          "MaxCapacity": 1,
+          "RoleARN": "arn:aws:iam::913524902871:role/aws-service-role/sagemaker.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_SageMakerEndpoint",
+          "CreationTime": "2026-10-28 11:02:18.086000+00:00",
+          "SuspendedState": {
+            "DynamicScalingInSuspended": false,
+            "DynamicScalingOutSuspended": false,
+            "ScheduledScalingSuspended": false
+          },
+          "ScalableTargetARN": "arn:aws:application-autoscaling:us-east-1:913524902871:scalable-target/056m1bdab5e0b0f043fa9f1e34c9d793dade"
+        }
+      ]
+    }
+  ]
+}

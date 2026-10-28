@@ -1,0 +1,20 @@
+[
+  {
+    "provider": "transcribe",
+    "status": "complete"
+  },
+  {
+    "provider": "whisper",
+    "status": "complete"
+  },
+  {
+    "provider": "qwen3-asr",
+    "status": "failed",
+    "error": "TimeoutError: qwen3-asr was not ready within 900 seconds"
+  },
+  {
+    "provider": "nemotron",
+    "status": "failed",
+    "error": "TimeoutError: nemotron was not ready within 900 seconds"
+  }
+]

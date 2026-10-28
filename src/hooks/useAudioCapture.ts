@@ -3,9 +3,10 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { isIOS, supportsSystemAudio } from '@/lib/platform'
 
-// Streaming defaults to 700ms; the provider policy requests longer batch context.
+// Provider policy selects the transport interval; batch engines need more context.
 const CHUNK_DURATION_MS = 700
-const SCRIPT_PROCESSOR_BUFFER_SIZE = 4096
+// Audio callbacks stay shorter than 160 ms, including with a native 16 kHz device.
+const SCRIPT_PROCESSOR_BUFFER_SIZE = 1024
 
 // Downsample to 16kHz (Whisper's native rate) using linear interpolation
 function downsampleTo16k(samples: Float32Array, inputRate: number): Float32Array {
@@ -91,15 +92,11 @@ export function useAudioCapture({
   const levelAnimRef = useRef<number | null>(null)
   const onChunkRef = useRef(onChunk)
 
-  useEffect(() => {
-    onChunkRef.current = onChunk
-  }, [onChunk])
-
   const flushChunk = useCallback(() => {
     if (samplesRef.current.length === 0) return
 
     const totalLength = samplesRef.current.reduce((acc, a) => acc + a.length, 0)
-    if (totalLength < 1600) return // skip very short chunks (< ~100ms at 16kHz)
+    if (totalLength === 0) return
 
     const combined = new Float32Array(totalLength)
     let offset = 0
@@ -111,10 +108,17 @@ export function useAudioCapture({
 
     const inputRate = audioContextRef.current?.sampleRate ?? 48000
     const resampled = downsampleTo16k(combined, inputRate)
+    if (resampled.length === 0) return
     const wavBuffer = encodeWav(resampled, 16000)
     const b64 = arrayBufferToBase64(wavBuffer)
     onChunkRef.current(b64)
   }, [])
+
+  useEffect(() => {
+    // Buffered samples belong to the previous language/translation settings.
+    flushChunk()
+    onChunkRef.current = onChunk
+  }, [onChunk, flushChunk])
 
   useEffect(() => {
     const worker = workerRef.current

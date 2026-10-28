@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>비전 유통 아키텍처 변경 방안 논의 · 타임라인</title>
+<meta name="transmeet:meeting-id" content="c3ca294c">
+<meta name="transmeet:generated-at" content="x">
+<meta name="transmeet:model" content="global.anthropic.claude-opus-5-5">
+<meta name="transmeet:style" content="timeline">
+<style>
+:root{--tm-bg:#ffffff;--tm-fg:#172033;--tm-muted:#5d6779;--tm-faint:#8a93a3;--tm-line:#e2e6ec;--tm-card:#f5f7fa;--tm-card2:#eaeef3;
+  --tm-accent:#2f55d4;--tm-accent-soft:#e7ecfc;--tm-accent-ink:#1f3c9c;
+  --tm-ok:#0f7a55;--tm-ok-soft:#dcf5ea;--tm-warn:#a8570c;--tm-warn-soft:#fff0d4;--tm-bad:#b4321a;--tm-bad-soft:#fde4dd;
+  --tm-hl:#ffe46b;--tm-hl-ok:#a9ecca;--tm-hl-risk:#ffc8b6;--tm-quote:#f5f7fa;--tm-quote-line:#2f55d4;
+  --tm-seg1:#2f55d4;--tm-seg2:#7d95e6;
+  --tm-font:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --tm-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--tm-radius:12px}
+@media (prefers-color-scheme:dark){:root{--tm-bg:#0f141d;--tm-fg:#e6e9ef;--tm-muted:#a0a8b6;--tm-faint:#6f7888;--tm-line:#253041;
+  --tm-card:#161d29;--tm-card2:#1d2635;--tm-accent:#7f9cff;--tm-accent-soft:#1c2a4f;--tm-accent-ink:#b9c8ff;
+  --tm-ok:#5fd3a2;--tm-ok-soft:#0f3326;--tm-warn:#f2b45a;--tm-warn-soft:#3a2a10;--tm-bad:#ff8f78;--tm-bad-soft:#3d1a14;
+  --tm-hl:rgba(255,214,10,.34);--tm-hl-ok:rgba(64,214,150,.32);--tm-hl-risk:rgba(255,120,90,.34);--tm-quote:#161d29;--tm-quote-line:#7f9cff;
+  --tm-seg1:#6d8cf5;--tm-seg2:#3d5297}}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:16px}
+body{margin:0;background:var(--tm-bg);color:var(--tm-fg);font-family:var(--tm-font);line-height:1.7;font-size:16px;
+  -webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+main{max-width:1180px;margin:0 auto;padding:40px 24px 80px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:40px}
+@media (min-width:1100px){.layout{grid-template-columns:220px minmax(0,1fr)}}
+article{min-width:0;max-width:820px}
+a{color:var(--tm-accent);text-underline-offset:2px}a:hover{text-decoration-thickness:2px}
+a:focus-visible,summary:focus-visible{outline:2px solid var(--tm-accent);outline-offset:2px;border-radius:4px}
+h1,h2,h3,h4,h5{letter-spacing:-.015em;line-height:1.3}
+
+/* ── 강조: 의미별 형광펜 ── */
+mark{color:inherit;padding:0 .12em;border-radius:2px;box-decoration-break:clone;-webkit-box-decoration-break:clone;
+  background:linear-gradient(transparent 54%,var(--tm-hl) 54%,var(--tm-hl) 94%,transparent 94%)}
+mark.ok{background:linear-gradient(transparent 54%,var(--tm-hl-ok) 54%,var(--tm-hl-ok) 94%,transparent 94%)}
+mark.risk{background:linear-gradient(transparent 54%,var(--tm-hl-risk) 54%,var(--tm-hl-risk) 94%,transparent 94%)}
+b,strong{font-weight:700}
+
+/* ── 목차 ── */
+.toc{font-size:.9rem;line-height:1.45}
+@media (min-width:1100px){.toc{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;padding-right:6px}}
+.toc-title{margin:0 0 10px 10px;font-size:.82rem;font-weight:700;color:var(--tm-faint)}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc>ol>li{margin:0 0 2px}
+.toc a{display:block;padding:5px 10px;border-radius:8px;color:var(--tm-fg);text-decoration:none}
+.toc a:hover{background:var(--tm-card)}
+.toc .n{display:inline-block;min-width:1.5em;color:var(--tm-faint);font-size:.8rem}
+.toc ol ol{margin:2px 0 8px 14px;border-left:2px solid var(--tm-line)}
+.toc ol ol a{padding:3px 10px;font-size:.84rem;color:var(--tm-muted)}
+.toc ol ol .time{margin-left:6px}
+@media (max-width:1099px){.toc{border:1px solid var(--tm-line);border-radius:var(--tm-radius);padding:14px 12px}.toc ol ol{display:none}}
+
+/* ── 헤더 ── */
+header[data-section=header]{margin:0 0 44px}
+.meeting-name{margin:0 0 10px;font-size:.95rem;font-weight:600;color:var(--tm-muted)}
+header h1{font-size:2.25rem;line-height:1.22;margin:0 0 16px;font-weight:800;letter-spacing:-.025em}
+.headline{font-size:2rem;line-height:1.3;max-width:24em}
+.meta{display:flex;flex-wrap:wrap;gap:4px 22px;margin:0 0 26px;padding:0;color:var(--tm-muted);font-size:.92rem}
+.meta div{display:flex;gap:6px}.meta dt{color:var(--tm-faint)}.meta dd{margin:0;color:var(--tm-fg);font-weight:600}
+
+/* ── 회의 리버: 주제 구간(시간 비례) + 결정·미결 핀 ── */
+.river{margin:0;padding:0;border:0;border-radius:0}
+.river-pins{position:relative;height:30px;margin:0 0 4px}
+.river-pins i{position:absolute;bottom:0;transform:translateX(-50%);font-style:normal;font-size:12px;line-height:1;cursor:default}
+.river-pins i.decide{color:var(--tm-ok)}.river-pins i.open{color:var(--tm-bad)}
+.river-pins i.r1{bottom:11px}.river-pins i.r2{bottom:22px}
+.river-band{display:flex;gap:2px;list-style:none;margin:0;padding:0;height:34px}
+.river-band li{flex-basis:0;min-width:3px;border-radius:3px;background:var(--tm-seg1);color:#fff;font-size:.74rem;font-weight:700;
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
+.river-band li:nth-child(even){background:var(--tm-seg2)}
+.river-band li.gap{background:transparent;border-top:2px dashed var(--tm-line);border-radius:0;height:0;align-self:center}
+.river-band a{color:inherit;text-decoration:none;display:flex;align-items:center;justify-content:center;width:100%;height:100%}
+.river-axis{display:flex;justify-content:space-between;margin:6px 0 0;font-size:.8rem;color:var(--tm-muted)}
+.river-legend{display:flex;flex-wrap:wrap;gap:4px 18px;margin:10px 0 0;padding:0;list-style:none;font-size:.86rem;color:var(--tm-muted)}
+.river-legend .decide::before{content:"◆ ";color:var(--tm-ok)}.river-legend .open::before{content:"● ";color:var(--tm-bad)}
+.river-legend .topics::before{content:"▬ ";color:var(--tm-seg1)}
+.river-legend b{color:var(--tm-fg)}
+
+/* ── 섹션 ── */
+section{margin:0 0 56px}
+section>h2{font-size:1.45rem;font-weight:800;margin:0 0 18px;padding:18px 0 0;border-top:1px solid var(--tm-line)}
+section>h2 .glyph{margin-right:8px;font-size:.9em}
+.glyph.decide{color:var(--tm-ok)}.glyph.open{color:var(--tm-bad)}.glyph.act{color:var(--tm-accent)}
+h4{margin:22px 0 8px;font-size:.95rem;font-weight:700;color:var(--tm-muted)}
+.prose>h4:first-child{margin-top:0}
+.points{margin:0 0 6px;padding-left:1.2em}.points li{margin:0 0 8px;padding-left:4px}.points li::marker{color:var(--tm-faint)}
+
+/* 한눈에 보기 */
+.takeaways{list-style:none;margin:0;padding:0}
+.takeaways li{padding:14px 0;border-bottom:1px solid var(--tm-line);font-size:1.12rem;line-height:1.6}
+.takeaways li:first-child{padding-top:0}.takeaways li:last-child{border-bottom:0}
+
+/* 결정·미결·할 일 목록 */
+.list{margin:0;padding:0;list-style:none}
+.list>li{position:relative;padding:12px 0 12px 30px;border-bottom:1px solid var(--tm-line)}
+.list>li:last-child{border-bottom:0}
+.list>li::before{position:absolute;left:4px;top:13px;font-size:.95rem}
+.list.decide>li::before{content:"◆";color:var(--tm-ok)}
+.list.open>li::before{content:"●";color:var(--tm-bad)}
+.list.act>li::before{content:"□";color:var(--tm-accent);font-weight:700}
+.list>li.time{padding-left:0}.list>li.time::before{display:none}
+.list .who{display:inline-block;margin-right:6px;padding:0 8px;border-radius:6px;background:var(--tm-accent-soft);color:var(--tm-accent-ink);font-size:.8rem;font-weight:700}
+.list .due{color:var(--tm-muted);font-size:.88rem}
+
+/* 표 */
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+th,td{text-align:left;padding:11px 10px;border-bottom:1px solid var(--tm-line);vertical-align:top}
+th{color:var(--tm-muted);font-weight:700;font-size:.84rem;white-space:nowrap;border-bottom:2px solid var(--tm-fg)}
+td:first-child{min-width:5.5em;font-weight:600}
+td code,.term{font-family:var(--tm-mono);font-size:.86em;background:var(--tm-card2);padding:1px 6px;border-radius:5px;overflow-wrap:break-word}
+.glossary{table-layout:fixed}.glossary th:nth-child(1),.glossary td:nth-child(1){width:24%}.glossary th:nth-child(3),.glossary td:nth-child(3){width:26%}
+.glossary td.time{line-height:1.5}
+
+/* 논의 흐름 (상세) */
+.topic{display:grid;grid-template-columns:52px minmax(0,1fr);gap:0 16px;padding:24px 0;border-bottom:1px solid var(--tm-line)}
+.topic:last-child{border-bottom:0}
+.topic-head{display:contents}
+.topic-head .num{grid-row:1/span 99;align-self:start;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;
+  border:2px solid var(--tm-seg1);color:var(--tm-accent-ink);font-weight:800;font-size:.95rem}
+.topic-head h3{grid-column:2;margin:0;font-size:1.2rem;font-weight:750}
+.topic-head .time{grid-column:2;margin:2px 0 10px}
+.topic>*{grid-column:2}
+.topic h4{margin:14px 0 6px}
+.topic>h4:first-of-type{display:none}
+.topic p{margin:0 0 10px}
+.topic dl{margin:0}
+.topic dt{font-weight:700;margin:8px 0 2px}.topic dt::before{content:"Q. ";color:var(--tm-accent)}
+.topic dd{margin:0 0 6px 1.6em;color:var(--tm-muted)}.topic dd::before{content:"A. ";font-weight:700}
+.time{font-size:.8rem;color:var(--tm-muted)}span.time{white-space:nowrap}
+blockquote{margin:8px 0;padding:6px 0 6px 16px;border-left:3px solid var(--tm-quote-line);font-size:1rem;color:var(--tm-fg)}
+blockquote .time{margin-right:8px}
+blockquote .orig,blockquote .spk{display:none}
+details.more{margin:6px 0 0}
+details.more>summary{cursor:pointer;color:var(--tm-accent);font-weight:600;font-size:.92rem;list-style:none}
+details.more>summary::-webkit-details-marker{display:none}
+details.more>summary::before{content:"+ "}details.more[open]>summary::before{content:"– "}
+details summary{cursor:pointer;color:var(--tm-accent);font-weight:600}
+
+/* 배지·카드·참고 자료 */
+.badge{display:inline-block;padding:1px 9px;border-radius:999px;font-size:.76rem;font-weight:700;vertical-align:middle;white-space:nowrap}
+.badge.ok,.badge.done{background:var(--tm-ok-soft);color:var(--tm-ok)}
+.badge.diff{background:var(--tm-warn-soft);color:var(--tm-warn)}
+.badge.na,.badge.todo{background:var(--tm-card2);color:var(--tm-muted)}
+.badge.infer,.badge.doing{background:var(--tm-accent-soft);color:var(--tm-accent-ink)}
+.card{background:var(--tm-card);border-radius:var(--tm-radius);padding:18px 22px}
+.card+.card{margin-top:10px}
+.card p{margin:0 0 8px}.card p:last-child{margin-bottom:0}
+section>h3{font-size:1.05rem;margin:26px 0 10px}
+.ref{margin:0 0 10px}.ref a{word-break:break-all;font-weight:600}
+.ref .why{color:var(--tm-muted);font-size:.9rem;margin-top:4px}
+figure{margin:16px 0;padding:16px;border:1px solid var(--tm-line);border-radius:var(--tm-radius)}
+figure svg{width:100%;height:auto;display:block}
+figcaption{color:var(--tm-muted);font-size:.86rem;margin-top:10px}
+
+/* ── 시각 컴포넌트 (모델이 VISUAL·주제 블록 안에 쓴다) ── */
+.visual{margin:0}
+.visual>h3{font-size:1.15rem;margin:0 0 4px}.visual>.why{margin:0 0 16px;color:var(--tm-muted)}
+/* 단계 흐름 */
+.flow{display:flex;flex-wrap:wrap;gap:10px 0;list-style:none;margin:0;padding:0;counter-reset:step}
+.flow>li{flex:1 1 140px;position:relative;padding:14px 26px 14px 14px;background:var(--tm-card);counter-increment:step;
+  clip-path:polygon(0 0,calc(100% - 16px) 0,100% 50%,calc(100% - 16px) 100%,0 100%,16px 50%)}
+.flow>li:first-child{clip-path:polygon(0 0,calc(100% - 16px) 0,100% 50%,calc(100% - 16px) 100%,0 100%)}
+.flow>li:not(:first-child){padding-left:28px;margin-left:-6px}
+.flow>li b{display:block;font-size:.98rem}.flow>li b::before{content:counter(step) ". ";color:var(--tm-accent)}
+.flow>li span{display:block;font-size:.86rem;color:var(--tm-muted);line-height:1.5;margin-top:2px}
+.flow>li.pick{background:var(--tm-ok-soft)}.flow>li.risk{background:var(--tm-bad-soft)}
+@media (max-width:640px){.flow{flex-direction:column}.flow>li,.flow>li:first-child{clip-path:none;margin-left:0;padding:12px 14px;border-left:3px solid var(--tm-accent)}
+  .flow>li:not(:first-child){padding-left:14px;margin-left:0}}
+/* 계층 구조(아키텍처) */
+.arch{display:flex;flex-direction:column;gap:0}
+.arch .layer{display:grid;grid-template-columns:7.5em minmax(0,1fr);gap:12px;align-items:center;padding:14px;border-radius:var(--tm-radius);background:var(--tm-card)}
+.arch .layer>h5{margin:0;font-size:.88rem;color:var(--tm-muted)}
+.arch .nodes{display:flex;flex-wrap:wrap;gap:8px}
+.node{display:inline-block;padding:6px 12px;border-radius:8px;background:var(--tm-bg);border:1.5px solid var(--tm-line);font-weight:650;font-size:.92rem}
+.node small{display:block;font-weight:400;color:var(--tm-muted);font-size:.78rem}
+.node.key{border-color:var(--tm-accent);color:var(--tm-accent-ink)}.node.new{border-color:var(--tm-ok);border-style:dashed}
+.arch .link{margin:0;padding:3px 0 3px calc(7.5em + 26px);font-size:.82rem;color:var(--tm-muted)}
+.arch .link::before{content:"↕ ";color:var(--tm-accent);font-weight:700}
+@media (max-width:640px){.arch .layer{grid-template-columns:1fr}.arch .link{padding-left:14px}}
+/* 선택지 비교 */
+.compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.compare .opt{padding:16px;border-radius:var(--tm-radius);border:1.5px solid var(--tm-line)}
+.compare .opt.pick{border-color:var(--tm-ok);background:var(--tm-ok-soft)}
+.compare .opt>h5{margin:0 0 8px;font-size:1rem}
+.compare .opt>h5 .badge{margin-left:6px}
+.pc{list-style:none;margin:0;padding:0;font-size:.9rem}.pc li{padding:3px 0 3px 20px;position:relative}
+.pc li::before{position:absolute;left:0;font-weight:800}.pc .pro::before{content:"+";color:var(--tm-ok)}.pc .con::before{content:"−";color:var(--tm-bad)}
+/* 변경 전 → 후 */
+.shift{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:stretch}
+.shift>div{padding:16px;border-radius:var(--tm-radius);background:var(--tm-card)}
+.shift>div:last-child{background:var(--tm-accent-soft)}
+.shift>div>h5{margin:0 0 6px;font-size:.88rem;color:var(--tm-muted)}
+.shift>.arrow{align-self:center;background:none;padding:0;font-size:1.4rem;color:var(--tm-accent)}
+@media (max-width:640px){.shift{grid-template-columns:1fr}.shift>.arrow{justify-self:center;transform:rotate(90deg)}}
+
+/* ── 한 단 레이아웃(brief·timeline) ── */
+.solo article{max-width:860px;margin:0 auto}
+.triad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
+.triad>section{margin:0}
+.triad>section>h2{font-size:1.1rem}
+.triad .list>li{font-size:.95rem;padding-top:9px;padding-bottom:9px}
+.triad .list>li::before{top:10px}
+@media (max-width:860px){.triad{grid-template-columns:1fr;gap:0}.triad>section{margin:0 0 40px}}
+
+/* ── 타임라인 ── */
+.stations{list-style:none;margin:0;padding:0;position:relative}
+.stations::before{content:"";position:absolute;left:66px;top:8px;bottom:8px;width:2px;background:var(--tm-line)}
+.station{display:grid;grid-template-columns:52px 30px minmax(0,1fr);gap:0 10px;padding:0 0 34px;position:relative}
+.station:last-child{padding-bottom:0}
+.st-time{text-align:right;font-weight:700;font-size:.92rem;padding-top:1px}
+.st-time small{display:block;font-weight:400;color:var(--tm-faint);font-size:.76rem}
+.st-dot{width:16px;height:16px;margin:5px 0 0 7px;border-radius:50%;background:var(--tm-bg);border:3px solid var(--tm-seg1);position:relative;z-index:1}
+.station:nth-child(even) .st-dot{border-color:var(--tm-seg2)}
+.st-body h3{margin:0 0 4px;font-size:1.2rem;font-weight:750}
+.st-body .gist{margin:0 0 8px}
+.st-body blockquote{margin:10px 0}
+.pins{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.pins li{padding:7px 12px 7px 30px;border-radius:8px;position:relative;font-size:.94rem}
+.pins li::before{position:absolute;left:11px;top:8px}
+.pins .decide{background:var(--tm-ok-soft)}.pins .decide::before{content:"◆";color:var(--tm-ok)}
+.pins .open{background:var(--tm-bad-soft)}.pins .open::before{content:"●";color:var(--tm-bad)}
+.pins .ask{background:var(--tm-card)}.pins .ask::before{content:"?";color:var(--tm-accent);font-weight:800}
+@media (max-width:560px){.stations::before{left:50px}.station{grid-template-columns:40px 24px minmax(0,1fr);gap:0 6px}.st-dot{margin-left:3px}}
+
+footer[data-section=footer]{border-top:1px solid var(--tm-line);padding-top:18px;color:var(--tm-faint);font-size:.82rem;line-height:1.6}
+@media (max-width:560px){body{font-size:15px}main{padding:22px 16px 56px}header h1{font-size:1.65rem}.headline{font-size:1.5rem}
+  th,td{padding:8px 6px}.card{padding:16px}td:first-child{min-width:4em}.takeaways li{font-size:1.04rem}
+  .topic{grid-template-columns:36px minmax(0,1fr);gap:0 12px}.topic-head .num{width:32px;height:32px;font-size:.85rem}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media print{main{max-width:none;padding:0}.layout{display:block}.toc{display:none}.topic,.card,.station{break-inside:avoid}details{display:block}details>summary{display:none}}
+
+</style>
+</head>
+<body class="solo">
+<main>
+<article>
+<header data-section="header">
+  <p class="meeting-name">비전 유통 아키텍처 변경 방안 논의</p>
+  <h1 class="headline">Vision 60의 두뇌를 Jetson Thor로 올리고, 하위 제어는 Jetson Xavier에 남긴다</h1>
+  <dl class="meta">
+    <div><dt>일시</dt><dd>2026-07-27 10:33–12:24</dd></div>
+    <div><dt>소요</dt><dd>1시간 50분</dd></div>
+  </dl>
+  
+</header>
+
+<section data-section="discussion" id="sec-discussion"><h2>시간 순서로 보기</h2>
+<ol class="stations"><li class="station" id="topic-1"><div class="st-time">10:33<small>2분</small></div><span class="st-dot"></span><div class="st-body"><h3>미팅 배경</h3><p class="gist">아키텍처에 맞지 않게 만든 에셋을 다시 만든 경험이 있어, 교육·워크숍 일정을 잡기 전에 구조부터 확인하기로 했습니다.</p></div></li><li class="station" id="topic-2"><div class="st-time">10:35<small>3분</small></div><span class="st-dot"></span><div class="st-body"><h3>Jetson Thor·Jetson Xavier 제어 구조</h3><p class="gist"><b>Jetson Xavier는 VCU, Jetson Thor는 상위 연산</b>으로 나누고 RJ45 이더넷으로 잇습니다. 구동시간이 줄어드는 문제는 YOLO 전용 구성으로 대응합니다.</p><blockquote><span class="time">[10:35]</span>Jetson Xavier는 … 약간 VCU 역할을 하는 거예요.</blockquote><ul class=pins><li class="decide">상위 연산은 Jetson Thor, 하위 제어는 Jetson Xavier로 나눔 — Jetson Xavier가 VCU 역할(액추에이터 제어·통신</li><li class="decide">Jetson Thor에는 YOLO 전용 구성을 올림 — 전력 소모를 줄이기 위한 것으로, 구동시간은 3시간 이상을 기준으로 봄</li><li class="decide">퍼셉션용 상부 카메라를 별도로 장착 — 기본 뎁스 카메라는 아래쪽을, 전면 광각 카메라 두 대는 바닥을 보고 있기 때문</li><li class="open">Jetson Thor 탑재 후 실제 구동시간 — 3시간 이상은 추가 연산이 없을 때 기준이고, Jetson Thor를 올린 뒤의 값은 확인되지 </li></ul></div></li><li class="station" id="topic-3"><div class="st-time">10:38<small>3분</small></div><span class="st-dot"></span><div class="st-body"><h3>센서 구성·제조사</h3><p class="gist">이 주제에서 나온 제안과 반론, 정리된 결론을 한두 문장으로 씁니다.</p><ul class=pins><li class="decide">퍼셉션용 상부 카메라를 별도로 장착 — 기본 뎁스 카메라는 아래쪽을, 전면 광각 카메라 두 대는 바닥을 보고 있기 때문</li><li class="decide">LiDAR 등 추가 센서는 Jetson Thor에 직접 연결 — 센서 구성은 뎁스 카메라, 상부 카메라, 고정형 LiDAR</li><li class="open">Ghost Robotics의 데이터·인터페이스 개방 범위 — 개방해 준다던 범위가 실제로는 제한적이라는 의견이 나옴. 총판 LIG Nex1을 통</li></ul></div></li><li class="station" id="topic-4"><div class="st-time">10:53<small>6분</small></div><span class="st-dot"></span><div class="st-body"><h3>저장·통신·오도메트리</h3><p class="gist">이 주제에서 나온 제안과 반론, 정리된 결론을 한두 문장으로 씁니다.</p><ul class=pins><li class="decide">오도메트리에는 LiDAR 내장 센서를 활용 — 다른 방식은 시프트가 생겨 쓰지 않음</li><li class="open">SLAM에 필요한 컴퓨팅 리소스와 모델 규모 — 파라미터가 너무 커지면 부담이 된다는 데서 답이 끊겨 구체적인 비중·규모가 나오지 않음</li></ul></div></li><li class="station" id="topic-5"><div class="st-time">10:58<small>7분</small></div><span class="st-dot"></span><div class="st-body"><h3>SLAM·가감속 제어</h3><p class="gist">이 주제에서 나온 제안과 반론, 정리된 결론을 한두 문장으로 씁니다.</p><ul class=pins><li class="decide">오도메트리에는 LiDAR 내장 센서를 활용 — 다른 방식은 시프트가 생겨 쓰지 않음</li><li class="decide">가감속 제어는 자체 로직을 Jetson Thor에서 내림 — 로봇은 기본 제어만 맡음. 이렇게 하지 않으면 자체 알고리즘을 얹을 수 없음</li><li class="decide">SLAM은 직접 개발 — FAST-LIO2는 실사용 성능이 떨어져 개량하는 방향으로 전환</li><li class="open">SLAM에 필요한 컴퓨팅 리소스와 모델 규모 — 파라미터가 너무 커지면 부담이 된다는 데서 답이 끊겨 구체적인 비중·규모가 나오지 않음</li><li class="open">계단 전환 시 발(모터)단 제어 방식 — 제어가 필요하다는 점만 확인했고 구현 방식은 논의되지 않음</li></ul></div></li><li class="station" id="topic-6"><div class="st-time">11:16<small>2분</small></div><span class="st-dot"></span><div class="st-body"><h3>AWS 핵심 서비스</h3><p class="gist">이 주제에서 나온 제안과 반론, 정리된 결론을 한두 문장으로 씁니다.</p></div></li><li class="station" id="topic-7"><div class="st-time">11:29<small>6분</small></div><span class="st-dot"></span><div class="st-body"><h3>데이터 파이프라인</h3><p class="gist">이 주제에서 나온 제안과 반론, 정리된 결론을 한두 문장으로 씁니다.</p></div></li><li class="station" id="topic-8"><div class="st-time">11:35<small>1분</small></div><span class="st-dot"></span><div class="st-body"><h3>Isaac Sim 분산 처리</h3><p class="gist">이 주제에서 나온 제안과 반론, 정리된 결론을 한두 문장으로 씁니다.</p></div></li><li class="station" id="topic-9"><div class="st-time">11:36<small>11분</small></div><span class="st-dot"></span><div class="st-body"><h3>산업안전 로봇 데모</h3><p class="gist">이 주제에서 나온 제안과 반론, 정리된 결론을 한두 문장으로 씁니다.</p><ul class=pins><li class="open">현장 인식에 맞는 파운데이션 모델 선정 — Amazon Bedrock 모델 중 무엇이 맞는지는 테스트해 봐야 함</li></ul></div></li><li class="station" id="topic-10"><div class="st-time">11:47<small>10분</small></div><span class="st-dot"></span><div class="st-body"><h3>Isaac Lab 클라우드 학습</h3><p class="gist">이 주제에서 나온 제안과 반론, 정리된 결론을 한두 문장으로 씁니다.</p><ul class=pins><li class="open">하드코딩 플래너의 예외 상황 대응 — 바닥에 물이 있는 경우처럼 예상하지 못한 상황을 어떻게 처리할지 답이 나오지 않음</li></ul></div></li><li class="station" id="topic-11"><div class="st-time">11:59<small>5분</small></div><span class="st-dot"></span><div class="st-body"><h3>대용량 영상 업로드</h3><p class="gist">이 주제에서 나온 제안과 반론, 정리된 결론을 한두 문장으로 씁니다.</p><ul class=pins><li class="open">대용량 360도 영상의 업로드 방식 — SSD 직접 교체, 특정 Wi‑Fi 자동 업로드, 압축이 후보로 나왔으나 확정되지 않음</li></ul></div></li><li class="station" id="topic-12"><div class="st-time">12:16<small>8분</small></div><span class="st-dot"></span><div class="st-body"><h3>현장 일정·지원 방식</h3><p class="gist">이 주제에서 나온 제안과 반론, 정리된 결론을 한두 문장으로 씁니다.</p><ul class=pins><li class="decide">기초 교육 대신 이 프로젝트에 맞춘 아젠다로 교육·워크숍 진행 — 투입 전 8월 말~9월 초까지 세팅을 끝내고 이후 Q&amp;A 세션을 이어감</li><li class="decide">지원 요청은 메일 루프로 받음 — 해도 되는지 묻지 말고 바로 메일을 보내면, 전문가 4명 중 한 명이 답하고 에셋을 공유함</li><li class="open">현장(용인·AIDC) 방문 시기와 빈도 — 울산 시험장은 어렵다는 의견이 나왔고, 방문이 언제 가능한지는 확정되지 않음</li></ul></div></li></ol></section>
+
+<div class="triad">
+<section data-section="decisions" id="sec-decisions"><h2><span class="glyph decide">◆</span>결정</h2>
+<ul class="list decide"><li><b>상위 연산은 Jetson Thor, 하위 제어는 Jetson Xavier</b>로 나눔 — Jetson Xavier가 VCU 역할(액추에이터 제어·통신)을 맡고, <mark class="ok">Vision 60의 RJ45 포트로 이더넷 통신</mark> <span class="time">[10:36]</span></li>
+<li><b>Jetson Thor에는 YOLO 전용 구성을 올림</b> — 전력 소모를 줄이기 위한 것으로, 구동시간은 3시간 이상을 기준으로 봄 <span class="time">[10:37]</span></li>
+<li><b>퍼셉션용 상부 카메라를 별도로 장착</b> — 기본 뎁스 카메라는 아래쪽을, 전면 광각 카메라 두 대는 바닥을 보고 있기 때문 <span class="time">[10:38]</span></li>
+<li><b>LiDAR 등 추가 센서는 Jetson Thor에 직접 연결</b> — 센서 구성은 뎁스 카메라, 상부 카메라, 고정형 LiDAR <span class="time">[10:40]</span></li>
+<li><b>오도메트리에는 LiDAR 내장 센서를 활용</b> — 다른 방식은 시프트가 생겨 쓰지 않음 <span class="time">[10:58]</span></li>
+<li><b>가감속 제어는 자체 로직을 Jetson Thor에서 내림</b> — 로봇은 기본 제어만 맡음. 이렇게 하지 않으면 자체 알고리즘을 얹을 수 없음 <span class="time">[11:04]</span></li>
+<li><b>SLAM은 직접 개발</b> — <mark class="risk">FAST-LIO2는 실사용 성능이 떨어져</mark> 개량하는 방향으로 전환 <span class="time">[11:04]</span></li>
+<li><b>기초 교육 대신 이 프로젝트에 맞춘 아젠다로 교육·워크숍 진행</b> — 투입 전 8월 말~9월 초까지 세팅을 끝내고 이후 Q&amp;A 세션을 이어감 <span class="time">[12:22]</span></li>
+<li><b>지원 요청은 메일 루프로 받음</b> — 해도 되는지 묻지 말고 바로 메일을 보내면, 전문가 4명 중 한 명이 답하고 에셋을 공유함 <span class="time">[12:22]</span></li></ul></section>
+
+<section data-section="action-items" id="sec-actions"><h2><span class="glyph act">□</span>할 일</h2>
+<ul class="list act"><li><span class="who">교육 지원 팀</span>프로젝트에 맞춘 교육 아젠다를 짜고 가능한 날짜 뽑기 <span class="time">[12:21]</span> <span class="due">기한 빠른 시일 내(구체 일자 미정)</span></li><li><span class="who">교육 지원 팀</span>워크숍 형식·일정·아젠다 정리 (AWS IoT Greengrass·AWS IoT Core 파이프라인 테스트 포함) <span class="time">[12:22]</span></li><li><span class="who">미정</span>현장 투입 전 세팅 완료 <span class="time">[12:22]</span> <span class="due">기한 8월 말~9월 초</span></li><li><span class="who">교육 지원 팀</span>메일로 요청이 오면 에셋 공유 <span class="time">[12:22]</span></li><li><span class="who">미정</span>현장에 가기 전에 기존 Vision 60 제품을 직접 확인 <span class="time">[10:38]</span></li><li><span class="who">미정</span>Jetson Thor용 퍼셉션 상부 카메라 별도 장착 <span class="time">[10:38]</span></li><li><span class="who">미정</span>FAST-LIO2를 대체할 자체 SLAM 개발 <span class="time">[11:04]</span></li><li><span class="who">미정</span>Jetson Thor에서 내릴 자체 가감속 제어 로직 구현 <span class="time">[11:04]</span></li><li><span class="who">미정</span>용인 현장 방문(초기에는 수동 주행) 일정 확정 <span class="time">[12:18]</span> <span class="due">기한 8월 중순부터 가능</span></li></ul></section>
+
+<section data-section="open-questions" id="sec-open"><h2><span class="glyph open">●</span>확인할 것</h2>
+<ul class="list open"><li><b>Ghost Robotics의 데이터·인터페이스 개방 범위</b> — 개방해 준다던 범위가 실제로는 제한적이라는 의견이 나옴. 총판 LIG Nex1을 통해 컨택하고 있으며 "방법이 없는 건 아니다"라는 답까지만 들음 <span class="time">[10:40]</span></li>
+<li><b>Jetson Thor 탑재 후 실제 구동시간</b> — 3시간 이상은 추가 연산이 없을 때 기준이고, <mark class="risk">Jetson Thor를 올린 뒤의 값은 확인되지 않음</mark> <span class="time">[10:37]</span></li>
+<li><b>SLAM에 필요한 컴퓨팅 리소스와 모델 규모</b> — 파라미터가 너무 커지면 부담이 된다는 데서 답이 끊겨 구체적인 비중·규모가 나오지 않음 <span class="time">[10:59]</span></li>
+<li><b>계단 전환 시 발(모터)단 제어 방식</b> — 제어가 필요하다는 점만 확인했고 구현 방식은 논의되지 않음 <span class="time">[11:04]</span></li>
+<li><b>현장 인식에 맞는 파운데이션 모델 선정</b> — Amazon Bedrock 모델 중 무엇이 맞는지는 테스트해 봐야 함 <span class="time">[11:46]</span></li>
+<li><b>하드코딩 플래너의 예외 상황 대응</b> — 바닥에 물이 있는 경우처럼 예상하지 못한 상황을 어떻게 처리할지 답이 나오지 않음 <span class="time">[11:57]</span></li>
+<li><b>대용량 360도 영상의 업로드 방식</b> — SSD 직접 교체, 특정 Wi‑Fi 자동 업로드, 압축이 후보로 나왔으나 확정되지 않음 <span class="time">[12:03]</span></li>
+<li><b>현장(용인·AIDC) 방문 시기와 빈도</b> — 울산 시험장은 어렵다는 의견이 나왔고, 방문이 언제 가능한지는 확정되지 않음 <span class="time">[12:17]</span></li></ul></section>
+</div>
+
+<footer data-section="footer">
+  TransMeet로 생성한 타임라인입니다. 모델 global.anthropic.claude-opus-5-5, 미팅 ID c3ca294c, 생성 2026-10-10 13:43
+</footer>
+</article>
+</main>
+</body>
+</html>

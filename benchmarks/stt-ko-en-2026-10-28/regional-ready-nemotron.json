@@ -1,0 +1,168 @@
+{
+  "verified_at": "2026-10-28T19:21:30.868593+00:00",
+  "provider": "nemotron",
+  "region": "ap-northeast-2",
+  "endpoint": {
+    "EndpointName": "transmeet-nemotron-asr",
+    "EndpointArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-asr",
+    "EndpointConfigName": "transmeet-nemotron-asr-warm-v1",
+    "ProductionVariants": [
+      {
+        "VariantName": "AllTraffic",
+        "CurrentInstanceCount": 1,
+        "DesiredInstanceCount": 1,
+        "ManagedInstanceScaling": {
+          "Status": "ENABLED",
+          "MinInstanceCount": 1,
+          "MaxInstanceCount": 1,
+          "ScaleInPolicy": {
+            "Strategy": "IDLE_RELEASE"
+          }
+        }
+      }
+    ],
+    "EndpointStatus": "InService",
+    "CreationTime": "2026-10-28 19:13:20.916000+00:00",
+    "LastModifiedTime": "2026-10-28 19:15:23.838000+00:00",
+    "MetricsConfig": {
+      "EnableDetailedObservability": true
+    },
+    "ResponseMetadata": {
+      "RequestId": "2907ccaa-36d0-4355-9209-2d52949d09de",
+      "HTTPStatusCode": 200,
+      "HTTPHeaders": {
+        "x-amzn-requestid": "2907ccaa-36d0-4355-9209-2d52949d09de",
+        "strict-transport-security": "max-age=47304000; includeSubDomains",
+        "x-frame-options": "DENY",
+        "content-security-policy": "frame-ancestors 'none'",
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "x-content-type-options": "nosniff",
+        "content-type": "application/x-amz-json-1.1",
+        "content-length": "573",
+        "date": "Wed, 28 Oct 2026 19:21:30 GMT"
+      },
+      "RetryAttempts": 0
+    }
+  },
+  "endpoint_config": {
+    "EndpointConfigName": "transmeet-nemotron-asr-warm-v1",
+    "EndpointConfigArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint-config/transmeet-nemotron-asr-warm-v1",
+    "ProductionVariants": [
+      {
+        "VariantName": "AllTraffic",
+        "InitialInstanceCount": 1,
+        "InstanceType": "ml.g5.2xlarge",
+        "ManagedInstanceScaling": {
+          "Status": "ENABLED",
+          "MinInstanceCount": 1,
+          "MaxInstanceCount": 1,
+          "ScaleInPolicy": {
+            "Strategy": "IDLE_RELEASE"
+          }
+        }
+      }
+    ],
+    "CreationTime": "2026-10-28 19:13:20.501000+00:00",
+    "ExecutionRoleArn": "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+    "EnableNetworkIsolation": true,
+    "MetricsConfig": {
+      "EnableDetailedObservability": true
+    },
+    "ResponseMetadata": {
+      "RequestId": "891812d4-1d09-45a1-9593-0a782912dc9b",
+      "HTTPStatusCode": 200,
+      "HTTPHeaders": {
+        "x-amzn-requestid": "891812d4-1d09-45a1-9593-0a782912dc9b",
+        "strict-transport-security": "max-age=47304000; includeSubDomains",
+        "x-frame-options": "DENY",
+        "content-security-policy": "frame-ancestors 'none'",
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "x-content-type-options": "nosniff",
+        "content-type": "application/x-amz-json-1.1",
+        "content-length": "636",
+        "date": "Wed, 28 Oct 2026 19:21:30 GMT"
+      },
+      "RetryAttempts": 0
+    }
+  },
+  "inference_component": {
+    "InferenceComponentName": "transmeet-nemotron-asr-ic-v2",
+    "InferenceComponentArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:inference-component/transmeet-nemotron-asr-ic-v2",
+    "EndpointName": "transmeet-nemotron-asr",
+    "EndpointArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-asr",
+    "VariantName": "AllTraffic",
+    "Specification": {
+      "ModelName": "transmeet-nemotron-asr-model",
+      "StartupParameters": {
+        "ModelDataDownloadTimeoutInSeconds": 2400,
+        "ContainerStartupHealthCheckTimeoutInSeconds": 1800
+      },
+      "ComputeResourceRequirements": {
+        "NumberOfCpuCoresRequired": 2.0,
+        "NumberOfAcceleratorDevicesRequired": 1.0,
+        "MinMemoryRequiredInMb": 8192
+      },
+      "DataCacheConfig": {
+        "EnableCaching": true
+      }
+    },
+    "RuntimeConfig": {
+      "DesiredCopyCount": 1,
+      "CurrentCopyCount": 1,
+      "PlacementStatus": [
+        {
+          "InstanceType": "ml.g5.2xlarge",
+          "CurrentCopyCount": 1
+        }
+      ]
+    },
+    "CreationTime": "2026-10-28 19:15:42.027000+00:00",
+    "LastModifiedTime": "2026-10-28 19:21:01.248000+00:00",
+    "InferenceComponentStatus": "InService",
+    "ResponseMetadata": {
+      "RequestId": "f5cfc163-c3d8-4fca-9f19-54c59fb0a6ec",
+      "HTTPStatusCode": 200,
+      "HTTPHeaders": {
+        "x-amzn-requestid": "f5cfc163-c3d8-4fca-9f19-54c59fb0a6ec",
+        "strict-transport-security": "max-age=47304000; includeSubDomains",
+        "x-frame-options": "DENY",
+        "content-security-policy": "frame-ancestors 'none'",
+        "cache-control": "no-cache, no-store, must-revalidate",
+        "x-content-type-options": "nosniff",
+        "content-type": "application/x-amz-json-1.1",
+        "content-length": "929",
+        "date": "Wed, 28 Oct 2026 19:21:30 GMT"
+      },
+      "RetryAttempts": 0
+    }
+  },
+  "scalable_targets": [
+    {
+      "ServiceNamespace": "sagemaker",
+      "ResourceId": "inference-component/transmeet-nemotron-asr-ic-v2",
+      "ScalableDimension": "sagemaker:inference-component:DesiredCopyCount",
+      "MinCapacity": 1,
+      "MaxCapacity": 1,
+      "RoleARN": "arn:aws:iam::913524902871:role/aws-service-role/sagemaker.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_SageMakerEndpoint",
+      "CreationTime": "2026-10-28 19:21:05.655000+00:00",
+      "SuspendedState": {
+        "DynamicScalingInSuspended": false,
+        "DynamicScalingOutSuspended": false,
+        "ScheduledScalingSuspended": false
+      },
+      "ScalableTargetARN": "arn:aws:application-autoscaling:ap-northeast-2:913524902871:scalable-target/056m26bf798def4144c3913e084723f455a9"
+    }
+  ],
+  "benchmark_environment": {
+    "REGION": "ap-northeast-2",
+    "QWEN_ASR_REGION": "ap-northeast-2",
+    "NEMOTRON_ASR_REGION": "ap-northeast-2",
+    "QWEN_ASR_ENDPOINT": "transmeet-qwen3-asr",
+    "QWEN_ASR_INFERENCE_COMPONENT": "transmeet-qwen3-asr-ic-v2",
+    "NEMOTRON_ASR_ENDPOINT": "transmeet-nemotron-asr",
+    "NEMOTRON_ASR_INFERENCE_COMPONENT": "transmeet-nemotron-asr-ic-v2",
+    "NEMOTRON_STREAMING_ENABLED": "false",
+    "STT_IDLE_SECONDS": "0"
+  },
+  "timing_note": "Endpoint/model initialization completed before measurement. No unscored inference warm-up is used; the first scored request may include lazy runtime initialization."
+}

@@ -137,3 +137,7 @@ The user requested reclaiming the entire bottom control row and keeping the titl
 - The controls measure the current mobile editor or published-page action area with ResizeObserver. Recording controls avoid the notes composer and both normal and expanded page-footer actions.
 - Existing engine readiness labels, recording-disabled conditions, and status content from concurrent STT work are preserved.
 - Current verification: 26 unit tests passed, browser checks cover all three prior refinements plus floating-menu keyboard behavior, title editing, compact heading, mobile/landscape positioning, and published-page button hit targets. The local API fixture preserves requested meeting IDs when returning meeting details.
+
+## Placement clarification
+
+The user clarified that the floating recorder belongs at the **conversation panel's** lower-right corner, not at the right edge of the entire workspace. Its anchor now measures that panel relative to the workspace and follows panel resizing or collapse. On mobile, the visible content panel is used and editor/page-action clearance remains active. Desktop notes and summary panels no longer reserve space for a recorder that is in the conversation panel.

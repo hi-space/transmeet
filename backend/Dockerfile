@@ -9,6 +9,13 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Transcribe and SageMaker HTTP/2 require incompatible awscrt versions.
+# Keep their native libraries in separate processes and Python environments.
+RUN python -m venv /opt/nemotron-stream \
+    && /opt/nemotron-stream/bin/pip install --no-cache-dir \
+       "aws-sdk-sagemaker-runtime-http2[awscrt]==0.12.0" "boto3==1.43.106"
+ENV NEMOTRON_STREAM_PYTHON=/opt/nemotron-stream/bin/python
+
 COPY app/ ./app/
 
 EXPOSE 8000

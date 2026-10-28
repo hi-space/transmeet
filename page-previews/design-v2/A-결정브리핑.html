@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="transmeet:meeting-id" content="c3ca294c-45c1-4d8a-b67d-e9cdc1c6c0b1">
+<meta name="transmeet:generated-at" content="2026-10-28T22:06:20.569002+09:00">
+<meta name="transmeet:model" content="global.anthropic.claude-opus-5-5">
+<meta name="transmeet:style" content="design">
+<title>Vision 60 아키텍처 변경 — 결정 브리핑</title>
+<style>
+:root{
+  --paper:#f5f7f8;--ink:#15212b;--steel:#56666f;--line:#cfd8de;--chip:#ffffff;
+  --new:#0a7480;--new-soft:#dcf0f1;
+  --old:#6f7d88;--old-soft:#e9edf0;
+  --cloud:#3c4fa0;--cloud-soft:#e4e8f6;
+  --ok:#2a8549;--ok-bg:#d3eedb;
+  --risk:#bf3f29;--risk-soft:#fbe6e1;--risk-bg:#fbd6cd;
+  --hi:#ffe47a;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#0f161b;--ink:#e3eaef;--steel:#9badb9;--line:#2b3a44;--chip:#16212a;
+    --new:#3fc4cf;--new-soft:#11323a;
+    --old:#8e9ba5;--old-soft:#1c252c;
+    --cloud:#8d9ff0;--cloud-soft:#1b2241;
+    --ok:#62cf88;--ok-bg:#1e4a2e;
+    --risk:#ff7f66;--risk-soft:#3a1c17;--risk-bg:#5b2519;
+    --hi:#6a590f;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;font-size:16.5px;line-height:1.6;word-break:keep-all;overflow-wrap:anywhere}
+main{max-width:1120px;margin:0 auto;padding:0 20px 64px}
+a{color:var(--cloud)}
+mark{background:var(--hi);color:inherit;padding:0 .12em;border-radius:2px}
+mark.ok{background:var(--ok-bg)}
+mark.risk{background:var(--risk-bg)}
+header{margin:40px 0 28px;padding:4px 0 4px 22px;border-left:10px solid var(--new)}
+.meet{margin:0 0 10px;color:var(--steel);font-size:15px}
+h1{margin:0 0 16px;font-size:clamp(28px,5.2vw,46px);line-height:1.2;font-weight:800;letter-spacing:-0.025em}
+.lead{margin:0;max-width:760px;font-size:19px;line-height:1.7}
+h2{margin:0 0 6px;font-size:22px;font-weight:800;letter-spacing:-0.01em}
+h3{margin:0 0 10px;font-size:19px;font-weight:800;letter-spacing:-0.01em}
+figure{margin:0}
+svg{display:block;width:100%;height:auto;font-family:inherit}
+figcaption{margin-top:10px;color:var(--steel);font-size:15px;max-width:760px}
+.hero{margin:0 0 44px;padding:20px 0 0;border-top:1px solid var(--line)}
+.hero-tall{display:none}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:12px 0 0;padding:0;list-style:none;font-size:14px;color:var(--steel)}
+.legend li{display:flex;align-items:center;gap:7px}
+.sw{display:inline-block;width:18px;height:12px;border-radius:2px;border:2px solid}
+.sw.n{background:var(--new-soft);border-color:var(--new)}
+.sw.o{background:var(--old-soft);border-color:var(--old)}
+.sw.c{background:var(--cloud-soft);border-color:var(--cloud)}
+.sw.r{background:var(--risk-soft);border-color:var(--risk);border-style:dashed}
+.board{display:grid;grid-template-columns:minmax(0,1fr);gap:36px 40px;margin-bottom:48px}
+.board>section{min-width:0;padding-top:12px;border-top:4px solid var(--line)}
+.board>section.dec{border-top-color:var(--ok)}
+.board>section.act{border-top-color:var(--new)}
+.board>section.risk{border-top-color:var(--risk)}
+.items{list-style:none;margin:0;padding:0}
+.items li{padding:10px 0;border-bottom:1px solid var(--line)}
+.items li:last-child{border-bottom:0}
+.when{color:var(--steel);white-space:nowrap}
+.note{margin:12px 0 0;font-size:15px;color:var(--steel)}
+.tag{display:inline-block;margin-left:4px;padding:0 6px;border:1px solid var(--steel);border-radius:3px;font-size:12.5px;color:var(--steel);vertical-align:1px}
+.detail{margin-top:8px}
+.detail>h2{margin-bottom:20px;padding-top:12px;border-top:1px solid var(--line)}
+.split{display:grid;grid-template-columns:minmax(0,1fr);gap:18px 40px;margin-bottom:40px}
+.split>*{min-width:0}
+.prose{max-width:760px}
+.prose ul{margin:0;padding-left:18px}
+.prose li{margin:0 0 8px}
+details{margin-top:12px;padding:12px 0;border-top:1px solid var(--line)}
+summary{cursor:pointer;font-weight:700}
+details ul{margin:10px 0 0;padding-left:18px;max-width:760px}
+details li{margin-bottom:6px;font-size:15px}
+@media (min-width:900px){
+  .board{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .board>section.risk{grid-column:1/-1}
+  .split{grid-template-columns:minmax(0,360px) minmax(0,1fr)}
+}
+@media (max-width:640px){
+  body{font-size:16px}
+  header{margin-top:24px;padding-left:14px;border-left-width:7px}
+  .lead{font-size:17.5px}
+  .hero-wide{display:none}
+  .hero-tall{display:block}
+}
+@media print{
+  body{background:#fff;color:#000;font-size:11pt}
+  main{max-width:none;padding:0}
+  .hero-wide{display:block}
+  .hero-tall{display:none}
+  .board,.split,figure,li{break-inside:avoid}
+  a{color:#000}
+}
+</style>
+</head>
+<body>
+<main>
+
+<header data-section="header">
+  <p class="meet">Vision 60 아키텍처 변경 방안 논의 — <time datetime="2026-07-27T10:33">2026년 7월 27일 10:33</time>부터 1시간 50분</p>
+  <h1>Vision 60의 상위 연산을 Jetson Thor로 옮긴다</h1>
+  <p class="lead"><mark>Jetson Xavier는 VCU로 남아 액추에이터 제어와 기본 통신만 맡는다.</mark> 퍼셉션·주행 플래닝·매핑·관제는 새로 올리는 Jetson Thor가 맡는다. 저수준 모터 제어 접근과 교육 일정은 아직 정하지 못했다.</p>
+</header>
+
+<figure class="hero">
+  <svg class="hero-wide" viewBox="0 0 720 446" role="img">
+    <title>새 Vision 60 연산 구조 — 클라우드, Jetson Thor, Jetson Xavier 세 층</title>
+    <defs>
+      <marker id="ha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--steel)"/></marker>
+    </defs>
+    <text x="20" y="22" font-size="13" font-weight="700" fill="var(--cloud)">클라우드 (AWS)</text>
+    <rect x="20" y="32" width="200" height="58" rx="6" fill="var(--cloud-soft)" stroke="var(--cloud)" stroke-width="1.5"/>
+    <text x="120" y="56" font-size="15" font-weight="700" text-anchor="middle" fill="var(--ink)">AWS IoT Greengrass</text>
+    <text x="120" y="78" font-size="13" text-anchor="middle" fill="var(--steel)">모델 배포</text>
+    <rect x="236" y="32" width="200" height="58" rx="6" fill="var(--cloud-soft)" stroke="var(--cloud)" stroke-width="1.5"/>
+    <text x="336" y="56" font-size="15" font-weight="700" text-anchor="middle" fill="var(--ink)">AWS IoT Core</text>
+    <text x="336" y="78" font-size="13" text-anchor="middle" fill="var(--steel)">MQTT 메트릭·원격 명령</text>
+    <rect x="452" y="32" width="248" height="58" rx="6" fill="var(--cloud-soft)" stroke="var(--cloud)" stroke-width="1.5"/>
+    <text x="576" y="56" font-size="14.5" font-weight="700" text-anchor="middle" fill="var(--ink)">Amazon Kinesis Video Streams</text>
+    <text x="576" y="78" font-size="13" text-anchor="middle" fill="var(--steel)">실시간 영상 (WebRTC·HLS)</text>
+    <line x1="120" y1="92" x2="120" y2="146" stroke="var(--steel)" stroke-width="2" marker-end="url(#ha)"/>
+    <line x1="336" y1="94" x2="336" y2="146" stroke="var(--steel)" stroke-width="2" marker-start="url(#ha)" marker-end="url(#ha)"/>
+    <line x1="490" y1="148" x2="490" y2="94" stroke="var(--steel)" stroke-width="2" marker-end="url(#ha)"/>
+    <text x="140" y="124" font-size="13" font-weight="700" fill="var(--risk)">현장 네트워크 전제</text>
+
+    <rect x="20" y="150" width="500" height="128" rx="8" fill="var(--new-soft)" stroke="var(--new)" stroke-width="2.5"/>
+    <text x="36" y="177"><tspan font-size="18" font-weight="800" fill="var(--new)">Jetson Thor</tspan><tspan dx="10" font-size="13" fill="var(--steel)">상위 연산 · 새로 올림</tspan></text>
+    <rect x="36" y="192" width="150" height="32" rx="4" fill="var(--chip)" stroke="var(--new)"/>
+    <text x="111" y="213" font-size="14" text-anchor="middle" fill="var(--ink)">퍼셉션 (YOLO)</text>
+    <rect x="196" y="192" width="150" height="32" rx="4" fill="var(--chip)" stroke="var(--new)"/>
+    <text x="271" y="213" font-size="14" text-anchor="middle" fill="var(--ink)">주행 플래닝</text>
+    <rect x="356" y="192" width="150" height="32" rx="4" fill="var(--chip)" stroke="var(--new)"/>
+    <text x="431" y="213" font-size="14" text-anchor="middle" fill="var(--ink)">매핑 (자체 SLAM)</text>
+    <rect x="36" y="234" width="150" height="32" rx="4" fill="var(--chip)" stroke="var(--new)"/>
+    <text x="111" y="255" font-size="14" text-anchor="middle" fill="var(--ink)">가감속 제어 (자체)</text>
+    <rect x="196" y="234" width="150" height="32" rx="4" fill="var(--chip)" stroke="var(--new)"/>
+    <text x="271" y="255" font-size="14" text-anchor="middle" fill="var(--ink)">관제 데이터 업로드</text>
+    <rect x="356" y="234" width="150" height="32" rx="4" fill="var(--chip)" stroke="var(--new)"/>
+    <text x="431" y="255" font-size="14" text-anchor="middle" fill="var(--ink)">YOLO 전용 연산 장치</text>
+
+    <line x1="520" y1="178" x2="544" y2="178" stroke="var(--new)" stroke-width="2"/>
+    <line x1="520" y1="250" x2="544" y2="250" stroke="var(--new)" stroke-width="2"/>
+    <rect x="544" y="150" width="156" height="56" rx="6" fill="var(--new-soft)" stroke="var(--new)" stroke-width="2"/>
+    <text x="622" y="174" font-size="15" font-weight="700" text-anchor="middle" fill="var(--ink)">LiDAR</text>
+    <text x="622" y="195" font-size="13" text-anchor="middle" fill="var(--steel)">직결 · 내장 IMU 사용</text>
+    <rect x="544" y="222" width="156" height="56" rx="6" fill="var(--new-soft)" stroke="var(--new)" stroke-width="2"/>
+    <text x="622" y="246" font-size="15" font-weight="700" text-anchor="middle" fill="var(--ink)">상부 카메라</text>
+    <text x="622" y="267" font-size="13" text-anchor="middle" fill="var(--steel)">퍼셉션용 새로 추가</text>
+
+    <line x1="270" y1="282" x2="270" y2="324" stroke="var(--steel)" stroke-width="2.5" marker-start="url(#ha)" marker-end="url(#ha)"/>
+    <text x="284" y="300" font-size="14" font-weight="700" fill="var(--ink)">RJ45 이더넷</text>
+    <text x="284" y="318" font-size="13" fill="var(--risk)">대역폭 미검토 (추정)</text>
+
+    <rect x="20" y="328" width="500" height="92" rx="8" fill="var(--old-soft)" stroke="var(--old)" stroke-width="1.5"/>
+    <text x="36" y="355"><tspan font-size="18" font-weight="800" fill="var(--ink)">Jetson Xavier</tspan><tspan dx="10" font-size="13" fill="var(--steel)">VCU · Vision 60 기존 내장 컴퓨터</tspan></text>
+    <rect x="36" y="372" width="150" height="32" rx="4" fill="var(--chip)" stroke="var(--old)"/>
+    <text x="111" y="393" font-size="14" text-anchor="middle" fill="var(--ink)">액추에이터 제어</text>
+    <rect x="196" y="372" width="150" height="32" rx="4" fill="var(--chip)" stroke="var(--old)"/>
+    <text x="271" y="393" font-size="14" text-anchor="middle" fill="var(--ink)">기본 통신</text>
+    <rect x="356" y="372" width="150" height="32" rx="4" fill="var(--chip)" stroke="var(--old)"/>
+    <text x="431" y="393" font-size="14" text-anchor="middle" fill="var(--ink)">평지·경사 보행</text>
+
+    <line x1="520" y1="354" x2="544" y2="354" stroke="var(--old)" stroke-width="2"/>
+    <line x1="520" y1="412" x2="544" y2="412" stroke="var(--risk)" stroke-width="2" stroke-dasharray="5 4"/>
+    <rect x="544" y="328" width="156" height="52" rx="6" fill="var(--old-soft)" stroke="var(--old)" stroke-width="1.5"/>
+    <text x="622" y="350" font-size="15" font-weight="700" text-anchor="middle" fill="var(--ink)">내장 뎁스 카메라</text>
+    <text x="622" y="370" font-size="13" text-anchor="middle" fill="var(--steel)">바닥을 향함</text>
+    <rect x="544" y="388" width="156" height="52" rx="6" fill="var(--risk-soft)" stroke="var(--risk)" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="622" y="410" font-size="15" font-weight="700" text-anchor="middle" fill="var(--ink)">발 모터 제어</text>
+    <text x="622" y="430" font-size="13" text-anchor="middle" fill="var(--risk)">계단 전환 · 접근 미확인</text>
+  </svg>
+
+  <svg class="hero-tall" viewBox="0 0 360 672" role="img">
+    <title>새 Vision 60 연산 구조 — 세로 배치</title>
+    <defs>
+      <marker id="hb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--steel)"/></marker>
+    </defs>
+    <text x="10" y="18" font-size="13" font-weight="700" fill="var(--cloud)">클라우드 (AWS)</text>
+    <rect x="10" y="28" width="340" height="40" rx="6" fill="var(--cloud-soft)" stroke="var(--cloud)" stroke-width="1.5"/>
+    <text x="22" y="54" font-size="14"><tspan font-weight="700" fill="var(--ink)">AWS IoT Greengrass</tspan><tspan dx="8" fill="var(--steel)">모델 배포</tspan></text>
+    <rect x="10" y="74" width="340" height="40" rx="6" fill="var(--cloud-soft)" stroke="var(--cloud)" stroke-width="1.5"/>
+    <text x="22" y="100" font-size="14"><tspan font-weight="700" fill="var(--ink)">AWS IoT Core</tspan><tspan dx="8" fill="var(--steel)">MQTT 메트릭·명령</tspan></text>
+    <rect x="10" y="120" width="340" height="40" rx="6" fill="var(--cloud-soft)" stroke="var(--cloud)" stroke-width="1.5"/>
+    <text x="22" y="146" font-size="14"><tspan font-weight="700" fill="var(--ink)">Amazon Kinesis Video Streams</tspan><tspan dx="8" fill="var(--steel)">영상</tspan></text>
+    <line x1="180" y1="164" x2="180" y2="204" stroke="var(--steel)" stroke-width="2" marker-start="url(#hb)" marker-end="url(#hb)"/>
+    <text x="192" y="189" font-size="13" font-weight="700" fill="var(--risk)">현장 네트워크 전제</text>
+
+    <rect x="10" y="208" width="340" height="160" rx="8" fill="var(--new-soft)" stroke="var(--new)" stroke-width="2.5"/>
+    <text x="22" y="234"><tspan font-size="17" font-weight="800" fill="var(--new)">Jetson Thor</tspan><tspan dx="8" font-size="13" fill="var(--steel)">상위 연산 · 새로 올림</tspan></text>
+    <rect x="22" y="248" width="152" height="30" rx="4" fill="var(--chip)" stroke="var(--new)"/>
+    <text x="98" y="268" font-size="14" text-anchor="middle" fill="var(--ink)">퍼셉션 (YOLO)</text>
+    <rect x="186" y="248" width="152" height="30" rx="4" fill="var(--chip)" stroke="var(--new)"/>
+    <text x="262" y="268" font-size="14" text-anchor="middle" fill="var(--ink)">주행 플래닝</text>
+    <rect x="22" y="286" width="152" height="30" rx="4" fill="var(--chip)" stroke="var(--new)"/>
+    <text x="98" y="306" font-size="14" text-anchor="middle" fill="var(--ink)">매핑 (자체 SLAM)</text>
+    <rect x="186" y="286" width="152" height="30" rx="4" fill="var(--chip)" stroke="var(--new)"/>
+    <text x="262" y="306" font-size="14" text-anchor="middle" fill="var(--ink)">가감속 제어 (자체)</text>
+    <rect x="22" y="324" width="152" height="30" rx="4" fill="var(--chip)" stroke="var(--new)"/>
+    <text x="98" y="344" font-size="14" text-anchor="middle" fill="var(--ink)">관제 데이터 업로드</text>
+    <rect x="186" y="324" width="152" height="30" rx="4" fill="var(--chip)" stroke="var(--new)"/>
+    <text x="262" y="344" font-size="14" text-anchor="middle" fill="var(--ink)">YOLO 전용 연산 장치</text>
+
+    <line x1="92" y1="368" x2="92" y2="380" stroke="var(--new)" stroke-width="2"/>
+    <line x1="267" y1="368" x2="267" y2="380" stroke="var(--new)" stroke-width="2"/>
+    <rect x="10" y="380" width="165" height="48" rx="6" fill="var(--new-soft)" stroke="var(--new)" stroke-width="2"/>
+    <text x="92" y="400" font-size="15" font-weight="700" text-anchor="middle" fill="var(--ink)">LiDAR</text>
+    <text x="92" y="419" font-size="13" text-anchor="middle" fill="var(--steel)">직결 · 내장 IMU</text>
+    <rect x="185" y="380" width="165" height="48" rx="6" fill="var(--new-soft)" stroke="var(--new)" stroke-width="2"/>
+    <text x="267" y="400" font-size="15" font-weight="700" text-anchor="middle" fill="var(--ink)">상부 카메라</text>
+    <text x="267" y="419" font-size="13" text-anchor="middle" fill="var(--steel)">퍼셉션용 추가</text>
+
+    <line x1="180" y1="436" x2="180" y2="480" stroke="var(--steel)" stroke-width="2.5" marker-start="url(#hb)" marker-end="url(#hb)"/>
+    <text x="192" y="454" font-size="14" font-weight="700" fill="var(--ink)">RJ45 이더넷</text>
+    <text x="192" y="472" font-size="13" fill="var(--risk)">대역폭 미검토 (추정)</text>
+
+    <rect x="10" y="484" width="340" height="118" rx="8" fill="var(--old-soft)" stroke="var(--old)" stroke-width="1.5"/>
+    <text x="22" y="510"><tspan font-size="17" font-weight="800" fill="var(--ink)">Jetson Xavier</tspan><tspan dx="8" font-size="13" fill="var(--steel)">VCU · 기존 내장</tspan></text>
+    <rect x="22" y="524" width="152" height="30" rx="4" fill="var(--chip)" stroke="var(--old)"/>
+    <text x="98" y="544" font-size="14" text-anchor="middle" fill="var(--ink)">액추에이터 제어</text>
+    <rect x="186" y="524" width="152" height="30" rx="4" fill="var(--chip)" stroke="var(--old)"/>
+    <text x="262" y="544" font-size="14" text-anchor="middle" fill="var(--ink)">기본 통신</text>
+    <rect x="22" y="562" width="152" height="30" rx="4" fill="var(--chip)" stroke="var(--old)"/>
+    <text x="98" y="582" font-size="14" text-anchor="middle" fill="var(--ink)">평지·경사 보행</text>
+
+    <line x1="92" y1="602" x2="92" y2="614" stroke="var(--old)" stroke-width="2"/>
+    <line x1="267" y1="602" x2="267" y2="614" stroke="var(--risk)" stroke-width="2" stroke-dasharray="4 3"/>
+    <rect x="10" y="614" width="165" height="50" rx="6" fill="var(--old-soft)" stroke="var(--old)" stroke-width="1.5"/>
+    <text x="92" y="636" font-size="15" font-weight="700" text-anchor="middle" fill="var(--ink)">내장 뎁스 카메라</text>
+    <text x="92" y="656" font-size="13" text-anchor="middle" fill="var(--steel)">바닥을 향함</text>
+    <rect x="185" y="614" width="165" height="50" rx="6" fill="var(--risk-soft)" stroke="var(--risk)" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="267" y="636" font-size="15" font-weight="700" text-anchor="middle" fill="var(--ink)">발 모터 제어</text>
+    <text x="267" y="656" font-size="13" text-anchor="middle" fill="var(--risk)">계단 전환 · 접근 미확인</text>
+  </svg>
+  <ul class="legend">
+    <li><span class="sw n"></span>새로 올리는 부분</li>
+    <li><span class="sw o"></span>Vision 60에 원래 있던 부분</li>
+    <li><span class="sw c"></span>AWS 클라우드</li>
+    <li><span class="sw r"></span>아직 확인하지 못한 부분</li>
+  </ul>
+  <figcaption>연산은 위 층으로 올라가고, 아래 층의 Jetson Xavier는 본체를 움직이는 일만 한다.</figcaption>
+</figure>
+
+<div class="board">
+  <section class="dec" data-section="decisions">
+    <h2>정해진 것</h2>
+    <ul class="items">
+      <li><b>Jetson Xavier는 VCU</b> — 액추에이터 제어와 기본 통신만 맡는다.</li>
+      <li><b>Jetson Thor가 상위 연산</b> — 퍼셉션·플래닝·매핑·관제를 맡고 RJ45 이더넷으로 Jetson Xavier와 잇는다.</li>
+      <li><b>센서 배치</b> — LiDAR는 Jetson Thor에 직결하고, <mark class="ok">뎁스 카메라가 바닥을 봐서 상부 카메라를 따로 단다.</mark></li>
+      <li><b>오도메트리</b> — 본체 IMU는 시프트가 생겨 쓰지 않고 LiDAR 내장 IMU를 쓴다.</li>
+      <li><b>SLAM·가감속 제어는 자체 개발</b> — FAST-LIO2는 실사용 성능이 부족했다.</li>
+      <li><b>클라우드 시작 구성</b> — <mark>AWS IoT Greengrass·AWS IoT Core·Amazon Kinesis Video Streams 세 가지로 간다.</mark> RL 정책만 학습하므로 Amazon SageMaker AI는 쓰지 않는다.</li>
+    </ul>
+  </section>
+
+  <section class="act" data-section="action-items">
+    <h2>할 일</h2>
+    <ul class="items">
+      <li><b>AWS 팀</b> — <mark>기초 교육 대신 포커스한 교육 아젠다와 가능한 날짜를 뽑는다</mark> — <span class="when">기한 미정</span></li>
+      <li><b>AWS 팀</b> — 워크숍 형식·일정·아젠다를 뽑는다 — <span class="when">기한 미정</span></li>
+      <li><b>담당 미정</b> — 현장 투입 전 세팅을 끝낸다 — <span class="when">8월 말~9월 초</span></li>
+      <li><b>담당 미정</b> — 로봇을 현장에 수동 운용으로 투입한다 — <span class="when">8월 중순부터 가능</span></li>
+      <li><b>담당 미정</b> — 현장 영상으로 Amazon Bedrock VLM 후보를 테스트해 고른다 — <span class="when">기한 미정</span></li>
+      <li><b>AWS 팀</b> — 메일 루프로 문의를 받고 전문가 네 명 중 한 명이 답하며 에셋을 공유한다</li>
+    </ul>
+    <p class="note">이번 지원은 AWS 팀의 고객 지원 프로그램으로 진행한다. AWS 팀은 원래 파트너를 직접 지원하지 않는다.</p>
+  </section>
+
+  <section class="risk" data-section="open-questions">
+    <h2>남은 위험·확인할 것</h2>
+    <ul class="items">
+      <li><b>저수준 모터 제어</b> — <mark class="risk">계단 전환에 필요한 발 모터 제어를 Ghost Robotics가 열어 줄지 아직 모른다.</mark> 데이터 개방도 약속보다 제한적이다.</li>
+      <li><b>구동시간</b> — Jetson Thor·상부 카메라·LiDAR를 단 상태로는 아직 재지 않았다. 기존 3시간 이상은 추가 장비가 없을 때 기준이다.</li>
+      <li><b>저장 장치</b> — <mark class="risk">Jetson Thor 모듈에는 기본 1TB 저장 장치가 없다.</mark> SSD를 바꾸려면 그래픽카드를 먼저 떼야 한다.</li>
+      <li><b>현장 네트워크</b> — 실시간 영상·원격 제어는 네트워크가 있어야 한다. 용인 현장의 망 조건은 모른다.<span class="tag">추정</span></li>
+      <li><b>교육 일정</b> — 날짜와 아젠다가 비어 있다. 워크숍이 세팅보다 늦으면 에셋을 다시 만들 수 있다.<span class="tag">추정</span></li>
+    </ul>
+  </section>
+</div>
+
+<div class="detail">
+  <h2>자세히</h2>
+
+  <section class="split" id="edge">
+    <figure>
+      <svg viewBox="0 0 360 320" role="img">
+        <title>엣지 YOLO 판단과 Amazon Bedrock VLM 분기</title>
+        <defs>
+          <marker id="va" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--steel)"/></marker>
+        </defs>
+        <rect x="80" y="8" width="200" height="36" rx="6" fill="var(--old-soft)" stroke="var(--old)" stroke-width="1.5"/>
+        <text x="180" y="31" font-size="14" text-anchor="middle" fill="var(--ink)">로봇 카메라 영상</text>
+        <line x1="180" y1="44" x2="180" y2="66" stroke="var(--steel)" stroke-width="2" marker-end="url(#va)"/>
+        <rect x="40" y="68" width="280" height="54" rx="6" fill="var(--new-soft)" stroke="var(--new)" stroke-width="2"/>
+        <text x="180" y="91" font-size="15" font-weight="700" text-anchor="middle" fill="var(--ink)">YOLO + 결정 트리</text>
+        <text x="180" y="111" font-size="13" text-anchor="middle" fill="var(--steel)">엣지 · 데모는 Jetson Orin</text>
+        <line x1="180" y1="122" x2="180" y2="146" stroke="var(--steel)" stroke-width="2" marker-end="url(#va)"/>
+        <polygon points="180,148 300,182 180,216 60,182" fill="var(--chip)" stroke="var(--steel)" stroke-width="1.5"/>
+        <text x="180" y="187" font-size="14" text-anchor="middle" fill="var(--ink)">confidence 충분?</text>
+        <polyline points="60,182 30,182 30,246" fill="none" stroke="var(--ok)" stroke-width="2" marker-end="url(#va)"/>
+        <text x="12" y="172" font-size="13" font-weight="700" fill="var(--ok)">충분</text>
+        <polyline points="300,182 330,182 330,246" fill="none" stroke="var(--cloud)" stroke-width="2" marker-end="url(#va)"/>
+        <text x="350" y="172" font-size="13" font-weight="700" text-anchor="end" fill="var(--cloud)">낮음</text>
+        <rect x="10" y="248" width="160" height="60" rx="6" fill="var(--chip)" stroke="var(--ok)" stroke-width="2"/>
+        <text x="90" y="273" font-size="14" font-weight="700" text-anchor="middle" fill="var(--ink)">엣지에서 바로 판단</text>
+        <text x="90" y="294" font-size="13" text-anchor="middle" fill="var(--steel)">대부분 여기서 거른다</text>
+        <rect x="190" y="248" width="160" height="60" rx="6" fill="var(--cloud-soft)" stroke="var(--cloud)" stroke-width="2"/>
+        <text x="270" y="273" font-size="14" font-weight="700" text-anchor="middle" fill="var(--ink)">Amazon Bedrock VLM</text>
+        <text x="270" y="294" font-size="13" text-anchor="middle" fill="var(--steel)">토큰 과금 · 왕복 지연</text>
+      </svg>
+      <figcaption>엣지에서 YOLO로 거르고, 확신이 낮은 장면만 클라우드 VLM이 판단한다.</figcaption>
+    </figure>
+    <div class="prose">
+      <h3>AWS 산업안전 데모와 같은 구조로 간다<span class="tag">추정</span></h3>
+      <ul>
+        <li><b>모델 배포</b> — 클라우드에서 학습한 YOLO를 AWS IoT Greengrass로 Jetson Orin에 배포했다.</li>
+        <li><b>영상·메트릭·명령</b> — 영상은 Amazon Kinesis Video Streams, 메트릭과 원격 명령은 AWS IoT Core(MQTT), 화면은 Grafana.</li>
+        <li><b>예외 상황</b> — <mark>YOLO confidence가 낮을 때만 Amazon Bedrock VLM에 보낸다.</mark> 바닥의 물처럼 룰 기반 플래너가 못 다루는 상황에 쓸 수 있다.</li>
+        <li><b>비용·개발</b> — IoT 서비스가 가장 싸고 Amazon Bedrock은 토큰 과금이다. 데모 기능은 직접 개발해야 한다.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="split" id="upload">
+    <figure>
+      <svg viewBox="0 0 360 336" role="img">
+        <title>360도 영상 업로드 경로 세 가지와 압축 단계</title>
+        <defs>
+          <marker id="ua" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--steel)"/></marker>
+        </defs>
+        <rect x="40" y="8" width="310" height="40" rx="6" fill="var(--old-soft)" stroke="var(--old)" stroke-width="1.5"/>
+        <text x="56" y="33" font-size="14" font-weight="700" fill="var(--ink)">360도 영상 1시간 분량</text>
+        <line x1="195" y1="48" x2="195" y2="68" stroke="var(--steel)" stroke-width="2" marker-end="url(#ua)"/>
+        <rect x="40" y="70" width="310" height="54" rx="6" fill="var(--new-soft)" stroke="var(--new)" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="56" y="93" font-size="15" font-weight="700" fill="var(--ink)">NVENC 압축 (검토)</text>
+        <text x="56" y="113" font-size="13" fill="var(--steel)">Jetson Thor 지원 확인 · 압축률 미측정</text>
+        <line x1="40" y1="97" x2="22" y2="97" stroke="var(--steel)" stroke-width="2"/>
+        <line x1="22" y1="97" x2="22" y2="302" stroke="var(--steel)" stroke-width="2"/>
+        <line x1="22" y1="174" x2="38" y2="174" stroke="var(--steel)" stroke-width="2" marker-end="url(#ua)"/>
+        <line x1="22" y1="238" x2="38" y2="238" stroke="var(--steel)" stroke-width="2" marker-end="url(#ua)"/>
+        <line x1="22" y1="302" x2="38" y2="302" stroke="var(--steel)" stroke-width="2" marker-end="url(#ua)"/>
+        <rect x="40" y="148" width="310" height="52" rx="4" fill="var(--chip)" stroke="var(--line)"/>
+        <rect x="40" y="148" width="6" height="52" fill="var(--ok)"/>
+        <text x="58" y="170" font-size="15" font-weight="700" fill="var(--ink)">SSD 직접 교체</text>
+        <text x="58" y="190" font-size="13" fill="var(--steel)">가장 빠름 · 그래픽카드를 떼야 함</text>
+        <rect x="40" y="212" width="310" height="52" rx="4" fill="var(--chip)" stroke="var(--line)"/>
+        <rect x="40" y="212" width="6" height="52" fill="var(--old)"/>
+        <text x="58" y="234" font-size="15" font-weight="700" fill="var(--ink)">Wi-Fi 자동 업로드</text>
+        <text x="58" y="254" font-size="13" fill="var(--steel)">사람 손 없음 · 밤새 걸림</text>
+        <rect x="40" y="276" width="310" height="52" rx="4" fill="var(--chip)" stroke="var(--line)"/>
+        <rect x="40" y="276" width="6" height="52" fill="var(--risk)"/>
+        <text x="58" y="298" font-size="15" font-weight="700" fill="var(--ink)">도킹 이더넷</text>
+        <text x="58" y="318" font-size="13" fill="var(--steel)">느리고 불안정 · 거의 안 씀</text>
+      </svg>
+      <figcaption>초록 띠가 가장 빠른 경로, 빨간 띠가 거의 쓰지 않는 경로이고, 어느 쪽으로 갈지는 정하지 않았다.</figcaption>
+    </figure>
+    <div class="prose">
+      <h3>1시간짜리 360도 영상을 옮기는 방법</h3>
+      <ul>
+        <li><b>SSD 직접 교체</b> — 가장 빠르지만 사람이 기다렸다가 분해해 꺼내야 한다.</li>
+        <li><b>Wi-Fi 자동 업로드</b> — 특정 Wi-Fi에 붙으면 올라간다. 경험상 밤새 걸렸다.</li>
+        <li><b>도킹 이더넷</b> — 느리고 불안정해서 거의 쓰지 않는다.</li>
+        <li><b>압축 후 업로드</b> — <mark>장치에서 NVENC로 압축하고 충전 중 올리는 조합이 SSD 교체를 대신할 후보다.</mark><span class="tag">추정</span> 10배 이상이라는 압축 효과는 확인하지 못했다.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="split" id="train">
+    <div class="prose">
+      <h3>클라우드 학습과 데이터 저장</h3>
+      <ul>
+        <li><b>Isaac Sim 환경</b> — AWS Marketplace AMI로 바로 띄우고, Amazon EC2 하나를 세팅해 복제한다.</li>
+        <li><b>파라미터 제어</b> — AWS Batch로 환경 ID·로봇·에폭을 한꺼번에 바꾼다. 개별 제어는 SSH·DCV·Slurm.</li>
+        <li><b>옮기는 시점</b> — <mark>클라우드는 로컬보다 느려서 로컬에서 환경·알고리즘을 정한 뒤 확장 단계에 옮긴다.</mark></li>
+        <li><b>데이터 레이크</b> — Amazon S3에 하이브 파티셔닝으로 L0·L1·L2를 두고 Amazon EKS로 처리한다. LiDAR 원시 데이터는 온프레미스가 더 빠르다.</li>
+      </ul>
+    </div>
+    <div class="prose">
+      <h3>제조사와 현장</h3>
+      <ul>
+        <li><b>Ghost Robotics 선택</b> — 중국산을 빼고 비교했을 때 가장 나았다.</li>
+        <li><b>총판</b> — KRM이 올해 4월 끝나고 LIG Nex1이 넘겨받았다고 한다. 공식 자료로는 LIG Nex1의 지분 60% 인수만 확인된다.</li>
+        <li><b>현장 일정</b> — 용인 현장 실측과 두 차례 방문을 잡고 있다. 울산은 시험장으로 쓰기 어렵다. 시점과 담당은 미정.</li>
+        <li><b>현장 방문 빈도</b> — 시뮬레이션만으로는 튜닝에 한계가 있어 자주 갈수록 좋다.</li>
+      </ul>
+    </div>
+  </section>
+
+  <details>
+    <summary>공식 자료로 확인한 사실</summary>
+    <ul>
+      <li><a href="https://ghostrobotics.io/vision-60">Vision 60 사양</a> — 내장 컴퓨터는 Jetson Xavier, 연속 보행 3시간 이상. 뎁스 카메라 방향은 사양에 없다.</li>
+      <li><a href="https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-thor/">Jetson Thor 사양</a> — 1TB NVMe는 개발자 키트 구성품이고, 모듈은 PCIe로 NVMe를 붙인다. 소비 전력 40–130 W.</li>
+      <li><a href="https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/hls-playback.html">Amazon Kinesis Video Streams HLS 재생</a> — 지연은 보통 3–5초이고 지난 영상도 다시 본다.</li>
+      <li><a href="https://docs.aws.amazon.com/sagemaker/latest/dg/neo-deployment-edge.html">AWS IoT Greengrass 모델 배포</a> — Jetson 계열 엣지 장치에 모델을 배포할 수 있다.</li>
+      <li><a href="https://aws.amazon.com/marketplace/pp/prodview-bl35herdyozhw">Isaac Sim AMI</a> — AMI는 무료이고 Amazon EC2 비용은 따로 낸다.</li>
+      <li><a href="https://aws.amazon.com/ko/blogs/hpc/scale-reinforcement-learning-with-aws-batch-multi-node-parallel-jobs/">AWS Batch 다중 노드 강화학습</a> — Isaac Lab 학습을 여러 노드에 나눠 돌린다.</li>
+      <li><a href="https://developer.nvidia.com/video-codec-sdk">NVIDIA Video Codec SDK</a> — 2026년 1월부터 Jetson Thor 인코딩을 지원한다. 압축률 수치는 없다.</li>
+      <li><a href="https://www.prnewswire.com/news-releases/ghost-robotics-corporation-and-lig-nex1-announce-close-of-acquisition-302208083.html">LIG Nex1의 Ghost Robotics 인수</a> — 지분 60% 인수는 확인되고, 국내 총판 이관은 출처에 없다.</li>
+    </ul>
+  </details>
+</div>
+
+</main>
+</body>
+</html>

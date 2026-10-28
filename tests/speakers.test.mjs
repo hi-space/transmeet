@@ -90,6 +90,25 @@ test('invalid saved speaker IDs still use the default speaker', () => {
   }
 })
 
+test('hydrating history discards transient STT completion identities', () => {
+  const { toMeeting } = loadSource('src/lib/api.ts')
+  const meeting = toMeeting({
+    meetingId: 'meeting-1',
+    title: '',
+    createdAt: '',
+    messages: [
+      {
+        ...message('speaker1'),
+        originalText: 'Saved speech.',
+        translatedText: '저장된 발언.',
+        pendingSttMessageId: 'stale-client-only-id',
+      },
+    ],
+  })
+  assert.equal(meeting.messages[0].pendingSttMessageId, undefined)
+  assert.equal(meeting.messages[0].original, 'Saved speech.')
+})
+
 test('voice cards show all recognized speakers while keeping typed messages separate', () => {
   const VoiceArea = loadSource('src/components/VoiceArea.tsx').default
   const html = renderToStaticMarkup(

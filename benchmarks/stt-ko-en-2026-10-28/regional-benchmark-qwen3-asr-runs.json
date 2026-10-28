@@ -1,0 +1,170 @@
+[
+  {
+    "provider": "qwen3-asr",
+    "language": "ko",
+    "chunk_seconds": 0,
+    "started_at": "2026-10-28T19:23:11.308154+00:00",
+    "command": [
+      "/usr/bin/python",
+      "-u",
+      "backend/scripts/benchmark_stt.py",
+      "benchmarks/stt-ko-en-2026-10-28/manifest-ko.json",
+      "--providers",
+      "qwen3-asr",
+      "--output",
+      "benchmarks/stt-ko-en-2026-10-28/raw/ko-qwen3-asr-full.json",
+      "--chunk-seconds",
+      "0",
+      "--timeout",
+      "90"
+    ],
+    "output": "benchmarks/stt-ko-en-2026-10-28/raw/ko-qwen3-asr-full.json",
+    "logfile": "benchmarks/stt-ko-en-2026-10-28/regional-benchmark-ko-qwen3-asr-full.log",
+    "source_sha256": {
+      "backend/app/config.py": "e03cb660a1eab7048087db100b714122b93f9d4d4dd2a0462e7a10a5436d37e2",
+      "backend/app/stt.py": "08c5ac3ba2f7491b3f5efbecbdac378655786b196a5c9b0c8a5c7d2a4f514731",
+      "backend/app/aws_clients.py": "7b2cec170a00f2005e3aecde8f547e45f86ccda57894d342c982980aad6b937c",
+      "backend/scripts/benchmark_stt.py": "e16ca3de75c63c58e53ef0a5ed47d4e0c5f3fdeef2867f66dd4d429eb86f4b44"
+    },
+    "completed_at": "2026-10-28T19:23:20.585441+00:00",
+    "return_code": 0,
+    "sha256": "daedffa7f5afc2ba7eb3c227df996016f9f629c37f2bb7136537c03cec90082c",
+    "summary": {
+      "qwen3-asr": {
+        "successful_samples": 10,
+        "failed_samples": 0,
+        "cer": 0.026845637583892617,
+        "errors": 12,
+        "reference_chars": 447,
+        "median_seconds": 0.8143499999999999,
+        "real_time_factor": 0.07962562994960405
+      }
+    }
+  },
+  {
+    "provider": "qwen3-asr",
+    "language": "en",
+    "chunk_seconds": 0,
+    "started_at": "2026-10-28T19:23:20.595195+00:00",
+    "command": [
+      "/usr/bin/python",
+      "-u",
+      "backend/scripts/benchmark_stt.py",
+      "benchmarks/stt-ko-en-2026-10-28/manifest-en.json",
+      "--providers",
+      "qwen3-asr",
+      "--output",
+      "benchmarks/stt-ko-en-2026-10-28/raw/en-qwen3-asr-full.json",
+      "--chunk-seconds",
+      "0",
+      "--timeout",
+      "90"
+    ],
+    "output": "benchmarks/stt-ko-en-2026-10-28/raw/en-qwen3-asr-full.json",
+    "logfile": "benchmarks/stt-ko-en-2026-10-28/regional-benchmark-en-qwen3-asr-full.log",
+    "source_sha256": {
+      "backend/app/config.py": "e03cb660a1eab7048087db100b714122b93f9d4d4dd2a0462e7a10a5436d37e2",
+      "backend/app/stt.py": "08c5ac3ba2f7491b3f5efbecbdac378655786b196a5c9b0c8a5c7d2a4f514731",
+      "backend/app/aws_clients.py": "7b2cec170a00f2005e3aecde8f547e45f86ccda57894d342c982980aad6b937c",
+      "backend/scripts/benchmark_stt.py": "e16ca3de75c63c58e53ef0a5ed47d4e0c5f3fdeef2867f66dd4d429eb86f4b44"
+    },
+    "completed_at": "2026-10-28T19:23:26.574521+00:00",
+    "return_code": 0,
+    "sha256": "74e10c0daf03aaaea332357ea28522dfee04181d9e14f5451df19890bd64fee0",
+    "summary": {
+      "qwen3-asr": {
+        "successful_samples": 10,
+        "failed_samples": 0,
+        "cer": 0.020854021847070508,
+        "errors": 21,
+        "reference_chars": 1007,
+        "median_seconds": 0.5293,
+        "real_time_factor": 0.060326445372609366
+      }
+    }
+  },
+  {
+    "provider": "qwen3-asr",
+    "language": "ko",
+    "chunk_seconds": 6,
+    "started_at": "2026-10-28T19:23:26.575015+00:00",
+    "command": [
+      "/usr/bin/python",
+      "-u",
+      "backend/scripts/benchmark_stt.py",
+      "benchmarks/stt-ko-en-2026-10-28/manifest-ko.json",
+      "--providers",
+      "qwen3-asr",
+      "--output",
+      "benchmarks/stt-ko-en-2026-10-28/raw/ko-qwen3-asr-6s.json",
+      "--chunk-seconds",
+      "6",
+      "--timeout",
+      "90"
+    ],
+    "output": "benchmarks/stt-ko-en-2026-10-28/raw/ko-qwen3-asr-6s.json",
+    "logfile": "benchmarks/stt-ko-en-2026-10-28/regional-benchmark-ko-qwen3-asr-6s.log",
+    "source_sha256": {
+      "backend/app/config.py": "e03cb660a1eab7048087db100b714122b93f9d4d4dd2a0462e7a10a5436d37e2",
+      "backend/app/stt.py": "08c5ac3ba2f7491b3f5efbecbdac378655786b196a5c9b0c8a5c7d2a4f514731",
+      "backend/app/aws_clients.py": "7b2cec170a00f2005e3aecde8f547e45f86ccda57894d342c982980aad6b937c",
+      "backend/scripts/benchmark_stt.py": "e16ca3de75c63c58e53ef0a5ed47d4e0c5f3fdeef2867f66dd4d429eb86f4b44"
+    },
+    "completed_at": "2026-10-28T19:23:37.379802+00:00",
+    "return_code": 0,
+    "sha256": "cf65f3ee9d79e4545ac25d233c6e22c258e7e7052927129f88a96baa4d1b2dcd",
+    "summary": {
+      "qwen3-asr": {
+        "successful_samples": 10,
+        "failed_samples": 0,
+        "cer": 0.058165548098434,
+        "errors": 26,
+        "reference_chars": 447,
+        "median_seconds": 1.0097,
+        "real_time_factor": 0.09337023038156948
+      }
+    }
+  },
+  {
+    "provider": "qwen3-asr",
+    "language": "en",
+    "chunk_seconds": 6,
+    "started_at": "2026-10-28T19:23:37.380354+00:00",
+    "command": [
+      "/usr/bin/python",
+      "-u",
+      "backend/scripts/benchmark_stt.py",
+      "benchmarks/stt-ko-en-2026-10-28/manifest-en.json",
+      "--providers",
+      "qwen3-asr",
+      "--output",
+      "benchmarks/stt-ko-en-2026-10-28/raw/en-qwen3-asr-6s.json",
+      "--chunk-seconds",
+      "6",
+      "--timeout",
+      "90"
+    ],
+    "output": "benchmarks/stt-ko-en-2026-10-28/raw/en-qwen3-asr-6s.json",
+    "logfile": "benchmarks/stt-ko-en-2026-10-28/regional-benchmark-en-qwen3-asr-6s.log",
+    "source_sha256": {
+      "backend/app/config.py": "e03cb660a1eab7048087db100b714122b93f9d4d4dd2a0462e7a10a5436d37e2",
+      "backend/app/stt.py": "08c5ac3ba2f7491b3f5efbecbdac378655786b196a5c9b0c8a5c7d2a4f514731",
+      "backend/app/aws_clients.py": "7b2cec170a00f2005e3aecde8f547e45f86ccda57894d342c982980aad6b937c",
+      "backend/scripts/benchmark_stt.py": "e16ca3de75c63c58e53ef0a5ed47d4e0c5f3fdeef2867f66dd4d429eb86f4b44"
+    },
+    "completed_at": "2026-10-28T19:23:44.506377+00:00",
+    "return_code": 0,
+    "sha256": "3c99031c579236b1e4edcbb2afa39b2e17324ab0e88236c6a53f5b3616ba857e",
+    "summary": {
+      "qwen3-asr": {
+        "successful_samples": 10,
+        "failed_samples": 0,
+        "cer": 0.019860973187686197,
+        "errors": 20,
+        "reference_chars": 1007,
+        "median_seconds": 0.68015,
+        "real_time_factor": 0.07358979995603429
+      }
+    }
+  }
+]

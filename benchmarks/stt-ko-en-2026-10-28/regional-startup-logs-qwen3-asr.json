@@ -1,0 +1,20 @@
+{
+  "checked_at": "2026-10-28T19:23:16.647952+00:00",
+  "provider": "qwen3-asr",
+  "component_status": "InService",
+  "runtime_config": {
+    "DesiredCopyCount": 1,
+    "CurrentCopyCount": 1,
+    "PlacementStatus": [
+      {
+        "InstanceType": "ml.g6.2xlarge",
+        "CurrentCopyCount": 1
+      }
+    ]
+  },
+  "failure_reason": null,
+  "log_state": {
+    "Message": "The specified log group does not exist.",
+    "Code": "ResourceNotFoundException"
+  }
+}

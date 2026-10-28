@@ -96,7 +96,7 @@ def test_payload_preserves_additional_speakers():
 
 
 
-def test_payload_carries_page_style_and_defaults_to_detailed():
+def test_payload_carries_page_style_and_defaults_to_visual():
     item = {"meetingId": "m1", "messages": [msg("2026-10-06T10:00:00+09:00", "me", "hi")]}
     assert build_meeting_payload(item, model_id=MODEL)["meeting"]["style"] == "visual"
     assert build_meeting_payload(item, model_id=MODEL, style="detailed")["meeting"]["style"] == "detailed"

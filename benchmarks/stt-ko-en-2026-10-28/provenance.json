@@ -1,0 +1,149 @@
+{
+  "created_at": "2026-10-28T18:32:47.206579+00:00",
+  "git_head": "926a6c867849f1e84691b5b024c25d4db4c67246",
+  "region": "us-east-1",
+  "files_sha256": {
+    "backend/scripts/benchmark_stt.py": "e16ca3de75c63c58e53ef0a5ed47d4e0c5f3fdeef2867f66dd4d429eb86f4b44",
+    "backend/app/stt.py": "10ee3fd2ce5d2ce597723ad42ed504c1038106e0f16da6a3c2da4a1eba43cba9"
+  },
+  "language_mode": "Known language is supplied to the current app adapter; Qwen adapter uses auto-detection regardless.",
+  "execution": "Each endpoint processes requests sequentially; distinct endpoints may run concurrently. No warm-up inference is excluded.",
+  "starting_resources": {
+    "whisper": {
+      "endpoint": "whisper-large",
+      "endpoint_status": "InService",
+      "variants": [
+        {
+          "VariantName": "AllTraffic",
+          "DeployedImages": [
+            {
+              "SpecifiedImage": "763104351884.dkr.ecr.us-east-1.amazonaws.com/huggingface-pytorch-inference:2.1.0-transformers4.37.0-gpu-py310-cu118-ubuntu20.04",
+              "ResolvedImage": "763104351884.dkr.ecr.us-east-1.amazonaws.com/huggingface-pytorch-inference@sha256:c1fa2c7f57e0e9637267afbc199e2ae51d152d997278d28292723b16f118e4b1",
+              "ResolutionTime": "2026-02-12 00:47:56.797000+00:00"
+            }
+          ],
+          "CurrentWeight": 1.0,
+          "DesiredWeight": 1.0,
+          "CurrentInstanceCount": 1,
+          "DesiredInstanceCount": 1
+        }
+      ],
+      "configured_variants": [
+        {
+          "VariantName": "AllTraffic",
+          "ModelName": "whisper-large-v3-turbo-004709",
+          "InitialInstanceCount": 1,
+          "InstanceType": "ml.g5.2xlarge",
+          "InitialVariantWeight": 1.0
+        }
+      ]
+    },
+    "qwen3-asr": {
+      "endpoint": "transmeet-qwen3-asr",
+      "endpoint_status": "InService",
+      "variants": [
+        {
+          "VariantName": "AllTraffic",
+          "CurrentInstanceCount": 0,
+          "DesiredInstanceCount": 0,
+          "ManagedInstanceScaling": {
+            "Status": "ENABLED",
+            "MinInstanceCount": 0,
+            "MaxInstanceCount": 1,
+            "ScaleInPolicy": {
+              "Strategy": "IDLE_RELEASE"
+            }
+          }
+        }
+      ],
+      "configured_variants": [
+        {
+          "VariantName": "AllTraffic",
+          "InitialInstanceCount": 1,
+          "InstancePools": [
+            {
+              "InstanceType": "ml.g6.xlarge",
+              "Priority": 1
+            },
+            {
+              "InstanceType": "ml.g6.2xlarge",
+              "Priority": 2
+            }
+          ],
+          "VariantInstanceProvisionTimeoutInSeconds": 600,
+          "ManagedInstanceScaling": {
+            "Status": "ENABLED",
+            "MinInstanceCount": 0,
+            "MaxInstanceCount": 1,
+            "ScaleInPolicy": {
+              "Strategy": "IDLE_RELEASE"
+            }
+          }
+        }
+      ],
+      "component": "transmeet-qwen3-asr-ic-v2",
+      "component_status": "InService",
+      "runtime": {
+        "DesiredCopyCount": 0,
+        "CurrentCopyCount": 0
+      },
+      "specification": {}
+    },
+    "nemotron": {
+      "endpoint": "transmeet-nemotron-asr",
+      "endpoint_status": "InService",
+      "variants": [
+        {
+          "VariantName": "AllTraffic",
+          "CurrentInstanceCount": 0,
+          "DesiredInstanceCount": 0,
+          "ManagedInstanceScaling": {
+            "Status": "ENABLED",
+            "MinInstanceCount": 0,
+            "MaxInstanceCount": 1,
+            "ScaleInPolicy": {
+              "Strategy": "IDLE_RELEASE"
+            }
+          }
+        }
+      ],
+      "configured_variants": [
+        {
+          "VariantName": "AllTraffic",
+          "InitialInstanceCount": 1,
+          "InstanceType": "ml.g5.2xlarge",
+          "ManagedInstanceScaling": {
+            "Status": "ENABLED",
+            "MinInstanceCount": 0,
+            "MaxInstanceCount": 1,
+            "ScaleInPolicy": {
+              "Strategy": "IDLE_RELEASE"
+            }
+          }
+        }
+      ],
+      "component": "transmeet-nemotron-asr-ic-v2",
+      "component_status": "InService",
+      "runtime": {
+        "DesiredCopyCount": 0,
+        "CurrentCopyCount": 0
+      },
+      "specification": {
+        "ModelName": "transmeet-nemotron-asr-model",
+        "StartupParameters": {
+          "ModelDataDownloadTimeoutInSeconds": 2400,
+          "ContainerStartupHealthCheckTimeoutInSeconds": 1800
+        },
+        "ComputeResourceRequirements": {
+          "NumberOfCpuCoresRequired": 2.0,
+          "NumberOfAcceleratorDevicesRequired": 1.0,
+          "MinMemoryRequiredInMb": 8192
+        },
+        "DataCacheConfig": {
+          "EnableCaching": true
+        }
+      }
+    }
+  },
+  "ready_resources": {}
+}

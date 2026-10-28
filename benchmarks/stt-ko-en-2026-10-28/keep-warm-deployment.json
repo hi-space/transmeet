@@ -1,0 +1,31 @@
+{
+  "base_image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-ws-backend@sha256:ea9feb7191b15466d78973ed4559b0f5310b3c489fdc20eedbc16be173a27dd6",
+  "image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-ws-backend:stt-keep-warm-20261028-184403",
+  "tag": "stt-keep-warm-20261028-184403",
+  "service": "TransmeetStack-WsServiceF27E424E-6Sv7kqQAPFMC",
+  "previous_task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:24",
+  "patched_file": "app/stt_capacity.py",
+  "patched_file_sha256": "e5e1e6ee61247bb3d6d91a082216264495b887fa307956153bbfd6a4a97aebc8",
+  "environment_change": {
+    "STT_IDLE_SECONDS": "0"
+  },
+  "started_at": "2026-10-28T18:45:49.881824+00:00",
+  "task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:26",
+  "latest_tag_updated": true,
+  "status": "complete",
+  "completed_at": "2026-10-28T18:48:30.476881+00:00",
+  "deployment_seconds": 160.59,
+  "running_count": 1,
+  "verification": {
+    "at": "2026-10-28T18:55:49.665858+00:00",
+    "idle_seconds": "0",
+    "running_tasks": 1,
+    "image_digest": "sha256:424ccac9b65b7df8babc3981cff8740acb3b467d37ab70b5954623c04873a7a4",
+    "target_health": [
+      {
+        "target": "172.31.90.191",
+        "state": "healthy"
+      }
+    ]
+  }
+}

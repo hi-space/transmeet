@@ -1,0 +1,52 @@
+{
+  "mode": "plan",
+  "model": {
+    "name": "transmeet-nemotron-asr-model",
+    "environment": {}
+  },
+  "endpoint_config": {
+    "EndpointConfigName": "transmeet-nemotron-asr-warm-v1",
+    "ExecutionRoleArn": "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+    "EnableNetworkIsolation": true,
+    "ProductionVariants": [
+      {
+        "VariantName": "AllTraffic",
+        "InitialInstanceCount": 1,
+        "ManagedInstanceScaling": {
+          "Status": "ENABLED",
+          "MinInstanceCount": 1,
+          "MaxInstanceCount": 1,
+          "ScaleInPolicy": {
+            "Strategy": "IDLE_RELEASE"
+          }
+        },
+        "InstanceType": "ml.g5.2xlarge"
+      }
+    ]
+  },
+  "inference_component": {
+    "InferenceComponentName": "transmeet-nemotron-asr-ic-v2",
+    "EndpointName": "transmeet-nemotron-asr",
+    "VariantName": "AllTraffic",
+    "RuntimeConfig": {
+      "CopyCount": 1
+    },
+    "Specification": {
+      "ModelName": "transmeet-nemotron-asr-model",
+      "ComputeResourceRequirements": {
+        "NumberOfCpuCoresRequired": 2,
+        "NumberOfAcceleratorDevicesRequired": 1,
+        "MinMemoryRequiredInMb": 8192
+      },
+      "StartupParameters": {
+        "ModelDataDownloadTimeoutInSeconds": 2400,
+        "ContainerStartupHealthCheckTimeoutInSeconds": 1800
+      }
+    }
+  },
+  "environment": {
+    "NEMOTRON_ASR_ENDPOINT": "transmeet-nemotron-asr",
+    "NEMOTRON_ASR_INFERENCE_COMPONENT": "transmeet-nemotron-asr-ic-v2",
+    "STT_IDLE_SECONDS": "0"
+  }
+}

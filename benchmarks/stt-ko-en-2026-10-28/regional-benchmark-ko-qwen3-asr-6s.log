@@ -1,0 +1,21 @@
+fleurs-ko-test-row-0 / qwen3-asr: CER=0.170
+fleurs-ko-test-row-1 / qwen3-asr: CER=0.024
+fleurs-ko-test-row-2 / qwen3-asr: CER=0.121
+fleurs-ko-test-row-3 / qwen3-asr: CER=0.000
+fleurs-ko-test-row-4 / qwen3-asr: CER=0.000
+fleurs-ko-test-row-5 / qwen3-asr: CER=0.025
+fleurs-ko-test-row-6 / qwen3-asr: CER=0.237
+fleurs-ko-test-row-7 / qwen3-asr: CER=0.000
+fleurs-ko-test-row-8 / qwen3-asr: CER=0.026
+fleurs-ko-test-row-9 / qwen3-asr: CER=0.000
+{
+  "qwen3-asr": {
+    "successful_samples": 10,
+    "failed_samples": 0,
+    "cer": 0.058165548098434,
+    "errors": 26,
+    "reference_chars": 447,
+    "median_seconds": 1.0097,
+    "real_time_factor": 0.09337023038156948
+  }
+}

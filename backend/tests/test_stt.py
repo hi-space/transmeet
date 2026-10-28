@@ -53,6 +53,17 @@ def test_whisper_retains_existing_binary_contract():
     assert request["Body"] == audio
 
 
+@pytest.mark.parametrize("language,expected", [("ko", "korean"), ("en", "english")])
+def test_whisper_fixed_input_conditions_transcription_without_translating(language, expected):
+    audio = wav_audio()
+    request = stt.build_request("whisper", audio, language)
+    assert request["ContentType"] == "application/json"
+    payload = json.loads(request["Body"])
+    assert bytes.fromhex(payload["audio_input"]) == audio
+    assert payload["language"] == expected
+    assert payload["task"] == "transcribe"
+
+
 @pytest.mark.parametrize(
     "provider,payload,text,language",
     [
@@ -92,6 +103,25 @@ def test_unknown_provider_is_not_routed_to_whisper():
         stt.build_request("typo", wav_audio(), "ko")
 
 
+def test_streaming_endpoint_is_required_independently_of_retained_batch_endpoint(monkeypatch):
+    monkeypatch.setattr(stt.config, "NEMOTRON_ASR_ENDPOINT", "old-batch")
+    monkeypatch.setitem(stt.config.__dict__, "NEMOTRON_STREAMING_ENABLED", True)
+    monkeypatch.setitem(stt.config.__dict__, "NEMOTRON_STREAMING_ENDPOINT", "")
+    with pytest.raises(ValueError, match="NEMOTRON_STREAMING_ENDPOINT"):
+        stt.validate_provider("nemotron")
+
+
+def test_active_streaming_endpoint_does_not_change_the_batch_adapter(monkeypatch):
+    monkeypatch.setattr(stt.config, "NEMOTRON_ASR_ENDPOINT", "old-batch")
+    monkeypatch.setattr(stt.config, "NEMOTRON_ASR_INFERENCE_COMPONENT", "old-batch-ic")
+    monkeypatch.setitem(stt.config.__dict__, "NEMOTRON_STREAMING_ENABLED", True)
+    monkeypatch.setitem(stt.config.__dict__, "NEMOTRON_STREAMING_ENDPOINT", "new-stream")
+    assert stt.active_endpoint_for("nemotron") == "new-stream"
+    assert stt.active_inference_component_for("nemotron") == ""
+    assert stt.endpoint_for("nemotron") == "old-batch"
+    assert stt.inference_component_for("nemotron") == "old-batch-ic"
+
+
 async def test_missing_endpoint_fails_before_network(monkeypatch):
     monkeypatch.setattr(stt.config, "QWEN_ASR_ENDPOINT", "")
     with pytest.raises(ValueError, match="QWEN_ASR_ENDPOINT"):
@@ -115,7 +145,8 @@ async def test_invocation_uses_configured_endpoint_and_parses_result(monkeypatch
             return {"Body": Body()}
 
     @asynccontextmanager
-    async def client():
+    async def client(*, region_name):
+        assert region_name == "us-east-1"
         yield Runtime()
 
     monkeypatch.setattr(stt, "sagemaker_client", client)

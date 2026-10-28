@@ -1,0 +1,170 @@
+[
+  {
+    "provider": "nemotron",
+    "language": "ko",
+    "chunk_seconds": 0,
+    "started_at": "2026-10-28T19:21:30.869228+00:00",
+    "command": [
+      "/usr/bin/python",
+      "-u",
+      "backend/scripts/benchmark_stt.py",
+      "benchmarks/stt-ko-en-2026-10-28/manifest-ko.json",
+      "--providers",
+      "nemotron",
+      "--output",
+      "benchmarks/stt-ko-en-2026-10-28/raw/ko-nemotron-full.json",
+      "--chunk-seconds",
+      "0",
+      "--timeout",
+      "90"
+    ],
+    "output": "benchmarks/stt-ko-en-2026-10-28/raw/ko-nemotron-full.json",
+    "logfile": "benchmarks/stt-ko-en-2026-10-28/regional-benchmark-ko-nemotron-full.log",
+    "source_sha256": {
+      "backend/app/config.py": "e03cb660a1eab7048087db100b714122b93f9d4d4dd2a0462e7a10a5436d37e2",
+      "backend/app/stt.py": "08c5ac3ba2f7491b3f5efbecbdac378655786b196a5c9b0c8a5c7d2a4f514731",
+      "backend/app/aws_clients.py": "7b2cec170a00f2005e3aecde8f547e45f86ccda57894d342c982980aad6b937c",
+      "backend/scripts/benchmark_stt.py": "e16ca3de75c63c58e53ef0a5ed47d4e0c5f3fdeef2867f66dd4d429eb86f4b44"
+    },
+    "completed_at": "2026-10-28T19:22:06.123683+00:00",
+    "return_code": 0,
+    "sha256": "bb7d882a18bf55451d2954f06d1491d0ed54ad973458ee829ce2f353652a0c64",
+    "summary": {
+      "nemotron": {
+        "successful_samples": 10,
+        "failed_samples": 0,
+        "cer": 0.09843400447427293,
+        "errors": 44,
+        "reference_chars": 447,
+        "median_seconds": 3.5835,
+        "real_time_factor": 0.31339542836573075
+      }
+    }
+  },
+  {
+    "provider": "nemotron",
+    "language": "en",
+    "chunk_seconds": 0,
+    "started_at": "2026-10-28T19:22:06.124231+00:00",
+    "command": [
+      "/usr/bin/python",
+      "-u",
+      "backend/scripts/benchmark_stt.py",
+      "benchmarks/stt-ko-en-2026-10-28/manifest-en.json",
+      "--providers",
+      "nemotron",
+      "--output",
+      "benchmarks/stt-ko-en-2026-10-28/raw/en-nemotron-full.json",
+      "--chunk-seconds",
+      "0",
+      "--timeout",
+      "90"
+    ],
+    "output": "benchmarks/stt-ko-en-2026-10-28/raw/en-nemotron-full.json",
+    "logfile": "benchmarks/stt-ko-en-2026-10-28/regional-benchmark-en-nemotron-full.log",
+    "source_sha256": {
+      "backend/app/config.py": "e03cb660a1eab7048087db100b714122b93f9d4d4dd2a0462e7a10a5436d37e2",
+      "backend/app/stt.py": "08c5ac3ba2f7491b3f5efbecbdac378655786b196a5c9b0c8a5c7d2a4f514731",
+      "backend/app/aws_clients.py": "7b2cec170a00f2005e3aecde8f547e45f86ccda57894d342c982980aad6b937c",
+      "backend/scripts/benchmark_stt.py": "e16ca3de75c63c58e53ef0a5ed47d4e0c5f3fdeef2867f66dd4d429eb86f4b44"
+    },
+    "completed_at": "2026-10-28T19:22:37.551386+00:00",
+    "return_code": 0,
+    "sha256": "b3ce42be8968db42dec32335bab87cf7c231f14d2a7753afcc48fe0331f31e30",
+    "summary": {
+      "nemotron": {
+        "successful_samples": 10,
+        "failed_samples": 0,
+        "cer": 0.06256206554121152,
+        "errors": 63,
+        "reference_chars": 1007,
+        "median_seconds": 3.3053999999999997,
+        "real_time_factor": 0.3406539898878874
+      }
+    }
+  },
+  {
+    "provider": "nemotron",
+    "language": "ko",
+    "chunk_seconds": 6,
+    "started_at": "2026-10-28T19:22:37.551898+00:00",
+    "command": [
+      "/usr/bin/python",
+      "-u",
+      "backend/scripts/benchmark_stt.py",
+      "benchmarks/stt-ko-en-2026-10-28/manifest-ko.json",
+      "--providers",
+      "nemotron",
+      "--output",
+      "benchmarks/stt-ko-en-2026-10-28/raw/ko-nemotron-6s.json",
+      "--chunk-seconds",
+      "6",
+      "--timeout",
+      "90"
+    ],
+    "output": "benchmarks/stt-ko-en-2026-10-28/raw/ko-nemotron-6s.json",
+    "logfile": "benchmarks/stt-ko-en-2026-10-28/regional-benchmark-ko-nemotron-6s.log",
+    "source_sha256": {
+      "backend/app/config.py": "e03cb660a1eab7048087db100b714122b93f9d4d4dd2a0462e7a10a5436d37e2",
+      "backend/app/stt.py": "08c5ac3ba2f7491b3f5efbecbdac378655786b196a5c9b0c8a5c7d2a4f514731",
+      "backend/app/aws_clients.py": "7b2cec170a00f2005e3aecde8f547e45f86ccda57894d342c982980aad6b937c",
+      "backend/scripts/benchmark_stt.py": "e16ca3de75c63c58e53ef0a5ed47d4e0c5f3fdeef2867f66dd4d429eb86f4b44"
+    },
+    "completed_at": "2026-10-28T19:23:19.983612+00:00",
+    "return_code": 0,
+    "sha256": "d37991a31d0ff03d52dce521c2be658a54e90155c4f01868f836a8a5acdd34a3",
+    "summary": {
+      "nemotron": {
+        "successful_samples": 10,
+        "failed_samples": 0,
+        "cer": 0.15659955257270694,
+        "errors": 70,
+        "reference_chars": 447,
+        "median_seconds": 4.2571,
+        "real_time_factor": 0.37795986321094316
+      }
+    }
+  },
+  {
+    "provider": "nemotron",
+    "language": "en",
+    "chunk_seconds": 6,
+    "started_at": "2026-10-28T19:23:19.985190+00:00",
+    "command": [
+      "/usr/bin/python",
+      "-u",
+      "backend/scripts/benchmark_stt.py",
+      "benchmarks/stt-ko-en-2026-10-28/manifest-en.json",
+      "--providers",
+      "nemotron",
+      "--output",
+      "benchmarks/stt-ko-en-2026-10-28/raw/en-nemotron-6s.json",
+      "--chunk-seconds",
+      "6",
+      "--timeout",
+      "90"
+    ],
+    "output": "benchmarks/stt-ko-en-2026-10-28/raw/en-nemotron-6s.json",
+    "logfile": "benchmarks/stt-ko-en-2026-10-28/regional-benchmark-en-nemotron-6s.log",
+    "source_sha256": {
+      "backend/app/config.py": "e03cb660a1eab7048087db100b714122b93f9d4d4dd2a0462e7a10a5436d37e2",
+      "backend/app/stt.py": "08c5ac3ba2f7491b3f5efbecbdac378655786b196a5c9b0c8a5c7d2a4f514731",
+      "backend/app/aws_clients.py": "7b2cec170a00f2005e3aecde8f547e45f86ccda57894d342c982980aad6b937c",
+      "backend/scripts/benchmark_stt.py": "e16ca3de75c63c58e53ef0a5ed47d4e0c5f3fdeef2867f66dd4d429eb86f4b44"
+    },
+    "completed_at": "2026-10-28T19:23:54.806397+00:00",
+    "return_code": 0,
+    "sha256": "fad327dd5911e054fa0852e3855c8554a924b987a7509cfa2d257b73a06fc11c",
+    "summary": {
+      "nemotron": {
+        "successful_samples": 10,
+        "failed_samples": 0,
+        "cer": 0.09831181727904667,
+        "errors": 99,
+        "reference_chars": 1007,
+        "median_seconds": 3.7348,
+        "real_time_factor": 0.3779577929215212
+      }
+    }
+  }
+]

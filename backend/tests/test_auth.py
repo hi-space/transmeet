@@ -170,3 +170,63 @@ async def test_async_returns_verified_email(signing_key):
 async def test_async_drops_unverified_email(signing_key):
     token = make_token(signing_key, email="me@amazon.com", email_verified=False)
     assert await auth.verify_id_token_async(token) == (SUB, "")
+
+
+def test_ws_refreshes_verified_email_without_replacing_the_meeting_connection(signing_key, monkeypatch):
+    patch_ddb(monkeypatch, FakeDdb({"m-mine": SUB}))
+    with _client().websocket_connect("/ws?meetingId=m-mine") as ws:
+        ws.send_json({"action": "auth", "token": make_token(signing_key)})
+        ws.send_json({"action": "ping"})
+        assert ws.receive_json()["type"] == "pong"
+        state = next(s for s in ws_handler.active_connections.values() if s.meeting_id == "m-mine")
+        assert state.user_email == ""
+
+        ws.send_json({
+            "action": "refreshAuth",
+            "token": make_token(signing_key, email="person@example.com", email_verified=True),
+        })
+        ws.send_json({"action": "ping"})
+        assert ws.receive_json()["type"] == "pong"
+        assert state.user_email == "person@example.com"
+        assert state.user_id == SUB
+        assert state.meeting_id == "m-mine"
+        assert "m-mine" in state.owned_meetings
+
+
+@pytest.mark.parametrize("other_user", [True, False], ids=["different-user", "invalid-token"])
+def test_ws_rejects_auth_refresh_that_cannot_identify_the_same_user(signing_key, monkeypatch, other_user):
+    patch_ddb(monkeypatch, FakeDdb({"m-mine": SUB}))
+    with _client().websocket_connect("/ws?meetingId=m-mine") as ws:
+        ws.send_json({
+            "action": "auth",
+            "token": make_token(signing_key, email="person@example.com", email_verified=True),
+        })
+        ws.send_json({"action": "ping"})
+        assert ws.receive_json()["type"] == "pong"
+        state = next(s for s in ws_handler.active_connections.values() if s.meeting_id == "m-mine")
+
+        token = make_token(signing_key, sub="user-b", email="other@example.com", email_verified=True) if other_user else "invalid"
+        ws.send_json({"action": "refreshAuth", "token": token})
+        ws.send_json({"action": "ping"})
+        assert ws.receive_json()["type"] == "error"
+        assert ws.receive_json()["type"] == "pong"
+        assert state.user_id == SUB
+        assert state.user_email == "person@example.com"
+        assert state.meeting_id == "m-mine"
+
+
+def test_ws_auth_refresh_drops_an_email_that_is_no_longer_verified(signing_key, monkeypatch):
+    patch_ddb(monkeypatch, FakeDdb({"m-mine": SUB}))
+    with _client().websocket_connect("/ws?meetingId=m-mine") as ws:
+        ws.send_json({
+            "action": "auth",
+            "token": make_token(signing_key, email="person@example.com", email_verified=True),
+        })
+        ws.send_json({"action": "refreshAuth", "token": make_token(
+            signing_key, email="changed@example.com", email_verified=False,
+        )})
+        ws.send_json({"action": "ping"})
+        assert ws.receive_json()["type"] == "pong"
+        state = next(s for s in ws_handler.active_connections.values() if s.meeting_id == "m-mine")
+        assert state.user_email == ""
+        assert state.user_id == SUB

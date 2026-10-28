@@ -13,6 +13,7 @@ import {
   STT_CHUNK_SECONDS,
   STT_PROVIDERS,
   isManagedStt,
+  isStreamingStt,
   sttChunkDuration,
   type SttProvider,
   type SttStatus,
@@ -114,6 +115,8 @@ export default function SettingsPanel({
   )
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canUseSystemAudio, setCanUseSystemAudio] = useState(true)
+  const streamingStt = isStreamingStt(settings.sttProvider, sttStatus)
+  const nemotronStreaming = settings.sttProvider === 'nemotron' && streamingStt
 
   useEffect(() => {
     setCanUseSystemAudio(supportsSystemAudio())
@@ -307,9 +310,11 @@ export default function SettingsPanel({
                   hint={
                     settings.sttProvider === 'transcribe'
                       ? '발화 중에도 인식 결과를 표시합니다.'
-                      : settings.sttProvider === 'qwen3-asr'
-                        ? '입력 언어는 자동으로 감지합니다. 번역 대상은 상단에서 따로 선택하세요.'
-                        : `음성을 약 ${sttChunkDuration(settings.sttProvider, settings.sttChunkSeconds) / 1000}초씩 모아 인식하므로 첫 결과까지 시간이 걸릴 수 있습니다.`
+                      : nemotronStreaming
+                        ? '실시간으로 원문을 표시합니다. 번역은 확정된 발화를 기준으로 합니다.'
+                        : settings.sttProvider === 'qwen3-asr'
+                          ? '입력 언어는 자동으로 감지합니다. 번역 대상은 상단에서 따로 선택하세요.'
+                          : `음성을 약 ${sttChunkDuration(settings.sttProvider, settings.sttChunkSeconds, sttStatus) / 1000}초씩 모아 인식하므로 첫 결과까지 시간이 걸릴 수 있습니다.`
                   }
                 />
                 {isManagedStt(settings.sttProvider) && (
@@ -319,7 +324,7 @@ export default function SettingsPanel({
                     onPrepare={onPrepareStt}
                   />
                 )}
-                {settings.sttProvider !== 'transcribe' && (
+                {!streamingStt && (
                   <Choices
                     label="음성 처리 구간"
                     value={settings.sttChunkSeconds}
@@ -331,28 +336,34 @@ export default function SettingsPanel({
                     hint="기본 6초. 짧게 잡으면 반응이 빨라지고, 길게 잡으면 문맥을 더 확보할 수 있습니다."
                   />
                 )}
-                <Choices
-                  label="발화 중 번역"
-                  value={settings.partialTranslationMode}
-                  options={[
-                    { value: 'sentence', label: '문장 단위' },
-                    { value: 'realtime', label: '일정 간격' },
-                  ]}
-                  onChange={(partialTranslationMode) => handleUpdate({ partialTranslationMode })}
-                />
-                {settings.partialTranslationMode === 'realtime' && (
-                  <Choices
-                    label="번역 간격"
-                    value={settings.partialThrottleMs}
-                    options={[
-                      { value: 500, label: '0.5초' },
-                      { value: 1000, label: '1초' },
-                      { value: 1500, label: '1.5초' },
-                      { value: 2000, label: '2초' },
-                      { value: 3000, label: '3초' },
-                    ]}
-                    onChange={(partialThrottleMs) => handleUpdate({ partialThrottleMs })}
-                  />
+                {!nemotronStreaming && (
+                  <>
+                    <Choices
+                      label="발화 중 번역"
+                      value={settings.partialTranslationMode}
+                      options={[
+                        { value: 'sentence', label: '문장 단위' },
+                        { value: 'realtime', label: '일정 간격' },
+                      ]}
+                      onChange={(partialTranslationMode) =>
+                        handleUpdate({ partialTranslationMode })
+                      }
+                    />
+                    {settings.partialTranslationMode === 'realtime' && (
+                      <Choices
+                        label="번역 간격"
+                        value={settings.partialThrottleMs}
+                        options={[
+                          { value: 500, label: '0.5초' },
+                          { value: 1000, label: '1초' },
+                          { value: 1500, label: '1.5초' },
+                          { value: 2000, label: '2초' },
+                          { value: 3000, label: '3초' },
+                        ]}
+                        onChange={(partialThrottleMs) => handleUpdate({ partialThrottleMs })}
+                      />
+                    )}
+                  </>
                 )}
                 <Choices
                   label="무음 후 대화 나누기"

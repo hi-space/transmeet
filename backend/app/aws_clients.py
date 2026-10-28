@@ -14,24 +14,24 @@ _session = aiobotocore.session.get_session()
 
 
 @asynccontextmanager
-async def sagemaker_client():
-    async with _session.create_client("sagemaker-runtime", region_name=config.REGION) as client:
+async def sagemaker_client(*, region_name: str | None = None):
+    async with _session.create_client("sagemaker-runtime", region_name=region_name or config.REGION) as client:
         yield client
 
 
 @asynccontextmanager
-async def sagemaker_control_client():
+async def sagemaker_control_client(*, region_name: str | None = None):
     async with _session.create_client(
-        "sagemaker", region_name=config.REGION,
+        "sagemaker", region_name=region_name or config.REGION,
         config=AioConfig(connect_timeout=5, read_timeout=15, retries={"max_attempts": 1}),
     ) as client:
         yield client
 
 
 @asynccontextmanager
-async def stt_metrics_client():
+async def stt_metrics_client(*, region_name: str | None = None):
     async with _session.create_client(
-        "cloudwatch", region_name=config.REGION,
+        "cloudwatch", region_name=region_name or config.REGION,
         config=AioConfig(connect_timeout=5, read_timeout=10, retries={"max_attempts": 1}),
     ) as client:
         yield client

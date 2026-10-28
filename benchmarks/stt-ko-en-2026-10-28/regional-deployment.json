@@ -1,0 +1,1752 @@
+{
+  "updated_at": "2026-10-28T19:24:49.984819+00:00",
+  "selected_region": "ap-northeast-2",
+  "selection_reason": "User preference for Seoul; live catalog supports both pinned models, each relevant endpoint quota is 2 and the region has no existing endpoints. Oregon us-west-2 is approved fallback only if Seoul cannot provision.",
+  "mode": "batch",
+  "account_id": "913524902871",
+  "models": {
+    "qwen3-asr": {
+      "hub_model_id": "huggingface-asr-qwen3-asr-1-7b",
+      "hub_model_version": "1.0.2",
+      "sagemaker_model_name": "transmeet-qwen3-asr-model-offline",
+      "endpoint_name": "transmeet-qwen3-asr",
+      "inference_component_name": "transmeet-qwen3-asr-ic-v2",
+      "endpoint_config_name": "transmeet-qwen3-asr-warm-v1",
+      "requested_instance_types": [
+        "ml.g6.2xlarge",
+        "ml.g6.xlarge"
+      ],
+      "region": "ap-northeast-2",
+      "status": "InService",
+      "host_minimum": 1,
+      "host_maximum": 1,
+      "copy_minimum": 1,
+      "copy_maximum": 1,
+      "catalog": {
+        "Provider": "Qwen",
+        "Url": "https://huggingface.co/Qwen/Qwen3-ASR-1.7B",
+        "MinSdkVersion": "2.237.1",
+        "TrainingSupported": false,
+        "IncrementalTrainingSupported": false,
+        "HostingEcrSpecs": {
+          "Framework": "vllm",
+          "FrameworkVersion": "server",
+          "PyVersion": "py312",
+          "HuggingfaceTransformersVersion": "4.37.0"
+        },
+        "HostingArtifactUri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/",
+        "HostingScriptUri": "s3://jumpstart-cache-prod-ap-northeast-2/source-directory-tarballs/inference/vllm-asr/v1.0.0/sourcedir.tar.gz",
+        "HostingUseScriptUri": false,
+        "InferenceDependencies": [],
+        "TrainingDependencies": [],
+        "InferenceEnvironmentVariables": [
+          {
+            "Name": "ENDPOINT_SERVER_TIMEOUT",
+            "Type": "int",
+            "Default": 3600,
+            "Scope": "container",
+            "RequiredForModelClass": true
+          },
+          {
+            "Name": "HF_MODEL_ID",
+            "Type": "text",
+            "Default": "/opt/ml/model",
+            "Scope": "container",
+            "RequiredForModelClass": true
+          },
+          {
+            "Name": "MODEL_CACHE_ROOT",
+            "Type": "text",
+            "Default": "/opt/ml/model",
+            "Scope": "container",
+            "RequiredForModelClass": true
+          },
+          {
+            "Name": "SAGEMAKER_CONTAINER_LOG_LEVEL",
+            "Type": "text",
+            "Default": "20",
+            "Scope": "container",
+            "RequiredForModelClass": false
+          },
+          {
+            "Name": "SAGEMAKER_ENV",
+            "Type": "text",
+            "Default": "1",
+            "Scope": "container",
+            "RequiredForModelClass": true
+          },
+          {
+            "Name": "SAGEMAKER_MODEL_SERVER_TIMEOUT",
+            "Type": "text",
+            "Default": "3600",
+            "Scope": "container",
+            "RequiredForModelClass": true
+          },
+          {
+            "Name": "SAGEMAKER_MODEL_SERVER_WORKERS",
+            "Type": "int",
+            "Default": 1,
+            "Scope": "container",
+            "RequiredForModelClass": true
+          },
+          {
+            "Name": "SAGEMAKER_PROGRAM",
+            "Type": "text",
+            "Default": "inference.py",
+            "Scope": "container",
+            "RequiredForModelClass": true
+          },
+          {
+            "Name": "SAGEMAKER_SUBMIT_DIRECTORY",
+            "Type": "text",
+            "Default": "/opt/ml/model/code",
+            "Scope": "container",
+            "RequiredForModelClass": true
+          }
+        ],
+        "DefaultInferenceInstanceType": "ml.g6.xlarge",
+        "SupportedInferenceInstanceTypes": [
+          "ml.g6.2xlarge",
+          "ml.g6.xlarge"
+        ],
+        "InferenceEnableNetworkIsolation": true,
+        "ValidationSupported": false,
+        "FineTuningSupported": false,
+        "ResourceNameBase": "hf-asr-qwen3-asr-1-7b",
+        "DefaultPayloads": {
+          "transcribeAudio": {
+            "Body": {
+              "max_tokens": 256,
+              "messages": [
+                {
+                  "content": [
+                    {
+                      "input_audio": {
+                        "data": "$s3_b64<inference-notebook-assets/speaker_1_angry.wav>",
+                        "format": "wav"
+                      },
+                      "type": "input_audio"
+                    }
+                  ],
+                  "role": "user"
+                }
+              ]
+            },
+            "ContentType": "application/json"
+          },
+          "transcribeWithPrompt": {
+            "Body": {
+              "max_tokens": 256,
+              "messages": [
+                {
+                  "content": [
+                    {
+                      "text": "Transcribe the following audio.",
+                      "type": "text"
+                    },
+                    {
+                      "input_audio": {
+                        "data": "$s3_b64<inference-notebook-assets/speaker_2.wav>",
+                        "format": "wav"
+                      },
+                      "type": "input_audio"
+                    }
+                  ],
+                  "role": "user"
+                }
+              ]
+            },
+            "ContentType": "application/json"
+          }
+        },
+        "HostingInstanceTypeVariants": {
+          "Variants": {
+            "g5": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/vllm:server-sagemaker-cuda-v1"
+              }
+            },
+            "g6": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/vllm:server-sagemaker-cuda-v1"
+              }
+            },
+            "g6e": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/vllm:server-sagemaker-cuda-v1"
+              }
+            },
+            "g7e": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/vllm:server-sagemaker-cuda-v1"
+              }
+            },
+            "local_gpu": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/vllm:server-sagemaker-cuda-v1"
+              }
+            },
+            "p4d": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/vllm:server-sagemaker-cuda-v1"
+              }
+            },
+            "p4de": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/vllm:server-sagemaker-cuda-v1"
+              }
+            },
+            "p5": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/vllm:server-sagemaker-cuda-v1"
+              }
+            },
+            "p5e": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/vllm:server-sagemaker-cuda-v1"
+              }
+            },
+            "p5en": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/vllm:server-sagemaker-cuda-v1"
+              }
+            },
+            "ml.g6.2xlarge": {
+              "Properties": {
+                "EnvironmentVariables": {
+                  "SM_VLLM_MAX_MODEL_LEN": "32768"
+                },
+                "ResourceRequirements": {
+                  "MinMemoryMb": 16384,
+                  "NumAccelerators": 1
+                }
+              }
+            },
+            "ml.g6.xlarge": {
+              "Properties": {
+                "EnvironmentVariables": {
+                  "SM_VLLM_MAX_MODEL_LEN": "32768"
+                },
+                "ResourceRequirements": {
+                  "MinMemoryMb": 8192,
+                  "NumAccelerators": 1
+                }
+              }
+            }
+          }
+        },
+        "HostingArtifactS3DataType": "S3Prefix",
+        "HostingArtifactCompressionType": "None",
+        "HostingResourceRequirements": {
+          "MinMemoryMb": 8192,
+          "NumAccelerators": 1
+        },
+        "DynamicContainerDeploymentSupported": true,
+        "InputModalities": [
+          "Audio"
+        ],
+        "OutputModalities": [
+          "Text"
+        ],
+        "ModelAccess": "Open",
+        "MlFramework": "Hugging Face",
+        "HuggingfaceId": "Qwen/Qwen3-ASR-1.7B",
+        "License": "Apache-2.0",
+        "Dependencies": [],
+        "HostingEcrUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/vllm:server-sagemaker-cuda-v1",
+        "SageMakerSdkPredictorSpecifications": {
+          "SupportedContentTypes": [
+            "application/json"
+          ],
+          "SupportedAcceptTypes": [
+            "application/json"
+          ],
+          "DefaultContentType": "application/json",
+          "DefaultAcceptType": "application/json"
+        },
+        "Capabilities": [],
+        "NotebookLocations": {
+          "DemoNotebook": "s3://jumpstart-cache-prod-ap-northeast-2/pmm-notebooks/pmm-notebook-model-hub-text-generation-deploy.ipynb",
+          "DemoNotebooks": [
+            {
+              "IsDefault": true,
+              "Title": "Deploy",
+              "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/pmm-notebooks/pmm-notebook-model-hub-text-generation-deploy.ipynb"
+            }
+          ]
+        },
+        "ModelTypes": [
+          "OPEN_WEIGHTS"
+        ],
+        "Task": "Automatic Speech Recognition",
+        "Framework": "huggingface",
+        "DataType": "audio",
+        "ContextualHelp": {}
+      },
+      "endpoint": {
+        "EndpointName": "transmeet-qwen3-asr",
+        "EndpointArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen3-asr",
+        "EndpointConfigName": "transmeet-qwen3-asr-warm-v1",
+        "ProductionVariants": [
+          {
+            "VariantName": "AllTraffic",
+            "CurrentInstanceCount": 1,
+            "DesiredInstanceCount": 1,
+            "InstancePools": [
+              {
+                "InstanceType": "ml.g6.2xlarge",
+                "CurrentInstanceCount": 1
+              }
+            ],
+            "ManagedInstanceScaling": {
+              "Status": "ENABLED",
+              "MinInstanceCount": 1,
+              "MaxInstanceCount": 1,
+              "ScaleInPolicy": {
+                "Strategy": "IDLE_RELEASE"
+              }
+            }
+          }
+        ],
+        "EndpointStatus": "InService",
+        "CreationTime": "2026-10-28 19:13:32.788000+00:00",
+        "LastModifiedTime": "2026-10-28 19:16:01.125000+00:00",
+        "MetricsConfig": {
+          "EnableDetailedObservability": true
+        },
+        "ResponseMetadata": {
+          "RequestId": "c75feb04-1be8-4a97-be82-224d3dffb4db",
+          "HTTPStatusCode": 200,
+          "HTTPHeaders": {
+            "x-amzn-requestid": "c75feb04-1be8-4a97-be82-224d3dffb4db",
+            "strict-transport-security": "max-age=47304000; includeSubDomains",
+            "x-frame-options": "DENY",
+            "content-security-policy": "frame-ancestors 'none'",
+            "cache-control": "no-cache, no-store, must-revalidate",
+            "x-content-type-options": "nosniff",
+            "content-type": "application/x-amz-json-1.1",
+            "content-length": "640",
+            "date": "Wed, 28 Oct 2026 19:24:49 GMT"
+          },
+          "RetryAttempts": 0
+        }
+      },
+      "model": {
+        "ModelName": "transmeet-qwen3-asr-model-offline",
+        "PrimaryContainer": {
+          "Image": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/vllm:server-sagemaker-cuda-v1",
+          "Mode": "SingleModel",
+          "ModelDataSource": {
+            "S3DataSource": {
+              "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-qwen3-asr-1-7b/artifacts/inference-prepack/v1.0.0/",
+              "S3DataType": "S3Prefix",
+              "CompressionType": "None"
+            }
+          },
+          "Environment": {
+            "ENDPOINT_SERVER_TIMEOUT": "3600",
+            "HF_MODEL_ID": "/opt/ml/model",
+            "MODEL_CACHE_ROOT": "/opt/ml/model",
+            "SAGEMAKER_ENV": "1",
+            "SAGEMAKER_MODEL_SERVER_TIMEOUT": "3600",
+            "SAGEMAKER_MODEL_SERVER_WORKERS": "1",
+            "SAGEMAKER_PROGRAM": "inference.py",
+            "SAGEMAKER_SUBMIT_DIRECTORY": "/opt/ml/model/code",
+            "SM_VLLM_MAX_MODEL_LEN": "32768",
+            "STANDARD_PIP_ARGS": "--no-deps --no-index -r /opt/ml/model/requirements.txt"
+          }
+        },
+        "ExecutionRoleArn": "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+        "CreationTime": "2026-10-28 19:13:31.865000+00:00",
+        "ModelArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:model/transmeet-qwen3-asr-model-offline",
+        "EnableNetworkIsolation": true,
+        "DeploymentRecommendation": {
+          "RecommendationStatus": "COMPLETED",
+          "RealTimeInferenceRecommendations": [
+            {
+              "RecommendationId": "transmeet-qwen3-asr-model-offline/mmg98WEN",
+              "InstanceType": "ml.g4dn.4xlarge",
+              "Environment": {}
+            },
+            {
+              "RecommendationId": "transmeet-qwen3-asr-model-offline/mO1eLrIW",
+              "InstanceType": "ml.c5.large",
+              "Environment": {}
+            },
+            {
+              "RecommendationId": "transmeet-qwen3-asr-model-offline/JeNWhh24",
+              "InstanceType": "ml.g4dn.xlarge",
+              "Environment": {}
+            }
+          ]
+        },
+        "ResponseMetadata": {
+          "RequestId": "1b3e7c03-b3bb-46c9-81ba-6510025f1049",
+          "HTTPStatusCode": 200,
+          "HTTPHeaders": {
+            "x-amzn-requestid": "1b3e7c03-b3bb-46c9-81ba-6510025f1049",
+            "strict-transport-security": "max-age=47304000; includeSubDomains",
+            "x-frame-options": "DENY",
+            "content-security-policy": "frame-ancestors 'none'",
+            "cache-control": "no-cache, no-store, must-revalidate",
+            "x-content-type-options": "nosniff",
+            "content-type": "application/x-amz-json-1.1",
+            "content-length": "1522",
+            "date": "Wed, 28 Oct 2026 19:24:49 GMT"
+          },
+          "RetryAttempts": 0
+        }
+      },
+      "inference_component": {
+        "InferenceComponentName": "transmeet-qwen3-asr-ic-v2",
+        "InferenceComponentArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:inference-component/transmeet-qwen3-asr-ic-v2",
+        "EndpointName": "transmeet-qwen3-asr",
+        "EndpointArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen3-asr",
+        "VariantName": "AllTraffic",
+        "Specifications": [
+          {
+            "InstanceType": "ml.g6.2xlarge",
+            "ModelName": "transmeet-qwen3-asr-model-offline",
+            "StartupParameters": {
+              "ModelDataDownloadTimeoutInSeconds": 2400,
+              "ContainerStartupHealthCheckTimeoutInSeconds": 1800
+            },
+            "ComputeResourceRequirements": {
+              "NumberOfCpuCoresRequired": 2.0,
+              "NumberOfAcceleratorDevicesRequired": 1.0,
+              "MinMemoryRequiredInMb": 8192
+            },
+            "DataCacheConfig": {
+              "EnableCaching": true
+            }
+          },
+          {
+            "InstanceType": "ml.g6.xlarge",
+            "ModelName": "transmeet-qwen3-asr-model-offline",
+            "StartupParameters": {
+              "ModelDataDownloadTimeoutInSeconds": 2400,
+              "ContainerStartupHealthCheckTimeoutInSeconds": 1800
+            },
+            "ComputeResourceRequirements": {
+              "NumberOfCpuCoresRequired": 2.0,
+              "NumberOfAcceleratorDevicesRequired": 1.0,
+              "MinMemoryRequiredInMb": 8192
+            },
+            "DataCacheConfig": {
+              "EnableCaching": true
+            }
+          }
+        ],
+        "RuntimeConfig": {
+          "DesiredCopyCount": 1,
+          "CurrentCopyCount": 1,
+          "PlacementStatus": [
+            {
+              "InstanceType": "ml.g6.2xlarge",
+              "CurrentCopyCount": 1
+            }
+          ]
+        },
+        "CreationTime": "2026-10-28 19:16:13.980000+00:00",
+        "LastModifiedTime": "2026-10-28 19:22:26.210000+00:00",
+        "InferenceComponentStatus": "InService",
+        "ResponseMetadata": {
+          "RequestId": "e8d3f54f-0d42-4631-8960-34f23de16d21",
+          "HTTPStatusCode": 200,
+          "HTTPHeaders": {
+            "x-amzn-requestid": "e8d3f54f-0d42-4631-8960-34f23de16d21",
+            "strict-transport-security": "max-age=47304000; includeSubDomains",
+            "x-frame-options": "DENY",
+            "content-security-policy": "frame-ancestors 'none'",
+            "cache-control": "no-cache, no-store, must-revalidate",
+            "x-content-type-options": "nosniff",
+            "content-type": "application/x-amz-json-1.1",
+            "content-length": "1322",
+            "date": "Wed, 28 Oct 2026 19:24:49 GMT"
+          },
+          "RetryAttempts": 0
+        }
+      },
+      "ready_verified_at": "2026-10-28T19:23:11.307546+00:00",
+      "final_verified_at": "2026-10-28T19:24:49.982689+00:00",
+      "actual_instance_type": "ml.g6.2xlarge",
+      "current_host_count": 1,
+      "current_gpu_count": 1,
+      "current_model_copy_count": 1,
+      "hourly_host_cost_usd": 1.5026,
+      "endpoint_config": {
+        "EndpointConfigName": "transmeet-qwen3-asr-warm-v1",
+        "EndpointConfigArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint-config/transmeet-qwen3-asr-warm-v1",
+        "ProductionVariants": [
+          {
+            "VariantName": "AllTraffic",
+            "InitialInstanceCount": 1,
+            "InstancePools": [
+              {
+                "InstanceType": "ml.g6.2xlarge",
+                "Priority": 1
+              },
+              {
+                "InstanceType": "ml.g6.xlarge",
+                "Priority": 2
+              }
+            ],
+            "VariantInstanceProvisionTimeoutInSeconds": 600,
+            "ManagedInstanceScaling": {
+              "Status": "ENABLED",
+              "MinInstanceCount": 1,
+              "MaxInstanceCount": 1,
+              "ScaleInPolicy": {
+                "Strategy": "IDLE_RELEASE"
+              }
+            }
+          }
+        ],
+        "CreationTime": "2026-10-28 19:13:32.315000+00:00",
+        "ExecutionRoleArn": "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+        "EnableNetworkIsolation": true,
+        "MetricsConfig": {
+          "EnableDetailedObservability": true
+        },
+        "ResponseMetadata": {
+          "RequestId": "7efc2dfb-0be7-474b-ab71-e94242c4ed72",
+          "HTTPStatusCode": 200,
+          "HTTPHeaders": {
+            "x-amzn-requestid": "7efc2dfb-0be7-474b-ab71-e94242c4ed72",
+            "strict-transport-security": "max-age=47304000; includeSubDomains",
+            "x-frame-options": "DENY",
+            "content-security-policy": "frame-ancestors 'none'",
+            "cache-control": "no-cache, no-store, must-revalidate",
+            "x-content-type-options": "nosniff",
+            "content-type": "application/x-amz-json-1.1",
+            "content-length": "755",
+            "date": "Wed, 28 Oct 2026 19:24:49 GMT"
+          },
+          "RetryAttempts": 0
+        }
+      },
+      "scalable_targets": [
+        {
+          "ServiceNamespace": "sagemaker",
+          "ResourceId": "inference-component/transmeet-qwen3-asr-ic-v2",
+          "ScalableDimension": "sagemaker:inference-component:DesiredCopyCount",
+          "MinCapacity": 1,
+          "MaxCapacity": 1,
+          "RoleARN": "arn:aws:iam::913524902871:role/aws-service-role/sagemaker.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_SageMakerEndpoint",
+          "CreationTime": "2026-10-28 19:22:38.104000+00:00",
+          "SuspendedState": {
+            "DynamicScalingInSuspended": false,
+            "DynamicScalingOutSuspended": false,
+            "ScheduledScalingSuspended": false
+          },
+          "ScalableTargetARN": "arn:aws:application-autoscaling:ap-northeast-2:913524902871:scalable-target/056mfc5b9efa53e442a784349623d39e6e8f"
+        }
+      ]
+    },
+    "nemotron": {
+      "hub_model_id": "huggingface-asr-nvidia-nemotron-3-5-asr-streaming-0-6b",
+      "hub_model_version": "1.0.2",
+      "sagemaker_model_name": "transmeet-nemotron-asr-model",
+      "endpoint_name": "transmeet-nemotron-asr",
+      "inference_component_name": "transmeet-nemotron-asr-ic-v2",
+      "endpoint_config_name": "transmeet-nemotron-asr-warm-v1",
+      "requested_instance_types": [
+        "ml.g5.2xlarge"
+      ],
+      "region": "ap-northeast-2",
+      "status": "InService",
+      "host_minimum": 1,
+      "host_maximum": 1,
+      "copy_minimum": 1,
+      "copy_maximum": 1,
+      "catalog": {
+        "Provider": "nvidia",
+        "Url": "https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b",
+        "MinSdkVersion": "2.237.1",
+        "TrainingSupported": false,
+        "IncrementalTrainingSupported": false,
+        "HostingEcrSpecs": {
+          "Framework": "pytorch",
+          "FrameworkVersion": "2.5.1",
+          "PyVersion": "py311"
+        },
+        "HostingArtifactUri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-nvidia-nemotron-3-5-asr-streaming-0-6b/artifacts/inference-prepack/v1.0.2/",
+        "HostingScriptUri": "s3://jumpstart-cache-prod-ap-northeast-2/source-directory-tarballs/inference/noop/v1.0.0/sourcedir.tar.gz",
+        "HostingUseScriptUri": false,
+        "InferenceDependencies": [],
+        "TrainingDependencies": [],
+        "InferenceEnvironmentVariables": [
+          {
+            "Name": "ENDPOINT_SERVER_TIMEOUT",
+            "Type": "int",
+            "Default": 3600,
+            "Scope": "container",
+            "RequiredForModelClass": true
+          },
+          {
+            "Name": "HF_TASK",
+            "Type": "text",
+            "Default": "automatic-speech-recognition",
+            "Scope": "container",
+            "RequiredForModelClass": true
+          },
+          {
+            "Name": "MODEL_CACHE_ROOT",
+            "Type": "text",
+            "Default": "/opt/ml/model",
+            "Scope": "container",
+            "RequiredForModelClass": true
+          },
+          {
+            "Name": "MODEL_PREPACK",
+            "Type": "text",
+            "Default": "a625df9a",
+            "Scope": "container",
+            "RequiredForModelClass": true
+          },
+          {
+            "Name": "SAGEMAKER_CONTAINER_LOG_LEVEL",
+            "Type": "text",
+            "Default": "20",
+            "Scope": "container",
+            "RequiredForModelClass": false
+          },
+          {
+            "Name": "SAGEMAKER_ENV",
+            "Type": "text",
+            "Default": "1",
+            "Scope": "container",
+            "RequiredForModelClass": true
+          },
+          {
+            "Name": "SAGEMAKER_MODEL_SERVER_TIMEOUT",
+            "Type": "int",
+            "Default": 3600,
+            "Scope": "container",
+            "RequiredForModelClass": true
+          },
+          {
+            "Name": "SAGEMAKER_MODEL_SERVER_WORKERS",
+            "Type": "int",
+            "Default": 1,
+            "Scope": "container",
+            "RequiredForModelClass": true
+          },
+          {
+            "Name": "SAGEMAKER_PROGRAM",
+            "Type": "text",
+            "Default": "inference.py",
+            "Scope": "container",
+            "RequiredForModelClass": true
+          },
+          {
+            "Name": "SAGEMAKER_SUBMIT_DIRECTORY",
+            "Type": "text",
+            "Default": "/opt/ml/model/code",
+            "Scope": "container",
+            "RequiredForModelClass": true
+          },
+          {
+            "Name": "TORCHDYNAMO_DISABLE",
+            "Type": "text",
+            "Default": "1",
+            "Scope": "container",
+            "RequiredForModelClass": true
+          },
+          {
+            "Name": "TS_DEFAULT_RESPONSE_TIMEOUT",
+            "Type": "text",
+            "Default": "900",
+            "Scope": "container",
+            "RequiredForModelClass": true
+          }
+        ],
+        "DefaultInferenceInstanceType": "ml.g5.2xlarge",
+        "SupportedInferenceInstanceTypes": [
+          "ml.g5.2xlarge"
+        ],
+        "InferenceVolumeSize": 512,
+        "InferenceEnableNetworkIsolation": true,
+        "ValidationSupported": false,
+        "FineTuningSupported": false,
+        "ResourceNameBase": "nvidia-nemotron-3-5-asr-streaming-0-6b",
+        "DefaultPayloads": {
+          "transcribeAutoDetectLanguage": {
+            "Body": {
+              "audio_base64": "$s3_b64<training-datasets/asr_notebook_data/sample1.wav>",
+              "language": "auto"
+            },
+            "ContentType": "application/json",
+            "OutputKeys": {
+              "language": "language",
+              "transcription": "text"
+            },
+            "PromptKey": "audio_base64"
+          },
+          "transcribeEnglish": {
+            "Body": {
+              "audio_base64": "$s3_b64<training-datasets/asr_notebook_data/sample1.wav>",
+              "language": "en-US"
+            },
+            "ContentType": "application/json",
+            "OutputKeys": {
+              "language": "language",
+              "transcription": "text"
+            },
+            "PromptKey": "audio_base64"
+          },
+          "transcribeFrench": {
+            "Body": {
+              "audio_base64": "$s3_b64<training-datasets/asr_notebook_data/sample_french1.wav>",
+              "language": "fr-FR"
+            },
+            "ContentType": "application/json",
+            "OutputKeys": {
+              "language": "language",
+              "transcription": "text"
+            },
+            "PromptKey": "audio_base64"
+          }
+        },
+        "HostingInstanceTypeVariants": {
+          "Variants": {
+            "c4": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "c5": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "c5d": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "c5n": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "c6a": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "c6i": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "c6id": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "c7i": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "c8a": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "c8g": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "c8i": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "g4dn": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311"
+              }
+            },
+            "g5": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311"
+              }
+            },
+            "g6": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311"
+              }
+            },
+            "g6e": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311"
+              }
+            },
+            "g6f": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311"
+              }
+            },
+            "g7": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311"
+              }
+            },
+            "g7e": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311"
+              }
+            },
+            "gr6": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311"
+              }
+            },
+            "i3en": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "local": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "local_gpu": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311"
+              }
+            },
+            "m4": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "m5": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "m5d": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "m6a": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "m6i": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "m6id": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "m7g": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "m7gd": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "m7i": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "m8a": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "m8g": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "m8i": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "p3": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311"
+              }
+            },
+            "p3dn": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311"
+              }
+            },
+            "p4d": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311"
+              }
+            },
+            "p4de": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311"
+              }
+            },
+            "p5": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311"
+              }
+            },
+            "p5e": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311"
+              }
+            },
+            "p5en": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311"
+              }
+            },
+            "p6-b200": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311"
+              }
+            },
+            "p6-b300": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311"
+              }
+            },
+            "r5": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "r5d": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "r6i": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "r6id": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "r7g": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "r7gd": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "r7i": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "r8g": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "r8i": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "t2": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "t3": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "u-p6e-gb200x36": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "u-p6e-gb200x72": {
+              "Properties": {
+                "ImageUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-cpu-py311"
+              }
+            },
+            "ml.g5.2xlarge": {
+              "Properties": {
+                "ResourceRequirements": {
+                  "MinMemoryMb": 16384,
+                  "NumAccelerators": 1
+                }
+              }
+            }
+          }
+        },
+        "HostingArtifactS3DataType": "S3Prefix",
+        "HostingArtifactCompressionType": "None",
+        "HostingResourceRequirements": {
+          "MinMemoryMb": 16384,
+          "NumAccelerators": 1
+        },
+        "DynamicContainerDeploymentSupported": true,
+        "InputModalities": [
+          "Audio"
+        ],
+        "OutputModalities": [
+          "Text"
+        ],
+        "ModelAccess": "Open",
+        "Languages": [
+          "English",
+          "Spanish",
+          "German",
+          "French",
+          "Italian",
+          "Arabic",
+          "Japanese",
+          "Korean",
+          "Portuguese",
+          "Russian",
+          "Hindi",
+          "Chinese",
+          "Vietnamese",
+          "Hebrew",
+          "Dutch",
+          "Czech",
+          "Danish",
+          "Polish",
+          "Norwegian",
+          "Swedish",
+          "Thai",
+          "Turkish",
+          "Bulgarian",
+          "Greek",
+          "Estonian",
+          "Finnish",
+          "Croatian",
+          "Hungarian",
+          "Lithuanian",
+          "Latvian",
+          "Romanian",
+          "Slovak",
+          "Ukrainian",
+          "Maltese",
+          "Slovenian"
+        ],
+        "MlFramework": "Hugging Face",
+        "HuggingfaceId": "nvidia/nemotron-3.5-asr-streaming-0.6b",
+        "License": "OpenMDW License Agreement",
+        "ContainerStartupHealthCheckTimeout": 900,
+        "ModelDataDownloadTimeout": 2400,
+        "Dependencies": [],
+        "HostingEcrUri": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311",
+        "SageMakerSdkPredictorSpecifications": {
+          "SupportedContentTypes": [
+            "application/json",
+            "audio/wav"
+          ],
+          "SupportedAcceptTypes": [
+            "application/json"
+          ],
+          "DefaultContentType": "application/json",
+          "DefaultAcceptType": "application/json"
+        },
+        "Capabilities": [],
+        "ModelTypes": [
+          "OPEN_WEIGHTS"
+        ],
+        "NotebookLocations": {
+          "DemoNotebook": "s3://jumpstart-cache-prod-ap-northeast-2/pmm-notebooks/pmm-notebook-model-hub-text-generation-deploy.ipynb",
+          "DemoNotebooks": [
+            {
+              "IsDefault": true,
+              "Title": "Deploy",
+              "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/pmm-notebooks/pmm-notebook-model-hub-text-generation-deploy.ipynb"
+            }
+          ]
+        },
+        "Task": "Automatic Speech Recognition",
+        "Framework": "huggingface",
+        "DataType": "audio",
+        "ContextualHelp": {}
+      },
+      "endpoint": {
+        "EndpointName": "transmeet-nemotron-asr",
+        "EndpointArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-asr",
+        "EndpointConfigName": "transmeet-nemotron-asr-warm-v1",
+        "ProductionVariants": [
+          {
+            "VariantName": "AllTraffic",
+            "CurrentInstanceCount": 1,
+            "DesiredInstanceCount": 1,
+            "ManagedInstanceScaling": {
+              "Status": "ENABLED",
+              "MinInstanceCount": 1,
+              "MaxInstanceCount": 1,
+              "ScaleInPolicy": {
+                "Strategy": "IDLE_RELEASE"
+              }
+            }
+          }
+        ],
+        "EndpointStatus": "InService",
+        "CreationTime": "2026-10-28 19:13:20.916000+00:00",
+        "LastModifiedTime": "2026-10-28 19:15:23.838000+00:00",
+        "MetricsConfig": {
+          "EnableDetailedObservability": true
+        },
+        "ResponseMetadata": {
+          "RequestId": "22bc174f-7231-4d40-892d-ddfbe7e452f7",
+          "HTTPStatusCode": 200,
+          "HTTPHeaders": {
+            "x-amzn-requestid": "22bc174f-7231-4d40-892d-ddfbe7e452f7",
+            "strict-transport-security": "max-age=47304000; includeSubDomains",
+            "x-frame-options": "DENY",
+            "content-security-policy": "frame-ancestors 'none'",
+            "cache-control": "no-cache, no-store, must-revalidate",
+            "x-content-type-options": "nosniff",
+            "content-type": "application/x-amz-json-1.1",
+            "content-length": "573",
+            "date": "Wed, 28 Oct 2026 19:24:49 GMT"
+          },
+          "RetryAttempts": 0
+        }
+      },
+      "model": {
+        "ModelName": "transmeet-nemotron-asr-model",
+        "PrimaryContainer": {
+          "Image": "763104351884.dkr.ecr.ap-northeast-2.amazonaws.com/pytorch-inference:2.5.1-gpu-py311",
+          "Mode": "SingleModel",
+          "ModelDataSource": {
+            "S3DataSource": {
+              "S3Uri": "s3://jumpstart-cache-prod-ap-northeast-2/huggingface-asr/huggingface-asr-nvidia-nemotron-3-5-asr-streaming-0-6b/artifacts/inference-prepack/v1.0.2/",
+              "S3DataType": "S3Prefix",
+              "CompressionType": "None"
+            }
+          },
+          "Environment": {
+            "ENDPOINT_SERVER_TIMEOUT": "3600",
+            "HF_TASK": "automatic-speech-recognition",
+            "MODEL_CACHE_ROOT": "/opt/ml/model",
+            "MODEL_PREPACK": "a625df9a",
+            "SAGEMAKER_ENV": "1",
+            "SAGEMAKER_MODEL_SERVER_TIMEOUT": "3600",
+            "SAGEMAKER_MODEL_SERVER_WORKERS": "1",
+            "SAGEMAKER_PROGRAM": "inference.py",
+            "SAGEMAKER_SUBMIT_DIRECTORY": "/opt/ml/model/code",
+            "TORCHDYNAMO_DISABLE": "1",
+            "TS_DEFAULT_RESPONSE_TIMEOUT": "900"
+          }
+        },
+        "ExecutionRoleArn": "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+        "CreationTime": "2026-10-28 19:13:20.162000+00:00",
+        "ModelArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:model/transmeet-nemotron-asr-model",
+        "EnableNetworkIsolation": true,
+        "DeploymentRecommendation": {
+          "RecommendationStatus": "COMPLETED",
+          "RealTimeInferenceRecommendations": [
+            {
+              "RecommendationId": "transmeet-nemotron-asr-model/DOWwL9m5",
+              "InstanceType": "ml.g4dn.4xlarge",
+              "Environment": {}
+            },
+            {
+              "RecommendationId": "transmeet-nemotron-asr-model/1oXFIEet",
+              "InstanceType": "ml.c5.large",
+              "Environment": {}
+            },
+            {
+              "RecommendationId": "transmeet-nemotron-asr-model/tAmiLzqy",
+              "InstanceType": "ml.g4dn.xlarge",
+              "Environment": {}
+            }
+          ]
+        },
+        "ResponseMetadata": {
+          "RequestId": "712747d2-5de1-470f-a05c-e91ccdc7a7d3",
+          "HTTPStatusCode": 200,
+          "HTTPHeaders": {
+            "x-amzn-requestid": "712747d2-5de1-470f-a05c-e91ccdc7a7d3",
+            "strict-transport-security": "max-age=47304000; includeSubDomains",
+            "x-frame-options": "DENY",
+            "content-security-policy": "frame-ancestors 'none'",
+            "cache-control": "no-cache, no-store, must-revalidate",
+            "x-content-type-options": "nosniff",
+            "content-type": "application/x-amz-json-1.1",
+            "content-length": "1516",
+            "date": "Wed, 28 Oct 2026 19:24:49 GMT"
+          },
+          "RetryAttempts": 0
+        }
+      },
+      "inference_component": {
+        "InferenceComponentName": "transmeet-nemotron-asr-ic-v2",
+        "InferenceComponentArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:inference-component/transmeet-nemotron-asr-ic-v2",
+        "EndpointName": "transmeet-nemotron-asr",
+        "EndpointArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-asr",
+        "VariantName": "AllTraffic",
+        "Specification": {
+          "ModelName": "transmeet-nemotron-asr-model",
+          "StartupParameters": {
+            "ModelDataDownloadTimeoutInSeconds": 2400,
+            "ContainerStartupHealthCheckTimeoutInSeconds": 1800
+          },
+          "ComputeResourceRequirements": {
+            "NumberOfCpuCoresRequired": 2.0,
+            "NumberOfAcceleratorDevicesRequired": 1.0,
+            "MinMemoryRequiredInMb": 8192
+          },
+          "DataCacheConfig": {
+            "EnableCaching": true
+          }
+        },
+        "RuntimeConfig": {
+          "DesiredCopyCount": 1,
+          "CurrentCopyCount": 1,
+          "PlacementStatus": [
+            {
+              "InstanceType": "ml.g5.2xlarge",
+              "CurrentCopyCount": 1
+            }
+          ]
+        },
+        "CreationTime": "2026-10-28 19:15:42.027000+00:00",
+        "LastModifiedTime": "2026-10-28 19:21:01.248000+00:00",
+        "InferenceComponentStatus": "InService",
+        "ResponseMetadata": {
+          "RequestId": "db7cbff8-6b2c-4ae5-ba87-cd682a30075b",
+          "HTTPStatusCode": 200,
+          "HTTPHeaders": {
+            "x-amzn-requestid": "db7cbff8-6b2c-4ae5-ba87-cd682a30075b",
+            "strict-transport-security": "max-age=47304000; includeSubDomains",
+            "x-frame-options": "DENY",
+            "content-security-policy": "frame-ancestors 'none'",
+            "cache-control": "no-cache, no-store, must-revalidate",
+            "x-content-type-options": "nosniff",
+            "content-type": "application/x-amz-json-1.1",
+            "content-length": "929",
+            "date": "Wed, 28 Oct 2026 19:24:49 GMT"
+          },
+          "RetryAttempts": 0
+        }
+      },
+      "ready_verified_at": "2026-10-28T19:21:30.868593+00:00",
+      "final_verified_at": "2026-10-28T19:24:49.984098+00:00",
+      "actual_instance_type": "ml.g5.2xlarge",
+      "current_host_count": 1,
+      "current_gpu_count": 1,
+      "current_model_copy_count": 1,
+      "hourly_host_cost_usd": 1.8629,
+      "endpoint_config": {
+        "EndpointConfigName": "transmeet-nemotron-asr-warm-v1",
+        "EndpointConfigArn": "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint-config/transmeet-nemotron-asr-warm-v1",
+        "ProductionVariants": [
+          {
+            "VariantName": "AllTraffic",
+            "InitialInstanceCount": 1,
+            "InstanceType": "ml.g5.2xlarge",
+            "ManagedInstanceScaling": {
+              "Status": "ENABLED",
+              "MinInstanceCount": 1,
+              "MaxInstanceCount": 1,
+              "ScaleInPolicy": {
+                "Strategy": "IDLE_RELEASE"
+              }
+            }
+          }
+        ],
+        "CreationTime": "2026-10-28 19:13:20.501000+00:00",
+        "ExecutionRoleArn": "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+        "EnableNetworkIsolation": true,
+        "MetricsConfig": {
+          "EnableDetailedObservability": true
+        },
+        "ResponseMetadata": {
+          "RequestId": "47f58150-50e5-42b5-993e-579ff679c695",
+          "HTTPStatusCode": 200,
+          "HTTPHeaders": {
+            "x-amzn-requestid": "47f58150-50e5-42b5-993e-579ff679c695",
+            "strict-transport-security": "max-age=47304000; includeSubDomains",
+            "x-frame-options": "DENY",
+            "content-security-policy": "frame-ancestors 'none'",
+            "cache-control": "no-cache, no-store, must-revalidate",
+            "x-content-type-options": "nosniff",
+            "content-type": "application/x-amz-json-1.1",
+            "content-length": "636",
+            "date": "Wed, 28 Oct 2026 19:24:49 GMT"
+          },
+          "RetryAttempts": 0
+        }
+      },
+      "scalable_targets": [
+        {
+          "ServiceNamespace": "sagemaker",
+          "ResourceId": "inference-component/transmeet-nemotron-asr-ic-v2",
+          "ScalableDimension": "sagemaker:inference-component:DesiredCopyCount",
+          "MinCapacity": 1,
+          "MaxCapacity": 1,
+          "RoleARN": "arn:aws:iam::913524902871:role/aws-service-role/sagemaker.application-autoscaling.amazonaws.com/AWSServiceRoleForApplicationAutoScaling_SageMakerEndpoint",
+          "CreationTime": "2026-10-28 19:21:05.655000+00:00",
+          "SuspendedState": {
+            "DynamicScalingInSuspended": false,
+            "DynamicScalingOutSuspended": false,
+            "ScheduledScalingSuspended": false
+          },
+          "ScalableTargetARN": "arn:aws:application-autoscaling:ap-northeast-2:913524902871:scalable-target/056m26bf798def4144c3913e084723f455a9"
+        }
+      ]
+    }
+  },
+  "software": {
+    "boto3": "1.43.106",
+    "botocore": "1.43.106",
+    "sagemaker": "2.257.1",
+    "awscrt": "0.26.1",
+    "amazon-transcribe": "0.6.4"
+  },
+  "script_sha256": {
+    "backend/scripts/deploy_stt.py": "ff2ea3dbd0ce40f18b5ae8f8d7458781ab098c0a391e2fef1503e46302de2dac",
+    "backend/scripts/deploy_stt_scaling.py": "5a62a1009c1c754657b9219ec5d357c3e2488eb707858b02f5ff934d8bbe1272",
+    "backend/scripts/benchmark_stt.py": "e16ca3de75c63c58e53ef0a5ed47d4e0c5f3fdeef2867f66dd4d429eb86f4b44"
+  },
+  "artifacts": {
+    "preflight": "regional-preflight.json",
+    "pricing": "regional-pricing.json"
+  },
+  "benchmark_conditions": {
+    "language_sets": [
+      "ko",
+      "en"
+    ],
+    "samples_per_language": 10,
+    "chunk_seconds": [
+      0,
+      6
+    ],
+    "nemotron_streaming_enabled": false,
+    "stt_idle_seconds": 0,
+    "region": "ap-northeast-2",
+    "warmup": "No unscored inference warm-up. Endpoints, model copies and retention checks completed before scored requests.",
+    "latency_caveat": "Completed-clip client wall time includes network round trips and cannot be directly interpreted as live subtitle latency. These new endpoints are in Seoul; the earlier Transcribe/Whisper artifacts report us-east-1."
+  },
+  "benchmarks": {
+    "qwen3-asr": [
+      {
+        "provider": "qwen3-asr",
+        "language": "ko",
+        "chunk_seconds": 0,
+        "started_at": "2026-10-28T19:23:11.308154+00:00",
+        "command": [
+          "/usr/bin/python",
+          "-u",
+          "backend/scripts/benchmark_stt.py",
+          "benchmarks/stt-ko-en-2026-10-28/manifest-ko.json",
+          "--providers",
+          "qwen3-asr",
+          "--output",
+          "benchmarks/stt-ko-en-2026-10-28/raw/ko-qwen3-asr-full.json",
+          "--chunk-seconds",
+          "0",
+          "--timeout",
+          "90"
+        ],
+        "output": "benchmarks/stt-ko-en-2026-10-28/raw/ko-qwen3-asr-full.json",
+        "logfile": "benchmarks/stt-ko-en-2026-10-28/regional-benchmark-ko-qwen3-asr-full.log",
+        "source_sha256": {
+          "backend/app/config.py": "e03cb660a1eab7048087db100b714122b93f9d4d4dd2a0462e7a10a5436d37e2",
+          "backend/app/stt.py": "08c5ac3ba2f7491b3f5efbecbdac378655786b196a5c9b0c8a5c7d2a4f514731",
+          "backend/app/aws_clients.py": "7b2cec170a00f2005e3aecde8f547e45f86ccda57894d342c982980aad6b937c",
+          "backend/scripts/benchmark_stt.py": "e16ca3de75c63c58e53ef0a5ed47d4e0c5f3fdeef2867f66dd4d429eb86f4b44"
+        },
+        "completed_at": "2026-10-28T19:23:20.585441+00:00",
+        "return_code": 0,
+        "sha256": "daedffa7f5afc2ba7eb3c227df996016f9f629c37f2bb7136537c03cec90082c",
+        "summary": {
+          "qwen3-asr": {
+            "successful_samples": 10,
+            "failed_samples": 0,
+            "cer": 0.026845637583892617,
+            "errors": 12,
+            "reference_chars": 447,
+            "median_seconds": 0.8143499999999999,
+            "real_time_factor": 0.07962562994960405
+          }
+        }
+      },
+      {
+        "provider": "qwen3-asr",
+        "language": "en",
+        "chunk_seconds": 0,
+        "started_at": "2026-10-28T19:23:20.595195+00:00",
+        "command": [
+          "/usr/bin/python",
+          "-u",
+          "backend/scripts/benchmark_stt.py",
+          "benchmarks/stt-ko-en-2026-10-28/manifest-en.json",
+          "--providers",
+          "qwen3-asr",
+          "--output",
+          "benchmarks/stt-ko-en-2026-10-28/raw/en-qwen3-asr-full.json",
+          "--chunk-seconds",
+          "0",
+          "--timeout",
+          "90"
+        ],
+        "output": "benchmarks/stt-ko-en-2026-10-28/raw/en-qwen3-asr-full.json",
+        "logfile": "benchmarks/stt-ko-en-2026-10-28/regional-benchmark-en-qwen3-asr-full.log",
+        "source_sha256": {
+          "backend/app/config.py": "e03cb660a1eab7048087db100b714122b93f9d4d4dd2a0462e7a10a5436d37e2",
+          "backend/app/stt.py": "08c5ac3ba2f7491b3f5efbecbdac378655786b196a5c9b0c8a5c7d2a4f514731",
+          "backend/app/aws_clients.py": "7b2cec170a00f2005e3aecde8f547e45f86ccda57894d342c982980aad6b937c",
+          "backend/scripts/benchmark_stt.py": "e16ca3de75c63c58e53ef0a5ed47d4e0c5f3fdeef2867f66dd4d429eb86f4b44"
+        },
+        "completed_at": "2026-10-28T19:23:26.574521+00:00",
+        "return_code": 0,
+        "sha256": "74e10c0daf03aaaea332357ea28522dfee04181d9e14f5451df19890bd64fee0",
+        "summary": {
+          "qwen3-asr": {
+            "successful_samples": 10,
+            "failed_samples": 0,
+            "cer": 0.020854021847070508,
+            "errors": 21,
+            "reference_chars": 1007,
+            "median_seconds": 0.5293,
+            "real_time_factor": 0.060326445372609366
+          }
+        }
+      },
+      {
+        "provider": "qwen3-asr",
+        "language": "ko",
+        "chunk_seconds": 6,
+        "started_at": "2026-10-28T19:23:26.575015+00:00",
+        "command": [
+          "/usr/bin/python",
+          "-u",
+          "backend/scripts/benchmark_stt.py",
+          "benchmarks/stt-ko-en-2026-10-28/manifest-ko.json",
+          "--providers",
+          "qwen3-asr",
+          "--output",
+          "benchmarks/stt-ko-en-2026-10-28/raw/ko-qwen3-asr-6s.json",
+          "--chunk-seconds",
+          "6",
+          "--timeout",
+          "90"
+        ],
+        "output": "benchmarks/stt-ko-en-2026-10-28/raw/ko-qwen3-asr-6s.json",
+        "logfile": "benchmarks/stt-ko-en-2026-10-28/regional-benchmark-ko-qwen3-asr-6s.log",
+        "source_sha256": {
+          "backend/app/config.py": "e03cb660a1eab7048087db100b714122b93f9d4d4dd2a0462e7a10a5436d37e2",
+          "backend/app/stt.py": "08c5ac3ba2f7491b3f5efbecbdac378655786b196a5c9b0c8a5c7d2a4f514731",
+          "backend/app/aws_clients.py": "7b2cec170a00f2005e3aecde8f547e45f86ccda57894d342c982980aad6b937c",
+          "backend/scripts/benchmark_stt.py": "e16ca3de75c63c58e53ef0a5ed47d4e0c5f3fdeef2867f66dd4d429eb86f4b44"
+        },
+        "completed_at": "2026-10-28T19:23:37.379802+00:00",
+        "return_code": 0,
+        "sha256": "cf65f3ee9d79e4545ac25d233c6e22c258e7e7052927129f88a96baa4d1b2dcd",
+        "summary": {
+          "qwen3-asr": {
+            "successful_samples": 10,
+            "failed_samples": 0,
+            "cer": 0.058165548098434,
+            "errors": 26,
+            "reference_chars": 447,
+            "median_seconds": 1.0097,
+            "real_time_factor": 0.09337023038156948
+          }
+        }
+      },
+      {
+        "provider": "qwen3-asr",
+        "language": "en",
+        "chunk_seconds": 6,
+        "started_at": "2026-10-28T19:23:37.380354+00:00",
+        "command": [
+          "/usr/bin/python",
+          "-u",
+          "backend/scripts/benchmark_stt.py",
+          "benchmarks/stt-ko-en-2026-10-28/manifest-en.json",
+          "--providers",
+          "qwen3-asr",
+          "--output",
+          "benchmarks/stt-ko-en-2026-10-28/raw/en-qwen3-asr-6s.json",
+          "--chunk-seconds",
+          "6",
+          "--timeout",
+          "90"
+        ],
+        "output": "benchmarks/stt-ko-en-2026-10-28/raw/en-qwen3-asr-6s.json",
+        "logfile": "benchmarks/stt-ko-en-2026-10-28/regional-benchmark-en-qwen3-asr-6s.log",
+        "source_sha256": {
+          "backend/app/config.py": "e03cb660a1eab7048087db100b714122b93f9d4d4dd2a0462e7a10a5436d37e2",
+          "backend/app/stt.py": "08c5ac3ba2f7491b3f5efbecbdac378655786b196a5c9b0c8a5c7d2a4f514731",
+          "backend/app/aws_clients.py": "7b2cec170a00f2005e3aecde8f547e45f86ccda57894d342c982980aad6b937c",
+          "backend/scripts/benchmark_stt.py": "e16ca3de75c63c58e53ef0a5ed47d4e0c5f3fdeef2867f66dd4d429eb86f4b44"
+        },
+        "completed_at": "2026-10-28T19:23:44.506377+00:00",
+        "return_code": 0,
+        "sha256": "3c99031c579236b1e4edcbb2afa39b2e17324ab0e88236c6a53f5b3616ba857e",
+        "summary": {
+          "qwen3-asr": {
+            "successful_samples": 10,
+            "failed_samples": 0,
+            "cer": 0.019860973187686197,
+            "errors": 20,
+            "reference_chars": 1007,
+            "median_seconds": 0.68015,
+            "real_time_factor": 0.07358979995603429
+          }
+        }
+      }
+    ],
+    "nemotron": [
+      {
+        "provider": "nemotron",
+        "language": "ko",
+        "chunk_seconds": 0,
+        "started_at": "2026-10-28T19:21:30.869228+00:00",
+        "command": [
+          "/usr/bin/python",
+          "-u",
+          "backend/scripts/benchmark_stt.py",
+          "benchmarks/stt-ko-en-2026-10-28/manifest-ko.json",
+          "--providers",
+          "nemotron",
+          "--output",
+          "benchmarks/stt-ko-en-2026-10-28/raw/ko-nemotron-full.json",
+          "--chunk-seconds",
+          "0",
+          "--timeout",
+          "90"
+        ],
+        "output": "benchmarks/stt-ko-en-2026-10-28/raw/ko-nemotron-full.json",
+        "logfile": "benchmarks/stt-ko-en-2026-10-28/regional-benchmark-ko-nemotron-full.log",
+        "source_sha256": {
+          "backend/app/config.py": "e03cb660a1eab7048087db100b714122b93f9d4d4dd2a0462e7a10a5436d37e2",
+          "backend/app/stt.py": "08c5ac3ba2f7491b3f5efbecbdac378655786b196a5c9b0c8a5c7d2a4f514731",
+          "backend/app/aws_clients.py": "7b2cec170a00f2005e3aecde8f547e45f86ccda57894d342c982980aad6b937c",
+          "backend/scripts/benchmark_stt.py": "e16ca3de75c63c58e53ef0a5ed47d4e0c5f3fdeef2867f66dd4d429eb86f4b44"
+        },
+        "completed_at": "2026-10-28T19:22:06.123683+00:00",
+        "return_code": 0,
+        "sha256": "bb7d882a18bf55451d2954f06d1491d0ed54ad973458ee829ce2f353652a0c64",
+        "summary": {
+          "nemotron": {
+            "successful_samples": 10,
+            "failed_samples": 0,
+            "cer": 0.09843400447427293,
+            "errors": 44,
+            "reference_chars": 447,
+            "median_seconds": 3.5835,
+            "real_time_factor": 0.31339542836573075
+          }
+        }
+      },
+      {
+        "provider": "nemotron",
+        "language": "en",
+        "chunk_seconds": 0,
+        "started_at": "2026-10-28T19:22:06.124231+00:00",
+        "command": [
+          "/usr/bin/python",
+          "-u",
+          "backend/scripts/benchmark_stt.py",
+          "benchmarks/stt-ko-en-2026-10-28/manifest-en.json",
+          "--providers",
+          "nemotron",
+          "--output",
+          "benchmarks/stt-ko-en-2026-10-28/raw/en-nemotron-full.json",
+          "--chunk-seconds",
+          "0",
+          "--timeout",
+          "90"
+        ],
+        "output": "benchmarks/stt-ko-en-2026-10-28/raw/en-nemotron-full.json",
+        "logfile": "benchmarks/stt-ko-en-2026-10-28/regional-benchmark-en-nemotron-full.log",
+        "source_sha256": {
+          "backend/app/config.py": "e03cb660a1eab7048087db100b714122b93f9d4d4dd2a0462e7a10a5436d37e2",
+          "backend/app/stt.py": "08c5ac3ba2f7491b3f5efbecbdac378655786b196a5c9b0c8a5c7d2a4f514731",
+          "backend/app/aws_clients.py": "7b2cec170a00f2005e3aecde8f547e45f86ccda57894d342c982980aad6b937c",
+          "backend/scripts/benchmark_stt.py": "e16ca3de75c63c58e53ef0a5ed47d4e0c5f3fdeef2867f66dd4d429eb86f4b44"
+        },
+        "completed_at": "2026-10-28T19:22:37.551386+00:00",
+        "return_code": 0,
+        "sha256": "b3ce42be8968db42dec32335bab87cf7c231f14d2a7753afcc48fe0331f31e30",
+        "summary": {
+          "nemotron": {
+            "successful_samples": 10,
+            "failed_samples": 0,
+            "cer": 0.06256206554121152,
+            "errors": 63,
+            "reference_chars": 1007,
+            "median_seconds": 3.3053999999999997,
+            "real_time_factor": 0.3406539898878874
+          }
+        }
+      },
+      {
+        "provider": "nemotron",
+        "language": "ko",
+        "chunk_seconds": 6,
+        "started_at": "2026-10-28T19:22:37.551898+00:00",
+        "command": [
+          "/usr/bin/python",
+          "-u",
+          "backend/scripts/benchmark_stt.py",
+          "benchmarks/stt-ko-en-2026-10-28/manifest-ko.json",
+          "--providers",
+          "nemotron",
+          "--output",
+          "benchmarks/stt-ko-en-2026-10-28/raw/ko-nemotron-6s.json",
+          "--chunk-seconds",
+          "6",
+          "--timeout",
+          "90"
+        ],
+        "output": "benchmarks/stt-ko-en-2026-10-28/raw/ko-nemotron-6s.json",
+        "logfile": "benchmarks/stt-ko-en-2026-10-28/regional-benchmark-ko-nemotron-6s.log",
+        "source_sha256": {
+          "backend/app/config.py": "e03cb660a1eab7048087db100b714122b93f9d4d4dd2a0462e7a10a5436d37e2",
+          "backend/app/stt.py": "08c5ac3ba2f7491b3f5efbecbdac378655786b196a5c9b0c8a5c7d2a4f514731",
+          "backend/app/aws_clients.py": "7b2cec170a00f2005e3aecde8f547e45f86ccda57894d342c982980aad6b937c",
+          "backend/scripts/benchmark_stt.py": "e16ca3de75c63c58e53ef0a5ed47d4e0c5f3fdeef2867f66dd4d429eb86f4b44"
+        },
+        "completed_at": "2026-10-28T19:23:19.983612+00:00",
+        "return_code": 0,
+        "sha256": "d37991a31d0ff03d52dce521c2be658a54e90155c4f01868f836a8a5acdd34a3",
+        "summary": {
+          "nemotron": {
+            "successful_samples": 10,
+            "failed_samples": 0,
+            "cer": 0.15659955257270694,
+            "errors": 70,
+            "reference_chars": 447,
+            "median_seconds": 4.2571,
+            "real_time_factor": 0.37795986321094316
+          }
+        }
+      },
+      {
+        "provider": "nemotron",
+        "language": "en",
+        "chunk_seconds": 6,
+        "started_at": "2026-10-28T19:23:19.985190+00:00",
+        "command": [
+          "/usr/bin/python",
+          "-u",
+          "backend/scripts/benchmark_stt.py",
+          "benchmarks/stt-ko-en-2026-10-28/manifest-en.json",
+          "--providers",
+          "nemotron",
+          "--output",
+          "benchmarks/stt-ko-en-2026-10-28/raw/en-nemotron-6s.json",
+          "--chunk-seconds",
+          "6",
+          "--timeout",
+          "90"
+        ],
+        "output": "benchmarks/stt-ko-en-2026-10-28/raw/en-nemotron-6s.json",
+        "logfile": "benchmarks/stt-ko-en-2026-10-28/regional-benchmark-en-nemotron-6s.log",
+        "source_sha256": {
+          "backend/app/config.py": "e03cb660a1eab7048087db100b714122b93f9d4d4dd2a0462e7a10a5436d37e2",
+          "backend/app/stt.py": "08c5ac3ba2f7491b3f5efbecbdac378655786b196a5c9b0c8a5c7d2a4f514731",
+          "backend/app/aws_clients.py": "7b2cec170a00f2005e3aecde8f547e45f86ccda57894d342c982980aad6b937c",
+          "backend/scripts/benchmark_stt.py": "e16ca3de75c63c58e53ef0a5ed47d4e0c5f3fdeef2867f66dd4d429eb86f4b44"
+        },
+        "completed_at": "2026-10-28T19:23:54.806397+00:00",
+        "return_code": 0,
+        "sha256": "fad327dd5911e054fa0852e3855c8554a924b987a7509cfa2d257b73a06fc11c",
+        "summary": {
+          "nemotron": {
+            "successful_samples": 10,
+            "failed_samples": 0,
+            "cer": 0.09831181727904667,
+            "errors": 99,
+            "reference_chars": 1007,
+            "median_seconds": 3.7348,
+            "real_time_factor": 0.3779577929215212
+          }
+        }
+      }
+    ]
+  },
+  "baseline_raw_sha256": {
+    "raw/en-transcribe-full.json": "b4f37e14d1e4afcd7ee8fa095399c0b415f708ee737bbf138d2b28bc2589ac00",
+    "raw/en-whisper-6s.json": "4abbc56948c1ed03d14b04b4cd526c479db3ab49ad416b0b015e1435f4c0b19b",
+    "raw/en-whisper-full.json": "673796628f17bd66714fddba5c413359adb65d0686b504cf014ab051332e0355",
+    "raw/ko-transcribe-full.json": "a73bbb78ed49baa5c92d76fb469509af50e989ddc47a4c0827124ad5a56c53ba",
+    "raw/ko-whisper-6s.json": "b5908a75aabd8982db597ed17cd829dd43b76bc9eb8261d25474f397e48ae9a1",
+    "raw/ko-whisper-full.json": "10e1b30641cbfc592dba43530fff296f653e18756cd47f212d2a8c10cf837d3a"
+  },
+  "manifest_sha256": {
+    "manifest-ko.json": "5d61914cdf01e27d3e266557bd3295624023efb6396b2b0a2f37e9c5b5606ee0",
+    "manifest-en.json": "09d2c6e77bb6d075a0d1f70560855dc94e8899cb3615c4b50092f51eeac001d6"
+  },
+  "verification_sources": [
+    {
+      "url": "https://docs.aws.amazon.com/sagemaker/latest/APIReference/API_ProductionVariantManagedInstanceScaling.html",
+      "confidence": "documented",
+      "confirmed_date": "2026-10-28",
+      "valid_until": "2026-11-11",
+      "claim": "MinInstanceCount is the minimum number of hosts retained during scale-in; MinInstanceCount=1 and MaxInstanceCount=1 restrict the endpoint to one retained host."
+    },
+    {
+      "api": "DescribeHubContent / ListServiceQuotas / ListEndpoints",
+      "confidence": "verified",
+      "region": "ap-northeast-2",
+      "confirmed_date": "2026-10-28",
+      "valid_until": "2026-11-11",
+      "artifact": "regional-preflight.json"
+    }
+  ],
+  "status": "complete",
+  "final_verification": {
+    "verified_at": "2026-10-28T19:24:49.984819+00:00",
+    "successful_measured_samples": 80,
+    "failed_measured_samples": 0,
+    "new_raw_files": 8,
+    "original_raw_files_preserved": 6,
+    "manifests_preserved": 2,
+    "both_endpoints_inservice": true,
+    "both_components_inservice": true,
+    "current_hosts_per_model": 1,
+    "current_copies_per_model": 1,
+    "host_min_max": [
+      1,
+      1
+    ],
+    "copy_min_max": [
+      1,
+      1
+    ],
+    "source_or_git_changes_by_this_worker": false,
+    "old_us_east_1_resources_modified_by_this_worker": false,
+    "custom_nemotron_streaming_resources_modified_by_this_worker": false
+  },
+  "cost": {
+    "currency": "USD",
+    "combined_hourly_host_cost": 3.3655,
+    "combined_host_cost_at_730_hours": 2456.815,
+    "excludes": "Storage, data transfer, other endpoints, Transcribe, backend services and taxes.",
+    "source": "regional-pricing.json"
+  }
+}

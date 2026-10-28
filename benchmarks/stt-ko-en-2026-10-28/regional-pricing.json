@@ -1,0 +1,187 @@
+{
+  "checked_at": "2026-10-28T19:12:54.164212+00:00",
+  "source": "AWS Pricing API get_products",
+  "region": "ap-northeast-2",
+  "prices": {
+    "ml.g6.xlarge": [
+      {
+        "product": {
+          "productFamily": "ML Instance",
+          "attributes": {
+            "gpuMemory": "24 GB",
+            "platoinstancename": "g6",
+            "memory": "16 GiB",
+            "computeType": "Accelerated Computing Instances",
+            "vCpu": "4",
+            "instanceName": "ml.g6.xlarge",
+            "instanceType": "ml.g6.xlarge-Hosting",
+            "usagetype": "APN2-Host:ml.g6.xlarge",
+            "locationType": "AWS Region",
+            "storage": "1 x 250 GB NVMe SSD",
+            "platoinstancetype": "Hosting",
+            "gpu": "1",
+            "component": "Hosting",
+            "regionCode": "ap-northeast-2",
+            "servicecode": "AmazonSageMaker",
+            "clockSpeed": "2.6 GHz",
+            "currentGeneration": "Yes",
+            "networkPerformance": "Up to 10 Gigabit",
+            "location": "Asia Pacific (Seoul)",
+            "servicename": "Amazon SageMaker",
+            "processorArchitecture": "64-bit",
+            "physicalCpu": "AMD EPYC 7R13 Processor",
+            "operation": "RunInstance",
+            "physicalGpu": "N/A"
+          },
+          "sku": "EFA99S6CJM8DQM73"
+        },
+        "serviceCode": "AmazonSageMaker",
+        "terms": {
+          "OnDemand": {
+            "EFA99S6CJM8DQM73.JRTCKXETXF": {
+              "priceDimensions": {
+                "EFA99S6CJM8DQM73.JRTCKXETXF.6YS6EN2CT7": {
+                  "unit": "Hrs",
+                  "endRange": "Inf",
+                  "description": "$1.3854 per ml.g6.xlarge hour in Asia Pacific (Seoul)",
+                  "appliesTo": [],
+                  "rateCode": "EFA99S6CJM8DQM73.JRTCKXETXF.6YS6EN2CT7",
+                  "beginRange": "0",
+                  "pricePerUnit": {
+                    "USD": "1.3854000000"
+                  }
+                }
+              },
+              "sku": "EFA99S6CJM8DQM73",
+              "effectiveDate": "2026-10-01T00:00:00Z",
+              "offerTermCode": "JRTCKXETXF",
+              "termAttributes": {}
+            }
+          }
+        },
+        "version": "20261028004631",
+        "publicationDate": "2026-10-28T00:46:31Z"
+      }
+    ],
+    "ml.g6.2xlarge": [
+      {
+        "product": {
+          "productFamily": "ML Instance",
+          "attributes": {
+            "gpuMemory": "24 GB",
+            "platoinstancename": "g6",
+            "memory": "32 GiB",
+            "computeType": "Accelerated Computing Instances",
+            "vCpu": "8",
+            "instanceName": "ml.g6.2xlarge",
+            "instanceType": "ml.g6.2xlarge-Hosting",
+            "usagetype": "APN2-Host:ml.g6.2xlarge",
+            "locationType": "AWS Region",
+            "storage": "1 x 450 GB NVMe SSD",
+            "platoinstancetype": "Hosting",
+            "gpu": "1",
+            "component": "Hosting",
+            "regionCode": "ap-northeast-2",
+            "servicecode": "AmazonSageMaker",
+            "clockSpeed": "2.6 GHz",
+            "currentGeneration": "Yes",
+            "networkPerformance": "Up to 10 Gigabit",
+            "location": "Asia Pacific (Seoul)",
+            "servicename": "Amazon SageMaker",
+            "processorArchitecture": "64-bit",
+            "physicalCpu": "AMD EPYC 7R13 Processor",
+            "operation": "RunInstance",
+            "physicalGpu": "N/A"
+          },
+          "sku": "JWFKY2QUEQFBCCCX"
+        },
+        "serviceCode": "AmazonSageMaker",
+        "terms": {
+          "OnDemand": {
+            "JWFKY2QUEQFBCCCX.JRTCKXETXF": {
+              "priceDimensions": {
+                "JWFKY2QUEQFBCCCX.JRTCKXETXF.6YS6EN2CT7": {
+                  "unit": "Hrs",
+                  "endRange": "Inf",
+                  "description": "$1.5026 per ml.g6.2xlarge hour in Asia Pacific (Seoul)",
+                  "appliesTo": [],
+                  "rateCode": "JWFKY2QUEQFBCCCX.JRTCKXETXF.6YS6EN2CT7",
+                  "beginRange": "0",
+                  "pricePerUnit": {
+                    "USD": "1.5026000000"
+                  }
+                }
+              },
+              "sku": "JWFKY2QUEQFBCCCX",
+              "effectiveDate": "2026-10-01T00:00:00Z",
+              "offerTermCode": "JRTCKXETXF",
+              "termAttributes": {}
+            }
+          }
+        },
+        "version": "20261028004631",
+        "publicationDate": "2026-10-28T00:46:31Z"
+      }
+    ],
+    "ml.g5.2xlarge": [
+      {
+        "product": {
+          "productFamily": "ML Instance",
+          "attributes": {
+            "gpuMemory": "24",
+            "platoinstancename": "g5",
+            "memory": "32 GiB",
+            "computeType": "Accelerated Computing Instances",
+            "vCpu": "8",
+            "instanceName": "ml.g5.2xlarge",
+            "instanceType": "ml.g5.2xlarge-Hosting",
+            "usagetype": "APN2-Host:ml.g5.2xlarge",
+            "locationType": "AWS Region",
+            "storage": "1 x 3800 NVMe SSD",
+            "platoinstancetype": "Hosting",
+            "gpu": "1",
+            "component": "Hosting",
+            "regionCode": "ap-northeast-2",
+            "servicecode": "AmazonSageMaker",
+            "clockSpeed": "3 GHz",
+            "currentGeneration": "Yes",
+            "networkPerformance": "N/A",
+            "location": "Asia Pacific (Seoul)",
+            "servicename": "Amazon SageMaker",
+            "processorArchitecture": "64-bit",
+            "physicalCpu": "N/A",
+            "operation": "RunInstance",
+            "physicalGpu": "N/A"
+          },
+          "sku": "JV7VRYUTJ3BVTQHA"
+        },
+        "serviceCode": "AmazonSageMaker",
+        "terms": {
+          "OnDemand": {
+            "JV7VRYUTJ3BVTQHA.JRTCKXETXF": {
+              "priceDimensions": {
+                "JV7VRYUTJ3BVTQHA.JRTCKXETXF.6YS6EN2CT7": {
+                  "unit": "Hrs",
+                  "endRange": "Inf",
+                  "description": "$1.8629 per Hosting ml.g5.2xlarge hour in Asia Pacific (Seoul)",
+                  "appliesTo": [],
+                  "rateCode": "JV7VRYUTJ3BVTQHA.JRTCKXETXF.6YS6EN2CT7",
+                  "beginRange": "0",
+                  "pricePerUnit": {
+                    "USD": "1.8629000000"
+                  }
+                }
+              },
+              "sku": "JV7VRYUTJ3BVTQHA",
+              "effectiveDate": "2026-10-01T00:00:00Z",
+              "offerTermCode": "JRTCKXETXF",
+              "termAttributes": {}
+            }
+          }
+        },
+        "version": "20261028004631",
+        "publicationDate": "2026-10-28T00:46:31Z"
+      }
+    ]
+  }
+}

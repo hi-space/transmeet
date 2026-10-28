@@ -28,10 +28,19 @@ export interface SttStatus {
   desiredCopies?: number
   message?: string
   recordingBlocked?: boolean
+  /** Omitted by older backends, which still expect complete audio windows. */
+  streaming?: boolean
 }
 
 export function isManagedStt(provider: SttProvider): boolean {
   return provider === 'qwen3-asr' || provider === 'nemotron'
+}
+
+export function isStreamingStt(provider: SttProvider, state?: SttStatus): boolean {
+  return (
+    provider === 'transcribe' ||
+    (provider === 'nemotron' && state?.provider === provider && state.streaming === true)
+  )
 }
 
 export function shouldStopSttRecording(provider: SttProvider, state?: SttStatus): boolean {
@@ -64,8 +73,10 @@ export function normalizeSttChunkSeconds(value: unknown): SttChunkSeconds {
 
 export function sttChunkDuration(
   provider: SttProvider,
-  seconds: SttChunkSeconds = DEFAULT_STT_CHUNK_SECONDS
+  seconds: SttChunkSeconds = DEFAULT_STT_CHUNK_SECONDS,
+  state?: SttStatus
 ): number {
-  // Batch requests need more context; Transcribe retains context across sends.
-  return provider === 'transcribe' ? 700 : normalizeSttChunkSeconds(seconds) * 1000
+  if (provider === 'transcribe') return 700
+  if (isStreamingStt(provider, state)) return 160
+  return normalizeSttChunkSeconds(seconds) * 1000
 }

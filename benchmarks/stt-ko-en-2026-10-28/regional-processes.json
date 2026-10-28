@@ -1,0 +1,38 @@
+{
+  "started_at": "2026-10-28T19:13:17.762394+00:00",
+  "region": "ap-northeast-2",
+  "processes": {
+    "qwen3-asr": {
+      "pid": 38889,
+      "command": [
+        "/usr/bin/python",
+        "-u",
+        "backend/scripts/deploy_stt_scaling.py",
+        "qwen3-asr",
+        "--region",
+        "ap-northeast-2",
+        "--role",
+        "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+        "--apply",
+        "--wait"
+      ],
+      "logfile": "benchmarks/stt-ko-en-2026-10-28/regional-deploy-qwen3-asr.log"
+    },
+    "nemotron": {
+      "pid": 38890,
+      "command": [
+        "/usr/bin/python",
+        "-u",
+        "backend/scripts/deploy_stt_scaling.py",
+        "nemotron",
+        "--region",
+        "ap-northeast-2",
+        "--role",
+        "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+        "--apply",
+        "--wait"
+      ],
+      "logfile": "benchmarks/stt-ko-en-2026-10-28/regional-deploy-nemotron.log"
+    }
+  }
+}

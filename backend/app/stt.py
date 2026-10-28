@@ -29,6 +29,23 @@ class STTResult:
     language: str = ""
 
 
+def region_for(provider: str) -> str:
+    """Resolve the batch model's server-configured region."""
+    setting = {
+        "qwen3-asr": "QWEN_ASR_REGION",
+        "nemotron": "NEMOTRON_ASR_REGION",
+    }.get(provider)
+    override = getattr(config, setting, "") if setting else ""
+    return override.strip() or config.REGION
+
+
+def active_region_for(provider: str) -> str:
+    """The optional streaming endpoint may be deployed separately from batch."""
+    if provider == "nemotron" and getattr(config, "NEMOTRON_STREAMING_ENABLED", False):
+        return config.NEMOTRON_STREAMING_REGION.strip() or config.REGION
+    return region_for(provider)
+
+
 def endpoint_for(provider: str) -> str:
     setting = _ENDPOINT_SETTINGS.get(provider)
     if setting is None:
@@ -41,7 +58,23 @@ def endpoint_for(provider: str) -> str:
 
 def validate_provider(provider: str) -> None:
     if provider != "transcribe":
-        endpoint_for(provider)
+        active_endpoint_for(provider)
+
+
+def is_streaming_provider(provider: str) -> bool:
+    return provider == "nemotron" and config.NEMOTRON_STREAMING_ENABLED
+
+
+def active_endpoint_for(provider: str) -> str:
+    """Recording endpoint; batch remains available for rollback and benchmarks."""
+    if is_streaming_provider(provider):
+        endpoint = config.NEMOTRON_STREAMING_ENDPOINT.strip()
+        if not endpoint:
+            raise ValueError("nemotron 엔드포인트가 설정되지 않았습니다. NEMOTRON_STREAMING_ENDPOINT 설정이 필요합니다.")
+        if config.NEMOTRON_STREAMING_CHUNK_MS not in (320, 560):
+            raise ValueError("NEMOTRON_STREAMING_CHUNK_MS는 320 또는 560이어야 합니다.")
+        return endpoint
+    return endpoint_for(provider)
 
 
 def inference_component_for(provider: str) -> str:
@@ -53,13 +86,29 @@ def inference_component_for(provider: str) -> str:
     return getattr(config, setting).strip() if setting else ""
 
 
+def active_inference_component_for(provider: str) -> str:
+    # The bidirectional SDK cannot address inference components.
+    return "" if is_streaming_provider(provider) else inference_component_for(provider)
+
+
 def build_request(provider: str, audio: bytes, source_lang: str = "auto") -> dict[str, Any]:
     """Build only the model payload; clients cannot choose an endpoint name."""
     if source_lang not in _LANGUAGES:
         raise ValueError(f"지원하지 않는 음성 입력 언어: {source_lang}")
     if provider == "whisper":
-        # Preserve the existing deployed Whisper handler's binary audio contract.
-        return {"ContentType": "audio/wav", "Accept": "application/json", "Body": audio}
+        if source_lang == "auto":
+            return {"ContentType": "audio/wav", "Accept": "application/json", "Body": audio}
+        # The deployed JumpStart handler accepts hex WAV plus generation options.
+        # Keep task=transcribe: translation belongs to the separate text pipeline.
+        return {
+            "ContentType": "application/json",
+            "Accept": "application/json",
+            "Body": json.dumps({
+                "audio_input": audio.hex(),
+                "language": {"ko": "korean", "en": "english"}[source_lang],
+                "task": "transcribe",
+            }).encode("utf-8"),
+        }
     encoded = base64.b64encode(audio).decode("ascii")
     if provider == "qwen3-asr":
         # JumpStart's chat interface uses automatic language identification.
@@ -130,7 +179,7 @@ async def transcribe_audio(provider: str, audio: bytes, source_lang: str = "auto
     component = inference_component_for(provider)
     if component:
         request["InferenceComponentName"] = component
-    async with sagemaker_client() as client:
+    async with sagemaker_client(region_name=region_for(provider)) as client:
         response = await client.invoke_endpoint(EndpointName=endpoint, **request)
         body = await response["Body"].read()
     return parse_response(provider, json.loads(body))

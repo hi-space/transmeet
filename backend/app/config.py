@@ -7,12 +7,23 @@ class Config(BaseSettings):
     # 발행된 페이지 기록(pageId·url·title·shareSummary·generatedAt). 미팅 항목은 발언 전체를 인라인으로 담아
     # 400 KB 한도에 닿을 수 있으므로 페이지 기록은 별도 테이블에 둔다.
     PAGES_TABLE: str = "transmeet-pages"
+    # 내 양식 사본(meetingId 키). 회의 항목은 400 KB 한도에 가까워 따로 둔다.
+    SUMMARY_SNAPSHOTS_TABLE: str = "transmeet-summary-snapshots"
     WHISPER_ENDPOINT: str = "whisper-large"
     QWEN_ASR_ENDPOINT: str = ""
     NEMOTRON_ASR_ENDPOINT: str = ""
+    QWEN_ASR_REGION: str = ""
+    NEMOTRON_ASR_REGION: str = ""
+    NEMOTRON_STREAMING_ENABLED: bool = False
+    NEMOTRON_STREAMING_ENDPOINT: str = ""
+    NEMOTRON_STREAMING_REGION: str = ""
+    NEMOTRON_STREAMING_CHUNK_MS: int = 560
+    # Separate CRT dependency from amazon-transcribe; Docker sets the venv path.
+    NEMOTRON_STREAM_PYTHON: str = ""
     QWEN_ASR_INFERENCE_COMPONENT: str = ""
     NEMOTRON_ASR_INFERENCE_COMPONENT: str = ""
-    STT_IDLE_SECONDS: int = 300
+    # Zero disables idle shutdown so the retained model copies stay ready.
+    STT_IDLE_SECONDS: int = 0
     BEDROCK_MODEL_ID: str = "global.anthropic.claude-haiku-5-5"
     QA_MODEL_ID: str = "global.anthropic.claude-sonnet-5-5"
     # 요약 패널(WebSocket summarize). 실시간 번역 모델과 분리 — 페이지 수준의 디테일을 내야 해서 큰 모델을 쓴다.

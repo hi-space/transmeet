@@ -8,6 +8,7 @@ import logging
 import re
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
+from urllib.parse import urlsplit
 
 from botocore.exceptions import ClientError
 
@@ -38,12 +39,97 @@ def _inline(text: str) -> str:
     return re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", html.escape(text))
 
 
+def _table_cells(raw: str) -> tuple[List[str], bool]:
+    """Split table cells without treating escaped pipes as column boundaries."""
+    line = raw.strip()
+    cells, current, separators = [], [], []
+    index = 0
+    while index < len(line):
+        char = line[index]
+        if char == "\\" and index + 1 < len(line) and line[index + 1] in ("|", "\\"):
+            current.append(line[index + 1])
+            index += 2
+            continue
+        if char == "|":
+            cells.append("".join(current).strip())
+            current = []
+            separators.append(index)
+        else:
+            current.append(char)
+        index += 1
+    cells.append("".join(current).strip())
+    if separators and separators[0] == 0:
+        cells.pop(0)
+    if separators and separators[-1] == len(line) - 1:
+        cells.pop()
+    return cells, bool(separators)
+
+
+def _table_at(lines: List[str], start: int) -> Optional[tuple[str, int]]:
+    if start + 1 >= len(lines):
+        return None
+    headers, header_pipe = _table_cells(lines[start])
+    delimiters, delimiter_pipe = _table_cells(lines[start + 1])
+    if not (header_pipe or delimiter_pipe) or not lines[start].strip() or not headers:
+        return None
+    if len(headers) != len(delimiters):
+        return None
+    if not all(re.fullmatch(r":?-+:?", cell) for cell in delimiters):
+        return None
+    aligns = [
+        "center" if cell.startswith(":") and cell.endswith(":")
+        else "right" if cell.endswith(":") else "left"
+        for cell in delimiters
+    ]
+    cell_style = "border:1px solid #cbd5e1;padding:8px 10px;vertical-align:top;word-break:break-word;"
+    out = [
+        '<table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;'
+        'table-layout:fixed;margin:12px 0;font-size:14px">',
+        "<thead><tr>",
+    ]
+    for cell, align in zip(headers, aligns):
+        out.append(
+            f'<th scope="col" style="{cell_style}background-color:#f1f5f9;text-align:{align}">'
+            f"{_inline(cell)}</th>"
+        )
+    out.append("</tr></thead><tbody>")
+    index = start + 2
+    while index < len(lines):
+        line = lines[index].strip()
+        if not line or re.match(
+            r"^(?:#{1,6}(?:\s|$)|[-+*]\s+|\d{1,9}[.)]\s+|>|`{3,}|~{3,}|"
+            r"(?:\*\s*){3,}$|(?:-\s*){3,}$|(?:_\s*){3,}$)",
+            line,
+        ):
+            break
+        cells, _ = _table_cells(line)
+        out.append("<tr>")
+        for column, align in enumerate(aligns):
+            cell = cells[column] if column < len(cells) else ""
+            out.append(f'<td style="{cell_style}text-align:{align}">{_inline(cell)}</td>')
+        out.append("</tr>")
+        index += 1
+    out.append("</tbody></table>")
+    return "".join(out), index
+
+
 def summary_to_html(summary: str) -> str:
-    """요약 패널 마크다운(제목·불릿·굵게)만 다루는 작은 변환기. 의존성을 늘리지 않으려고 직접 쓴다."""
+    """요약 마크다운의 제목·불릿·굵게·표를 메일용 HTML로 변환한다."""
     out: List[str] = []
     in_list = False
-    for raw in summary.splitlines():
-        line = raw.strip()
+    lines = summary.splitlines()
+    index = 0
+    while index < len(lines):
+        table = _table_at(lines, index)
+        if table:
+            if in_list:
+                out.append("</ul>")
+                in_list = False
+            rendered, index = table
+            out.append(rendered)
+            continue
+        line = lines[index].strip()
+        index += 1
         bullet = re.match(r"^[-*]\s+(.*)", line)
         if bullet:
             if not in_list:
@@ -78,11 +164,19 @@ def build_meeting_email(
     summary: Optional[str],
     audio_url: Optional[str],
     meeting_url: str,
+    page_url: Optional[str] = None,
 ) -> dict:
     title = title or "제목 없는 미팅"
     when = _format_started(started_at)
     audio_label = "녹음 파일 다운로드"
     expiry_note = "다운로드 링크는 몇 시간 안에 만료됩니다. 만료됐으면 미팅 화면의 '녹음 파일' 버튼으로 받으세요."
+    if page_url:
+        try:
+            parsed = urlsplit(page_url)
+            if parsed.scheme not in ("https", "http") or not parsed.netloc:
+                page_url = None
+        except ValueError:
+            page_url = None
 
     buttons = []
     text_links = []
@@ -90,7 +184,10 @@ def build_meeting_email(
         buttons.append(_button(audio_url, audio_label, primary=True))
         text_links.append(f"{audio_label}: {audio_url}")
         text_links.append(f"({expiry_note})")
-    buttons.append(_button(meeting_url, "미팅 화면에서 보기", primary=not audio_url))
+    if page_url:
+        buttons.append(_button(page_url, "회의 페이지 보기", primary=not audio_url))
+        text_links.append(f"회의 페이지 보기: {page_url}")
+    buttons.append(_button(meeting_url, "미팅 화면에서 보기", primary=not (audio_url or page_url)))
     text_links.append(f"미팅 화면에서 보기: {meeting_url}")
 
     summary_html = summary_to_html(summary) if summary else f"<p>{SUMMARY_FAILED_TEXT}</p>"

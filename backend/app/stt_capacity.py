@@ -6,7 +6,13 @@ import time
 
 from .aws_clients import sagemaker_control_client, stt_metrics_client
 from .config import config
-from .stt import endpoint_for, inference_component_for, validate_provider
+from .stt import (
+    active_endpoint_for,
+    active_inference_component_for,
+    active_region_for,
+    is_streaming_provider,
+    validate_provider,
+)
 
 logger = logging.getLogger(__name__)
 MANAGED_PROVIDERS = ("qwen3-asr", "nemotron")
@@ -14,8 +20,8 @@ MANAGED_PROVIDERS = ("qwen3-asr", "nemotron")
 
 class CapacityManager:
     def __init__(self, client_factory=None, clock=None, metrics_client_factory=None):
-        self.client_factory = client_factory or sagemaker_control_client
-        self.metrics_client_factory = metrics_client_factory or stt_metrics_client
+        self.client_factory = client_factory
+        self.metrics_client_factory = metrics_client_factory
         self.clock = clock or time.monotonic
         self.locks = defaultdict(asyncio.Lock)
         self.sessions = defaultdict(set)
@@ -23,6 +29,16 @@ class CapacityManager:
         self.cache = {}
         self.was_ready = {}
         self.preparing_until = {}
+
+    def _control_client(self, provider):
+        if self.client_factory is not None:
+            return self.client_factory()
+        return sagemaker_control_client(region_name=active_region_for(provider))
+
+    def _metrics_client(self, region):
+        if self.metrics_client_factory is not None:
+            return self.metrics_client_factory()
+        return stt_metrics_client(region_name=region)
 
     def touch(self, provider):
         self.last_used[provider] = self.clock()
@@ -45,20 +61,23 @@ class CapacityManager:
             return status
 
     async def status(self, provider, refresh=False):
+        identity = {"provider": provider}
+        if provider == "nemotron":
+            identity["streaming"] = is_streaming_provider(provider)
         try:
             validate_provider(provider)
         except (TypeError, ValueError):
-            return {"provider": provider, "status": "unavailable",
+            return {**identity, "status": "unavailable",
                     "message": "이 음성 인식 엔진은 아직 설정되지 않았습니다."}
         if provider not in MANAGED_PROVIDERS:
-            return {"provider": provider, "status": "ready", "managed": False}
+            return {**identity, "status": "ready", "managed": False}
         cached = self.cache.get(provider)
         if cached and not refresh and self.clock() - cached[0] < 2:
             return dict(cached[1])
-        endpoint = endpoint_for(provider)
-        component = inference_component_for(provider)
+        endpoint = active_endpoint_for(provider)
+        component = active_inference_component_for(provider)
         try:
-            async with self.client_factory() as client:
+            async with self._control_client(provider) as client:
                 if component:
                     ep, ic = await asyncio.gather(
                         client.describe_endpoint(EndpointName=endpoint),
@@ -68,9 +87,9 @@ class CapacityManager:
                     ep = await client.describe_endpoint(EndpointName=endpoint)
                     ic = None
             instances = sum(v.get("CurrentInstanceCount", 0) for v in ep.get("ProductionVariants", []))
-            result = {"provider": provider, "managed": bool(component), "instances": instances}
+            result = {**identity, "managed": bool(component), "instances": instances}
             if ic is None:
-                result["status"] = "ready" if ep["EndpointStatus"] == "InService" else (
+                result["status"] = "ready" if ep["EndpointStatus"] == "InService" and instances else (
                     "error" if ep["EndpointStatus"] == "Failed" else "starting")
             else:
                 runtime = ic.get("RuntimeConfig", {})
@@ -100,14 +119,14 @@ class CapacityManager:
             return dict(result)
         except Exception:
             logger.exception("Cannot read STT capacity for %s", provider)
-            return {"provider": provider, "status": "unknown",
+            return {**identity, "status": "unknown",
                     "message": "일시적으로 엔진 상태를 확인하지 못했습니다. 다시 확인하고 있습니다."}
 
     async def _set_copies(self, provider, count):
-        component = inference_component_for(provider)
+        component = active_inference_component_for(provider)
         if not component:
             raise ValueError("Inference Component is not configured")
-        async with self.client_factory() as client:
+        async with self._control_client(provider) as client:
             await client.update_inference_component_runtime_config(
                 InferenceComponentName=component,
                 DesiredRuntimeConfig={"CopyCount": count},
@@ -139,34 +158,36 @@ class CapacityManager:
                         "message": "음성 인식 엔진을 준비하고 있습니다. 몇 분 걸릴 수 있습니다."}
             except Exception:
                 logger.exception("Cannot prepare STT capacity for %s", provider)
-                return {"provider": provider, "status": "error",
+                return {**status, "status": "error",
                         "message": "엔진 준비를 시작하지 못했습니다. 잠시 후 다시 시도해 주세요."}
 
     async def publish_activity(self):
-        metrics = []
+        metrics = defaultdict(list)
         now = self.clock()
         for provider in MANAGED_PROVIDERS:
-            component = inference_component_for(provider)
+            component = active_inference_component_for(provider)
             if not component:
                 continue
-            active = bool(self.sessions[provider]) or (
+            active = config.STT_IDLE_SECONDS <= 0 or bool(self.sessions[provider]) or (
                 now - self.last_used.get(provider, float("-inf")) < config.STT_IDLE_SECONDS
             ) or now < self.preparing_until.get(provider, 0)
-            metrics.append({
+            metrics[active_region_for(provider)].append({
                 "MetricName": "ActiveUse",
                 "Dimensions": [{"Name": "InferenceComponentName", "Value": component}],
                 "Value": 1.0 if active else 0.0, "Unit": "Count",
             })
-        if metrics:
+        for region, data in metrics.items():
             try:
-                async with self.metrics_client_factory() as client:
-                    await client.put_metric_data(Namespace="TransMeet/STT", MetricData=metrics)
+                async with self._metrics_client(region) as client:
+                    await client.put_metric_data(Namespace="TransMeet/STT", MetricData=data)
             except Exception:
-                logger.exception("Cannot publish STT activity metrics")
+                logger.exception("Cannot publish STT activity metrics in %s", region)
 
     async def release_idle(self):
+        if config.STT_IDLE_SECONDS <= 0:
+            return
         for provider in MANAGED_PROVIDERS:
-            if not inference_component_for(provider) or self.sessions[provider]:
+            if not active_inference_component_for(provider) or self.sessions[provider]:
                 continue
             async with self.locks[provider]:
                 if self.sessions[provider]:

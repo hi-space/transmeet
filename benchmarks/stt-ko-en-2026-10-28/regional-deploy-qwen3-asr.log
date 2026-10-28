@@ -1,0 +1,87 @@
+{
+  "mode": "apply",
+  "model": {
+    "name": "transmeet-qwen3-asr-model-offline",
+    "environment": {
+      "STANDARD_PIP_ARGS": "--no-deps --no-index -r /opt/ml/model/requirements.txt"
+    }
+  },
+  "endpoint_config": {
+    "EndpointConfigName": "transmeet-qwen3-asr-warm-v1",
+    "ExecutionRoleArn": "arn:aws:iam::913524902871:role/service-role/AmazonSageMaker-ExecutionRole-20260107T160456",
+    "EnableNetworkIsolation": true,
+    "ProductionVariants": [
+      {
+        "VariantName": "AllTraffic",
+        "InitialInstanceCount": 1,
+        "ManagedInstanceScaling": {
+          "Status": "ENABLED",
+          "MinInstanceCount": 1,
+          "MaxInstanceCount": 1,
+          "ScaleInPolicy": {
+            "Strategy": "IDLE_RELEASE"
+          }
+        },
+        "InstancePools": [
+          {
+            "InstanceType": "ml.g6.2xlarge",
+            "Priority": 1
+          },
+          {
+            "InstanceType": "ml.g6.xlarge",
+            "Priority": 2
+          }
+        ],
+        "VariantInstanceProvisionTimeoutInSeconds": 600
+      }
+    ]
+  },
+  "inference_component": {
+    "InferenceComponentName": "transmeet-qwen3-asr-ic-v2",
+    "EndpointName": "transmeet-qwen3-asr",
+    "VariantName": "AllTraffic",
+    "RuntimeConfig": {
+      "CopyCount": 1
+    },
+    "Specifications": [
+      {
+        "InstanceType": "ml.g6.2xlarge",
+        "ModelName": "transmeet-qwen3-asr-model-offline",
+        "ComputeResourceRequirements": {
+          "NumberOfCpuCoresRequired": 2,
+          "NumberOfAcceleratorDevicesRequired": 1,
+          "MinMemoryRequiredInMb": 8192
+        },
+        "StartupParameters": {
+          "ModelDataDownloadTimeoutInSeconds": 2400,
+          "ContainerStartupHealthCheckTimeoutInSeconds": 1800
+        }
+      },
+      {
+        "InstanceType": "ml.g6.xlarge",
+        "ModelName": "transmeet-qwen3-asr-model-offline",
+        "ComputeResourceRequirements": {
+          "NumberOfCpuCoresRequired": 2,
+          "NumberOfAcceleratorDevicesRequired": 1,
+          "MinMemoryRequiredInMb": 8192
+        },
+        "StartupParameters": {
+          "ModelDataDownloadTimeoutInSeconds": 2400,
+          "ContainerStartupHealthCheckTimeoutInSeconds": 1800
+        }
+      }
+    ]
+  },
+  "environment": {
+    "QWEN_ASR_ENDPOINT": "transmeet-qwen3-asr",
+    "QWEN_ASR_INFERENCE_COMPONENT": "transmeet-qwen3-asr-ic-v2",
+    "STT_IDLE_SECONDS": "0"
+  }
+}
+sagemaker.config INFO - Not applying SDK defaults from location: /etc/xdg/sagemaker/config.yaml
+sagemaker.config INFO - Not applying SDK defaults from location: /home/ubuntu/.config/sagemaker/config.yaml
+transmeet-qwen3-asr: Creating
+transmeet-qwen3-asr: InService
+transmeet-qwen3-asr-ic-v2: Creating
+transmeet-qwen3-asr-ic-v2: InService
+Retained component and native autoscaling configured; idle target is 1 copies.

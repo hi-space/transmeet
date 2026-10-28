@@ -25,6 +25,8 @@ const WHISPER_ENDPOINT = 'whisper-large';
 const BEDROCK_MODEL_ID = 'global.anthropic.claude-haiku-5-5';
 const REGION = 'us-east-1';
 const MEETINGS_TABLE = 'transmeet-meetings';
+const SUMMARY_TEMPLATES_TABLE = 'transmeet-summary-templates';
+const SUMMARY_SNAPSHOTS_TABLE = 'transmeet-summary-snapshots';
 // 발행된 미팅 페이지 기록. 미팅 항목은 발언 전체를 인라인으로 담아 긴 미팅은 400 KB 한도에 닿으므로
 // 페이지 기록(수백 바이트)은 미팅 항목에 얹지 않고 별도 테이블에 둔다.
 const PAGES_TABLE = 'transmeet-pages';
@@ -46,10 +48,19 @@ export class TransmeetStack extends cdk.Stack {
 
     const qwenAsrEndpoint = this.node.tryGetContext('qwenAsrEndpoint') || process.env.QWEN_ASR_ENDPOINT || 'transmeet-qwen3-asr';
     const nemotronAsrEndpoint = this.node.tryGetContext('nemotronAsrEndpoint') || process.env.NEMOTRON_ASR_ENDPOINT || 'transmeet-nemotron-asr';
+    const qwenAsrRegion = this.node.tryGetContext('qwenAsrRegion') || process.env.QWEN_ASR_REGION || 'ap-northeast-2';
+    const nemotronAsrRegion = this.node.tryGetContext('nemotronAsrRegion') || process.env.NEMOTRON_ASR_REGION || 'ap-northeast-2';
+    const nemotronStreamingEndpoint = this.node.tryGetContext('nemotronStreamingEndpoint') || process.env.NEMOTRON_STREAMING_ENDPOINT || 'transmeet-nemotron-streaming-v2';
+    const nemotronStreamingRegion = this.node.tryGetContext('nemotronStreamingRegion') || process.env.NEMOTRON_STREAMING_REGION || REGION;
+    const nemotronStreamingEnabled = String(this.node.tryGetContext('nemotronStreamingEnabled') ?? process.env.NEMOTRON_STREAMING_ENABLED ?? 'false') === 'true';
     const qwenAsrComponent = this.node.tryGetContext('qwenAsrComponent') || process.env.QWEN_ASR_INFERENCE_COMPONENT || 'transmeet-qwen3-asr-ic-v2';
     const nemotronAsrComponent = this.node.tryGetContext('nemotronAsrComponent') || process.env.NEMOTRON_ASR_INFERENCE_COMPONENT || 'transmeet-nemotron-asr-ic-v2';
     const wsImageTag = this.node.tryGetContext('wsImageTag') || 'latest';
-    const speechEndpoints = [WHISPER_ENDPOINT, qwenAsrEndpoint, nemotronAsrEndpoint].filter(Boolean);
+    const speechEndpoints = [
+      { endpoint: WHISPER_ENDPOINT, region: REGION },
+      { endpoint: qwenAsrEndpoint, region: qwenAsrRegion },
+      { endpoint: nemotronAsrEndpoint, region: nemotronAsrRegion },
+    ].filter(({ endpoint }) => Boolean(endpoint));
 
     // ─── DynamoDB Tables ───────────────────────────────────────────────────────
 
@@ -78,6 +89,25 @@ export class TransmeetStack extends cdk.Stack {
 
     const pagesTable = new dynamodb.Table(this, 'PagesTable', {
       tableName: PAGES_TABLE,
+      partitionKey: { name: 'meetingId', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      pointInTimeRecovery: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    // 내 양식(사용자별 요약 프롬프트). 회의는 고를 때 사본을 갖고 가므로 요약 생성 경로는 이 테이블을 읽지 않는다.
+    const summaryTemplatesTable = new dynamodb.Table(this, 'SummaryTemplatesTable', {
+      tableName: SUMMARY_TEMPLATES_TABLE,
+      partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'templateId', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      pointInTimeRecovery: true,
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    // 회의가 고른 내 양식의 사본(meetingId 키). 회의 항목은 발언 전체를 담아 400 KB 한도에 가까우므로 따로 둔다.
+    const summarySnapshotsTable = new dynamodb.Table(this, 'SummarySnapshotsTable', {
+      tableName: SUMMARY_SNAPSHOTS_TABLE,
       partitionKey: { name: 'meetingId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       pointInTimeRecovery: true,
@@ -144,12 +174,16 @@ export class TransmeetStack extends cdk.Stack {
     // DynamoDB
     meetingsTable.grantReadWriteData(lambdaRole);
     pagesTable.grantReadWriteData(lambdaRole);
+    summaryTemplatesTable.grantReadWriteData(lambdaRole);
+    summarySnapshotsTable.grantReadWriteData(lambdaRole);
 
     // ─── Shared Lambda Config ───────────────────────────────────────────────────
 
     const commonEnv: Record<string, string> = {
       MEETINGS_TABLE: meetingsTable.tableName,
       PAGES_TABLE: pagesTable.tableName,
+      SUMMARY_TEMPLATES_TABLE: summaryTemplatesTable.tableName,
+      SUMMARY_SNAPSHOTS_TABLE: summarySnapshotsTable.tableName,
       WHISPER_ENDPOINT,
       BEDROCK_MODEL_ID,
       REGION,
@@ -252,6 +286,9 @@ export class TransmeetStack extends cdk.Stack {
     titleResource.addMethod('POST', meetingsIntegration, authed);
     titleResource.addMethod('PUT', meetingsIntegration, authed);
 
+    // /meetings/{id}/summary-style — selection is saved without invoking a model
+    meetingResource.addResource('summary-style').addMethod('PUT', meetingsIntegration, authed);
+
     // /tts
     restApi.root.addResource('tts').addMethod('POST', ttsIntegration, authed);
 
@@ -288,9 +325,25 @@ export class TransmeetStack extends cdk.Stack {
       role: emailRole,
     });
     const emailIntegration = new apigateway.LambdaIntegration(emailFn);
-    const meEmailResource = restApi.root.addResource('me').addResource('email');
+    const meResource = restApi.root.addResource('me');
+    const meEmailResource = meResource.addResource('email');
     meEmailResource.addMethod('GET', emailIntegration, authed);
     meEmailResource.addResource('verify').addMethod('POST', emailIntegration, authed);
+
+    // /me/summary-templates — 내 양식 CRUD
+    const summaryTemplatesFn = new NodejsFunction(this, 'SummaryTemplatesFn', {
+      functionName: 'transmeet-summary-templates',
+      entry: path.join(__dirname, '../lambda/summary-templates/index.ts'),
+      timeout: cdk.Duration.seconds(10),
+      ...commonNodejsFunctionProps,
+    });
+    const summaryTemplatesIntegration = new apigateway.LambdaIntegration(summaryTemplatesFn);
+    const summaryTemplatesResource = meResource.addResource('summary-templates');
+    summaryTemplatesResource.addMethod('GET', summaryTemplatesIntegration, authed);
+    summaryTemplatesResource.addMethod('POST', summaryTemplatesIntegration, authed);
+    const summaryTemplateResource = summaryTemplatesResource.addResource('{templateId}');
+    summaryTemplateResource.addMethod('PUT', summaryTemplatesIntegration, authed);
+    summaryTemplateResource.addMethod('DELETE', summaryTemplatesIntegration, authed);
 
     // ─── S3 + CloudFront (Frontend Hosting) ────────────────────────────────────
 
@@ -431,8 +484,14 @@ export class TransmeetStack extends cdk.Stack {
       new iam.PolicyStatement({
         actions: ['sagemaker:InvokeEndpoint', 'sagemaker:DescribeEndpoint'],
         resources: speechEndpoints.map(
-          (endpoint) => `arn:aws:sagemaker:${REGION}:${this.account}:endpoint/${endpoint}`
+          ({ endpoint, region }) => `arn:aws:sagemaker:${region}:${this.account}:endpoint/${endpoint}`
         ),
+      })
+    );
+    wsTaskRole.addToPolicy(
+      new iam.PolicyStatement({
+        actions: ['sagemaker:InvokeEndpointWithBidirectionalStream', 'sagemaker:DescribeEndpoint'],
+        resources: [`arn:aws:sagemaker:${nemotronStreamingRegion}:${this.account}:endpoint/${nemotronStreamingEndpoint}`],
       })
     );
     wsTaskRole.addToPolicy(
@@ -441,8 +500,11 @@ export class TransmeetStack extends cdk.Stack {
           'sagemaker:DescribeInferenceComponent',
           'sagemaker:UpdateInferenceComponentRuntimeConfig',
         ],
-        resources: [qwenAsrComponent, nemotronAsrComponent].map(
-          (component) => `arn:aws:sagemaker:${REGION}:${this.account}:inference-component/${component}`
+        resources: [
+          { component: qwenAsrComponent, region: qwenAsrRegion },
+          { component: nemotronAsrComponent, region: nemotronAsrRegion },
+        ].map(
+          ({ component, region }) => `arn:aws:sagemaker:${region}:${this.account}:inference-component/${component}`
         ),
       })
     );
@@ -476,6 +538,8 @@ export class TransmeetStack extends cdk.Stack {
 
     meetingsTable.grantReadWriteData(wsTaskRole);
     pagesTable.grantReadWriteData(wsTaskRole);
+    // 요약은 사본만 읽는다(양식 테이블 권한은 주지 않는다)
+    summarySnapshotsTable.grantReadData(wsTaskRole);
 
     // ─── AgentCore Gateway: Web Search connector ───────────────────────────────
 
@@ -676,11 +740,19 @@ export class TransmeetStack extends cdk.Stack {
         REGION,
         MEETINGS_TABLE,
         PAGES_TABLE,
+        SUMMARY_SNAPSHOTS_TABLE,
         WHISPER_ENDPOINT,
         QWEN_ASR_ENDPOINT: qwenAsrEndpoint,
         NEMOTRON_ASR_ENDPOINT: nemotronAsrEndpoint,
+        NEMOTRON_STREAMING_ENDPOINT: nemotronStreamingEndpoint,
+        NEMOTRON_STREAMING_ENABLED: String(nemotronStreamingEnabled),
+        NEMOTRON_STREAMING_CHUNK_MS: process.env.NEMOTRON_STREAMING_CHUNK_MS || '560',
         QWEN_ASR_INFERENCE_COMPONENT: qwenAsrComponent,
         NEMOTRON_ASR_INFERENCE_COMPONENT: nemotronAsrComponent,
+        QWEN_ASR_REGION: qwenAsrRegion,
+        NEMOTRON_ASR_REGION: nemotronAsrRegion,
+        NEMOTRON_STREAMING_REGION: nemotronStreamingRegion,
+        STT_IDLE_SECONDS: process.env.STT_IDLE_SECONDS || '0',
         BEDROCK_MODEL_ID,
         PAGE_AGENT_RUNTIME_ARN: runtimeArn,
         PAGE_AGENT_MODEL_ID,

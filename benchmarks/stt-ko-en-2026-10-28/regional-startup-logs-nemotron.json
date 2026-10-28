@@ -1,0 +1,10 @@
+{
+  "provider": "nemotron",
+  "region": "ap-northeast-2",
+  "checked_at": "2026-10-28T19:16:45.527435+00:00",
+  "log_group": "/aws/sagemaker/Endpoints/transmeet-nemotron-asr",
+  "error": {
+    "Message": "The specified log group does not exist.",
+    "Code": "ResourceNotFoundException"
+  }
+}

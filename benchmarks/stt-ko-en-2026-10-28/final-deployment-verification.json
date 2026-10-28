@@ -1,0 +1,123 @@
+{
+  "verified_at": "2026-10-28T19:31:23.314120+00:00",
+  "active_seoul": [
+    {
+      "endpoint": "transmeet-qwen3-asr",
+      "component": "transmeet-qwen3-asr-ic-v2",
+      "region": "ap-northeast-2",
+      "status": "InService",
+      "gpu_instances": 1,
+      "model_copies": 1,
+      "minimum_copies": 1,
+      "maximum_copies": 1,
+      "variants": [
+        {
+          "VariantName": "AllTraffic",
+          "CurrentInstanceCount": 1,
+          "DesiredInstanceCount": 1,
+          "InstancePools": [
+            {
+              "InstanceType": "ml.g6.2xlarge",
+              "CurrentInstanceCount": 1
+            }
+          ],
+          "ManagedInstanceScaling": {
+            "Status": "ENABLED",
+            "MinInstanceCount": 1,
+            "MaxInstanceCount": 1,
+            "ScaleInPolicy": {
+              "Strategy": "IDLE_RELEASE"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "endpoint": "transmeet-nemotron-asr",
+      "component": "transmeet-nemotron-asr-ic-v2",
+      "region": "ap-northeast-2",
+      "status": "InService",
+      "gpu_instances": 1,
+      "model_copies": 1,
+      "minimum_copies": 1,
+      "maximum_copies": 1,
+      "variants": [
+        {
+          "VariantName": "AllTraffic",
+          "CurrentInstanceCount": 1,
+          "DesiredInstanceCount": 1,
+          "ManagedInstanceScaling": {
+            "Status": "ENABLED",
+            "MinInstanceCount": 1,
+            "MaxInstanceCount": 1,
+            "ScaleInPolicy": {
+              "Strategy": "IDLE_RELEASE"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "retired_us_east": [
+    {
+      "endpoint": "transmeet-qwen3-asr",
+      "component": "transmeet-qwen3-asr-ic-v2",
+      "region": "us-east-1",
+      "status": "InService",
+      "variants": [
+        {
+          "VariantName": "AllTraffic",
+          "CurrentInstanceCount": 0,
+          "DesiredInstanceCount": 0,
+          "ManagedInstanceScaling": {
+            "Status": "ENABLED",
+            "MinInstanceCount": 0,
+            "MaxInstanceCount": 1,
+            "ScaleInPolicy": {
+              "Strategy": "IDLE_RELEASE"
+            }
+          }
+        }
+      ],
+      "runtime": {
+        "DesiredCopyCount": 0,
+        "CurrentCopyCount": 0
+      }
+    },
+    {
+      "endpoint": "transmeet-nemotron-asr",
+      "component": "transmeet-nemotron-asr-ic-v2",
+      "region": "us-east-1",
+      "status": "Updating",
+      "variants": [
+        {
+          "VariantName": "AllTraffic",
+          "CurrentInstanceCount": 0,
+          "DesiredInstanceCount": 0,
+          "ManagedInstanceScaling": {
+            "Status": "ENABLED",
+            "MinInstanceCount": 0,
+            "MaxInstanceCount": 1,
+            "ScaleInPolicy": {
+              "Strategy": "IDLE_RELEASE"
+            }
+          }
+        }
+      ],
+      "runtime": {
+        "DesiredCopyCount": 0,
+        "CurrentCopyCount": 0
+      }
+    }
+  ],
+  "backend": {
+    "task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:27",
+    "region": "us-east-1",
+    "qwen_region": "ap-northeast-2",
+    "nemotron_region": "ap-northeast-2",
+    "idle_seconds": "0",
+    "target_health": [
+      "healthy"
+    ]
+  }
+}

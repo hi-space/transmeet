@@ -71,6 +71,8 @@ function setup({
     },
   }
   const dependencies = {
+    '../../../src/lib/summaryStyles': loadTypeScript('src/lib/summaryStyles.ts'),
+    '../shared/summaryPrompt': loadTypeScript('infra/lambda/shared/summaryPrompt.ts'),
     '@aws-sdk/client-dynamodb': { DynamoDBClient: class {} },
     '@aws-sdk/lib-dynamodb': {
       DynamoDBDocumentClient: { from: () => ddb },

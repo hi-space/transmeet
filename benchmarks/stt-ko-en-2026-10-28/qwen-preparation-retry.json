@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-28T18:34:49.618252+00:00",
+  "component": "transmeet-qwen3-asr-ic-v2",
+  "status": "InService",
+  "runtime": {
+    "DesiredCopyCount": 0,
+    "CurrentCopyCount": 0
+  },
+  "failure_reason": "There is not enough hardware resources on the instances for this endpoint to create a copy of the inference component. Please update resource requirements for this inference component, remove existing inference components, or increase the number of instances for this endpoint.",
+  "endpoint_status": "InService",
+  "variants": [
+    {
+      "VariantName": "AllTraffic",
+      "CurrentInstanceCount": 0,
+      "DesiredInstanceCount": 0,
+      "ManagedInstanceScaling": {
+        "Status": "ENABLED",
+        "MinInstanceCount": 0,
+        "MaxInstanceCount": 1,
+        "ScaleInPolicy": {
+          "Strategy": "IDLE_RELEASE"
+        }
+      }
+    }
+  ],
+  "action": "Retry existing component preparation once after its desired copies returned to zero.",
+  "request_http_status": 200
+}

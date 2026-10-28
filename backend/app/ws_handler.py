@@ -8,7 +8,8 @@ Transcribe mode uses a **persistent streaming session** for the entire recording
   - Final results   → Bedrock translation → { phase: "stt" / "translating" / "done" }
   - On stopRecording: send end-of-stream, wait for remaining results
 
-Whisper, Qwen3-ASR, and Nemotron use the buffer/flush pipeline:
+Enabled Nemotron recordings use a persistent SageMaker bidirectional stream.
+Whisper, Qwen3-ASR, and batch Nemotron use the buffer/flush pipeline:
   - Audio chunks are buffered per connection
   - 600ms after the latest chunk (or when the buffer is full), audio is sent to SageMaker
 
@@ -17,16 +18,15 @@ Message sequence per final utterance (both modes):
   2. { type: "subtitle_stream", phase: "translating", partialTranslation } × N tokens
   3. { type: "subtitle_stream", phase: "done",        originalText, translatedText, detectedLanguage }
 
-Transcribe-only partial:
+Streaming partial:
   0. { type: "subtitle_stream", phase: "stt_partial", originalText, detectedLanguage }
      (live, not committed)
 
 Translation direction:
-  - sourceLang "ko"/"en" → targetLang is fixed for the whole recording.
-  - sourceLang "auto"    → targetLang is derived per utterance from the detected
-                           language (ko→en, en→ko); the client's targetLang is ignored.
-                           Speaker diarization remains enabled for both language
-                           options (en-US and ko-KR).
+  - sourceLang controls recognition; detectedLanguage describes the actual result.
+  - translationTarget "ko"/"en" fixes the destination independently of recognition.
+  - translationTarget "auto" chooses the opposite language per utterance.
+  - Legacy clients without translationTarget retain their original direction.
 
 Inbound message format:
 {
@@ -35,17 +35,20 @@ Inbound message format:
   meetingId?: "<uuid>",
   speaker?: "remote" | "local",
   sourceLang?: "ko" | "en" | "auto",
-  targetLang?: "ko" | "en",
+  translationTarget?: "ko" | "en" | "auto",
+  targetLang?: "ko" | "en", // legacy
   modelId?: string,
   sttProvider?: "whisper" | "transcribe" | "qwen3-asr" | "nemotron",
 }
 """
 import asyncio
 import base64
+import io
 import json
 import logging
 import re
 import struct
+import wave
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -64,23 +67,41 @@ from .aws_clients import (
     dynamodb_client,
     generate_message_id,
     is_hallucination,
-    normalize_language,
     polly_client,
     resolve_detected_language,
 )
 from . import audio_store, mailer
 from .auth import AuthError, owns_meeting, verify_id_token_async
 from .config import config
+from .language_settings import parse_language_settings, resolve_translation_target
 from .page_agent import (
     PageRequestError,
     check_meeting_id,
     is_transient_agent_error,
+    load_page,
     page_status_event,
     run_unpublish,
     start_page_generation,
 )
-from .summary_prompt import SUMMARY_SYSTEM_PROMPT, build_summary_prompt, transcript_lines
-from .stt import transcribe_audio, validate_provider, inference_component_for
+from .summary_prompt import (
+    SUMMARY_SYSTEM_PROMPT,
+    build_summary_prompt,
+    normalize_summary_style,
+    parse_summary_custom,
+    resolve_summary_style,
+    transcript_lines,
+)
+from .nemotron_stream import MAX_INPUT_BYTES, NemotronStream, NemotronStreamError
+from .stt import (
+    active_endpoint_for,
+    active_inference_component_for,
+    active_region_for,
+    inference_component_for,
+    is_streaming_provider,
+    parse_response,
+    transcribe_audio,
+    validate_provider,
+)
 from .stt_capacity import capacity
 
 logger = logging.getLogger(__name__)
@@ -124,7 +145,14 @@ def _is_auto(source_lang: Optional[str]) -> bool:
 
 def _auto_target_lang(detected_language: str) -> str:
     """AUTO 방향: 감지된 언어의 반대편으로 번역한다."""
-    return "en" if detected_language == "ko" else "ko"
+    return resolve_translation_target("auto", detected_language)
+
+
+def _translation_target(state: "ConnectionState", detected_language: str) -> str:
+    selection = state.translation_target
+    if selection is None:
+        selection = "auto" if _is_auto(state.source_lang) else state.target_lang
+    return resolve_translation_target(selection or "ko", detected_language)
 
 
 @dataclass
@@ -138,6 +166,8 @@ class ConnectionState:
     stt_ready: bool = False
     target_lang: str = "ko"
     source_lang: str = "auto"
+    # None is reserved for legacy callers; new sessions resolve a separate target.
+    translation_target: Optional[str] = None
     model_id: str = field(default_factory=lambda: config.BEDROCK_MODEL_ID)
     speaker: str = "speaker1"
     # Transcribe: final 결과로 확인된 마지막 화자 (partial에서 provisional로 사용)
@@ -150,6 +180,10 @@ class ConnectionState:
     # Transcribe mode: persistent streaming session
     audio_queue: asyncio.Queue = field(default_factory=asyncio.Queue)
     transcribe_task: Optional[asyncio.Task] = None
+    nemotron_stream: Optional[NemotronStream] = None
+    # Match a final with its speculative subtitle even after a recording switch.
+    stt_stream_id: Optional[str] = None
+    stt_utterance_id: Optional[int] = None
     # 세션 시작 연속 실패 횟수 / 다음 재시도 허용 시각 (event-loop time)
     transcribe_fail_count: int = 0
     transcribe_retry_at: float = 0.0
@@ -420,12 +454,12 @@ async def _process_segment(
     meeting_id = state.meeting_id
     bedrock_model_id = state.model_id
 
-    # AUTO 모드에서는 방향이 녹음 시작 시점 설정이 아니라 발화 단위 감지 결과로
-    # 결정된다 — 고정 target 을 쓰면 한국어가 들어왔을 때 ko→ko 가 된다.
-    if _is_auto(state.source_lang):
-        translation_target = _auto_target_lang(detected_language)
-    else:
-        translation_target = state.target_lang or "ko"
+    translation_target = _translation_target(state, detected_language)
+    stream_metadata = ({
+        "sttProvider": "nemotron",
+        "streamId": state.stt_stream_id,
+        "utteranceId": state.stt_utterance_id,
+    } if state.stt_stream_id is not None else {})
     logger.info(
         "[process_segment] speaker=%s detectedLang=%s auto=%s -> translation_target=%s text=%r",
         speaker, detected_language, _is_auto(state.source_lang),
@@ -440,8 +474,11 @@ async def _process_segment(
             "type": "subtitle_stream",
             "messageId": message_id,
             "phase": "stt",
+            **stream_metadata,
             "speaker": speaker,
             "originalText": original_text,
+            "detectedLanguage": detected_language,
+            "targetLanguage": translation_target,
             "timestamp": timestamp,
         })
     except Exception:
@@ -454,32 +491,36 @@ async def _process_segment(
         f"Text: {original_text}"
     )
 
-    translated_text = ""
+    translated_text = original_text if translation_target == detected_language else ""
     try:
-        async with bedrock_client() as br:
-            stream_resp = await br.converse_stream(
-                modelId=bedrock_model_id,
-                messages=[{"role": "user", "content": [{"text": prompt}]}],
-                inferenceConfig={"maxTokens": 1024},
-            )
-            async for event in stream_resp["stream"]:
-                delta = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
-                if not delta:
-                    continue
-                translated_text += delta
-                try:
-                    await _safe_send(ws, {
-                        "type": "subtitle_stream",
-                        "messageId": message_id,
-                        "phase": "translating",
-                        "speaker": speaker,
-                        "originalText": original_text,
-                        "partialTranslation": translated_text,
-                        "timestamp": timestamp,
-                    })
-                except Exception:
-                    # WS may be closing — keep accumulating translation for DB save
-                    pass
+        if translation_target != detected_language:
+            async with bedrock_client() as br:
+                stream_resp = await br.converse_stream(
+                    modelId=bedrock_model_id,
+                    messages=[{"role": "user", "content": [{"text": prompt}]}],
+                    inferenceConfig={"maxTokens": 1024},
+                )
+                async for event in stream_resp["stream"]:
+                    delta = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
+                    if not delta:
+                        continue
+                    translated_text += delta
+                    try:
+                        await _safe_send(ws, {
+                            "type": "subtitle_stream",
+                            "messageId": message_id,
+                            "phase": "translating",
+                            **stream_metadata,
+                            "speaker": speaker,
+                            "originalText": original_text,
+                            "partialTranslation": translated_text,
+                            "detectedLanguage": detected_language,
+                            "targetLanguage": translation_target,
+                            "timestamp": timestamp,
+                        })
+                    except Exception:
+                        # WS may be closing — keep accumulating translation for DB save
+                        pass
     except Exception:
         logger.exception("[process_segment] Bedrock translation failed for message_id=%s", message_id)
         # 번역 실패해도 done phase는 보내야 프론트엔드 말풍선이 stuck 안 됨
@@ -490,10 +531,12 @@ async def _process_segment(
             "type": "subtitle_stream",
             "messageId": message_id,
             "phase": "done",
+            **stream_metadata,
             "speaker": speaker,
             "originalText": original_text,
             "translatedText": translated_text,
             "detectedLanguage": detected_language,
+            "targetLanguage": translation_target,
             "timestamp": timestamp,
         })
     except Exception:
@@ -522,6 +565,7 @@ async def _process_segment(
                             "originalText": {"S": original_text},
                             "translatedText": {"S": translated_text},
                             "detectedLanguage": {"S": detected_language},
+                            "targetLanguage": {"S": translation_target},
                             "timestamp": {"S": timestamp},
                         }}]},
                         ":empty": {"L": []},
@@ -581,7 +625,7 @@ async def _retranslate_segment(
     Skips the STT phase (uses provided text directly) and DynamoDB write.
     Streams translating + done phases back to the frontend.
     """
-    translation_target = target_lang if target_lang else "ko"
+    translation_target = resolve_translation_target(target_lang or "ko", detected_language)
     logger.info(
         "[retranslate] messageId=%s speaker=%s detectedLang=%s -> translation_target=%s text=%r",
         message_id, speaker, detected_language, translation_target, original_text,
@@ -595,27 +639,30 @@ async def _retranslate_segment(
         f"Text: {original_text}"
     )
 
-    translated_text = ""
-    async with bedrock_client() as br:
-        stream_resp = await br.converse_stream(
-            modelId=model_id,
-            messages=[{"role": "user", "content": [{"text": prompt}]}],
-            inferenceConfig={"maxTokens": 1024},
-        )
-        async for event in stream_resp["stream"]:
-            delta = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
-            if not delta:
-                continue
-            translated_text += delta
-            await _safe_send(ws, {
-                "type": "subtitle_stream",
-                "messageId": message_id,
-                "phase": "translating",
-                "speaker": speaker,
-                "originalText": original_text,
-                "partialTranslation": translated_text,
-                "timestamp": timestamp,
-            })
+    translated_text = original_text if translation_target == detected_language else ""
+    if translation_target != detected_language:
+        async with bedrock_client() as br:
+            stream_resp = await br.converse_stream(
+                modelId=model_id,
+                messages=[{"role": "user", "content": [{"text": prompt}]}],
+                inferenceConfig={"maxTokens": 1024},
+            )
+            async for event in stream_resp["stream"]:
+                delta = event.get("contentBlockDelta", {}).get("delta", {}).get("text")
+                if not delta:
+                    continue
+                translated_text += delta
+                await _safe_send(ws, {
+                    "type": "subtitle_stream",
+                    "messageId": message_id,
+                    "phase": "translating",
+                    "speaker": speaker,
+                    "originalText": original_text,
+                    "partialTranslation": translated_text,
+                    "detectedLanguage": detected_language,
+                    "targetLanguage": translation_target,
+                    "timestamp": timestamp,
+                })
 
     logger.info("[retranslate] done: translatedText=%r", translated_text)
     await _safe_send(ws, {
@@ -626,6 +673,7 @@ async def _retranslate_segment(
         "originalText": original_text,
         "translatedText": translated_text,
         "detectedLanguage": detected_language,
+        "targetLanguage": translation_target,
         "timestamp": timestamp,
     })
 
@@ -691,7 +739,7 @@ async def _run_transcribe_streaming(
         # 자동 식별 모드에서도 반드시 넘겨야 하며, None 이면 직렬화 단계에서
         # x-amzn-transcribe-language-code 헤더가 빠진다 (serialize._serialize_header).
         kwargs["language_code"] = None
-        kwargs["identify_language"] = True
+        kwargs["identify_multiple_languages"] = True
         # 반드시 list — SDK 가 ",".join(value) 를 하므로 문자열을 넘기면
         # "e,n,-,U,S,,,k,o,-,K,R" 로 망가지고 AWS 가 BadRequestException 을 준다.
         kwargs["language_options"] = ["en-US", "ko-KR"]
@@ -783,10 +831,7 @@ async def _run_transcribe_streaming(
                         continue
 
                     # partial 번역도 방향을 알아야 하므로 partial/final 모두 언어를 해석한다.
-                    if _is_auto(state.source_lang):
-                        language = resolve_detected_language(detected_lang, transcript_text)
-                    else:
-                        language = normalize_language(state.source_lang)
+                    language = resolve_detected_language(detected_lang, transcript_text)
 
                     if result.is_partial:
                         # Live partial → pending bubble on frontend (not committed)
@@ -820,7 +865,8 @@ async def _run_transcribe_streaming(
 
                         # language 는 위에서 partial/final 공용으로 해석해 둔 값이다.
                         for text, speaker in segments:
-                            if not _apply_segment_filters(text, state.source_lang):
+                            segment_language = resolve_detected_language(detected_lang, text)
+                            if not _apply_segment_filters(text, segment_language):
                                 continue
                             # 화자가 바뀌면 기존 버퍼를 즉시 flush 후 새 화자로 시작
                             if (
@@ -832,7 +878,7 @@ async def _run_transcribe_streaming(
                                     state.seg_flush_task.cancel()
                                     state.seg_flush_task = None
                                 await _flush_seg_buffer(state, ws)
-                            state.seg_buffer.append((text, speaker, language))
+                            state.seg_buffer.append((text, speaker, segment_language))
                             state.seg_last_speaker = speaker
 
                         timing = state.translation_timing
@@ -850,7 +896,7 @@ async def _run_transcribe_streaming(
                             sentence_ended = any(
                                 (t.rstrip() or "")[-1:] in ".?!。？！"
                                 for t, _ in segments
-                                if _apply_segment_filters(t, state.source_lang)
+                                if _apply_segment_filters(t, resolve_detected_language(detected_lang, t))
                             )
                             if sentence_ended:
                                 if state.seg_flush_task and not state.seg_flush_task.done():
@@ -889,6 +935,137 @@ async def _run_transcribe_streaming(
         logger.exception("[Transcribe] Session failed for connection_id=%s", connection_id)
 
 
+def _start_nemotron_streaming(state: ConnectionState, ws: WebSocket, connection_id: str) -> None:
+    """Snapshot one recording; partials stay live and only unique finals are saved."""
+    snapshot = replace(state)
+    recording_id = uuid4().hex
+    stream = NemotronStream(
+        endpoint_name=active_endpoint_for("nemotron"),
+        language=LANG_CODE_MAP.get(snapshot.source_lang, "auto"),
+        chunk_ms=config.NEMOTRON_STREAMING_CHUNK_MS,
+        region=active_region_for("nemotron"),
+        worker_python=config.NEMOTRON_STREAM_PYTHON,
+    )
+    state.nemotron_stream = stream
+    seen_finals = set()
+    generation = None
+    pending_utterance = None
+
+    async def send(payload):
+        try:
+            await asyncio.wait_for(_safe_send(ws, payload), timeout=1)
+        except Exception:
+            pass  # A disconnected browser must not prevent final persistence.
+
+    async def clear_partial():
+        nonlocal pending_utterance
+        if pending_utterance is not None:
+            await send({
+                "type": "subtitle_stream", "phase": "stt_partial", "messageId": "partial",
+                "originalText": "", "speaker": snapshot.speaker, "sttProvider": "nemotron",
+                "streamId": f"{recording_id}:{generation}", "utteranceId": pending_utterance,
+                "timestamp": _iso_now(),
+            })
+            pending_utterance = None
+
+    async def on_event(event):
+        nonlocal generation, pending_utterance
+        if event["stream_id"] != generation:
+            generation = event["stream_id"]
+            seen_finals.clear()  # IDs are local to a 25-minute model connection.
+            pending_utterance = None
+        kind = event["type"]
+        if kind == "error":
+            await clear_partial()
+            await _nemotron_recording_failed(
+                state, ws, connection_id, stream,
+                f"Nemotron 실시간 음성 인식에 실패했습니다: {event['message']}",
+            )
+            return
+        if kind == "ended":
+            await clear_partial()
+            return
+        if kind not in ("partial", "final"):
+            return
+        utterance_id = event["utterance_id"]
+        if utterance_id in seen_finals:
+            return
+        result = parse_response("nemotron", event)
+        fallback = "" if _is_auto(snapshot.source_lang) else snapshot.source_lang
+        language = resolve_detected_language(result.language or fallback, result.text)
+        stream_id = f"{recording_id}:{generation}"
+        if kind == "partial":
+            pending_utterance = utterance_id
+            await send({
+                "type": "subtitle_stream", "phase": "stt_partial", "messageId": "partial",
+                "originalText": result.text, "detectedLanguage": language,
+                "speaker": snapshot.speaker, "sttProvider": "nemotron",
+                "streamId": stream_id, "utteranceId": utterance_id, "timestamp": _iso_now(),
+            })
+            return
+
+        seen_finals.add(utterance_id)
+        if not result.text or not _apply_segment_filters(result.text, language):
+            if pending_utterance == utterance_id:
+                await clear_partial()
+            return
+        if pending_utterance == utterance_id:
+            pending_utterance = None
+        # Keep translation separate from the audio receiver, with a bounded backlog.
+        final_state = replace(snapshot, stt_stream_id=stream_id, stt_utterance_id=utterance_id)
+        task = asyncio.create_task(_process_segment(
+            ws, result.text, snapshot.speaker, language, final_state, _iso_now(),
+        ))
+        state.segment_tasks.add(task)
+        task.add_done_callback(state.segment_tasks.discard)
+        if len(state.segment_tasks) > 64:
+            # Preserve this already-confirmed original, then stop new input.
+            # Raising ends the stream reader so no further overflow is scheduled.
+            raise NemotronStreamError("번역 처리가 지연되어 음성 인식을 중단했습니다. 잠시 후 다시 시작해 주세요.")
+
+    stream.start(on_event)
+
+
+async def _nemotron_recording_failed(state, ws, connection_id, stream, message):
+    payloads = [{"type": "error", "message": message, "timestamp": _iso_now()}]
+    if state.nemotron_stream is stream:
+        state.stt_ready = False
+        capacity.release("nemotron", connection_id)
+        payloads.append({
+            "type": "stt_status", "provider": "nemotron", "status": "error",
+            "streaming": True, "managed": False, "recordingBlocked": True, "message": message,
+        })
+    for payload in payloads:
+        try:
+            await asyncio.wait_for(_safe_send(ws, payload), timeout=1)
+        except Exception:
+            pass
+
+
+def _nemotron_pcm(audio_data: str) -> bytes:
+    """Decode the browser WAV, including a short tail and nonstandard RIFF headers."""
+    if len(audio_data) > (MAX_INPUT_BYTES + 4096) * 4 // 3 + 4:
+        raise ValueError("Nemotron 오디오 메시지가 너무 큽니다.")
+    audio_bytes = base64.b64decode(audio_data, validate=True)
+    try:
+        with wave.open(io.BytesIO(audio_bytes), "rb") as audio:
+            if (audio.getnchannels(), audio.getsampwidth(), audio.getframerate(), audio.getcomptype()) != (
+                1, 2, 16000, "NONE",
+            ):
+                raise ValueError("Nemotron은 16 kHz mono PCM16 오디오를 사용합니다.")
+            size = audio.getnframes() * 2
+            if size > MAX_INPUT_BYTES:
+                raise ValueError("Nemotron 오디오 메시지가 너무 큽니다.")
+            # Reading one extra frame exposes an odd trailing byte in a malformed
+            # data chunk; readframes(nframes) would silently truncate that byte.
+            pcm = audio.readframes(audio.getnframes() + 1)
+            if len(pcm) != size or len(pcm) % 2:
+                raise ValueError("Nemotron 오디오 메시지가 잘렸습니다.")
+            return pcm
+    except (wave.Error, EOFError) as exc:
+        raise ValueError("Nemotron 오디오 메시지가 올바른 WAV가 아닙니다.") from exc
+
+
 # ─── SageMaker providers: buffer/flush pipeline ─────────────────────────────
 
 async def _process_buffered_audio(
@@ -896,8 +1073,6 @@ async def _process_buffered_audio(
 ) -> None:
     """Send one utterance to its selected endpoint and run common translation."""
     timestamp = _iso_now()
-    req_source_lang: Optional[str] = None if state.source_lang == "auto" else state.source_lang
-
     result = await transcribe_audio(state.stt_provider, audio_bytes, state.source_lang)
     original_text = result.text
     detected_lang_raw = result.language
@@ -907,12 +1082,11 @@ async def _process_buffered_audio(
     if not original_text:
         return
 
-    if req_source_lang:
-        detected_language = normalize_language(req_source_lang)
-    else:
-        detected_language = resolve_detected_language(detected_lang_raw, original_text)
-
-    if not _apply_segment_filters(original_text, req_source_lang):
+    fallback_language = "" if _is_auto(state.source_lang) else state.source_lang
+    detected_language = resolve_detected_language(
+        detected_lang_raw or fallback_language, original_text,
+    )
+    if not _apply_segment_filters(original_text, detected_language):
         return
 
     await _process_segment(ws, original_text, state.speaker, detected_language, state, timestamp)
@@ -1178,6 +1352,7 @@ async def _stream_summary(
     model_id: str,
     *,
     inline_messages: Optional[list] = None,
+    summary_style: Optional[str] = None,
 ) -> Optional[str]:
     """Fetch meeting messages and stream a summary via converse_stream. 만든 요약을 돌려주고, 실패하면 None.
 
@@ -1191,18 +1366,22 @@ async def _stream_summary(
     수 초~수십 초 침묵하므로, 요청한 소켓 하나에 묶으면 그 사이 미팅 전환·재접속으로 소켓이 바뀔 때
     닫힌 소켓에 보내다 예외로 죽고 저장도 안 된다(2026-10-09). 보낼 곳이 없어도 요약은 끝까지 만들어 저장한다.
     """
+    style = normalize_summary_style(summary_style)
     try:
         lines: List[str] = []
         current_title = ""
+        saved_style = None
+        custom = None
         if inline_messages:
             lines = transcript_lines(inline_messages)
             async with dynamodb_client() as ddb:
                 meta = await ddb.get_item(
                     TableName=config.MEETINGS_TABLE,
                     Key={"meetingId": {"S": meeting_id}},
-                    ProjectionExpression="title",
+                    ProjectionExpression="title, summaryStyle",
                 )
             current_title = meta.get("Item", {}).get("title", {}).get("S", "")
+            saved_style = meta.get("Item", {}).get("summaryStyle", {}).get("S")
         else:
             async with dynamodb_client() as ddb:
                 result = await ddb.get_item(
@@ -1210,6 +1389,7 @@ async def _stream_summary(
                     Key={"meetingId": {"S": meeting_id}},
                 )
             current_title = result.get("Item", {}).get("title", {}).get("S", "")
+            saved_style = result.get("Item", {}).get("summaryStyle", {}).get("S")
             raw_messages = result.get("Item", {}).get("messages", {}).get("L", [])
             lines = transcript_lines(
                 {"originalText": m.get("M", {}).get("originalText", {}).get("S", ""),
@@ -1217,12 +1397,20 @@ async def _stream_summary(
                 for m in raw_messages
             )
 
+        # 내 양식은 고를 때 만든 사본(meetingId 키 테이블)으로만 만든다 — 양식 테이블을 읽지 않으므로 양식을 지워도 동작한다.
+        if normalize_summary_style(summary_style if summary_style is not None else saved_style) == "custom":
+            async with dynamodb_client() as ddb:
+                snap = await ddb.get_item(TableName=config.SUMMARY_SNAPSHOTS_TABLE, Key={"meetingId": {"S": meeting_id}})
+            custom = parse_summary_custom(snap.get("Item"))
+        style = resolve_summary_style(summary_style, saved_style, custom)
+        label = custom["name"] if style == "custom" and custom else None
+        style_fields: Dict[str, Any] = {"summaryStyle": style, **({"summaryLabel": label} if label else {})}
         if not lines:
             await send({"type": "summary_stream", "phase": "error", "meetingId": meeting_id, "error": "No messages to summarize"})
             return None
         transcript = "\n".join(lines)
 
-        user_prompt = build_summary_prompt(current_title, transcript)
+        user_prompt = build_summary_prompt(current_title, transcript, style, custom)
         summary_model_id = config.SUMMARY_MODEL_ID or model_id
         logger.info("[ws] summary start meeting_id=%s model=%s lines=%d", meeting_id, summary_model_id, len(lines))
 
@@ -1247,7 +1435,8 @@ async def _stream_summary(
                         if not delta:
                             continue
                         summary += delta
-                        await send({"type": "summary_stream", "phase": "delta", "meetingId": meeting_id, "text": delta})
+                        await send({"type": "summary_stream", "phase": "delta", "meetingId": meeting_id,
+                                    **style_fields, "text": delta})
                     break
                 except Exception as e:
                     if summary or not is_transient_agent_error(e):
@@ -1273,16 +1462,25 @@ async def _stream_summary(
             await ddb.update_item(
                 TableName=config.MEETINGS_TABLE,
                 Key={"meetingId": {"S": meeting_id}},
-                UpdateExpression="SET summary = :s, summarizedAt = :t",
+                UpdateExpression=(
+                    "SET summary = :s, summarizedAt = :t, summaryGeneratedStyle = :style, summaryGeneratedLabel = :label"
+                    if label else
+                    "SET summary = :s, summarizedAt = :t, summaryGeneratedStyle = :style REMOVE summaryGeneratedLabel"
+                ),
                 ExpressionAttributeValues={
                     ":s": {"S": summary},
                     ":t": {"S": _iso_now()},
+                    ":style": {"S": style},
+                    **({":label": {"S": label}} if label else {}),
                 },
             )
 
         new_title = await _generate_title_if_default(meeting_id, current_title, lines, model_id)
 
-        done_payload: Dict[str, Any] = {"type": "summary_stream", "phase": "done", "meetingId": meeting_id, "summary": summary}
+        done_payload: Dict[str, Any] = {
+            "type": "summary_stream", "phase": "done", "meetingId": meeting_id,
+            "summary": summary, **style_fields,
+        }
         if new_title:
             done_payload["title"] = new_title
         await send(done_payload)
@@ -1369,6 +1567,18 @@ async def _release_email_send(meeting_id: str) -> None:
         )
 
 
+async def _email_page_url(meeting_id: str) -> Optional[str]:
+    """Only link a published page; optional page lookup must not block the summary email."""
+    try:
+        async with dynamodb_client() as ddb:
+            page = await load_page(ddb, config.PAGES_TABLE, meeting_id)
+        url = page.get("url") if page else None
+        return url if isinstance(url, str) else None
+    except Exception:
+        logger.warning("[mail] page lookup failed meeting_id=%s", meeting_id, exc_info=True)
+        return None
+
+
 async def _send_end_email(state: ConnectionState, meeting_id: str, summary: Optional[str]) -> str:
     """메일 단계의 결과 상태: sent | already_sent | unverified | no_email | failed."""
     if not state.user_email:
@@ -1386,6 +1596,7 @@ async def _send_end_email(state: ConnectionState, meeting_id: str, summary: Opti
             summary=summary,
             audio_url=audio_url,
             meeting_url=f"{config.APP_BASE_URL}/?meeting={meeting_id}",
+            page_url=await _email_page_url(meeting_id),
         )
         await mailer.send_meeting_email(state.user_email, mail)
     except Exception:
@@ -1403,6 +1614,7 @@ async def _end_meeting(
     *,
     email_on_end: bool,
     inline_messages: Optional[list] = None,
+    summary_style: Optional[str] = None,
 ) -> None:
     """오디오 마무리 → 요약 → 페이지 생성 시작·메일. 소켓이 바뀌어도 끝까지 간다.
 
@@ -1425,7 +1637,9 @@ async def _end_meeting(
             )
 
         await send({"type": "meeting_end", "meetingId": meeting_id, "phase": "summary"})
-        summary = await _stream_summary(send, meeting_id, state.model_id, inline_messages=inline_messages)
+        summary = await _stream_summary(
+            send, meeting_id, state.model_id, inline_messages=inline_messages, summary_style=summary_style,
+        )
 
         # 페이지는 수 분 걸리므로 완료를 기다리지 않는다. 생성기가 태스크를 보관하고
         # page_stream 으로 진행·결과를 알린다. 종료 재시도는 기존 페이지 링크를 보존한다.
@@ -1549,7 +1763,10 @@ async def _claim_meeting(state: ConnectionState, meeting_id: Optional[str]) -> O
 async def _stop_recording(state: ConnectionState, ws: WebSocket, connection_id: str) -> None:
     """녹음 정지: STT 를 마무리하고 아직 안 올린 녹음을 S3 로 올린다."""
     state.stt_ready = False
-    if state.stt_provider == "transcribe":
+    if state.nemotron_stream is not None:
+        await state.nemotron_stream.close()
+        state.nemotron_stream = None
+    elif state.stt_provider == "transcribe":
         if state.transcribe_task and not state.transcribe_task.done():
             # Signal end-of-stream; wait up to 8 s for final results
             await state.audio_queue.put(None)
@@ -1603,6 +1820,21 @@ async def ws_endpoint(
             if action == "ping":
                 await _safe_send(ws, {"type": "pong", "timestamp": _iso_now()})
 
+            elif action == "refreshAuth":
+                # 이메일 인증 뒤 새 클레임을 반영하되, 진행 중인 녹음과 미팅 소유자는 유지한다.
+                try:
+                    refreshed_user_id, refreshed_email = await verify_id_token_async(data.get("token") or "")
+                    if refreshed_user_id != state.user_id:
+                        raise AuthError("refreshed token belongs to a different user")
+                except AuthError:
+                    await _safe_send(ws, {
+                        "type": "error",
+                        "message": "로그인 정보를 갱신하지 못했습니다. 다시 로그인해 주세요.",
+                        "timestamp": _iso_now(),
+                    })
+                    continue
+                state.user_email = refreshed_email
+
             elif action in ("prepareStt", "sttStatus"):
                 provider = data.get("sttProvider")
                 if provider not in ("whisper", "transcribe", "qwen3-asr", "nemotron"):
@@ -1614,11 +1846,10 @@ async def ws_endpoint(
             elif action == "startRecording":
                 # Drain the old engine before changing its provider/language.
                 await _stop_recording(state, ws, connection_id)
-                if state.segment_tasks:
-                    await asyncio.gather(*list(state.segment_tasks), return_exceptions=True)
                 provider = data.get("sttProvider", "whisper")
                 try:
                     validate_provider(provider)
+                    source_lang, translation_target = parse_language_settings(provider, data)
                 except (TypeError, ValueError) as exc:
                     await _safe_send(ws, {
                         "type": "error",
@@ -1626,7 +1857,7 @@ async def ws_endpoint(
                         "timestamp": _iso_now(),
                     })
                     continue
-                if inference_component_for(provider):
+                if active_inference_component_for(provider) or is_streaming_provider(provider):
                     status = await capacity.start_session(provider, connection_id)
                     if status["status"] != "ready":
                         await _safe_send(ws, {"type": "stt_status", **status, "recordingBlocked": True})
@@ -1648,8 +1879,9 @@ async def ws_endpoint(
 
                 state.stt_provider = provider
                 state.stt_ready = True
-                state.target_lang = data.get("targetLang", "ko") or "ko"
-                state.source_lang = data.get("sourceLang", "auto") or "auto"
+                state.target_lang = translation_target if translation_target != "auto" else "ko"
+                state.source_lang = source_lang
+                state.translation_target = translation_target
                 state.model_id = data.get("modelId") or config.BEDROCK_MODEL_ID
                 if data.get("meetingId"):
                     # 남의 미팅이면 None — 발언은 저장되지 않는다
@@ -1682,6 +1914,8 @@ async def ws_endpoint(
                     state.transcribe_task = asyncio.create_task(
                         _run_transcribe_streaming(state, ws, connection_id)
                     )
+                elif is_streaming_provider(state.stt_provider):
+                    _start_nemotron_streaming(state, ws, connection_id)
 
             elif action == "stopRecording":
                 await _stop_recording(state, ws, connection_id)
@@ -1696,6 +1930,7 @@ async def ws_endpoint(
                         _meeting_broadcaster(mid), state, mid,
                         email_on_end=bool(data.get("emailOnEnd")),
                         inline_messages=data.get("messages"),
+                        summary_style=data.get("summaryStyle"),
                     ))
 
             elif action == "prepare_audio":
@@ -1713,7 +1948,10 @@ async def ws_endpoint(
                     # 결과는 요청한 소켓이 아니라 이 미팅을 보고 있는 현재 연결 전부에 간다 (_stream_summary 참고)
                     state.meeting_id = state.meeting_id or mid
                     asyncio.create_task(
-                        _stream_summary(_meeting_broadcaster(mid), mid, state.model_id, inline_messages=inline_messages)
+                        _stream_summary(
+                            _meeting_broadcaster(mid), mid, state.model_id,
+                            inline_messages=inline_messages, summary_style=data.get("summaryStyle"),
+                        )
                     )
 
             elif action == "generate_page":
@@ -1726,7 +1964,8 @@ async def ws_endpoint(
                     # 미팅 ID·메시지 상한 검증, 같은 미팅 중복 생성 거절 (다른 연결이어도)
                     try:
                         state.page_task = start_page_generation(
-                            _meeting_broadcaster(mid), mid, inline_messages=data.get("messages")
+                            _meeting_broadcaster(mid), mid, inline_messages=data.get("messages"),
+                            style=data.get("pageStyle"),
                         )
                     except PageRequestError as e:
                         await _safe_send(ws, {"type": "page_stream", "meetingId": mid, "phase": "error", "error": str(e)})
@@ -1772,17 +2011,23 @@ async def ws_endpoint(
                 msg_id = data.get("messageId")
                 orig_text = (data.get("originalText") or "").strip()
                 speaker = data.get("speaker") or state.speaker
-                # AUTO 모드에서는 state.target_lang 이 의미가 없으므로 감지 결과에서
-                # 방향을 유도한다 (normalize_language("auto") 는 "en" 이라 그대로 쓰면
-                # 한국어 발화가 en→ko 로 잘못 번역된다).
                 raw_source = data.get("sourceLang") or state.source_lang
-                if _is_auto(raw_source):
-                    source_lang = resolve_detected_language("", orig_text)
-                    fallback_target = _auto_target_lang(source_lang)
+                source_lang = resolve_detected_language(
+                    "" if _is_auto(raw_source) else raw_source, orig_text,
+                )
+                requested_target = data.get("translationTarget") or data.get("targetLang")
+                if requested_target:
+                    if requested_target not in ("auto", "ko", "en"):
+                        await _safe_send(ws, {
+                            "type": "error", "message": "지원하지 않는 번역 대상입니다.",
+                            "timestamp": _iso_now(),
+                        })
+                        continue
+                    target_lang = resolve_translation_target(requested_target, source_lang)
+                elif state.translation_target is None and _is_auto(raw_source):
+                    target_lang = _auto_target_lang(source_lang)
                 else:
-                    source_lang = normalize_language(raw_source)
-                    fallback_target = state.target_lang or "ko"
-                target_lang = data.get("targetLang") or fallback_target
+                    target_lang = _translation_target(state, source_lang)
                 model_id = data.get("modelId") or state.model_id
                 if msg_id and orig_text:
                     asyncio.create_task(
@@ -1808,6 +2053,19 @@ async def ws_endpoint(
                 capacity.touch(state.stt_provider)
                 audio_data: Optional[str] = data.get("audioData")
                 if audio_data:
+                    if state.nemotron_stream is not None:
+                        try:
+                            pcm = _nemotron_pcm(audio_data)
+                            _buffer_audio(state, connection_id, pcm)
+                            # Silence drives model endpointing; even a tiny stop tail is valid.
+                            await state.nemotron_stream.send_audio(pcm)
+                        except Exception as exc:
+                            await _nemotron_recording_failed(
+                                state, ws, connection_id, state.nemotron_stream,
+                                f"Nemotron 오디오 전송에 실패했습니다: {exc}",
+                            )
+                            await _stop_recording(state, ws, connection_id)
+                        continue
                     audio_bytes = base64.b64decode(audio_data)
                     # 브라우저가 보내는 조각은 44바이트 헤더가 붙은 16 kHz mono 16-bit WAV 다
                     _buffer_audio(state, connection_id, audio_bytes[44:])
@@ -1858,6 +2116,10 @@ async def ws_endpoint(
     except WebSocketDisconnect:
         logger.info("[ws] Disconnected: connection_id=%s", connection_id)
     finally:
+        if state.nemotron_stream is not None:
+            await _stop_recording(state, ws, connection_id)
+        if is_streaming_provider(state.stt_provider) and state.segment_tasks:
+            await asyncio.gather(*list(state.segment_tasks), return_exceptions=True)
         capacity.release(state.stt_provider, connection_id)
         # Clean up both modes
         if state.transcribe_task and not state.transcribe_task.done():

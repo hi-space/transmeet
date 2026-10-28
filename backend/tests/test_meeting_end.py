@@ -113,6 +113,7 @@ async def env(monkeypatch):
 
     async def stream_summary(send, meeting_id, model_id, **kw):
         calls["summaries"] += 1
+        calls.setdefault("summary_styles", []).append(kw.get("summary_style"))
         return summary["value"]
 
     async def email_verified(email):
@@ -191,6 +192,38 @@ async def test_end_meeting_sends_once(env):
     assert statuses == ["already_sent", "sent"]
 
 
+async def test_end_email_includes_an_existing_published_page(env):
+    env["ddb"].page = {key: TypeSerializer().serialize(value) for key, value in PAGE.items()}
+    state, _ = make_state()
+    assert await ws_handler._send_end_email(state, "m1", env["summary"]["value"]) == "sent"
+    _, mail = env["calls"]["sent"][0]
+    assert PAGE["url"] in mail["html"]
+    assert f"회의 페이지 보기: {PAGE['url']}" in mail["text"]
+
+
+async def test_end_email_without_a_published_page_keeps_the_meeting_link(env):
+    state, _ = make_state()
+    assert await ws_handler._send_end_email(state, "m1", env["summary"]["value"]) == "sent"
+    _, mail = env["calls"]["sent"][0]
+    assert "회의 페이지 보기" not in mail["html"]
+    assert "https://transmeet.hi-yoo.com/?meeting=m1" in mail["html"]
+
+
+async def test_page_lookup_failure_does_not_prevent_the_summary_email(env, monkeypatch):
+    read = env["ddb"].get_item
+
+    async def get_item(**kwargs):
+        if kwargs["TableName"] == ws_handler.config.PAGES_TABLE:
+            raise RuntimeError("page metadata temporarily unavailable")
+        return await read(**kwargs)
+
+    monkeypatch.setattr(env["ddb"], "get_item", get_item)
+    state, _ = make_state()
+    assert await ws_handler._send_end_email(state, "m1", env["summary"]["value"]) == "sent"
+    assert len(env["calls"]["sent"]) == 1
+    assert "회의 페이지 보기" not in env["calls"]["sent"][0][1]["html"]
+
+
 async def test_end_meeting_unverified(env):
     env["verified"]["value"] = False
     state, ws = make_state()
@@ -228,6 +261,16 @@ async def test_end_meeting_email_off(env):
     assert [e["status"] for e in events(ws, "meeting_end") if e["phase"] == "email"] == ["skipped"]
 
 
+async def test_end_meeting_uses_selected_summary_style_for_emailed_summary(env):
+    state, ws = make_state()
+    await ws_handler._end_meeting(
+        ws_handler._meeting_broadcaster("m1"), state, "m1",
+        email_on_end=True, summary_style="report",
+    )
+    assert env["calls"]["summary_styles"] == ["report"]
+    assert env["summary"]["value"] in env["calls"]["sent"][0][1]["text"]
+
+
 async def test_end_meeting_automatically_publishes_page_with_latest_messages(env):
     # 저장된 발언이 없는 경우 화면 기록을 대체 입력으로 사용한다.
     env["ddb"].item["messages"] = {"L": []}
@@ -241,6 +284,7 @@ async def test_end_meeting_automatically_publishes_page_with_latest_messages(env
     await env["finish_pages"]()
 
     assert len(env["calls"]["pages"]) == 1
+    assert env["calls"]["pages"][0]["meeting"]["style"] == "visual"
     message = env["calls"]["pages"][0]["messages"][0]
     assert message["original"] == "Ship on Friday."
     assert message["translation"] == "금요일 출시"

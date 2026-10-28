@@ -1,0 +1,163 @@
+{
+  "created_at": "2026-10-28T19:23:54.712576+00:00",
+  "region": "ap-northeast-2",
+  "source": {
+    "dataset": "google/fleurs",
+    "config": "en_us",
+    "split": "test",
+    "rows": "0-9",
+    "url": "https://huggingface.co/datasets/google/fleurs",
+    "parquet": "https://huggingface.co/datasets/google/fleurs/resolve/refs%2Fconvert%2Fparquet/en_us/test/0000.parquet"
+  },
+  "license": "CC-BY-4.0",
+  "conditions": {
+    "input": "identical pre-recorded 16 kHz mono PCM clips",
+    "timing": "completed-clip wall time; Transcribe sent without real-time pacing",
+    "normalization": "NFKC, casefold, alphanumeric characters; no number/abbreviation rewriting",
+    "sagemaker_chunk_seconds": 6.0,
+    "repetitions": 1
+  },
+  "summary": {
+    "nemotron": {
+      "successful_samples": 10,
+      "failed_samples": 0,
+      "cer": 0.09831181727904667,
+      "errors": 99,
+      "reference_chars": 1007,
+      "median_seconds": 3.7348,
+      "real_time_factor": 0.3779577929215212
+    }
+  },
+  "results": [
+    {
+      "provider": "nemotron",
+      "audio_seconds": 10.56,
+      "reference": "However, due to the slow communication channels, styles in the west could lag behind by 25 to 30 year.",
+      "text": "However, due to the slow dot communication channels styles in the West Lag behind by twenty five to thirty years.",
+      "language": "en-US",
+      "errors": 25,
+      "reference_chars": 81,
+      "cer": 0.30864197530864196,
+      "elapsed_seconds": 3.7626,
+      "sample_id": "fleurs-en-test-row-0",
+      "repeat": 1
+    },
+    {
+      "provider": "nemotron",
+      "audio_seconds": 8.76,
+      "reference": "All nouns, alongside the word Sie for you, always begin with a capital letter, even in the middle of a sentence.",
+      "text": "All nouns alongside the world say for you always begin with a capital letter You've been in the middle of a sentence.",
+      "language": "en-US",
+      "errors": 9,
+      "reference_chars": 88,
+      "cer": 0.10227272727272728,
+      "elapsed_seconds": 3.4525,
+      "sample_id": "fleurs-en-test-row-1",
+      "repeat": 1
+    },
+    {
+      "provider": "nemotron",
+      "audio_seconds": 11.46,
+      "reference": "To the north and within easy reach is the romantic and fascinating town of Sintra and which was made famous to foreigners after a glowing account of its splendours recorded by Lord Byron.",
+      "text": "To the north and within easy reach is a romantic and fascinating town of Sintra, and which was made famo To foreigners after a glowing account of its splendoros recorded by Lord Byron.",
+      "language": "en-US",
+      "errors": 7,
+      "reference_chars": 154,
+      "cer": 0.045454545454545456,
+      "elapsed_seconds": 4.4142,
+      "sample_id": "fleurs-en-test-row-2",
+      "repeat": 1
+    },
+    {
+      "provider": "nemotron",
+      "audio_seconds": 5.76,
+      "reference": "The cabbage juice changes color depending on how acidic or basic (alkaline) the chemical is.",
+      "text": "The cabbage juice changes color depending on how acidic, basic, alkaline the chemical is.",
+      "language": "en-US",
+      "errors": 2,
+      "reference_chars": 75,
+      "cer": 0.02666666666666667,
+      "elapsed_seconds": 2.2485,
+      "sample_id": "fleurs-en-test-row-3",
+      "repeat": 1
+    },
+    {
+      "provider": "nemotron",
+      "audio_seconds": 4.32,
+      "reference": "Many people don't think about them as dinosaurs because they have feathers and can fly.",
+      "text": "Maybe so measin dinosaurs because they have feathers and can fly.",
+      "language": "en-US",
+      "errors": 23,
+      "reference_chars": 71,
+      "cer": 0.323943661971831,
+      "elapsed_seconds": 1.7403,
+      "sample_id": "fleurs-en-test-row-4",
+      "repeat": 1
+    },
+    {
+      "provider": "nemotron",
+      "audio_seconds": 11.42,
+      "reference": "The hospital has followed protocol for infection control, including separating the patient from others to prevent possible infection of others.",
+      "text": "The hospital has followed protocol for infection control, including separating the From others to prevent possible infection of others.",
+      "language": "en-US",
+      "errors": 7,
+      "reference_chars": 122,
+      "cer": 0.05737704918032787,
+      "elapsed_seconds": 4.0263,
+      "sample_id": "fleurs-en-test-row-5",
+      "repeat": 1
+    },
+    {
+      "provider": "nemotron",
+      "audio_seconds": 10.8,
+      "reference": "The Northern Marianas emergency management office said that there were no damages reported in the nation.",
+      "text": "The Northern Mariana's Emergency Management Office said that there were no damage Reported in the nation.",
+      "language": "en-US",
+      "errors": 1,
+      "reference_chars": 89,
+      "cer": 0.011235955056179775,
+      "elapsed_seconds": 3.707,
+      "sample_id": "fleurs-en-test-row-6",
+      "repeat": 1
+    },
+    {
+      "provider": "nemotron",
+      "audio_seconds": 6.96,
+      "reference": "Twentieth century research has shown that there are two pools of genetic variation: hidden and expressed.",
+      "text": "Twentieth century research has shown that there are two pools of genetic variation hidden and expre",
+      "language": "en-US",
+      "errors": 4,
+      "reference_chars": 88,
+      "cer": 0.045454545454545456,
+      "elapsed_seconds": 3.0255,
+      "sample_id": "fleurs-en-test-row-7",
+      "repeat": 1
+    },
+    {
+      "provider": "nemotron",
+      "audio_seconds": 11.04,
+      "reference": "The aspect ratio of this format (dividing by twelve to obtain the simplest whole-number ratio) is therefore said to be 3:2.",
+      "text": "The aspect ratio of this format dividing by twelve to obtain the sim Whole number ratio is therefore said to be free to two",
+      "language": "en-US",
+      "errors": 14,
+      "reference_chars": 98,
+      "cer": 0.14285714285714285,
+      "elapsed_seconds": 3.9471,
+      "sample_id": "fleurs-en-test-row-8",
+      "repeat": 1
+    },
+    {
+      "provider": "nemotron",
+      "audio_seconds": 9.9,
+      "reference": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at campuses, easier to reach than those built in modern times.",
+      "text": "As light pollution in their heyday was not the kind of problem it is today, they are usually located in cities or at It's easier to reach than those built in modern times.",
+      "language": "en-US",
+      "errors": 7,
+      "reference_chars": 141,
+      "cer": 0.04964539007092199,
+      "elapsed_seconds": 4.0626,
+      "sample_id": "fleurs-en-test-row-9",
+      "repeat": 1
+    }
+  ]
+}

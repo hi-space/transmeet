@@ -1,0 +1,29 @@
+{
+  "verified_at": "2026-10-28T19:33:33.214661+00:00",
+  "benchmark": {
+    "conditions": 14,
+    "successful_sample_evaluations": 140,
+    "failures": 0,
+    "checks": [
+      "WAV format and SHA-256",
+      "reference equality",
+      "recomputed CER",
+      "recomputed median latency",
+      "English WER from saved text",
+      "all report evidence links resolve"
+    ]
+  },
+  "backend_tests": {
+    "command": "cd backend && python -m pytest -q",
+    "passed": 418,
+    "failed": 0,
+    "warnings": "3 pre-existing Pydantic class-based configuration deprecation warnings"
+  },
+  "infra_typescript_build": {
+    "command": "cd infra && npm run build",
+    "exit_code": 0
+  },
+  "deployed_container_smoke": "passed; inference, control plane and metrics routed to the intended region",
+  "independent_code_review": "no blockers; region review ran 48 focused tests",
+  "deployment_evidence": "final-deployment-verification.json"
+}

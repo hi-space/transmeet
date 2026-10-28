@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="transmeet:meeting-id" content="c3ca294c-45c1-4d8a-b67d-e9cdc1c6c0b1">
+<meta name="transmeet:generated-at" content="2026-10-28T22:06:20.569002+09:00">
+<meta name="transmeet:model" content="global.anthropic.claude-opus-5-5">
+<meta name="transmeet:style" content="design">
+<title>Vision 60 아키텍처 변경 방안 논의 — 미팅록</title>
+<style>
+:root{
+  --bg:#f3f5f8;--paper:#ffffff;--ink:#14212d;--muted:#56636f;--line:#c7d0d9;
+  --steel:#2a4b72;--cyan:#0f7a86;
+  --ok:#1c7d47;--ok-bg:#d8efe1;
+  --risk:#c2410c;--risk-bg:#fde2d1;
+  --key:#2148a8;--key-bg:#fff0a6;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0e141a;--paper:#16202a;--ink:#e3e9ef;--muted:#9aa8b5;--line:#33424f;
+    --steel:#8fb4de;--cyan:#5cc6d0;
+    --ok:#5cc98a;--ok-bg:#1b3a29;
+    --risk:#ff9c66;--risk-bg:#4a2615;
+    --key:#93b2ff;--key-bg:#5a4d10;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;font-size:16px;line-height:1.68;word-break:keep-all;overflow-wrap:anywhere}
+main{max-width:1200px;margin:0 auto;padding:0 28px 72px}
+a{color:var(--key)}
+mark{background:var(--key-bg);color:inherit;padding:0 .12em}
+mark.ok{background:var(--ok-bg)}
+mark.risk{background:var(--risk-bg)}
+header[data-section="header"]{border-top:12px solid var(--steel);padding-top:30px}
+h1{font-size:clamp(28px,4.4vw,48px);line-height:1.18;letter-spacing:-.025em;font-weight:800;margin:.15em 0 .25em}
+.when{color:var(--muted);font-size:15px;margin:0}
+.lead{font-size:clamp(19px,2.3vw,25px);line-height:1.5;font-weight:650;margin:.7em 0 .35em;letter-spacing:-.01em}
+.sub{font-size:17px;margin:0}
+figure{margin:0;min-width:0}
+.ov{background:var(--paper);border:1px solid var(--line);padding:18px;margin-top:24px}
+.ov-n{display:none}
+.sv{width:100%;height:auto;display:block}
+.sv text{font-family:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,sans-serif;fill:var(--ink);font-size:14px}
+.sv .s{font-size:13px;fill:var(--muted)}
+.sv .h{font-weight:700}
+.sv .big{font-size:18px;font-weight:800}
+.sv .tr{fill:var(--risk)}
+.sv .to{fill:var(--ok)}
+.sv .frame{fill:none;stroke:var(--line);stroke-width:1.5}
+.sv .box{fill:var(--paper);stroke:var(--steel);stroke-width:1.5}
+.sv .old{fill:var(--bg);stroke:var(--muted);stroke-width:1.5}
+.sv .inner{fill:var(--bg);stroke:var(--line);stroke-width:1.2}
+.sv .ok{fill:var(--ok-bg);stroke:var(--ok);stroke-width:2}
+.sv .risk{fill:var(--risk-bg);stroke:var(--risk);stroke-width:2;stroke-dasharray:6 4}
+.sv .key{fill:var(--paper);stroke:var(--key);stroke-width:2}
+.sv .keyd{fill:var(--paper);stroke:var(--key);stroke-width:2;stroke-dasharray:6 4}
+.sv .ln{stroke:var(--steel);stroke-width:2;fill:none}
+.sv .ln-k{stroke:var(--key);stroke-width:2;fill:none}
+.sv .ln-r{stroke:var(--risk);stroke-width:2;fill:none;stroke-dasharray:6 4}
+.sv .mk{fill:var(--steel)}
+.sv .mkr{fill:var(--risk)}
+.sv .mkk{fill:var(--key)}
+.sv .c-ok{fill:var(--ok)}
+.sv .c-risk{fill:var(--risk)}
+.sv .c-key{fill:var(--key)}
+.sv .c-st{fill:var(--steel)}
+.sv .ct{fill:var(--paper);font-size:13px;font-weight:800}
+.sv .gr-ok{stroke:var(--ok);stroke-width:5;fill:none;stroke-linejoin:round}
+.sv .gr-risk{stroke:var(--risk);stroke-width:5;fill:none;stroke-dasharray:8 5;stroke-linejoin:round}
+.legend{display:flex;flex-wrap:wrap;gap:6px 22px;list-style:none;padding:0;margin:12px 0 0;font-size:14px;color:var(--muted)}
+.legend li::before{content:"";display:inline-block;width:20px;height:12px;margin-right:7px;vertical-align:-1px;border:2px solid var(--line)}
+.legend .lg-ok::before{background:var(--ok-bg);border-color:var(--ok)}
+.legend .lg-risk::before{background:var(--risk-bg);border-color:var(--risk);border-style:dashed}
+.legend .lg-key::before{background:var(--paper);border-color:var(--key)}
+figcaption{font-size:14px;color:var(--muted);margin-top:8px}
+section{margin-top:60px}
+h2{font-size:27px;line-height:1.3;letter-spacing:-.015em;font-weight:800;margin:0 0 18px}
+.points{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 40px;list-style:none;padding:0;margin:0}
+.points li{display:grid;grid-template-columns:40px minmax(0,1fr);gap:12px;padding-top:14px;border-top:1px solid var(--line);min-width:0}
+.points li>div{min-width:0}
+.points h3{font-size:18px;line-height:1.4;margin:2px 0 6px}
+.points p{margin:0}
+.n{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:50%;font-weight:800;font-size:16px;color:var(--paper);background:var(--steel)}
+.n.ok{background:var(--ok)}
+.n.risk{background:var(--risk)}
+.n.key{background:var(--key)}
+.tri{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:30px}
+.tri>div{min-width:0;border-top:6px solid var(--line);padding-top:12px}
+.tri .col-ok{border-top-color:var(--ok)}
+.tri .col-key{border-top-color:var(--key)}
+.tri .col-risk{border-top-color:var(--risk);border-top-style:dashed}
+.tri h2{font-size:22px;margin-bottom:6px}
+.tri ul{list-style:none;padding:0;margin:0}
+.tri li{padding:11px 0;border-bottom:1px solid var(--line)}
+.tri li b{display:block;font-size:16.5px}
+.tri .who{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+.topic{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);grid-template-areas:"t t" "p f" "u u";gap:16px 40px;padding:30px 0;border-top:1px solid var(--line)}
+.topic>*{min-width:0}
+.topic h3{grid-area:t;font-size:23px;line-height:1.35;letter-spacing:-.015em;margin:0;display:flex;gap:12px;align-items:baseline}
+.topic h3 .k{flex:none;font-size:15px;font-weight:800;color:var(--steel)}
+.topic>p{grid-area:p;margin:0;font-size:17px}
+.topic figure{grid-area:f;background:var(--paper);border:1px solid var(--line);padding:12px}
+.topic ul{grid-area:u;margin:0;padding-left:1.2em;columns:2;column-gap:40px}
+.topic li{break-inside:avoid;margin-bottom:7px}
+details{border-top:1px solid var(--line);padding-top:14px}
+summary{cursor:pointer;font-weight:700;font-size:18px}
+.refs{margin-top:16px}
+.ref{padding:12px 0;border-bottom:1px solid var(--line)}
+.ref p{margin:4px 0 0}
+.ref .src{font-size:13px;color:var(--muted)}
+.badge{display:inline-block;font-size:12px;line-height:1.6;padding:0 8px;border:1px solid currentColor;margin-left:6px;font-weight:700;vertical-align:1px}
+.badge.ok{color:var(--ok)}
+.badge.diff{color:var(--risk)}
+.badge.na{color:var(--muted)}
+.badge.infer{color:var(--key);margin:0 6px 0 0}
+.ins h3{font-size:19px;margin:26px 0 6px}
+.ins p{margin:8px 0}
+@media (max-width:960px){
+  .tri{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .topic{grid-template-columns:minmax(0,1fr);grid-template-areas:"t" "p" "f" "u"}
+}
+@media (max-width:640px){
+  main{padding:0 14px 56px}
+  .ov{padding:8px}
+  .ov-w{display:none}
+  .ov-n{display:block}
+  .points{grid-template-columns:minmax(0,1fr)}
+  .tri{grid-template-columns:minmax(0,1fr)}
+  .topic ul{columns:1}
+  .topic figure{padding:6px}
+  h2{font-size:23px}
+  .topic h3{font-size:20px}
+}
+@media print{
+  :root{--bg:#ffffff;--paper:#ffffff}
+  body{background:#fff;color:#000;font-size:11pt}
+  main{max-width:none;padding:0}
+  .topic,.points li,.tri li{break-inside:avoid}
+  section{margin-top:28px}
+}
+</style>
+</head>
+<body>
+<main>
+<header data-section="header">
+  <h1>Vision 60 아키텍처 변경 방안 논의</h1>
+  <p class="when"><time datetime="2026-07-27T10:33+09:00">2026년 7월 27일 10:33–12:24</time> (1시간 50분)</p>
+  <p class="lead"><mark>Vision 60은 Jetson Xavier가 하위 제어(VCU)를 맡고, 새로 올리는 Jetson Thor가 퍼셉션·플래닝·매핑·관제를 맡는 구조로 바꿉니다.</mark></p>
+  <p class="sub">클라우드 연동은 AWS IoT Greengrass, AWS IoT Core, Amazon Kinesis Video Streams 세 서비스로 시작합니다. 제조사의 저수준 제어 개방 범위, 대용량 데이터 업로드 방식, 교육 일정은 아직 정하지 못했습니다.</p>
+
+  <figure class="ov">
+    <svg class="sv ov-w" viewBox="0 0 720 440" role="img">
+      <title>Vision 60 새 구조와 AWS 서비스 연결 개요</title>
+      <defs>
+        <marker id="m-ov" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker>
+        <marker id="m-ovr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mkr" d="M0,0 L10,5 L0,10 z"/></marker>
+        <marker id="m-ovk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mkk" d="M0,0 L10,5 L0,10 z"/></marker>
+      </defs>
+      <rect class="frame" x="12" y="12" width="300" height="416"/>
+      <text class="big" x="28" y="40">Vision 60</text>
+      <text class="s" x="124" y="40">Ghost Robotics 4족 보행</text>
+      <rect class="ok" x="28" y="70" width="104" height="44"/>
+      <text x="80" y="97" text-anchor="middle">LiDAR</text>
+      <rect class="ok" x="28" y="128" width="104" height="44"/>
+      <text x="80" y="155" text-anchor="middle">상부 카메라</text>
+      <rect class="box" x="28" y="246" width="104" height="52"/>
+      <text x="80" y="268" text-anchor="middle">뎁스 카메라</text>
+      <text class="s" x="80" y="287" text-anchor="middle">바닥 방향</text>
+      <rect class="ok" x="160" y="62" width="140" height="126"/>
+      <text class="h" x="230" y="88" text-anchor="middle">Jetson Thor</text>
+      <text x="230" y="112" text-anchor="middle">퍼셉션·YOLO</text>
+      <text x="230" y="134" text-anchor="middle">주행 플래닝</text>
+      <text x="230" y="156" text-anchor="middle">매핑·관제</text>
+      <rect class="ok" x="160" y="236" width="140" height="72"/>
+      <text class="h" x="230" y="262" text-anchor="middle">Jetson Xavier</text>
+      <text x="230" y="286" text-anchor="middle">VCU(제어·통신)</text>
+      <line class="ln" x1="230" y1="190" x2="230" y2="234" marker-start="url(#m-ov)" marker-end="url(#m-ov)"/>
+      <text class="s" x="222" y="216" text-anchor="end">RJ45 이더넷</text>
+      <circle class="c-ok" cx="250" cy="212" r="11"/><text class="ct" x="250" y="217" text-anchor="middle">1</text>
+      <line class="ln" x1="132" y1="92" x2="158" y2="92" marker-end="url(#m-ov)"/>
+      <line class="ln" x1="132" y1="150" x2="158" y2="150" marker-end="url(#m-ov)"/>
+      <line class="ln" x1="132" y1="272" x2="158" y2="272" marker-end="url(#m-ov)"/>
+      <circle class="c-ok" cx="146" cy="121" r="11"/><text class="ct" x="146" y="126" text-anchor="middle">2</text>
+      <path class="ln-r" d="M160 176 H146 V364 H158" marker-end="url(#m-ovr)"/>
+      <rect class="risk" x="160" y="340" width="140" height="48"/>
+      <text class="h" x="230" y="361" text-anchor="middle">액추에이터</text>
+      <text class="s" x="230" y="379" text-anchor="middle">발 모터</text>
+      <line class="ln" x1="230" y1="308" x2="230" y2="338" marker-end="url(#m-ov)"/>
+      <circle class="c-risk" cx="300" cy="340" r="11"/><text class="ct" x="300" y="345" text-anchor="middle">3</text>
+      <text class="s tr" x="28" y="414">저수준 제어 개방 범위 미확인</text>
+      <rect class="frame" x="430" y="12" width="278" height="416"/>
+      <text class="big" x="446" y="40">AWS</text>
+      <rect class="ok" x="444" y="56" width="250" height="48"/>
+      <text class="h" x="456" y="77">AWS IoT Greengrass</text>
+      <text class="s" x="456" y="96">YOLO 모델 배포</text>
+      <circle class="c-ok" cx="678" cy="72" r="11"/><text class="ct" x="678" y="77" text-anchor="middle">4</text>
+      <rect class="ok" x="444" y="112" width="250" height="48"/>
+      <text class="h" x="456" y="133">AWS IoT Core (MQTT)</text>
+      <text class="s" x="456" y="152">메트릭·원격 명령 → Grafana</text>
+      <rect class="ok" x="444" y="168" width="250" height="48"/>
+      <text class="h" x="456" y="189">Amazon Kinesis Video Streams</text>
+      <text class="s" x="456" y="208">실시간 영상, 약 4초 지연</text>
+      <rect class="key" x="444" y="224" width="250" height="48"/>
+      <text class="h" x="456" y="245">Amazon Bedrock (VLM)</text>
+      <text class="s" x="456" y="264">YOLO 신뢰도가 낮을 때만</text>
+      <circle class="c-key" cx="678" cy="240" r="11"/><text class="ct" x="678" y="245" text-anchor="middle">5</text>
+      <rect class="box" x="444" y="280" width="250" height="48"/>
+      <text class="h" x="456" y="301">Amazon S3 (L0·L1·L2)</text>
+      <text class="s" x="456" y="320">원시·가공 데이터</text>
+      <rect class="key" x="444" y="336" width="250" height="48"/>
+      <text class="h" x="456" y="357">Amazon EC2 + AWS Batch</text>
+      <text class="s" x="456" y="376">Isaac Sim·Isaac Lab 학습</text>
+      <circle class="c-key" cx="678" cy="352" r="11"/><text class="ct" x="678" y="357" text-anchor="middle">7</text>
+      <path class="ln" d="M694 372 H702 V88 H696" marker-end="url(#m-ov)"/>
+      <line class="ln" x1="442" y1="80" x2="302" y2="84" marker-end="url(#m-ov)"/>
+      <line class="ln" x1="302" y1="112" x2="442" y2="136" marker-start="url(#m-ov)" marker-end="url(#m-ov)"/>
+      <line class="ln" x1="300" y1="140" x2="442" y2="192" marker-end="url(#m-ov)"/>
+      <line class="ln-k" x1="300" y1="166" x2="442" y2="248" marker-end="url(#m-ovk)"/>
+      <path class="ln-r" d="M300 182 H352 V298" marker-end="url(#m-ovr)"/>
+      <rect class="risk" x="322" y="300" width="98" height="88"/>
+      <text class="h" x="371" y="328" text-anchor="middle">데이터</text>
+      <text class="h" x="371" y="348" text-anchor="middle">업로드</text>
+      <text class="s tr" x="371" y="370" text-anchor="middle">방식 미정</text>
+      <circle class="c-risk" cx="404" cy="300" r="11"/><text class="ct" x="404" y="305" text-anchor="middle">6</text>
+      <line class="ln-r" x1="420" y1="326" x2="442" y2="310" marker-end="url(#m-ovr)"/>
+    </svg>
+    <svg class="sv ov-n" viewBox="0 0 360 792" role="img">
+      <title>Vision 60 새 구조와 AWS 서비스 연결 개요(세로 배치)</title>
+      <defs>
+        <marker id="m-ovm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker>
+        <marker id="m-ovmr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mkr" d="M0,0 L10,5 L0,10 z"/></marker>
+      </defs>
+      <rect class="frame" x="6" y="6" width="348" height="340"/>
+      <text class="big" x="20" y="32">Vision 60</text>
+      <rect class="ok" x="20" y="46" width="110" height="38"/>
+      <text x="75" y="70" text-anchor="middle">LiDAR</text>
+      <rect class="ok" x="142" y="46" width="120" height="38"/>
+      <text x="202" y="70" text-anchor="middle">상부 카메라</text>
+      <circle class="c-ok" cx="288" cy="65" r="11"/><text class="ct" x="288" y="70" text-anchor="middle">2</text>
+      <line class="ln" x1="75" y1="84" x2="75" y2="108" marker-end="url(#m-ovm)"/>
+      <line class="ln" x1="202" y1="84" x2="202" y2="108" marker-end="url(#m-ovm)"/>
+      <rect class="ok" x="20" y="110" width="320" height="70"/>
+      <text class="h" x="180" y="138" text-anchor="middle">Jetson Thor</text>
+      <text x="180" y="162" text-anchor="middle">퍼셉션·YOLO·플래닝·매핑·관제</text>
+      <line class="ln" x1="180" y1="182" x2="180" y2="212" marker-start="url(#m-ovm)" marker-end="url(#m-ovm)"/>
+      <text class="s" x="192" y="202">RJ45 이더넷</text>
+      <circle class="c-ok" cx="160" cy="197" r="11"/><text class="ct" x="160" y="202" text-anchor="middle">1</text>
+      <rect class="ok" x="20" y="214" width="210" height="58"/>
+      <text class="h" x="125" y="238" text-anchor="middle">Jetson Xavier</text>
+      <text x="125" y="260" text-anchor="middle">VCU(제어·통신)</text>
+      <rect class="box" x="242" y="214" width="98" height="58"/>
+      <text x="291" y="238" text-anchor="middle">뎁스 카메라</text>
+      <text class="s" x="291" y="260" text-anchor="middle">바닥 방향</text>
+      <line class="ln" x1="125" y1="272" x2="125" y2="288" marker-end="url(#m-ovm)"/>
+      <rect class="risk" x="20" y="290" width="320" height="46"/>
+      <text class="h" x="180" y="310" text-anchor="middle">액추에이터·발 모터</text>
+      <text class="s tr" x="180" y="328" text-anchor="middle">저수준 제어 개방 범위 미확인</text>
+      <circle class="c-risk" cx="330" cy="290" r="11"/><text class="ct" x="330" y="295" text-anchor="middle">3</text>
+      <line class="ln-r" x1="180" y1="346" x2="180" y2="360" marker-end="url(#m-ovmr)"/>
+      <rect class="risk" x="6" y="362" width="348" height="48"/>
+      <circle class="c-risk" cx="30" cy="386" r="11"/><text class="ct" x="30" y="391" text-anchor="middle">6</text>
+      <text class="h" x="50" y="383">데이터 업로드 방식 미정</text>
+      <text class="s" x="50" y="401">SSD 교체·Wi-Fi 자동 업로드·압축 후보</text>
+      <line class="ln" x1="180" y1="410" x2="180" y2="426" marker-start="url(#m-ovm)" marker-end="url(#m-ovm)"/>
+      <rect class="frame" x="6" y="428" width="348" height="356"/>
+      <text class="big" x="20" y="454">AWS</text>
+      <rect class="ok" x="20" y="466" width="320" height="46"/>
+      <text class="h" x="32" y="486">AWS IoT Greengrass</text>
+      <text class="s" x="32" y="504">YOLO 모델 배포</text>
+      <circle class="c-ok" cx="320" cy="489" r="11"/><text class="ct" x="320" y="494" text-anchor="middle">4</text>
+      <rect class="ok" x="20" y="518" width="320" height="46"/>
+      <text class="h" x="32" y="538">AWS IoT Core (MQTT)</text>
+      <text class="s" x="32" y="556">메트릭·원격 명령 → Grafana</text>
+      <rect class="ok" x="20" y="570" width="320" height="46"/>
+      <text class="h" x="32" y="590">Amazon Kinesis Video Streams</text>
+      <text class="s" x="32" y="608">실시간 영상, 약 4초 지연</text>
+      <rect class="key" x="20" y="622" width="320" height="46"/>
+      <text class="h" x="32" y="642">Amazon Bedrock (VLM)</text>
+      <text class="s" x="32" y="660">YOLO 신뢰도가 낮을 때만</text>
+      <circle class="c-key" cx="320" cy="645" r="11"/><text class="ct" x="320" y="650" text-anchor="middle">5</text>
+      <rect class="box" x="20" y="674" width="320" height="46"/>
+      <text class="h" x="32" y="694">Amazon S3 (L0·L1·L2)</text>
+      <text class="s" x="32" y="712">원시·가공 데이터</text>
+      <rect class="key" x="20" y="726" width="320" height="46"/>
+      <text class="h" x="32" y="746">Amazon EC2 + AWS Batch</text>
+      <text class="s" x="32" y="764">Isaac Sim·Isaac Lab 학습</text>
+      <circle class="c-key" cx="320" cy="749" r="11"/><text class="ct" x="320" y="754" text-anchor="middle">7</text>
+    </svg>
+    <ul class="legend">
+      <li class="lg-ok">정해진 것</li>
+      <li class="lg-key">제안·권고</li>
+      <li class="lg-risk">미확인·미정</li>
+    </ul>
+    <figcaption>로봇 안에서는 Jetson Thor가 판단하고 Jetson Xavier가 실행하며, 초록은 정해진 부분, 주황 점선은 아직 정하지 못한 부분입니다.</figcaption>
+  </figure>
+</header>
+
+<section>
+  <h2>요점</h2>
+  <ol class="points">
+    <li><span class="n ok">1</span><div><h3>Jetson Xavier는 VCU, Jetson Thor는 상위 연산</h3><p>Jetson Xavier는 액추에이터 제어와 기본 통신만 맡고 Jetson Thor의 제어 명령을 받습니다. 두 장치는 Vision 60의 RJ45 단자로 이더넷 통신합니다. 센서 데이터와 제어 명령이 같은 링크로 오가는데, 그 대역폭은 아직 검토하지 않았습니다(추정).</p></div></li>
+    <li><span class="n ok">2</span><div><h3>LiDAR 직결과 상부 카메라 추가</h3><p>내장 뎁스 카메라가 바닥을 향해 있어 퍼셉션에 쓰기 어렵습니다. <mark class="ok">상부에 별도 카메라를 달고, 고정 LiDAR는 Jetson Thor에 직접 연결합니다.</mark> 오도메트리는 시프트가 생기는 내장 IMU 대신 LiDAR 내장 IMU로 계산합니다.</p></div></li>
+    <li><span class="n risk">3</span><div><h3>제조사 저수준 제어 개방 범위</h3><p>평지와 경사는 로봇 본체 제어에 맡기면 됩니다. 계단 동작을 바꿀 때는 발 모터 제어가 필요하고, 가감속 제어도 직접 만든 로직으로 바꾸려 합니다. <mark class="risk">Ghost Robotics가 이 제어를 열어 줄지는 아직 모릅니다.</mark></p></div></li>
+    <li><span class="n ok">4</span><div><h3>핵심 클라우드 서비스 세 가지</h3><p>데이터 수집과 모델 배포에는 AWS IoT Greengrass와 AWS IoT Core를, 실시간 영상에는 Amazon Kinesis Video Streams를 씁니다. RL 정책만 학습한다면 Amazon SageMaker AI는 이번에 쓰지 않아도 됩니다. 파이프라인 구성은 워크숍에서 실습합니다.</p></div></li>
+    <li><span class="n key">5</span><div><h3>YOLO 우선, 낮은 신뢰도만 VLM</h3><p>엣지에서 YOLO와 결정 트리로 대부분의 장면을 거릅니다. confidence가 낮을 때만 Amazon Bedrock의 VLM에 판단을 보냅니다. 어떤 파운데이션 모델을 쓸지는 현장 영상으로 테스트한 뒤 정합니다.</p></div></li>
+    <li><span class="n risk">6</span><div><h3>대용량 데이터 업로드 방식 미정</h3><p>1시간 분량의 360도 영상은 무선으로 올리는 데 매우 오래 걸립니다. 이더넷은 느리고 불안정해서 SSD를 직접 교체하는 방법이 가장 빠릅니다. 특정 Wi-Fi 자동 업로드와 NVIDIA 인코더 압축이 대안이지만 기본 방식은 정하지 않았습니다.</p></div></li>
+    <li><span class="n key">7</span><div><h3>Isaac Sim·Isaac Lab 클라우드 학습</h3><p>AMI로 Isaac Sim 환경을 띄우고 Amazon EC2 한 대를 세팅해 복제합니다. AWS Batch로 파라미터를 한꺼번에 제어하거나 SSH·DCV로 한 대씩 제어합니다. 클라우드는 로컬보다 느려서 대규모 확장 테스트 단계에서 옮기는 것을 권합니다.</p></div></li>
+  </ol>
+</section>
+
+<section>
+  <div class="tri">
+    <div class="col-ok" data-section="decisions">
+      <h2>정해진 것</h2>
+      <ul>
+        <li><b>Jetson Xavier는 VCU로 한정</b>액추에이터 제어와 기본 통신만 담당, Jetson Thor의 제어 명령 수신</li>
+        <li><b>Jetson Thor가 상위 연산 담당</b>관제·주행 플래닝·매핑·퍼셉션, Jetson Xavier와 RJ45 이더넷으로 연결</li>
+        <li><b>센서는 뎁스 카메라, 상부 카메라, 고정 LiDAR 조합</b><mark class="ok">LiDAR는 Jetson Thor에 직접 연결</mark></li>
+        <li><b>YOLO 전용 연산 장치 탑재</b>Jetson Thor 쪽 전력 소모를 줄이기 위한 선택</li>
+        <li><b>오도메트리는 LiDAR 내장 IMU 사용</b>로봇 내장 IMU는 시프트가 생겨 제외</li>
+        <li><b>SLAM과 가감속 제어는 자체 개발</b>FAST-LIO2는 실사용 성능 부족, 기본 가감속 로직은 자체 알고리즘에 얹을 수 없음</li>
+        <li><b>클라우드는 세 서비스로 시작</b><mark class="ok">AWS IoT Greengrass, AWS IoT Core, Amazon Kinesis Video Streams가 핵심</mark>, RL 정책만 학습하면 Amazon SageMaker AI 제외</li>
+        <li><b>이번 지원은 고객 지원 프로그램</b>파트너 지원이 아니며, 파트너 지원 요청은 별도 파트너 팀 담당</li>
+        <li><b>현장 방문은 잦을수록 유리</b>시뮬레이션만으로는 튜닝에 한계, 실측 데이터와 병행</li>
+      </ul>
+    </div>
+    <div class="col-key" data-section="action-items">
+      <h2>할 일</h2>
+      <ul>
+        <li><b>교육 아젠다와 가능한 날짜 제시</b>기초 교육 대신 이 프로젝트에 맞춘 아젠다<span class="who">AWS 지원 팀</span></li>
+        <li><b>워크숍 형식·일정·아젠다 정리</b>데이터 수집·모델 배포 파이프라인 실습용<span class="who">AWS 지원 팀</span></li>
+        <li><b>투입 전 세팅 완료</b>교육·워크숍을 마치고 현장 투입 준비<span class="who">8월 말~9월 초 목표</span></li>
+        <li><b>수동 운용 형태로 현장 투입</b>자율주행 전 단계에서 현장 데이터 확보<span class="who">8월 중순부터 가능</span></li>
+        <li><b>투입 후 Q&amp;A 세션 운영</b>세팅 이후 질문을 이어서 처리<span class="who">AWS 지원 팀</span></li>
+        <li><b>문의는 메일 루프로 전달</b>전문가 네 명 중 한 명이 답하고 에셋 공유<span class="who">AWS 지원 팀</span></li>
+        <li><b>VLM 후보 테스트 후 선정</b>현장 영상 판단에 가장 정확한 Amazon Bedrock 파운데이션 모델 선택</li>
+        <li><b>현장 투입 전 Vision 60 실물 확인</b>뎁스 카메라 방향 등 기존 구성 파악</li>
+        <li><b>3사 공동 레퍼런스 구상 구체화</b>SK의 첫 건설 산업 사례로 외부 공유·발표, Seoul Dynamics 파트너 참여</li>
+      </ul>
+    </div>
+    <div class="col-risk" data-section="open-questions">
+      <h2>확인할 것</h2>
+      <ul>
+        <li><b>Ghost Robotics 데이터 개방 범위 미확인</b><mark class="risk">약속과 달리 하위단·카메라 접근이 제한적</mark></li>
+        <li><b>계단 전환 시 발 모터 제어 가능 여부 미확인</b>가감속 제어 교체도 같은 조건</li>
+        <li><b>Jetson Thor 탑재 후 구동시간 미측정</b>3시간 이상은 추가 장비가 없을 때 기준, Jetson Thor 소비 전력 40–130 W</li>
+        <li><b>Jetson Xavier–Jetson Thor 이더넷 대역폭 미검토(추정)</b>카메라 데이터와 제어 명령이 같은 링크 사용</li>
+        <li><b>데이터 업로드 기본 방식 미정</b><mark class="risk">SSD 교체, Wi-Fi 자동 업로드, 압축 중 선택 필요</mark></li>
+        <li><b>Jetson Thor 모듈 저장 구성 미정</b>모듈에는 기본 1TB 저장 장치가 없고, SSD 교체 시 그래픽카드 분리 필요</li>
+        <li><b>현장 방문 시점·담당 미정</b>용인 현장 실측 예정, 울산은 시험장으로 어려움</li>
+        <li><b>현장 네트워크 조건 미확인(추정)</b>실시간 영상·메트릭·원격 제어는 네트워크 연결이 전제</li>
+        <li><b>국내 총판 이관은 공식 자료로 확인 불가</b>KRM 종료와 LIG Nex1 이관을 다룬 공식 자료 없음</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>흐름</h2>
+
+  <article class="topic">
+    <h3><span class="k">1</span>Jetson Xavier는 VCU, Jetson Thor는 상위 연산 담당</h3>
+    <p>지금 Vision 60은 내장 Jetson Xavier가 연산을 맡는 제조사 방식입니다. 새 구조에서 Jetson Xavier는 VCU로서 액추에이터 제어와 기본 통신만 맡습니다. 관제·주행 플래닝·매핑·퍼셉션 같은 상위 연산은 새로 올리는 Jetson Thor가 맡고, 제어 명령을 Jetson Xavier로 내려보냅니다. 두 장치는 Vision 60 본체의 RJ45 단자를 통해 <b>이더넷으로 연결</b>합니다. <mark class="risk">Jetson Thor를 더한 상태의 배터리 구동시간은 아직 재지 않았습니다.</mark></p>
+    <figure>
+      <svg class="sv" viewBox="0 0 360 262" role="img">
+        <title>Jetson Thor와 Jetson Xavier의 역할 분담</title>
+        <defs><marker id="m-t1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+        <rect class="ok" x="10" y="10" width="340" height="94"/>
+        <text class="h" x="180" y="36" text-anchor="middle">Jetson Thor (상위 연산)</text>
+        <text x="180" y="62" text-anchor="middle">관제·주행 플래닝·매핑</text>
+        <text x="180" y="86" text-anchor="middle">퍼셉션·YOLO 전용 연산 장치</text>
+        <line class="ln" x1="40" y1="104" x2="40" y2="154" marker-end="url(#m-t1)"/>
+        <text class="s" x="52" y="136">제어 명령</text>
+        <text class="s" x="180" y="136" text-anchor="middle">RJ45 이더넷</text>
+        <line class="ln" x1="320" y1="156" x2="320" y2="106" marker-end="url(#m-t1)"/>
+        <text class="s" x="308" y="136" text-anchor="end">센서 데이터</text>
+        <rect class="ok" x="10" y="156" width="340" height="64"/>
+        <text class="h" x="180" y="182" text-anchor="middle">Jetson Xavier (VCU)</text>
+        <text x="180" y="206" text-anchor="middle">액추에이터 제어·기본 통신</text>
+        <text class="s tr" x="180" y="248" text-anchor="middle">Jetson Thor 탑재 후 구동시간 미측정</text>
+      </svg>
+      <figcaption>위층이 판단하고 아래층이 실행하며, 두 층은 이더넷 링크 하나를 함께 씁니다.</figcaption>
+    </figure>
+    <ul>
+      <li><b>구동시간 기준</b>은 3시간 이상, 추가 장비가 없을 때 기준</li>
+      <li><b>YOLO 전용 연산 장치</b>를 Jetson Thor에 탑재해 전력 소모 감소 목표</li>
+      <li><b>카메라 데이터 경로</b>: Jetson Xavier에 붙은 카메라 영상은 YOLO 추론을 위해 Jetson Thor로 다시 전송 필요</li>
+      <li><b>카메라 하위단 직접 연결</b>은 제조사 접근이 열려 있지 않아 보류</li>
+      <li><b>Jetson Thor 자체 통신</b>은 가능, 옵션에 따라 Wi-Fi가 없는 모델은 분해해 추가</li>
+    </ul>
+  </article>
+
+  <article class="topic">
+    <h3><span class="k">2</span>LiDAR 직결과 자체 SLAM으로 위치추정</h3>
+    <p>Vision 60의 내장 뎁스 카메라 두 개는 바닥을 향해 있고, 전면 광각 카메라 두 개도 퍼셉션에 쓰기 어렵습니다. <mark class="ok">센서는 뎁스 카메라, 상부 카메라, 고정 LiDAR 조합으로 갑니다.</mark> 로봇 내장 IMU는 시프트가 생겨 오도메트리에 쓰지 않고, 3D LiDAR에 들어 있는 IMU를 씁니다. SLAM은 FAST-LIO2를 검토했지만 실사용 성능이 부족했습니다. 그래서 <b>다층·3D 구조에 맞게 개량한 자체 SLAM</b>을 만들고 있습니다.</p>
+    <figure>
+      <svg class="sv" viewBox="0 0 360 236" role="img">
+        <title>위치추정·퍼셉션 구성의 기존과 새 구조 비교</title>
+        <defs><marker id="m-t2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+        <text class="h" x="88" y="22" text-anchor="middle">기존</text>
+        <text class="h" x="272" y="22" text-anchor="middle">새 구조</text>
+        <rect class="old" x="8" y="34" width="160" height="56"/>
+        <text x="88" y="58" text-anchor="middle">로봇 내장 IMU</text>
+        <text class="s" x="88" y="78" text-anchor="middle">시프트 발생</text>
+        <line class="ln" x1="170" y1="62" x2="190" y2="62" marker-end="url(#m-t2)"/>
+        <rect class="ok" x="192" y="34" width="160" height="56"/>
+        <text x="272" y="58" text-anchor="middle">LiDAR 내장 IMU</text>
+        <text class="s" x="272" y="78" text-anchor="middle">오도메트리에 사용</text>
+        <rect class="old" x="8" y="100" width="160" height="56"/>
+        <text x="88" y="124" text-anchor="middle">FAST-LIO2</text>
+        <text class="s" x="88" y="144" text-anchor="middle">실사용 성능 부족</text>
+        <line class="ln" x1="170" y1="128" x2="190" y2="128" marker-end="url(#m-t2)"/>
+        <rect class="ok" x="192" y="100" width="160" height="56"/>
+        <text x="272" y="124" text-anchor="middle">자체 SLAM</text>
+        <text class="s" x="272" y="144" text-anchor="middle">다층·3D 구조용 개량</text>
+        <rect class="old" x="8" y="166" width="160" height="56"/>
+        <text x="88" y="190" text-anchor="middle">뎁스 카메라</text>
+        <text class="s" x="88" y="210" text-anchor="middle">바닥 방향</text>
+        <line class="ln" x1="170" y1="194" x2="190" y2="194" marker-end="url(#m-t2)"/>
+        <rect class="ok" x="192" y="166" width="160" height="56"/>
+        <text x="272" y="190" text-anchor="middle">상부 카메라 추가</text>
+        <text class="s" x="272" y="210" text-anchor="middle">퍼셉션 전용</text>
+      </svg>
+      <figcaption>위치추정과 퍼셉션 모두 제조사 기본 구성 대신 직접 고른 센서와 알고리즘을 씁니다.</figcaption>
+    </figure>
+    <ul>
+      <li><b>공식 기본 센서</b>: RGB 카메라 5대, D435 뎁스 센서 4대</li>
+      <li><b>뎁스 카메라 장착 방향</b>은 공식 사양에 없어 확인 불가</li>
+      <li><b>3D LiDAR 내장 IMU</b>는 센서 퓨전에 유리</li>
+      <li><b>FAST-LIO2</b>는 회전형·고정형 LiDAR와 외부 IMU를 지원하는 공개 패키지</li>
+      <li><b>SLAM 모델 크기</b>: 파라미터가 커지면 내부 연산 부담, 필요한 리소스 규모 미정</li>
+    </ul>
+  </article>
+
+  <article class="topic">
+    <h3><span class="k">3</span>평지·경사는 본체 제어, 계단 전환은 직접 제어 필요</h3>
+    <p>로코모션 제어는 기본적으로 로봇 본체에 맡깁니다. 상위 연산은 전진·회전·방향 같은 추상 명령만 주고, 본체가 보행을 처리합니다. 평지와 경사에서는 이 방식에 문제가 없습니다. 계단을 오르내리며 동작을 바꿀 때는 발 모터단을 직접 제어해야 하고, 가감속 제어도 자체 알고리즘에 얹기 위해 직접 만든 로직으로 바꿉니다. <mark class="risk">Ghost Robotics가 저수준 제어를 어디까지 열어 줄지는 아직 모릅니다.</mark></p>
+    <figure>
+      <svg class="sv" viewBox="0 0 360 226" role="img">
+        <title>지형별 보행 제어 담당</title>
+        <text class="s" x="180" y="24" text-anchor="middle">상위 연산은 전진·회전·방향 명령만 전달</text>
+        <path class="gr-ok" d="M10 150 H100 L180 110 H215"/>
+        <path class="gr-risk" d="M215 110 V92 H245 V74 H275 V56 H350"/>
+        <text x="55" y="180" text-anchor="middle">평지</text>
+        <text x="140" y="180" text-anchor="middle">경사</text>
+        <text x="283" y="180" text-anchor="middle">계단 전환</text>
+        <text class="h to" x="100" y="206" text-anchor="middle">본체 기본 제어</text>
+        <text class="h tr" x="283" y="206" text-anchor="middle">발 모터 제어 필요</text>
+      </svg>
+      <figcaption>초록 구간은 지금 구조로 충분하고, 주황 구간은 제조사가 저수준 제어를 열어야 가능합니다.</figcaption>
+    </figure>
+    <ul>
+      <li><b>Ghost Robotics 데이터 개방</b>은 약속과 달리 제한적이라는 우려</li>
+      <li><b>제조사 선정 근거</b>: 중국산 제외 후 비교 분석에서 Ghost Robotics가 가장 나음</li>
+      <li><b>국내 총판</b>은 KRM이 올해 4월 종료된 뒤 LIG Nex1이 이관, 공식 자료로는 확인 불가</li>
+      <li><b>LIG Nex1</b>은 2024년 7월 Ghost Robotics 지분 60% 인수(공식 보도자료)</li>
+      <li><b>LIG Nex1 담당자</b>와 직접 연락 중</li>
+      <li><b>Seoul Dynamics</b>는 건설 로봇·지게차 로봇 개발 경험 보유</li>
+    </ul>
+  </article>
+
+  <article class="topic">
+    <h3><span class="k">4</span>핵심 AWS 서비스 세 가지와 Amazon S3 데이터 레이크</h3>
+    <p>로봇 데이터를 클라우드로 올리고, 학습한 모델을 다시 로봇에 배포하는 단계가 가장 중요합니다. <mark>이 단계는 AWS IoT Greengrass, AWS IoT Core, Amazon Kinesis Video Streams 세 서비스만 알면 됩니다.</mark> Amazon SageMaker AI는 VLA 모델처럼 MLOps 환경이 필요할 때 쓰고, RL 정책만 학습한다면 필요 없습니다. 대량 업로드 레퍼런스는 Amazon S3에 원시 데이터를 L0, 가공 데이터를 L1에 두고 Amazon EKS로 처리합니다. 어떤 데이터를 남기고 시각을 어떻게 맞출지는 지금처럼 직접 개발해야 합니다.</p>
+    <figure>
+      <svg class="sv" viewBox="0 0 360 304" role="img">
+        <title>로봇 데이터 수집·저장·학습·배포 파이프라인</title>
+        <defs><marker id="m-t4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+        <rect class="box" x="14" y="10" width="336" height="36"/>
+        <text class="h" x="182" y="33" text-anchor="middle">로봇 (Jetson Thor)</text>
+        <line class="ln" x1="92" y1="46" x2="92" y2="64" marker-end="url(#m-t4)"/>
+        <line class="ln" x1="268" y1="46" x2="268" y2="64" marker-end="url(#m-t4)"/>
+        <rect class="ok" x="14" y="66" width="161" height="52"/>
+        <text x="94" y="88" text-anchor="middle">AWS IoT Core</text>
+        <text class="s" x="94" y="108" text-anchor="middle">MQTT 메트릭</text>
+        <rect class="ok" x="185" y="66" width="165" height="52"/>
+        <text x="268" y="88" text-anchor="middle">Amazon Kinesis</text>
+        <text x="268" y="106" text-anchor="middle">Video Streams</text>
+        <line class="ln" x1="92" y1="118" x2="92" y2="136" marker-end="url(#m-t4)"/>
+        <line class="ln" x1="268" y1="118" x2="268" y2="136" marker-end="url(#m-t4)"/>
+        <rect class="box" x="14" y="138" width="336" height="80"/>
+        <text class="h" x="182" y="160" text-anchor="middle">Amazon S3 (하이브 파티셔닝)</text>
+        <rect class="inner" x="24" y="172" width="94" height="34"/>
+        <text x="71" y="194" text-anchor="middle">L0 원시</text>
+        <rect class="inner" x="134" y="172" width="94" height="34"/>
+        <text x="181" y="194" text-anchor="middle">L1 가공</text>
+        <rect class="inner" x="244" y="172" width="94" height="34"/>
+        <text x="291" y="194" text-anchor="middle">L2</text>
+        <line class="ln" x1="118" y1="189" x2="132" y2="189" marker-end="url(#m-t4)"/>
+        <line class="ln" x1="228" y1="189" x2="242" y2="189" marker-end="url(#m-t4)"/>
+        <text class="s" x="18" y="236">처리: Amazon EKS</text>
+        <text class="s" x="18" y="254">메타 정보: Amazon DynamoDB</text>
+        <line class="ln" x1="330" y1="218" x2="330" y2="260" marker-end="url(#m-t4)"/>
+        <rect class="ok" x="14" y="262" width="336" height="34"/>
+        <text x="182" y="284" text-anchor="middle">학습 → AWS IoT Greengrass로 배포</text>
+        <path class="ln" d="M14 279 H5 V28 H12" marker-end="url(#m-t4)"/>
+      </svg>
+      <figcaption>데이터는 위에서 아래로 쌓이고, 학습한 모델은 왼쪽 선을 따라 로봇으로 돌아갑니다.</figcaption>
+    </figure>
+    <ul>
+      <li><b>메타 정보</b>는 Amazon DynamoDB에 저장해 구간별 데이터 위치 색인</li>
+      <li><b>비디오 데이터</b>의 90% 이상은 쓸모없는 데이터라는 경험</li>
+      <li><b>Amazon Kinesis Video Streams 재생</b>: 약 4초 지연으로 실시간 시청, 지난 영상도 재생 가능</li>
+      <li><b>LiDAR 원시 데이터 업로드</b>는 너무 무거워 온프레미스 처리가 더 빠를 가능성</li>
+      <li><b>중간 가공 서비스</b>는 쓰지 않고 코드로 처리하는 편이 깔끔하다는 판단</li>
+      <li><b>참고 사례</b>: 위로보틱스(VLA·VTLA 학습 데이터 수집), 뉴빌리티(실시간 영상 업로드)</li>
+    </ul>
+  </article>
+
+  <article class="topic">
+    <h3><span class="k">5</span>엣지 YOLO로 거르고 애매한 장면만 VLM에 판단 요청</h3>
+    <p>작년 산업안전 데모는 Unitree Go2에 Jetson Orin을 달고 공장을 순찰하며 쓰러진 사람·화재·제스처를 감지했습니다. YOLO 모델은 클라우드에서 학습한 뒤 AWS IoT Greengrass로 Jetson Orin에 배포했습니다. 영상은 Amazon Kinesis Video Streams로, CPU·메모리·배터리 같은 메트릭은 AWS IoT Core(MQTT)로 올려 Grafana 대시보드에 띄웠습니다. 학습 데이터가 없는 상황은 VLM이 더 잘 판단하므로, <mark>엣지 YOLO의 confidence가 낮을 때만 Amazon Bedrock의 VLM에 판단을 보내는 구성을 권합니다.</mark> 이 구성은 네트워크 연결이 전제이며, 완성품이 아니라 직접 개발해야 합니다.</p>
+    <figure>
+      <svg class="sv" viewBox="0 0 360 274" role="img">
+        <title>YOLO 신뢰도에 따른 판단 경로</title>
+        <defs><marker id="m-t5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+        <rect class="box" x="100" y="8" width="160" height="36"/>
+        <text x="180" y="31" text-anchor="middle">카메라 영상</text>
+        <line class="ln" x1="180" y1="44" x2="180" y2="62" marker-end="url(#m-t5)"/>
+        <rect class="ok" x="50" y="64" width="260" height="40"/>
+        <text class="h" x="180" y="89" text-anchor="middle">엣지: YOLO + 결정 트리</text>
+        <line class="ln" x1="180" y1="104" x2="180" y2="118" marker-end="url(#m-t5)"/>
+        <polygon class="key" points="180,120 262,152 180,184 98,152"/>
+        <text class="s" x="180" y="157" text-anchor="middle">confidence</text>
+        <path class="ln" d="M98 152 H70 V202" marker-end="url(#m-t5)"/>
+        <path class="ln" d="M262 152 H290 V202" marker-end="url(#m-t5)"/>
+        <rect class="ok" x="8" y="204" width="150" height="62"/>
+        <text class="h" x="83" y="228" text-anchor="middle">높을 때</text>
+        <text x="83" y="250" text-anchor="middle">엣지에서 판단</text>
+        <rect class="key" x="202" y="204" width="150" height="62"/>
+        <text class="h" x="277" y="224" text-anchor="middle">낮을 때만</text>
+        <text x="277" y="242" text-anchor="middle">Amazon Bedrock VLM</text>
+        <text class="s" x="277" y="259" text-anchor="middle">토큰 과금·왕복 지연</text>
+      </svg>
+      <figcaption>클라우드 왕복에는 시간이 걸리므로 대부분은 엣지에서 끝내고 애매한 장면만 위로 보냅니다.</figcaption>
+    </figure>
+    <ul>
+      <li><b>원격 제어</b>: ROS 커맨드 컴포넌트를 AWS IoT Core에 연결해 클라우드에서 MQTT로 명령 전송</li>
+      <li><b>학습용 이미지</b>는 Amazon S3에 별도 업로드</li>
+      <li><b>순찰 보고서</b>: 에이전트 AI가 영상·위치·메트릭을 종합해 위험 수준과 권고 사항 작성</li>
+      <li><b>비용</b>: IoT 서비스가 가장 저렴, Amazon Bedrock은 토큰 기반 과금</li>
+      <li><b>VLM 후보</b>: Amazon Bedrock에 Anthropic·OpenAI·NVIDIA 등 여러 공급사 모델, 현장 영상으로 테스트 후 선정</li>
+      <li><b>AI의 로봇 제어 메시지 직접 생성</b>: 미리 정의한 명령이나 결정 트리 없이 이미지를 보고 이동 명령을 만드는 구현도 데모에 포함</li>
+    </ul>
+  </article>
+
+  <article class="topic">
+    <h3><span class="k">6</span>Isaac Sim·Isaac Lab 학습은 로컬에서 정의하고 클라우드로 확장</h3>
+    <p>지금은 PC 한 대에서 Isaac Lab 학습과 시뮬레이션을 함께 돌립니다. 클라우드에서는 학습과 시뮬레이션을 나누고, 공유 스토리지에 체크포인트를 저장해 시뮬레이션에서 불러와 검증합니다. ROS, Isaac Sim, 통신 프로토콜을 설치한 Amazon EC2 한 대를 세팅하면 그대로 복제해 여러 대로 늘릴 수 있습니다. 여러 노드의 경험 데이터는 스토리지로 동기화해 <b>하나의 모델을 함께 학습</b>합니다. <mark>클라우드는 로컬 PC보다 느리므로, 환경과 알고리즘을 로컬에서 먼저 정의하고 대규모 확장 테스트 때 옮기는 것을 권합니다.</mark></p>
+    <figure>
+      <svg class="sv" viewBox="0 0 360 300" role="img">
+        <title>Isaac Sim·Isaac Lab 클라우드 학습 단계</title>
+        <defs><marker id="m-t6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+        <rect class="box" x="10" y="8" width="340" height="50"/>
+        <circle class="c-st" cx="34" cy="33" r="11"/><text class="ct" x="34" y="38" text-anchor="middle">1</text>
+        <text class="h" x="54" y="29">로컬 PC</text>
+        <text class="s" x="54" y="48">환경·알고리즘 먼저 정의</text>
+        <line class="ln" x1="180" y1="58" x2="180" y2="74" marker-end="url(#m-t6)"/>
+        <rect class="box" x="10" y="76" width="340" height="50"/>
+        <circle class="c-st" cx="34" cy="101" r="11"/><text class="ct" x="34" y="106" text-anchor="middle">2</text>
+        <text class="h" x="54" y="97">Amazon EC2 한 대 세팅</text>
+        <text class="s" x="54" y="116">ROS·Isaac Sim·통신 프로토콜</text>
+        <line class="ln" x1="180" y1="126" x2="180" y2="142" marker-end="url(#m-t6)"/>
+        <rect class="key" x="10" y="144" width="340" height="50"/>
+        <circle class="c-key" cx="34" cy="169" r="11"/><text class="ct" x="34" y="174" text-anchor="middle">3</text>
+        <text class="h" x="54" y="165">AWS Batch 일괄 설정</text>
+        <text class="s" x="54" y="184">환경 ID·로봇·에폭·노드 수</text>
+        <line class="ln" x1="180" y1="194" x2="60" y2="210" marker-end="url(#m-t6)"/>
+        <line class="ln" x1="180" y1="194" x2="180" y2="210" marker-end="url(#m-t6)"/>
+        <line class="ln" x1="180" y1="194" x2="300" y2="210" marker-end="url(#m-t6)"/>
+        <rect class="box" x="10" y="212" width="100" height="34"/>
+        <text x="60" y="234" text-anchor="middle">Amazon EC2</text>
+        <rect class="box" x="130" y="212" width="100" height="34"/>
+        <text x="180" y="234" text-anchor="middle">Amazon EC2</text>
+        <rect class="box" x="250" y="212" width="100" height="34"/>
+        <text x="300" y="234" text-anchor="middle">Amazon EC2</text>
+        <line class="ln" x1="60" y1="246" x2="60" y2="260" marker-end="url(#m-t6)"/>
+        <line class="ln" x1="180" y1="246" x2="180" y2="260" marker-end="url(#m-t6)"/>
+        <line class="ln" x1="300" y1="246" x2="300" y2="260" marker-end="url(#m-t6)"/>
+        <rect class="ok" x="10" y="262" width="340" height="32"/>
+        <text class="s" x="180" y="283" text-anchor="middle">공유 스토리지: 체크포인트·경험 데이터 동기화</text>
+      </svg>
+      <figcaption>한 대를 세팅해 복제한 뒤, 파라미터는 AWS Batch에서 한 번에 넣고 결과는 공유 스토리지로 모읍니다.</figcaption>
+    </figure>
+    <ul>
+      <li><b>Isaac Sim AMI</b>: 버튼 하나로 Isaac Sim 설치 환경 실행, AMI는 무료이고 Amazon EC2 비용은 별도</li>
+      <li><b>AWS Batch 노출 파라미터</b>: 환경 ID, 로봇, 학습 에폭, 노드 수, 노드당 GPU 수, 이터레이션</li>
+      <li><b>개별 제어</b>: 복제한 Amazon EC2에 SSH로 접속하거나 DCV GUI로 원격 조작</li>
+      <li><b>Slurm</b> 같은 HPC 스케줄러로 대규모 Amazon EC2를 직접 제어하는 방법도 가능</li>
+      <li><b>학습 결과 확인</b>: 로그는 클라우드에서, 학습된 정책의 동작은 Isaac Sim에서 바로 재생</li>
+      <li><b>룰 기반 플래너의 한계</b>: 바닥에 물이 있는 경우 같은 예상 못 한 상황 처리 미해결</li>
+    </ul>
+  </article>
+
+  <article class="topic">
+    <h3><span class="k">7</span>대용량 영상은 SSD 직접 교체가 가장 빠른 방법</h3>
+    <p>로봇이 1시간 동안 찍은 360도 영상을 무선으로 올리면 시간이 매우 오래 걸립니다. 도킹 스테이션과 이더넷으로 연결해 옮기는 방법은 가능하지만, 이더넷 전송은 너무 느리고 다른 통신보다 불안정해 거의 쓰지 않습니다. 가장 빠른 방법은 <b>사람이 SSD를 직접 빼서 옮기는 것</b>입니다. 차선책은 특정 Wi-Fi에 접속하면 자동으로 올리는 방식이지만 밤새 걸렸던 경험이 있고, 올리기 전에 NVIDIA 인코더로 압축하면 용량이 크게 줄어듭니다. <mark class="risk">어느 방식을 기본으로 할지는 정하지 않았습니다.</mark></p>
+    <figure>
+      <svg class="sv" viewBox="0 0 360 268" role="img">
+        <title>대용량 영상 업로드 방법별 속도 순서</title>
+        <defs><marker id="m-t7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+        <text class="s" x="30" y="24" text-anchor="middle">빠름</text>
+        <line class="ln" x1="30" y1="34" x2="30" y2="178" marker-end="url(#m-t7)"/>
+        <text class="s" x="30" y="198" text-anchor="middle">느림</text>
+        <rect class="box" x="60" y="10" width="292" height="50"/>
+        <text class="h" x="74" y="31">SSD 직접 교체</text>
+        <text class="s" x="74" y="50">사람 개입·분해 필요</text>
+        <rect class="box" x="60" y="70" width="292" height="50"/>
+        <text class="h" x="74" y="91">특정 Wi-Fi 자동 업로드</text>
+        <text class="s" x="74" y="110">밤새 걸린 경험</text>
+        <rect class="risk" x="60" y="130" width="292" height="50"/>
+        <text class="h" x="74" y="151">이더넷 도킹</text>
+        <text class="s" x="74" y="170">느리고 불안정</text>
+        <rect class="keyd" x="10" y="210" width="342" height="50"/>
+        <text class="h" x="24" y="231">+ NVIDIA 인코더 압축</text>
+        <text class="s" x="24" y="250">어느 방식이든 올리기 전 용량 축소</text>
+      </svg>
+      <figcaption>위로 갈수록 빠르지만 사람 손이 더 들고, 압축은 세 방식 모두에 더할 수 있습니다.</figcaption>
+    </figure>
+    <ul>
+      <li><b>Jetson Thor SSD 교체</b>는 그래픽카드를 먼저 떼어내야 하는 작업</li>
+      <li><b>Jetson Thor 모듈 저장 장치</b>: 1TB NVMe는 개발자 키트 구성품, 모듈은 PCIe로 NVMe를 따로 연결</li>
+      <li><b>USB SSD를 외부로 빼는 방식</b>도 대안으로 검토</li>
+      <li><b>압축 효과</b>: 압축 여부에 따라 10배 이상 차이라는 언급, 공식 수치는 확인 불가</li>
+      <li><b>NVENC</b>: 2026년 1월부터 Video Codec SDK가 Jetson Thor 인코딩 지원</li>
+      <li><b>충전 중 업로드</b>: 충전 시간 동안 업로드를 기다려야 하는 제약</li>
+    </ul>
+  </article>
+
+  <article class="topic">
+    <h3><span class="k">8</span>8월 중순 수동 운용 투입, 교육 일정은 미정</h3>
+    <p>로봇은 현장에 자주 갈수록 좋습니다. 시뮬레이션을 잘 만들어도 실제 현장에서 튜닝을 많이 거쳐야 하기 때문입니다. 8월 중순부터는 자율주행이 아닌 수동 운용 형태로 투입할 수 있고, 8월 말~9월 초 투입 전까지 세팅을 끝내는 것이 목표입니다. 교육은 기초 과정 대신 이 프로젝트에 맞춘 아젠다와 워크숍으로 진행하고, 이후 Q&amp;A 세션을 이어 갑니다. <mark class="risk">교육·워크숍의 날짜와 아젠다는 아직 정하지 않았습니다.</mark></p>
+    <figure>
+      <svg class="sv" viewBox="0 0 360 204" role="img">
+        <title>현장 투입까지의 일정</title>
+        <defs><marker id="m-t8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="mk" d="M0,0 L10,5 L0,10 z"/></marker></defs>
+        <line class="ln" x1="14" y1="92" x2="346" y2="92" marker-end="url(#m-t8)"/>
+        <circle class="c-st" cx="30" cy="92" r="6"/>
+        <text x="30" y="70" text-anchor="middle">7월 27일</text>
+        <text class="s" x="30" y="118" text-anchor="middle">이번 회의</text>
+        <circle class="c-st" cx="165" cy="92" r="6"/>
+        <text x="165" y="70" text-anchor="middle">8월 중순</text>
+        <text class="s" x="165" y="118" text-anchor="middle">수동 운용 투입</text>
+        <rect class="ok" x="246" y="84" width="86" height="16"/>
+        <text x="289" y="70" text-anchor="middle">8월 말~9월 초</text>
+        <text class="s" x="289" y="118" text-anchor="middle">투입 전 세팅 완료</text>
+        <rect class="risk" x="14" y="146" width="332" height="48"/>
+        <text class="h" x="180" y="167" text-anchor="middle">교육·워크숍 날짜·아젠다 미정</text>
+        <text class="s tr" x="180" y="186" text-anchor="middle">세팅 완료 전 확정 필요(추정)</text>
+      </svg>
+      <figcaption>투입 목표 시점은 정해졌지만 그 앞에 와야 할 교육 일정은 아직 비어 있습니다.</figcaption>
+    </figure>
+    <ul>
+      <li><b>현장 방문</b>: 두 차례 방문을 기본으로 계획, 용인 현장 실측</li>
+      <li><b>울산</b>은 시험장으로 쓰기 어려움</li>
+      <li><b>플랜트 LiDAR 스캔 데이터</b> 제공</li>
+      <li><b>법규 제약</b>: 건축법상 설계와 시공 분리</li>
+      <li><b>문의 창구</b>: 메일 루프, 전문가 네 명 중 한 명이 답하고 에셋 공유</li>
+      <li><b>3사 공동 레퍼런스</b>: SK의 첫 건설 산업 사례로 외부 공유·발표, Seoul Dynamics 파트너 참여 구상</li>
+    </ul>
+  </article>
+</section>
+
+<section>
+  <details>
+    <summary>참고 자료 — 공식 자료 10건 대조(일치 6, 상이 1, 확인 불가 3)와 인사이트</summary>
+    <div class="refs">
+      <div class="ref">
+        <a href="https://ghostrobotics.io/vision-60">Ghost Robotics — Vision 60 제품·기술 사양</a><span class="badge ok">확인됨</span>
+        <p>내장 컴퓨터는 Jetson Xavier이고, 기본 센서는 RGB 카메라 5대와 D435 뎁스 센서 4대입니다. 연속 보행 시간 3시간 이상도 회의 내용과 같습니다. 뎁스 카메라의 장착 방향은 사양에 없어 확인할 수 없습니다.</p>
+        <p class="src">제조사 공식 제품 페이지</p>
+      </div>
+      <div class="ref">
+        <a href="https://www.prnewswire.com/news-releases/ghost-robotics-corporation-and-lig-nex1-announce-close-of-acquisition-302208083.html">Ghost Robotics Corporation and LIG Nex1 Announce Close of Acquisition</a><span class="badge na">확인 불가</span>
+        <p>LIG Nex1이 2024년 7월 Ghost Robotics 지분 60%를 인수해 경영권을 확보했습니다. <mark class="risk">KRM 종료와 국내 총판 이관을 다룬 공식 자료는 찾지 못했습니다.</mark></p>
+        <p class="src">공식 보도자료 · 2024-07-29</p>
+      </div>
+      <div class="ref">
+        <a href="https://www.nvidia.com/en-us/autonomous-machines/embedded-systems/jetson-thor/">NVIDIA Jetson Thor — 모듈·개발자 키트 사양</a><span class="badge diff">상이함</span>
+        <p>1TB NVMe는 개발자 키트의 구성품이고, 모듈은 PCIe로 NVMe를 연결하는 방식입니다. 소비 전력은 40–130 W입니다. <mark class="risk">모듈만 쓰면 캐리어 보드에 저장 장치를 따로 구성해야 합니다.</mark></p>
+        <p class="src">공식 제품 페이지</p>
+      </div>
+      <div class="ref">
+        <a href="https://github.com/hku-mars/FAST_LIO">hku-mars/FAST_LIO (FAST-LIO2) GitHub</a><span class="badge na">확인 불가</span>
+        <p>FAST-LIO2는 회전형·고정형 LiDAR와 외부 IMU를 지원하는 LiDAR-관성 오도메트리 패키지입니다. 실사용 성능이 부족하다는 판단은 현장 경험이라 공식 문서로 검증할 수 없습니다.</p>
+        <p class="src">공식 저장소</p>
+      </div>
+      <div class="ref">
+        <a href="https://docs.aws.amazon.com/kinesisvideostreams/latest/dg/hls-playback.html">Video playback with HLS — Amazon Kinesis Video Streams</a><span class="badge ok">확인됨</span>
+        <p>HLS 실시간 재생 지연은 보통 3–5초이고, 지난 영상도 재생할 수 있습니다. 초저지연 양방향 스트리밍은 WebRTC로 지원합니다. 약 4초 지연이라는 설명과 같습니다.</p>
+        <p class="src">공식 문서 · 함께 볼 자료: <a href="https://aws.amazon.com/it/kinesis/video-streams/faqs/">Kinesis Video Streams FAQ</a></p>
+      </div>
+      <div class="ref">
+        <a href="https://docs.aws.amazon.com/sagemaker/latest/dg/neo-deployment-edge.html">Deploy a Model (AWS IoT Greengrass) — Amazon SageMaker AI</a><span class="badge ok">확인됨</span>
+        <p>클라우드에서 학습한 모델을 AWS IoT Greengrass로 Jetson 계열 엣지 장치에 배포해 추론할 수 있습니다. Jetson Orin NX에 YOLOv8을 Greengrass 컴포넌트로 배포하고 MQTT로 결과를 보내는 AWS 사례도 있습니다.</p>
+        <p class="src">공식 문서 · 사례: <a href="https://aws.amazon.com/cn/blogs/iot/deploying-and-benchmarking-yolov8-on-gpu-based-edge-devices-using-aws-iot-greengrass/">Deploying and benchmarking YOLOv8 on GPU-based edge devices using AWS IoT Greengrass</a> (2023-06)</p>
+      </div>
+      <div class="ref">
+        <a href="https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference-supported-models-features.html">Models at a glance — Amazon Bedrock</a><span class="badge ok">확인됨</span>
+        <p>Amazon Bedrock은 Anthropic·OpenAI·NVIDIA 등 여러 공급사의 파운데이션 모델을 제공합니다. 회의에서 언급한 Claude 모델명은 검색 발췌에서 직접 확인하지 못했습니다.</p>
+        <p class="src">공식 문서 · 함께 볼 자료: <a href="https://aws.amazon.com/bedrock/model-choice/">Amazon Bedrock Model Choice</a> (2026-10)</p>
+      </div>
+      <div class="ref">
+        <a href="https://aws.amazon.com/marketplace/pp/prodview-bl35herdyozhw">AWS Marketplace: NVIDIA Isaac Sim™ Development Workstation (Linux)</a><span class="badge ok">확인됨</span>
+        <p>NVIDIA가 등록한 Isaac Sim AMI가 있습니다. AMI는 무료이고 g6e·g7e Amazon EC2 인프라 비용은 따로 냅니다. SSH·DCV 접속 안내도 회의 내용과 같습니다.</p>
+        <p class="src">AWS Marketplace 제품 페이지 · 설치 안내: <a href="https://docs.isaacsim.omniverse.nvidia.com/latest/installation/install_advanced_cloud_setup_aws.html">AWS Deployment — Isaac Sim Documentation</a></p>
+      </div>
+      <div class="ref">
+        <a href="https://aws.amazon.com/ko/blogs/hpc/scale-reinforcement-learning-with-aws-batch-multi-node-parallel-jobs/">Scale Reinforcement Learning with AWS Batch Multi-Node Parallel Jobs</a><span class="badge ok">확인됨</span>
+        <p>AWS Batch 다중 노드 병렬 작업으로 Isaac Lab 강화학습을 여러 노드에 분산하고, 체크포인트는 Amazon EFS에 저장합니다. 파라미터를 일괄로 넘기는 구성도 회의 설명과 같습니다.</p>
+        <p class="src">AWS 공식 블로그 · 2025-03 · 함께 볼 자료: <a href="https://aws.amazon.com/blogs/physical-ai/gpu-accelerated-robotic-simulation-training-with-nvidia-isaac-lab-in-vams/">GPU-Accelerated Robotic Simulation Training with NVIDIA Isaac Lab in VAMS</a> (2026-01)</p>
+      </div>
+      <div class="ref">
+        <a href="https://developer.nvidia.com/video-codec-sdk">NVIDIA Video Codec SDK (NVENC/NVDEC)</a><span class="badge na">확인 불가</span>
+        <p>NVENC는 H.264·HEVC·AV1을 하드웨어로 인코딩하며, 2026년 1월부터 Jetson Thor를 지원합니다. 압축률은 코덱·비트레이트 설정에 따라 달라지고, 10배 이상이라는 수치는 출처에 없습니다.</p>
+        <p class="src">공식 개발자 페이지</p>
+      </div>
+      <p class="src">조회일 2026-10-28 · Web Search 10회</p>
+    </div>
+
+    <div class="ins">
+      <h3>시사점</h3>
+      <p><span class="badge infer">추정</span><b>산업안전 데모 구성을 그대로 바탕으로 쓸 수 있습니다.</b> 데모는 Jetson Orin 위 YOLO를 AWS IoT Greengrass로 배포하고, 영상·메트릭·원격 명령을 Amazon Kinesis Video Streams와 AWS IoT Core로 처리했습니다. 시연 뒤 이 프로젝트 구조와 같다는 평가가 나왔습니다. <mark>처음부터 설계하기보다 데모의 Jetson Orin 자리를 Jetson Thor로 바꾸는 편이 빠릅니다.</mark></p>
+      <p><span class="badge infer">추정</span><b>룰 기반 플래너의 약점과 VLM 보완 구성이 맞물립니다.</b> 하드코딩한 플래너는 바닥에 물이 있는 경우 같은 예상 못 한 상황에 약합니다. YOLO confidence가 낮을 때만 VLM에 판단을 넘기는 구성을 이 예외 처리에 쓸 수 있습니다. 다만 클라우드 왕복 지연이 있어 주행 판단이 아니라 상황 판단에만 맞습니다.</p>
+
+      <h3>리스크</h3>
+      <p><b>계단 제어와 가감속 제어는 제조사가 열어 주는 범위에 달려 있습니다.</b> 카메라 하위단 접근도 열려 있지 않았고, Ghost Robotics의 데이터 개방도 약속보다 제한적입니다. <mark class="risk">저수준 모터 제어를 쓸 수 있는지는 아직 모릅니다.</mark> 저수준 제어 API·SDK 범위를 문의했을 때 답이 늦거나 추후 제공이라는 답이 오면 위험 신호입니다.</p>
+      <p><b>Jetson Thor

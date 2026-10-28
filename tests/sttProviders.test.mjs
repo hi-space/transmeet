@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { normalizeSttProvider, sttChunkDuration, sttRecordingAction, shouldStopSttRecording } from '../src/lib/sttProviders.ts'
+import {
+  normalizeSttProvider,
+  sttChunkDuration,
+  sttRecordingAction,
+  shouldStopSttRecording,
+} from '../src/lib/sttProviders.ts'
 
 test('all four saved speech engines remain selectable', () => {
   for (const provider of ['transcribe', 'whisper', 'qwen3-asr', 'nemotron']) {
@@ -22,12 +27,44 @@ test('batch models receive six seconds of context while Transcribe keeps streami
 })
 
 test('selected audio windows apply to batch engines without slowing the continuous stream', () => {
-  for (const [seconds, milliseconds] of [[2, 2000], [4, 4000], [6, 6000], [8, 8000], [10, 10000]]) {
+  for (const [seconds, milliseconds] of [
+    [2, 2000],
+    [4, 4000],
+    [6, 6000],
+    [8, 8000],
+    [10, 10000],
+  ]) {
     for (const provider of ['whisper', 'qwen3-asr', 'nemotron']) {
       assert.equal(sttChunkDuration(provider, seconds), milliseconds)
     }
     assert.equal(sttChunkDuration('transcribe', seconds), 700)
   }
+})
+
+test('enabled Nemotron streaming sends audio without waiting for the saved batch window', () => {
+  const status = { provider: 'nemotron', status: 'ready', streaming: true }
+  for (const seconds of [2, 4, 6, 8, 10, undefined]) {
+    assert.equal(sttChunkDuration('nemotron', seconds, status), 160)
+  }
+})
+
+test('old or disabled Nemotron backends retain the selected batch window', () => {
+  for (const status of [
+    undefined,
+    { provider: 'nemotron', status: 'ready' },
+    { provider: 'nemotron', status: 'ready', streaming: false },
+    { provider: 'qwen3-asr', status: 'ready', streaming: true },
+  ]) {
+    assert.equal(sttChunkDuration('nemotron', 8, status), 8000)
+    assert.equal(sttChunkDuration('nemotron', undefined, status), 6000)
+  }
+})
+
+test('Nemotron readiness cannot change another engines capture interval', () => {
+  const status = { provider: 'nemotron', status: 'ready', streaming: true }
+  assert.equal(sttChunkDuration('transcribe', 10, status), 700)
+  assert.equal(sttChunkDuration('whisper', 4, status), 4000)
+  assert.equal(sttChunkDuration('qwen3-asr', 8, status), 8000)
 })
 
 test('missing or corrupt saved audio windows use the six-second default', () => {
@@ -38,25 +75,51 @@ test('missing or corrupt saved audio windows use the six-second default', () => 
 
 test('a sleeping or unknown managed engine prepares before capturing audio', () => {
   assert.equal(sttRecordingAction('qwen3-asr', undefined, false), 'prepare')
-  assert.equal(sttRecordingAction('nemotron', { provider: 'nemotron', status: 'sleeping' }, false), 'prepare')
-  assert.equal(sttRecordingAction('nemotron', { provider: 'nemotron', status: 'starting' }, false), 'wait')
+  assert.equal(
+    sttRecordingAction('nemotron', { provider: 'nemotron', status: 'sleeping' }, false),
+    'prepare'
+  )
+  assert.equal(
+    sttRecordingAction('nemotron', { provider: 'nemotron', status: 'starting' }, false),
+    'wait'
+  )
 })
 
 test('only readiness for the selected engine permits microphone capture', () => {
-  assert.equal(sttRecordingAction('qwen3-asr', { provider: 'nemotron', status: 'ready' }, false), 'prepare')
-  assert.equal(sttRecordingAction('qwen3-asr', { provider: 'qwen3-asr', status: 'ready' }, false), 'start')
+  assert.equal(
+    sttRecordingAction('qwen3-asr', { provider: 'nemotron', status: 'ready' }, false),
+    'prepare'
+  )
+  assert.equal(
+    sttRecordingAction('qwen3-asr', { provider: 'qwen3-asr', status: 'ready' }, false),
+    'start'
+  )
   assert.equal(sttRecordingAction('transcribe', undefined, false), 'start')
   assert.equal(sttRecordingAction('whisper', undefined, false), 'start')
 })
 
 test('recording can always be stopped even when the engine becomes unavailable', () => {
-  assert.equal(sttRecordingAction('nemotron', { provider: 'nemotron', status: 'error' }, true), 'stop')
+  assert.equal(
+    sttRecordingAction('nemotron', { provider: 'nemotron', status: 'error' }, true),
+    'stop'
+  )
 })
 
 test('a transient status-query failure does not interrupt an established recording', () => {
-  assert.equal(shouldStopSttRecording('nemotron', { provider: 'nemotron', status: 'unknown' }), false)
-  assert.equal(shouldStopSttRecording('nemotron', { provider: 'nemotron', status: 'sleeping' }), true)
-  assert.equal(shouldStopSttRecording('nemotron', {
-    provider: 'nemotron', status: 'unknown', recordingBlocked: true,
-  }), true)
+  assert.equal(
+    shouldStopSttRecording('nemotron', { provider: 'nemotron', status: 'unknown' }),
+    false
+  )
+  assert.equal(
+    shouldStopSttRecording('nemotron', { provider: 'nemotron', status: 'sleeping' }),
+    true
+  )
+  assert.equal(
+    shouldStopSttRecording('nemotron', {
+      provider: 'nemotron',
+      status: 'unknown',
+      recordingBlocked: true,
+    }),
+    true
+  )
 })

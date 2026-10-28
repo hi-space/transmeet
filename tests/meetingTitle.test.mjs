@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import test from 'node:test'
 import ts from 'typescript'
+import { loadTypeScript } from './helpers/loadTypeScript.mjs'
 
 const sources = Object.fromEntries(['meetings/index', 'summarize/index', 'shared/owner'].map((name) => [
   name,
@@ -39,6 +40,8 @@ function setup() {
     },
   }
   const dependencies = {
+    '../../../src/lib/summaryStyles': loadTypeScript('src/lib/summaryStyles.ts'),
+    '../shared/summaryPrompt': loadTypeScript('infra/lambda/shared/summaryPrompt.ts'),
     crypto: { randomUUID },
     '@aws-sdk/client-dynamodb': { DynamoDBClient: class {} },
     '@aws-sdk/lib-dynamodb': {

@@ -13,11 +13,19 @@ import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedroc
 import { S3Client, DeleteObjectCommand, DeleteObjectsCommand, ListObjectsV2Command } from '@aws-sdk/client-s3'
 import { randomUUID } from 'crypto'
 import { callerId, ownsMeeting } from '../shared/owner'
+import {
+  CUSTOM_SUMMARY_STYLE,
+  DEFAULT_SUMMARY_STYLE,
+  isSummaryStyle,
+  type SummaryCustom,
+} from '../../../src/lib/summaryStyles'
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({ region: process.env.REGION }))
 const s3 = new S3Client({ region: process.env.REGION })
 // 발행된 페이지 기록은 미팅 항목이 아니라 별도 테이블에 있다(미팅 항목은 400 KB 한도에 닿을 수 있다).
 const PAGES_TABLE = process.env.PAGES_TABLE ?? 'transmeet-pages'
+// 내 양식 사본(meetingId 키). 회의 항목은 발언 전체를 담아 400 KB 한도에 가까우므로 따로 둔다.
+const SNAPSHOTS_TABLE = () => process.env.SUMMARY_SNAPSHOTS_TABLE ?? 'transmeet-summary-snapshots'
 
 interface PageRecord {
   meetingId: string
@@ -40,29 +48,38 @@ function toMeetingPage(page: PageRecord) {
   const { meetingId: _meetingId, updatedAt: _updatedAt, ...rest } = page
   return rest
 }
-// 발언이 0개인 미팅에 녹음이 있는지 붙인다. 프런트는 발언 0개 미팅을 빈 미팅으로 보고 지우는데,
-// STT 가 실패해도 녹음은 남아 있을 수 있다. hasAudio 는 userId-index 에 투영되지 않아(GSI 투영을 바꾸면
-// 인덱스를 다시 만들어야 한다) 빈 미팅만 기본 테이블에서 읽는다 — 보통 몇 개뿐이다.
-async function attachHasAudio(items: Record<string, unknown>[]): Promise<void> {
-  const empty = items.filter((m) => !m.messageCount)
-  for (let i = 0; i < empty.length; i += 100) {
-    const chunk = empty.slice(i, i + 100)
-    const result = await ddb.send(
-      new BatchGetCommand({
-        RequestItems: {
-          [process.env.MEETINGS_TABLE!]: {
-            Keys: chunk.map((m) => ({ meetingId: m.meetingId })),
-            ProjectionExpression: 'meetingId, hasAudio',
+// 한 줄 요약과 녹음 여부는 userId-index 에 없다. 기존 인덱스를 재생성하지 않고
+// 기본 테이블에서 목록에 필요한 필드만 함께 읽는다.
+async function attachListMetadata(items: Record<string, unknown>[]): Promise<void> {
+  const table = process.env.MEETINGS_TABLE!
+  const byId = new Map(items.map((item) => [String(item.meetingId), item]))
+  const ids = [...byId.keys()]
+  for (let i = 0; i < ids.length; i += 100) {
+    let keys = ids.slice(i, i + 100).map((meetingId) => ({ meetingId }))
+    for (let attempt = 0; keys.length; attempt++) {
+      const result = await ddb.send(
+        new BatchGetCommand({
+          RequestItems: {
+            [table]: {
+              Keys: keys,
+              ProjectionExpression:
+                'meetingId, hasAudio, brief, briefUpdatedAt, briefMessageCount, briefLastMessageId',
+            },
           },
-        },
-      })
-    )
-    const withAudio = new Set(
-      (result.Responses?.[process.env.MEETINGS_TABLE!] ?? [])
-        .filter((r) => r.hasAudio)
-        .map((r) => r.meetingId)
-    )
-    for (const m of chunk) if (withAudio.has(m.meetingId)) m.hasAudio = true
+        })
+      )
+      for (const metadata of result.Responses?.[table] ?? []) {
+        const item = byId.get(String(metadata.meetingId))
+        if (item) Object.assign(item, metadata)
+      }
+      keys = (result.UnprocessedKeys?.[table]?.Keys ?? []).map((key) => ({
+        meetingId: String(key.meetingId),
+      }))
+      if (!keys.length) break
+      // 녹음 여부를 못 읽은 회의를 빈 회의로 반환하면 프런트가 삭제할 수 있다.
+      if (attempt >= 3) throw new Error('Could not load meeting list metadata')
+      await new Promise((resolve) => setTimeout(resolve, 50 * 2 ** attempt))
+    }
   }
 }
 
@@ -90,6 +107,13 @@ function getBedrock() {
 const headers = {
   'Content-Type': 'application/json',
   'Access-Control-Allow-Origin': '*',
+}
+
+async function loadSummaryCustom(meetingId: string, userId: string | undefined): Promise<SummaryCustom | undefined> {
+  const res = await ddb.send(new GetCommand({ TableName: SNAPSHOTS_TABLE(), Key: { meetingId } }))
+  if (!res.Item || res.Item.userId !== userId) return undefined
+  const { templateId, name, kind, body, templateUpdatedAt } = res.Item
+  return { templateId, name, kind, body, templateUpdatedAt }
 }
 
 function respond(statusCode: number, body: unknown): APIGatewayProxyResult {
@@ -151,7 +175,13 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
             return respond(404, { error: 'Meeting not found' })
           }
           const page = await loadPage(meetingId)
-          return respond(200, page ? { ...result.Item, page: toMeetingPage(page) } : result.Item)
+          const summaryCustom =
+            result.Item.summaryStyle === CUSTOM_SUMMARY_STYLE ? await loadSummaryCustom(meetingId, userId) : undefined
+          return respond(200, {
+            ...result.Item,
+            ...(page ? { page: toMeetingPage(page) } : {}),
+            ...(summaryCustom ? { summaryCustom } : {}),
+          })
         }
 
         // GET /meetings - 호출자의 미팅 전부 (userId-index, 1MB 페이지 단위로 이어 받는다)
@@ -172,7 +202,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           if (page.Items) items.push(...page.Items)
           lastKey = page.LastEvaluatedKey
         } while (lastKey)
-        await attachHasAudio(items)
+        await attachListMetadata(items)
         items.sort(byCreatedAtDesc)
         return respond(200, items)
       }
@@ -259,6 +289,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           // messageCount === 0 을 근거로 삼으므로 생성 시점부터 0 을 기록한다.
           messageCount: 0,
           summary: null,
+          summaryStyle: DEFAULT_SUMMARY_STYLE,
         }
         await ddb.send(
           new PutCommand({
@@ -270,6 +301,59 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
       }
 
       case 'PUT': {
+        if (resource.endsWith('/summary-style')) {
+          if (!meetingId) return respond(400, { error: 'Missing meeting id' })
+          let body: { summaryStyle?: unknown; templateId?: unknown } | null
+          try {
+            body = JSON.parse(event.body ?? '{}')
+          } catch {
+            return respond(400, { error: 'Invalid request body' })
+          }
+          if (!isSummaryStyle(body?.summaryStyle)) {
+            return respond(400, { error: 'Invalid summary style' })
+          }
+          const summaryStyle = body.summaryStyle
+          if (summaryStyle === CUSTOM_SUMMARY_STYLE) {
+            // 내 양식은 서버가 양식 테이블에서 직접 읽어 사본을 둔다 — 클라이언트가 보낸 본문은 쓰지 않는다.
+            const templateId = body.templateId
+            if (typeof templateId !== 'string' || !templateId) {
+              return respond(400, { error: 'Missing template id' })
+            }
+            const template = await ddb.send(new GetCommand({
+              TableName: process.env.SUMMARY_TEMPLATES_TABLE,
+              Key: { userId, templateId },
+            }))
+            if (!template.Item) return respond(404, { error: 'Template not found' })
+            const summaryCustom: SummaryCustom = {
+              templateId,
+              name: template.Item.name,
+              kind: template.Item.kind,
+              body: template.Item.body,
+              templateUpdatedAt: template.Item.updatedAt,
+            }
+            // 사본을 먼저 둔다 — 선택값만 바뀌고 사본이 없는 순간이 없게(그 사이 요약은 이전 사본 또는 detailed)
+            await ddb.send(new PutCommand({
+              TableName: SNAPSHOTS_TABLE(),
+              Item: { meetingId, userId, ...summaryCustom },
+            }))
+            await ddb.send(new UpdateCommand({
+              TableName: process.env.MEETINGS_TABLE,
+              Key: { meetingId },
+              UpdateExpression: 'SET summaryStyle = :style',
+              ConditionExpression: 'attribute_exists(meetingId) AND userId = :uid',
+              ExpressionAttributeValues: { ':style': summaryStyle, ':uid': userId },
+            }))
+            return respond(200, { meetingId, summaryStyle, summaryCustom })
+          }
+          await ddb.send(new UpdateCommand({
+            TableName: process.env.MEETINGS_TABLE,
+            Key: { meetingId },
+            UpdateExpression: 'SET summaryStyle = :style',
+            ConditionExpression: 'attribute_exists(meetingId) AND userId = :uid',
+            ExpressionAttributeValues: { ':style': summaryStyle, ':uid': userId },
+          }))
+          return respond(200, { meetingId, summaryStyle })
+        }
         if (resource.endsWith('/title')) {
           if (!meetingId) {
             return respond(400, { error: 'Missing meeting id' })
@@ -311,6 +395,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           await ddb.send(new DeleteCommand({ TableName: PAGES_TABLE, Key: { meetingId } }))
         }
         await deleteMeetingAudio(meetingId)
+        await ddb.send(new DeleteCommand({ TableName: SNAPSHOTS_TABLE(), Key: { meetingId } }))
         await ddb.send(
           new DeleteCommand({
             TableName: process.env.MEETINGS_TABLE,

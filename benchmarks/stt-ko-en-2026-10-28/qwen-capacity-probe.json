@@ -1,0 +1,6 @@
+{
+  "at": "2026-10-28T18:36:01.356670+00:00",
+  "purpose": "Probe the existing endpoint so its configured NoCapacityInvocationFailures alarm can request scale-out. Excluded from accuracy and latency benchmark.",
+  "error": "ValidationError: An error occurred (ValidationError) when calling the InvokeEndpoint operation: Inference Component has no capacity to process this request. ApplicationAutoScaling may be in-progress (if configured) or try to increase the capacity by invoking UpdateInferenceComponentRuntimeConfig API.",
+  "elapsed_seconds": 1.94
+}

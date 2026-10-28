@@ -15,12 +15,12 @@ TransMeet은 **실시간 음성 번역 웹앱**입니다. 영어 화자의 발�
 
 ## Features
 
-- **STT 엔진 선택** — Whisper large-v3-turbo / Amazon Transcribe / Qwen3-ASR / Nemotron 3.5 ([한국어 비교·설정 가이드](docs/stt-models.md))
+- **STT 엔진 선택** — Whisper large-v3-turbo / Amazon Transcribe / Qwen3-ASR / Nemotron 3.5 ([한국어·영어 비교·설정 가이드](docs/stt-models.md)). Qwen과 Nemotron은 모델 복제본을 각각 1개 유지해 재기동 대기를 줄입니다.
 - **Transcribe 언어 토글** — 영어/한글 전환 가능 (Transcribe 모드)
 - **실시간 번역** — 영어 ↔ 한글 양방향 번역 (Bedrock Haiku 5.5 / GPT-6 Luna 선택)
 - **스트리밍 번역** — 번역 진행 중 부분 텍스트 실시간 표시
 - **화자 구분** — Speaker Diarization으로 화자별 메시지 분리
-- **대화 요약** — 자동/수동 요약 생성 (Bedrock Claude Sonnet) + 글자 크기 조절
+- **대화 요약** — 자세하게 / Amazon 미팅록 / 의사결정 기록 / 공유·보고용 선택, 자동·수동 생성
 - **빠른 번역** — 글로벌 팝업으로 한→영 즉석 번역 + 번역 히스토리 관리
 - **한→영 TTS** — 한글 입력 → 영어 음성 출력 (Polly Generative/Neural/Standard)
 - **회의 기록** — 생성, 조회, 삭제 + 자동 제목 생성
@@ -79,6 +79,21 @@ npm run format
 
 두 모델 모두 Bedrock 글로벌 추론 프로필을 사용합니다. 이전 Nova 모델 선택은 Haiku 5.5로 정리됩니다. 프로필·호출 검증 기록은 [번역 모델 검증](docs/translation-models.md)을 참고하세요.
 
+### 요약 방식
+
+요약 패널 상단의 **요약 방식**에서 회의별로 선택합니다. 기본값은 **자세하게**이며, 기존 상세 회의록 구성과 자동 요약 시점은 그대로 유지됩니다.
+
+| 방식 | 구성 |
+|---|---|
+| 자세하게 (기본) | 한눈에 보기, 회의 요약, 논의 흐름, 결정, 액션 아이템, 미결 사항 |
+| Amazon 미팅록 | 요약(BLUF), 고객 요구, 주요 논의, 결정, 액션 아이템(Owner/Due), 리스크·미결 |
+| 의사결정 기록 | 결정별 맥락·검토한 대안·선택 이유·트레이드오프·재검토 조건, 보류된 결정, 결정에 따른 할 일 |
+| 공유·보고용 | 서술형 보고문: 요약, 배경, 결정 사항, 향후 일정 |
+
+선택은 회의에 저장되며, 바꾸는 즉시 요약을 다시 생성하지는 않습니다. **요약 생성/새로 생성**, 자동 요약, 회의 종료 시 요약과 메일에 같은 선택이 적용됩니다. 다른 방식으로 다시 생성할 때도 원본 대화를 사용합니다. 기존 요약에는 실제 생성된 방식이 표시됩니다. 한 줄 요약과 별도 회의 페이지는 이 선택의 영향을 받지 않습니다.
+
+프롬프트는 `backend/app/summary_styles.json`에 정의하며 WebSocket과 REST 경로가 함께 사용합니다. 검증은 `npm run test:summary`와 `cd backend && python -m pytest`로 실행합니다.
+
 ## Project Structure
 
 ```
@@ -135,6 +150,22 @@ public/
   icons/                        # App icons
 ```
 
+## 회의 종료 메일
+
+설정에서 **회의 종료 시 메일로 받기**를 켜면 필요한 이메일 인증이 시작됩니다.
+
+1. 계정 이메일이 아직 확인되지 않았다면, 메일로 받은 **6자리 인증 코드**를 설정 화면에 입력합니다.
+2. 계정 확인이 끝나면 **수신 인증 메일**을 자동으로 보냅니다. 해당 메일의 링크를 한 번 눌러 주세요.
+3. 설정으로 돌아오면 **인증 완료**로 갱신됩니다. 필요하면 **인증 상태 확인**을 누를 수 있습니다.
+
+이미 인증된 단계는 건너뜁니다. 코드가 만료되었거나 메일이 도착하지 않으면 설정 안에서 다시 받을 수 있습니다. 인증 대기 중에는 메일이 발송되지 않으며, 옵션은 기본적으로 꺼져 있습니다.
+
+메일의 요약 표는 HTML 표로 표시합니다. 발송 시점에 회의 페이지가 이미 발행되어 있으면 **회의 페이지 보기** 링크도 함께 보냅니다. 페이지가 생성 중이거나 아직 없으면 요약과 기존 미팅 화면 링크를 먼저 보내며, 페이지 생성을 기다리느라 메일을 지연하지 않습니다.
+
+현재 SES 샌드박스 환경에서는 계정 이메일 확인과 수신 주소 인증이 모두 필요합니다. 계정 인증 후에는 로그인 토큰과 연결된 회의의 인증 정보를 갱신하므로 로그아웃하거나 녹음을 중단할 필요가 없습니다. 설정을 다시 열거나 인증 상태를 자동 조회할 때에는 인증 메일을 재발송하지 않습니다.
+
+검증: `npm run test:email`, `python3 tests/email_verification_browser.py` — 브라우저 테스트는 외부 인증·메일 요청을 가로채므로 실제 메일을 보내지 않습니다.
+
 ## 미팅 페이지 에이전트 (AgentCore Harness)
 
 미팅 기록으로 공유용 HTML 미팅록 페이지를 만드는 에이전트입니다. 설계: [`docs/superpowers/specs/2026-10-08-meeting-page-agent-design.md`](docs/superpowers/specs/2026-10-08-meeting-page-agent-design.md)
@@ -142,7 +173,16 @@ public/
 - **구성**: Amazon Bedrock AgentCore Harness · Claude Opus 5.5 · 스킬 4개(`agent/skills/`) · Code Interpreter · Web Search(AgentCore Gateway 커넥터)
 - **발행**: 에이전트가 `publish_page`를 호출하면 백엔드가 검증 후 S3에 올리고 `https://transmeet.hi-yoo.com/p/<meetingId>/<pageId>.html`로 공개
 - **UI**: 우측 패널 `회의 페이지` 탭 → 생성 · 미리보기 · 공유 · 재생성 · 공유 해제
-- **자동 생성**: `회의 종료`를 누르면 요약 후 미팅 페이지를 자동으로 생성하고 페이지 패널에 진행 상황과 결과를 표시합니다. 메일 발송 설정과 무관하게 동작하며, 이미 생성 중이거나 발행된 페이지는 재사용합니다. 내용을 갱신하려면 `다시 만들기`를 누르세요.
+- **자동 생성**: `회의 종료`를 누르면 요약 후 **시각 회의록**을 기본으로 자동 생성하고 페이지 패널에 진행 상황과 결과를 표시합니다. 메일 발송 설정과 무관하게 동작하며, 이미 생성 중이거나 발행된 페이지는 재사용합니다. 내용을 갱신하거나 이전 형식을 시각 회의록으로 바꾸려면 `다시 만들기`를 누르세요.
+
+최근 14일의 기존 미팅을 시각 회의록으로 일괄 생성하려면 저장소 루트에서 아래 명령을 실행합니다. 기간은 미팅 생성 시각을 기준으로 하며, 이미 시각 회의록인 페이지와 대화가 없는 미팅은 건너뜁니다. 기존 페이지와 링크 기록은 `agent/.page-backup/`에 백업하고 결과를 JSON으로 남깁니다. 재생성한 페이지는 새 공유 링크를 사용합니다.
+
+```bash
+python3 backend/scripts/backfill_visual_pages.py --user-id <계정-ID>          # 대상 확인
+python3 backend/scripts/backfill_visual_pages.py --user-id <계정-ID> --apply  # 생성
+```
+
+`--since`, `--until`로 ISO 8601 기간을 지정할 수 있습니다. 시간대가 없는 값은 UTC로 해석합니다. 기본적으로 최대 4건을 병렬로 생성하며 `--concurrency`로 조절할 수 있습니다. 모든 계정을 명시적으로 포함하려면 `--user-id` 대신 `--all-users`를 사용합니다.
 
 ```
 agent/
@@ -304,6 +344,7 @@ GET    /meetings                 # 회의 목록
 GET    /meetings/{id}            # 회의 상세
 DELETE /meetings/{id}            # 회의 삭제
 POST   /meetings/{id}/summarize  # 요약 생성
+PUT    /meetings/{id}/summary-style  # 회의별 요약 방식 저장
 POST   /meetings/{id}/title      # 자동 제목 생성
 POST   /tts                      # 한→영 번역 + TTS
 ```

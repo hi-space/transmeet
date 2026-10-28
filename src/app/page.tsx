@@ -325,7 +325,14 @@ export default function Home() {
   // realtime 모드 스로틀: 1.5초 간격으로 최신 partial 번역
   const partialThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pendingPartialRef = useRef<string>('')
-  const pendingDirectionRef = useRef<ReturnType<typeof resolveDirection> | null>(null)
+  const pendingDirectionRef = useRef<
+    | (ReturnType<typeof resolveDirection> & {
+        sttProvider?: SttProvider
+        streamId?: string
+        utteranceId?: number
+      })
+    | null
+  >(null)
   // AUTO 모드: 마지막으로 감지된 언어. ref 는 handleWsMessage 안에서 즉시 비교하려고,
   // state 는 헤더 배지 렌더링용 — 둘을 함께 갱신한다.
   const detectedLangRef = useRef<'ko' | 'en' | null>(null)
@@ -359,8 +366,6 @@ export default function Home() {
   const translationTimeoutsRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   // STT health watchdog: last time any STT event was received (for stuck session detection)
   const lastSttActivityTimeRef = useRef<number>(Date.now())
-  // 말풍선 병합: 병합된 신규 messageId → 기존 말풍선 id 매핑
-  const mergeAliasRef = useRef<Map<string, string>>(new Map())
   // 마운트 초기화(새 회의 생성)를 한 번만 실행하기 위한 가드
   const didInitRef = useRef(false)
   // 초기 요청이 끝나기 전에 사용하거나 삭제한 회의를 오래된 목록 응답으로 되돌리지 않는다.
@@ -699,6 +704,17 @@ export default function Home() {
         lastSttActivityTimeRef.current = Date.now()
         const SILENCE_TIMEOUT_MS = settings.silenceTimeout
         const MAX_SENTENCES = settings.maxSentencesPerBubble
+        const pendingDirection = pendingDirectionRef.current
+        const matchesPendingUtterance =
+          (!msg.sttProvider ||
+            !pendingDirection?.sttProvider ||
+            msg.sttProvider === pendingDirection.sttProvider) &&
+          (msg.streamId === undefined ||
+            msg.utteranceId === undefined ||
+            pendingDirection?.streamId === undefined ||
+            pendingDirection.utteranceId === undefined ||
+            (msg.streamId === pendingDirection.streamId &&
+              msg.utteranceId === pendingDirection.utteranceId))
 
         // 확정된 발화의 감지 언어를 헤더 배지에 반영한다. Whisper 모드는 partial 이
         // 없어서 이 경로가 유일한 갱신 지점이다. __pending__/__manual__/__quick__ 는
@@ -708,10 +724,10 @@ export default function Home() {
           msg.detectedLanguage &&
           !msg.messageId.startsWith('__')
         ) {
-          // A late final translation cannot replace a newer partial's language.
+          // An older utterance finishing cannot replace a newer partial's language.
           const currentLanguage =
-            msg.phase === 'done' && pendingDirectionRef.current
-              ? pendingDirectionRef.current.source
+            pendingDirection && (msg.phase === 'done' || !matchesPendingUtterance)
+              ? pendingDirection.source
               : msg.detectedLanguage
           if (detectedLangRef.current !== currentLanguage) {
             detectedLangRef.current = currentLanguage
@@ -719,9 +735,22 @@ export default function Home() {
           }
         }
         if (msg.phase === 'stt_partial') {
-          // Word-by-word Transcribe partial — show in pending bubble, not committed messages
+          if (msg.sttProvider && msg.sttProvider !== settings.sttProvider) return
+          // Each partial replaces the complete pending hypothesis.
           const partialText = msg.originalText ?? ''
           const partialSpeaker = msg.speaker ?? 'speaker1'
+          if (!partialText) {
+            if (!matchesPendingUtterance) return
+            setPendingTranscript(null)
+            pendingDirectionRef.current = null
+            lastTranslatedPartialRef.current = ''
+            pendingPartialRef.current = ''
+            if (partialThrottleRef.current) {
+              clearTimeout(partialThrottleRef.current)
+              partialThrottleRef.current = null
+            }
+            return
+          }
 
           // AUTO 모드: 백엔드가 partial 에 실어 보낸 감지 언어로 방향을 잡는다.
           // 감지 언어가 바뀌면 이전 언어로 쌓인 partial 번역을 버려야 한다 —
@@ -750,7 +779,8 @@ export default function Home() {
             text: partialText,
             speaker: partialSpeaker,
             // 언어가 뒤집혔으면 이전 언어 번역은 버린다
-            translation: langFlipped ? undefined : prev?.translation,
+            translation:
+              langFlipped || settings.sttProvider === 'nemotron' ? undefined : prev?.translation,
           }))
 
           const { source: srcLang, target: tgtLang } = resolveDirection(
@@ -758,7 +788,24 @@ export default function Home() {
             settings.translationTarget,
             partialDetected
           )
-          pendingDirectionRef.current = { source: srcLang, target: tgtLang }
+          pendingDirectionRef.current = {
+            source: srcLang,
+            target: tgtLang,
+            sttProvider: msg.sttProvider ?? settings.sttProvider,
+            streamId: msg.streamId,
+            utteranceId: msg.utteranceId,
+          }
+
+          // Nemotron can revise an entire hypothesis; translate only its final utterance.
+          if (settings.sttProvider === 'nemotron') {
+            lastTranslatedPartialRef.current = ''
+            pendingPartialRef.current = ''
+            if (partialThrottleRef.current) {
+              clearTimeout(partialThrottleRef.current)
+              partialThrottleRef.current = null
+            }
+            return
+          }
 
           if (settings.partialTranslationMode === 'realtime') {
             // 스로틀: 타이머가 없을 때만 새 타이머 등록 (1.5초 간격)
@@ -846,17 +893,20 @@ export default function Home() {
         }
 
         if (msg.phase === 'stt') {
-          // Final sentence from Transcribe — clear pending bubble
-          // partial 번역을 carry over: pending bubble에 쌓인 번역을 새 말풍선 초기값으로 설정
-          const carryoverTranslation = pendingTranscriptRef.current?.translation ?? ''
-          lastTranslatedPartialRef.current = ''
-          pendingDirectionRef.current = null
-          pendingPartialRef.current = ''
-          if (partialThrottleRef.current) {
-            clearTimeout(partialThrottleRef.current)
-            partialThrottleRef.current = null
+          // Only the matching final clears a pending hypothesis; legacy events have no IDs.
+          const carryoverTranslation = matchesPendingUtterance
+            ? (pendingTranscriptRef.current?.translation ?? '')
+            : ''
+          if (matchesPendingUtterance) {
+            lastTranslatedPartialRef.current = ''
+            pendingDirectionRef.current = null
+            pendingPartialRef.current = ''
+            if (partialThrottleRef.current) {
+              clearTimeout(partialThrottleRef.current)
+              partialThrottleRef.current = null
+            }
+            setPendingTranscript(null)
           }
-          setPendingTranscript(null)
           const streamSpeaker = (msg.speaker as Message['speaker']) ?? 'speaker1'
           setMeetings((prev) =>
             prev.map((m) => {
@@ -872,6 +922,8 @@ export default function Home() {
                 : Infinity
               const canMerge =
                 lastMsg &&
+                (lastMsg.streamPhase === undefined || lastMsg.streamPhase === 'done') &&
+                lastMsg.pendingSttMessageId === undefined &&
                 lastMsg.speaker === streamSpeaker &&
                 lastMsg.detectedLanguage === msg.detectedLanguage &&
                 lastMsg.targetLanguage === msg.targetLanguage &&
@@ -879,8 +931,7 @@ export default function Home() {
                   (countSentences(lastMsg.original) < MAX_SENTENCES &&
                     timeDiff < SILENCE_TIMEOUT_MS))
               if (canMerge && lastMsg) {
-                // 기존 말풍선에 텍스트 append + alias 등록
-                mergeAliasRef.current.set(msg.messageId, lastMsg.id)
+                // Keep the completion identity in the same state update as the merged text.
                 return {
                   ...m,
                   messages: m.messages.map((existing) =>
@@ -889,6 +940,7 @@ export default function Home() {
                           ...existing,
                           original: existing.original + ' ' + (msg.originalText ?? ''),
                           streamPhase: 'stt' as const,
+                          pendingSttMessageId: msg.messageId,
                         }
                       : existing
                   ),
@@ -903,6 +955,7 @@ export default function Home() {
                 detectedLanguage: msg.detectedLanguage,
                 targetLanguage: msg.targetLanguage,
                 streamPhase: 'stt',
+                pendingSttMessageId: msg.messageId,
                 timestamp: msg.timestamp,
               }
               return { ...m, messages: [...m.messages, newMsg] }
@@ -952,6 +1005,7 @@ export default function Home() {
           if (msg.messageId === '__pending__' || msg.messageId === '__pending_append__') {
             const currentDirection = pendingDirectionRef.current
             if (
+              settings.sttProvider === 'nemotron' ||
               !currentDirection ||
               (msg.detectedLanguage && msg.detectedLanguage !== currentDirection.source) ||
               (msg.targetLanguage && msg.targetLanguage !== currentDirection.target)
@@ -1018,50 +1072,54 @@ export default function Home() {
             )
             return
           }
-          // 타임아웃 해제 (alias된 경우 alias 기준으로 해제)
-          const aliasedId = mergeAliasRef.current.get(msg.messageId)
-          const resolvedDoneId = aliasedId ?? msg.messageId
-          const isMerged = !!aliasedId
-          if (isMerged) mergeAliasRef.current.delete(msg.messageId)
-          const t = translationTimeoutsRef.current.get(resolvedDoneId)
+          // Timers use the incoming utterance ID, including merged utterances.
+          const t = translationTimeoutsRef.current.get(msg.messageId)
           if (t) {
             clearTimeout(t)
-            translationTimeoutsRef.current.delete(resolvedDoneId)
+            translationTimeoutsRef.current.delete(msg.messageId)
           }
           setMeetings((prev) =>
-            prev.map((m) =>
-              m.id === activeMeetingId
-                ? {
-                    ...m,
-                    messages: m.messages.map((existing) =>
-                      existing.id === resolvedDoneId
-                        ? existing.speaker === 'me'
-                          ? {
-                              // 'me': EN 번역 결과 → original, KO 원본(translation) 유지
-                              ...existing,
-                              original: isMerged
-                                ? (existing.original || '') + ' ' + (msg.translatedText ?? '')
-                                : (msg.translatedText ?? ''),
-                              streamPhase: 'done' as const,
-                            }
-                          : {
-                              ...existing,
-                              // 병합 시 원문은 stt phase에서 이미 append됨
-                              original: isMerged
-                                ? existing.original
-                                : (msg.originalText ?? existing.original),
-                              translation: isMerged
-                                ? (existing.translation || '') + ' ' + (msg.translatedText ?? '')
-                                : (msg.translatedText ?? ''),
-                              detectedLanguage: msg.detectedLanguage,
-                              targetLanguage: msg.targetLanguage,
-                              streamPhase: 'done' as const,
-                            }
-                        : existing
-                    ),
-                  }
-                : m
-            )
+            prev.map((m) => {
+              if (m.id !== activeMeetingId) return m
+              // Resolve after earlier STT updates, even when both arrive in one JS turn.
+              const target = m.messages.find(
+                (existing) =>
+                  existing.id === msg.messageId || existing.pendingSttMessageId === msg.messageId
+              )
+              if (!target) return m
+              const isMerged = target.id !== msg.messageId
+              return {
+                ...m,
+                messages: m.messages.map((existing) =>
+                  existing.id === target.id
+                    ? existing.speaker === 'me'
+                      ? {
+                          // 'me': EN 번역 결과 → original, KO 원본(translation) 유지
+                          ...existing,
+                          original: isMerged
+                            ? (existing.original || '') + ' ' + (msg.translatedText ?? '')
+                            : (msg.translatedText ?? ''),
+                          streamPhase: 'done' as const,
+                          pendingSttMessageId: undefined,
+                        }
+                      : {
+                          ...existing,
+                          // 병합 시 원문은 stt phase에서 이미 append됨
+                          original: isMerged
+                            ? existing.original
+                            : (msg.originalText ?? existing.original),
+                          translation: isMerged
+                            ? (existing.translation || '') + ' ' + (msg.translatedText ?? '')
+                            : (msg.translatedText ?? ''),
+                          detectedLanguage: msg.detectedLanguage,
+                          targetLanguage: msg.targetLanguage,
+                          streamPhase: 'done' as const,
+                          pendingSttMessageId: undefined,
+                        }
+                    : existing
+                ),
+              }
+            })
           )
         }
       } else if (msg.type === 'tts_stream') {
@@ -1315,6 +1373,7 @@ export default function Home() {
       settings.ttsAutoPlay,
       settings.partialTranslationMode,
       settings.partialThrottleMs,
+      settings.sttProvider,
       speechSourceLang,
       settings.translationTarget,
       settings.translationModel,
@@ -1379,7 +1438,11 @@ export default function Home() {
     flush: flushAudio,
   } = useAudioCapture({
     onChunk: handleChunk,
-    chunkDurationMs: sttChunkDuration(settings.sttProvider, settings.sttChunkSeconds),
+    chunkDurationMs: sttChunkDuration(
+      settings.sttProvider,
+      settings.sttChunkSeconds,
+      selectedSttStatus
+    ),
     audioSource: settings.audioSource,
   })
 
@@ -1391,6 +1454,7 @@ export default function Home() {
         ...previous,
         [provider]: {
           provider,
+          streaming: previous[provider]?.streaming,
           status: sent ? 'starting' : 'error',
           message: sent
             ? '음성 인식 엔진을 준비하고 있습니다. 몇 분 걸릴 수 있습니다.'

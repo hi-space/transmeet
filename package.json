@@ -9,13 +9,14 @@
     "lint": "next lint",
     "test:theme": "node --experimental-strip-types --experimental-default-type=module --test tests/theme.test.mjs",
     "test:settings": "node --experimental-strip-types --experimental-default-type=module --test tests/theme.test.mjs tests/translationModels.test.mjs tests/sttProviders.test.mjs tests/speechLanguages.test.mjs",
-    "test:ui": "node --experimental-strip-types --experimental-default-type=module --test tests/theme.test.mjs tests/translationModels.test.mjs tests/sttProviders.test.mjs tests/workspace.test.mjs tests/speakers.test.mjs tests/meetingEnd.test.mjs tests/meetingBrief.test.mjs tests/speechLanguages.test.mjs tests/emailVerification.test.mjs",
+    "test:ui": "node --experimental-strip-types --experimental-default-type=module --test tests/theme.test.mjs tests/translationModels.test.mjs tests/sttProviders.test.mjs tests/speechLanguages.test.mjs tests/workspace.test.mjs tests/speakers.test.mjs tests/meetingEnd.test.mjs tests/meetingBrief.test.mjs tests/meetingList.test.mjs tests/emailVerification.test.mjs",
+    "test:speech": "node --experimental-strip-types --experimental-default-type=module --test tests/speechLanguages.test.mjs",
+    "test:email": "node --test tests/emailVerification.test.mjs",
     "test:brief": "node --test tests/meetingBrief.test.mjs",
     "test:speakers": "node --test tests/speakers.test.mjs",
+    "test:summary": "node --experimental-strip-types --experimental-default-type=module --test tests/summaryStyles.test.mjs tests/summaryTemplates.test.mjs tests/meetingEnd.test.mjs",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "test:speech": "node --experimental-strip-types --experimental-default-type=module --test tests/speechLanguages.test.mjs",
-    "test:email": "node --test tests/emailVerification.test.mjs"
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",

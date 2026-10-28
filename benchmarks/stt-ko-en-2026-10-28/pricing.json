@@ -1,0 +1,1011 @@
+{
+  "retrieved_at": "2026-10-28T18:33:44.609678+00:00",
+  "source": "AWS Pricing API get_products",
+  "results": [
+    {
+      "instance": "ml.g6.xlarge",
+      "products": [
+        {
+          "product": {
+            "productFamily": "ML Instance",
+            "attributes": {
+              "gpuMemory": "24",
+              "platoinstancename": "g6",
+              "memory": "16 GiB",
+              "computeType": "Accelerated Computing Instances",
+              "vCpu": "4",
+              "instanceName": "ml.g6.xlarge",
+              "instanceType": "ml.g6.xlarge-Hosting",
+              "usagetype": "USE1-Host:ml.g6.xlarge",
+              "locationType": "AWS Region",
+              "storage": "N/A",
+              "platoinstancetype": "Hosting",
+              "gpu": "1",
+              "component": "Hosting",
+              "regionCode": "us-east-1",
+              "servicecode": "AmazonSageMaker",
+              "clockSpeed": "2.6 GHz",
+              "currentGeneration": "Yes",
+              "networkPerformance": "N/A",
+              "location": "US East (N. Virginia)",
+              "servicename": "Amazon SageMaker",
+              "processorArchitecture": "64-bit",
+              "physicalCpu": "N/A",
+              "operation": "RunInstance",
+              "physicalGpu": "N/A"
+            },
+            "sku": "VS6QR2AYRGYF5H3F"
+          },
+          "serviceCode": "AmazonSageMaker",
+          "terms": {
+            "OnDemand": {
+              "VS6QR2AYRGYF5H3F.JRTCKXETXF": {
+                "priceDimensions": {
+                  "VS6QR2AYRGYF5H3F.JRTCKXETXF.6YS6EN2CT7": {
+                    "unit": "Hrs",
+                    "endRange": "Inf",
+                    "description": "$1.1267 per Hosting ml.g6.xlarge hour in US East (N. Virginia)",
+                    "appliesTo": [],
+                    "rateCode": "VS6QR2AYRGYF5H3F.JRTCKXETXF.6YS6EN2CT7",
+                    "beginRange": "0",
+                    "pricePerUnit": {
+                      "USD": "1.1267000000"
+                    }
+                  }
+                },
+                "sku": "VS6QR2AYRGYF5H3F",
+                "effectiveDate": "2026-10-01T00:00:00Z",
+                "offerTermCode": "JRTCKXETXF",
+                "termAttributes": {}
+              }
+            }
+          },
+          "version": "20261028004631",
+          "publicationDate": "2026-10-28T00:46:31Z"
+        }
+      ]
+    },
+    {
+      "instance": "ml.g6.2xlarge",
+      "products": [
+        {
+          "product": {
+            "productFamily": "ML Instance",
+            "attributes": {
+              "gpuMemory": "24",
+              "platoinstancename": "g6",
+              "memory": "32 GiB",
+              "computeType": "Accelerated Computing Instances",
+              "vCpu": "8",
+              "instanceName": "ml.g6.2xlarge",
+              "instanceType": "ml.g6.2xlarge-Hosting",
+              "usagetype": "USE1-Host:ml.g6.2xlarge",
+              "locationType": "AWS Region",
+              "storage": "N/A",
+              "platoinstancetype": "Hosting",
+              "gpu": "1",
+              "component": "Hosting",
+              "regionCode": "us-east-1",
+              "servicecode": "AmazonSageMaker",
+              "clockSpeed": "2.6 GHz",
+              "currentGeneration": "Yes",
+              "networkPerformance": "N/A",
+              "location": "US East (N. Virginia)",
+              "servicename": "Amazon SageMaker",
+              "processorArchitecture": "64-bit",
+              "physicalCpu": "N/A",
+              "operation": "RunInstance",
+              "physicalGpu": "N/A"
+            },
+            "sku": "NMVPBX35NXYVMXPM"
+          },
+          "serviceCode": "AmazonSageMaker",
+          "terms": {
+            "OnDemand": {
+              "NMVPBX35NXYVMXPM.JRTCKXETXF": {
+                "priceDimensions": {
+                  "NMVPBX35NXYVMXPM.JRTCKXETXF.6YS6EN2CT7": {
+                    "unit": "Hrs",
+                    "endRange": "Inf",
+                    "description": "$1.222 per Hosting ml.g6.2xlarge hour in US East (N. Virginia)",
+                    "appliesTo": [],
+                    "rateCode": "NMVPBX35NXYVMXPM.JRTCKXETXF.6YS6EN2CT7",
+                    "beginRange": "0",
+                    "pricePerUnit": {
+                      "USD": "1.2220000000"
+                    }
+                  }
+                },
+                "sku": "NMVPBX35NXYVMXPM",
+                "effectiveDate": "2026-10-01T00:00:00Z",
+                "offerTermCode": "JRTCKXETXF",
+                "termAttributes": {}
+              }
+            }
+          },
+          "version": "20261028004631",
+          "publicationDate": "2026-10-28T00:46:31Z"
+        }
+      ]
+    },
+    {
+      "instance": "ml.g5.2xlarge",
+      "products": [
+        {
+          "product": {
+            "productFamily": "ML Instance",
+            "attributes": {
+              "gpuMemory": "24",
+              "platoinstancename": "g5",
+              "memory": "32 GiB",
+              "computeType": "Accelerated Computing Instances",
+              "vCpu": "8",
+              "instanceName": "ml.g5.2xlarge",
+              "instanceType": "ml.g5.2xlarge-Hosting",
+              "usagetype": "USE1-Host:ml.g5.2xlarge",
+              "locationType": "AWS Region",
+              "storage": "1 x 3800 NVMe SSD",
+              "platoinstancetype": "Hosting",
+              "gpu": "1",
+              "component": "Hosting",
+              "regionCode": "us-east-1",
+              "servicecode": "AmazonSageMaker",
+              "clockSpeed": "3 GHz",
+              "currentGeneration": "Yes",
+              "networkPerformance": "N/A",
+              "location": "US East (N. Virginia)",
+              "servicename": "Amazon SageMaker",
+              "processorArchitecture": "64-bit",
+              "physicalCpu": "N/A",
+              "operation": "RunInstance",
+              "physicalGpu": "N/A"
+            },
+            "sku": "BTQ8KZF3DKVFJY87"
+          },
+          "serviceCode": "AmazonSageMaker",
+          "terms": {
+            "OnDemand": {
+              "BTQ8KZF3DKVFJY87.JRTCKXETXF": {
+                "priceDimensions": {
+                  "BTQ8KZF3DKVFJY87.JRTCKXETXF.6YS6EN2CT7": {
+                    "unit": "Hrs",
+                    "endRange": "Inf",
+                    "description": "$1.515 per Hosting ml.g5.2xlarge hour in US East (N. Virginia)",
+                    "appliesTo": [],
+                    "rateCode": "BTQ8KZF3DKVFJY87.JRTCKXETXF.6YS6EN2CT7",
+                    "beginRange": "0",
+                    "pricePerUnit": {
+                      "USD": "1.5150000000"
+                    }
+                  }
+                },
+                "sku": "BTQ8KZF3DKVFJY87",
+                "effectiveDate": "2026-10-01T00:00:00Z",
+                "offerTermCode": "JRTCKXETXF",
+                "termAttributes": {}
+              }
+            }
+          },
+          "version": "20261028004631",
+          "publicationDate": "2026-10-28T00:46:31Z"
+        }
+      ]
+    },
+    {
+      "service": "transcribe",
+      "products": [
+        {
+          "product": {
+            "productFamily": "Streaming",
+            "attributes": {
+              "regionCode": "us-east-1",
+              "servicecode": "transcribe",
+              "usagetype": "USE1-MedicalStreamingAudio",
+              "locationType": "AWS Region",
+              "location": "US East (N. Virginia)",
+              "servicename": "Amazon Transcribe",
+              "supportedModes": "Stream to Text",
+              "operation": "MedicalStreamingAudio"
+            },
+            "sku": "3F5ZNN2H4CAQJUUJ"
+          },
+          "serviceCode": "transcribe",
+          "terms": {
+            "OnDemand": {
+              "3F5ZNN2H4CAQJUUJ.JRTCKXETXF": {
+                "priceDimensions": {
+                  "3F5ZNN2H4CAQJUUJ.JRTCKXETXF.6YS6EN2CT7": {
+                    "unit": "seconds",
+                    "endRange": "Inf",
+                    "description": "Processed Medical streaming transcription request in us-east-1",
+                    "appliesTo": [],
+                    "rateCode": "3F5ZNN2H4CAQJUUJ.JRTCKXETXF.6YS6EN2CT7",
+                    "beginRange": "0",
+                    "pricePerUnit": {
+                      "USD": "0.0012500000"
+                    }
+                  }
+                },
+                "sku": "3F5ZNN2H4CAQJUUJ",
+                "effectiveDate": "2026-06-01T00:00:00Z",
+                "offerTermCode": "JRTCKXETXF",
+                "termAttributes": {}
+              }
+            }
+          },
+          "version": "20260911124646",
+          "publicationDate": "2026-09-11T12:46:46Z"
+        },
+        {
+          "product": {
+            "productFamily": "Transcription Job",
+            "attributes": {
+              "regionCode": "us-east-1",
+              "servicecode": "transcribe",
+              "usagetype": "USE1-ToxicityDetectionTranscribeAudio",
+              "locationType": "AWS Region",
+              "location": "US East (N. Virginia)",
+              "servicename": "Amazon Transcribe",
+              "supportedModes": "Toxicity Detection",
+              "operation": "ToxicityDetectionTranscribeAudio"
+            },
+            "sku": "3KW6QC2H8X2W9QPC"
+          },
+          "serviceCode": "transcribe",
+          "terms": {
+            "OnDemand": {
+              "3KW6QC2H8X2W9QPC.JRTCKXETXF": {
+                "priceDimensions": {
+                  "3KW6QC2H8X2W9QPC.JRTCKXETXF.XEPN5HMENM": {
+                    "unit": "seconds",
+                    "endRange": "15000000",
+                    "description": "$0.00006 per seconds for ToxicityDetectionTranscribeAudio:ToxicityDetectionTranscribeAudio in US East (N. Virginia)",
+                    "appliesTo": [],
+                    "rateCode": "3KW6QC2H8X2W9QPC.JRTCKXETXF.XEPN5HMENM",
+                    "beginRange": "0",
+                    "pricePerUnit": {
+                      "USD": "0.0000600000"
+                    }
+                  },
+                  "3KW6QC2H8X2W9QPC.JRTCKXETXF.Y5DREYKEMT": {
+                    "unit": "seconds",
+                    "endRange": "Inf",
+                    "description": "$0.00002 per seconds for ToxicityDetectionTranscribeAudio:ToxicityDetectionTranscribeAudio in US East (N. Virginia)",
+                    "appliesTo": [],
+                    "rateCode": "3KW6QC2H8X2W9QPC.JRTCKXETXF.Y5DREYKEMT",
+                    "beginRange": "300000000",
+                    "pricePerUnit": {
+                      "USD": "0.0000200000"
+                    }
+                  },
+                  "3KW6QC2H8X2W9QPC.JRTCKXETXF.EPWSATNW8X": {
+                    "unit": "seconds",
+                    "endRange": "300000000",
+                    "description": "$0.000025 per seconds for ToxicityDetectionTranscribeAudio:ToxicityDetectionTranscribeAudio in US East (N. Virginia)",
+                    "appliesTo": [],
+                    "rateCode": "3KW6QC2H8X2W9QPC.JRTCKXETXF.EPWSATNW8X",
+                    "beginRange": "60000000",
+                    "pricePerUnit": {
+                      "USD": "0.0000250000"
+                    }
+                  },
+                  "3KW6QC2H8X2W9QPC.JRTCKXETXF.R5R9GNZZG6": {
+                    "unit": "seconds",
+                    "endRange": "60000000",
+                    "description": "$0.0000375 per seconds for ToxicityDetectionTranscribeAudio:ToxicityDetectionTranscribeAudio in US East (N. Virginia)",
+                    "appliesTo": [],
+                    "rateCode": "3KW6QC2H8X2W9QPC.JRTCKXETXF.R5R9GNZZG6",
+                    "beginRange": "15000000",
+                    "pricePerUnit": {
+                      "USD": "0.0000375000"
+                    }
+                  }
+                },
+                "sku": "3KW6QC2H8X2W9QPC",
+                "effectiveDate": "2026-06-01T00:00:00Z",
+                "offerTermCode": "JRTCKXETXF",
+                "termAttributes": {}
+              }
+            }
+          },
+          "version": "20260911124646",
+          "publicationDate": "2026-09-11T12:46:46Z"
+        },
+        {
+          "product": {
+            "productFamily": "Transcription Job",
+            "attributes": {
+              "regionCode": "us-east-1",
+              "servicecode": "transcribe",
+              "usagetype": "USE1-TranscribeClmAudio",
+              "locationType": "AWS Region",
+              "location": "US East (N. Virginia)",
+              "servicename": "Amazon Transcribe",
+              "supportedModes": "Transcribe Custom Language Model",
+              "operation": "TranscribeClmAudio"
+            },
+            "sku": "4FYZJJEFPGCX363E"
+          },
+          "serviceCode": "transcribe",
+          "terms": {
+            "OnDemand": {
+              "4FYZJJEFPGCX363E.JRTCKXETXF": {
+                "priceDimensions": {
+                  "4FYZJJEFPGCX363E.JRTCKXETXF.Y5DREYKEMT": {
+                    "unit": "seconds",
+                    "endRange": "Inf",
+                    "description": "USD per Second for TranscribeClmAudio:TranscribeClmAudio in US East (N. Virginia), 5M min +",
+                    "appliesTo": [],
+                    "rateCode": "4FYZJJEFPGCX363E.JRTCKXETXF.Y5DREYKEMT",
+                    "beginRange": "300000000",
+                    "pricePerUnit": {
+                      "USD": "0.0000330000"
+                    }
+                  },
+                  "4FYZJJEFPGCX363E.JRTCKXETXF.XEPN5HMENM": {
+                    "unit": "seconds",
+                    "endRange": "15000000",
+                    "description": "USD per Second for TranscribeClmAudio:TranscribeClmAudio in US East (N. Virginia), 0 to 250K min",
+                    "appliesTo": [],
+                    "rateCode": "4FYZJJEFPGCX363E.JRTCKXETXF.XEPN5HMENM",
+                    "beginRange": "0",
+                    "pricePerUnit": {
+                      "USD": "0.0001000000"
+                    }
+                  },
+                  "4FYZJJEFPGCX363E.JRTCKXETXF.EPWSATNW8X": {
+                    "unit": "seconds",
+                    "endRange": "300000000",
+                    "description": "USD per Second for TranscribeClmAudio:TranscribeClmAudio in US East (N. Virginia), 1M min to 5M min",
+                    "appliesTo": [],
+                    "rateCode": "4FYZJJEFPGCX363E.JRTCKXETXF.EPWSATNW8X",
+                    "beginRange": "60000000",
+                    "pricePerUnit": {
+                      "USD": "0.0000430000"
+                    }
+                  },
+                  "4FYZJJEFPGCX363E.JRTCKXETXF.R5R9GNZZG6": {
+                    "unit": "seconds",
+                    "endRange": "60000000",
+                    "description": "USD per Second for TranscribeClmAudio:TranscribeClmAudio in US East (N. Virginia), 250K min to 1M min",
+                    "appliesTo": [],
+                    "rateCode": "4FYZJJEFPGCX363E.JRTCKXETXF.R5R9GNZZG6",
+                    "beginRange": "15000000",
+                    "pricePerUnit": {
+                      "USD": "0.0000630000"
+                    }
+                  }
+                },
+                "sku": "4FYZJJEFPGCX363E",
+                "effectiveDate": "2026-06-01T00:00:00Z",
+                "offerTermCode": "JRTCKXETXF",
+                "termAttributes": {}
+              }
+            }
+          },
+          "version": "20260911124646",
+          "publicationDate": "2026-09-11T12:46:46Z"
+        },
+        {
+          "product": {
+            "productFamily": "Streaming",
+            "attributes": {
+              "regionCode": "us-east-1",
+              "servicecode": "transcribe",
+              "usagetype": "USE1-TranscribeStreamingClm",
+              "locationType": "AWS Region",
+              "location": "US East (N. Virginia)",
+              "servicename": "Amazon Transcribe",
+              "supportedModes": "Transcribe Custom Language Model",
+              "operation": "TranscribeStreamingClm"
+            },
+            "sku": "4X8MVN64HNNPYKJP"
+          },
+          "serviceCode": "transcribe",
+          "terms": {
+            "OnDemand": {
+              "4X8MVN64HNNPYKJP.JRTCKXETXF": {
+                "priceDimensions": {
+                  "4X8MVN64HNNPYKJP.JRTCKXETXF.Y5DREYKEMT": {
+                    "unit": "seconds",
+                    "endRange": "Inf",
+                    "description": "USD per Second for TranscribeStreamingClm:TranscribeStreamingClm in US East (N. Virginia), 5M min +",
+                    "appliesTo": [],
+                    "rateCode": "4X8MVN64HNNPYKJP.JRTCKXETXF.Y5DREYKEMT",
+                    "beginRange": "300000000",
+                    "pricePerUnit": {
+                      "USD": "0.0000330000"
+                    }
+                  },
+                  "4X8MVN64HNNPYKJP.JRTCKXETXF.XEPN5HMENM": {
+                    "unit": "seconds",
+                    "endRange": "15000000",
+                    "description": "USD per Second for TranscribeStreamingClm:TranscribeStreamingClm in US East (N. Virginia), 0 to 250K min",
+                    "appliesTo": [],
+                    "rateCode": "4X8MVN64HNNPYKJP.JRTCKXETXF.XEPN5HMENM",
+                    "beginRange": "0",
+                    "pricePerUnit": {
+                      "USD": "0.0001000000"
+                    }
+                  },
+                  "4X8MVN64HNNPYKJP.JRTCKXETXF.R5R9GNZZG6": {
+                    "unit": "seconds",
+                    "endRange": "60000000",
+                    "description": "USD per Second for TranscribeStreamingClm:TranscribeStreamingClm in US East (N. Virginia), 250K min to 1M min",
+                    "appliesTo": [],
+                    "rateCode": "4X8MVN64HNNPYKJP.JRTCKXETXF.R5R9GNZZG6",
+                    "beginRange": "15000000",
+                    "pricePerUnit": {
+                      "USD": "0.0000630000"
+                    }
+                  },
+                  "4X8MVN64HNNPYKJP.JRTCKXETXF.EPWSATNW8X": {
+                    "unit": "seconds",
+                    "endRange": "300000000",
+                    "description": "USD per Second for TranscribeStreamingClm:TranscribeStreamingClm in US East (N. Virginia), 1M min to 5M min",
+                    "appliesTo": [],
+                    "rateCode": "4X8MVN64HNNPYKJP.JRTCKXETXF.EPWSATNW8X",
+                    "beginRange": "60000000",
+                    "pricePerUnit": {
+                      "USD": "0.0000430000"
+                    }
+                  }
+                },
+                "sku": "4X8MVN64HNNPYKJP",
+                "effectiveDate": "2026-06-01T00:00:00Z",
+                "offerTermCode": "JRTCKXETXF",
+                "termAttributes": {}
+              }
+            }
+          },
+          "version": "20260911124646",
+          "publicationDate": "2026-09-11T12:46:46Z"
+        },
+        {
+          "product": {
+            "productFamily": "Transcription Job",
+            "attributes": {
+              "regionCode": "us-east-1",
+              "servicecode": "transcribe",
+              "usagetype": "USE1-SummaryCallAnalyticsTranscribe",
+              "locationType": "AWS Region",
+              "location": "US East (N. Virginia)",
+              "servicename": "Amazon Transcribe",
+              "supportedModes": "Transcribe Call Analytics Summarization",
+              "operation": "SummaryCallAnalyticsTranscribe"
+            },
+            "sku": "EASEZCD8P5RFWFVY"
+          },
+          "serviceCode": "transcribe",
+          "terms": {
+            "OnDemand": {
+              "EASEZCD8P5RFWFVY.JRTCKXETXF": {
+                "priceDimensions": {
+                  "EASEZCD8P5RFWFVY.JRTCKXETXF.EPWSATNW8X": {
+                    "unit": "seconds",
+                    "endRange": "300000000",
+                    "description": "USD per second for CallAnalytics:Summarization  in US East (N. Virginia), 1M to 5M min",
+                    "appliesTo": [],
+                    "rateCode": "EASEZCD8P5RFWFVY.JRTCKXETXF.EPWSATNW8X",
+                    "beginRange": "60000000",
+                    "pricePerUnit": {
+                      "USD": "0.0000183333"
+                    }
+                  },
+                  "EASEZCD8P5RFWFVY.JRTCKXETXF.R5R9GNZZG6": {
+                    "unit": "seconds",
+                    "endRange": "60000000",
+                    "description": "USD per second for CallAnalytics:Summarization  in US East (N. Virginia), 250K to 1M min",
+                    "appliesTo": [],
+                    "rateCode": "EASEZCD8P5RFWFVY.JRTCKXETXF.R5R9GNZZG6",
+                    "beginRange": "15000000",
+                    "pricePerUnit": {
+                      "USD": "0.0000250000"
+                    }
+                  },
+                  "EASEZCD8P5RFWFVY.JRTCKXETXF.XEPN5HMENM": {
+                    "unit": "seconds",
+                    "endRange": "15000000",
+                    "description": "USD per second for CallAnalytics:Summarization in US East (N. Virginia), 0 to 250K min",
+                    "appliesTo": [],
+                    "rateCode": "EASEZCD8P5RFWFVY.JRTCKXETXF.XEPN5HMENM",
+                    "beginRange": "0",
+                    "pricePerUnit": {
+                      "USD": "0.0000400000"
+                    }
+                  },
+                  "EASEZCD8P5RFWFVY.JRTCKXETXF.Y5DREYKEMT": {
+                    "unit": "seconds",
+                    "endRange": "Inf",
+                    "description": "USD per second for CallAnalytics:Summarization in US East (N. Virginia), 5M min+",
+                    "appliesTo": [],
+                    "rateCode": "EASEZCD8P5RFWFVY.JRTCKXETXF.Y5DREYKEMT",
+                    "beginRange": "300000000",
+                    "pricePerUnit": {
+                      "USD": "0.0000150000"
+                    }
+                  }
+                },
+                "sku": "EASEZCD8P5RFWFVY",
+                "effectiveDate": "2026-06-01T00:00:00Z",
+                "offerTermCode": "JRTCKXETXF",
+                "termAttributes": {}
+              }
+            }
+          },
+          "version": "20260911124646",
+          "publicationDate": "2026-09-11T12:46:46Z"
+        },
+        {
+          "product": {
+            "productFamily": "Transcription Job",
+            "attributes": {
+              "regionCode": "us-east-1",
+              "servicecode": "transcribe",
+              "usagetype": "USE1-RedactionTranscribeAudio",
+              "locationType": "AWS Region",
+              "location": "US East (N. Virginia)",
+              "servicename": "Amazon Transcribe",
+              "supportedModes": "Audio to Text",
+              "operation": "RedactionTranscribeAudio"
+            },
+            "sku": "GMYWXFUGQ5WUNKAC"
+          },
+          "serviceCode": "transcribe",
+          "terms": {
+            "OnDemand": {
+              "GMYWXFUGQ5WUNKAC.JRTCKXETXF": {
+                "priceDimensions": {
+                  "GMYWXFUGQ5WUNKAC.JRTCKXETXF.Y5DREYKEMT": {
+                    "unit": "Second",
+                    "endRange": "Inf",
+                    "description": "USD per Second for RedactionTranscribeAudio:RedactionTranscribeAudio in US East (N. Virginia), 5M min +",
+                    "appliesTo": [],
+                    "rateCode": "GMYWXFUGQ5WUNKAC.JRTCKXETXF.Y5DREYKEMT",
+                    "beginRange": "300000000",
+                    "pricePerUnit": {
+                      "USD": "0.0000130000"
+                    }
+                  },
+                  "GMYWXFUGQ5WUNKAC.JRTCKXETXF.EPWSATNW8X": {
+                    "unit": "Second",
+                    "endRange": "300000000",
+                    "description": "USD per Second for RedactionTranscribeAudio:RedactionTranscribeAudio in US East (N. Virginia), 1M min to 5M min",
+                    "appliesTo": [],
+                    "rateCode": "GMYWXFUGQ5WUNKAC.JRTCKXETXF.EPWSATNW8X",
+                    "beginRange": "60000000",
+                    "pricePerUnit": {
+                      "USD": "0.0000170000"
+                    }
+                  },
+                  "GMYWXFUGQ5WUNKAC.JRTCKXETXF.R5R9GNZZG6": {
+                    "unit": "Second",
+                    "endRange": "60000000",
+                    "description": "USD per Second for RedactionTranscribeAudio:RedactionTranscribeAudio in US East (N. Virginia), 250K min to 1M min",
+                    "appliesTo": [],
+                    "rateCode": "GMYWXFUGQ5WUNKAC.JRTCKXETXF.R5R9GNZZG6",
+                    "beginRange": "15000000",
+                    "pricePerUnit": {
+                      "USD": "0.0000250000"
+                    }
+                  },
+                  "GMYWXFUGQ5WUNKAC.JRTCKXETXF.XEPN5HMENM": {
+                    "unit": "Second",
+                    "endRange": "15000000",
+                    "description": "USD per Second for RedactionTranscribeAudio:RedactionTranscribeAudio in US East (N. Virginia), 0 to 250K min",
+                    "appliesTo": [],
+                    "rateCode": "GMYWXFUGQ5WUNKAC.JRTCKXETXF.XEPN5HMENM",
+                    "beginRange": "0",
+                    "pricePerUnit": {
+                      "USD": "0.0000400000"
+                    }
+                  }
+                },
+                "sku": "GMYWXFUGQ5WUNKAC",
+                "effectiveDate": "2026-06-01T00:00:00Z",
+                "offerTermCode": "JRTCKXETXF",
+                "termAttributes": {}
+              }
+            }
+          },
+          "version": "20260911124646",
+          "publicationDate": "2026-09-11T12:46:46Z"
+        },
+        {
+          "product": {
+            "productFamily": "Streaming",
+            "attributes": {
+              "regionCode": "us-east-1",
+              "servicecode": "transcribe",
+              "usagetype": "USE1-RedactionTranscribeStreaming",
+              "locationType": "AWS Region",
+              "location": "US East (N. Virginia)",
+              "servicename": "Amazon Transcribe",
+              "supportedModes": "automatic content redaction",
+              "operation": "RedactionTranscribeStreaming"
+            },
+            "sku": "NVBT383B7PJKZFRY"
+          },
+          "serviceCode": "transcribe",
+          "terms": {
+            "OnDemand": {
+              "NVBT383B7PJKZFRY.JRTCKXETXF": {
+                "priceDimensions": {
+                  "NVBT383B7PJKZFRY.JRTCKXETXF.R5R9GNZZG6": {
+                    "unit": "seconds",
+                    "endRange": "60000000",
+                    "description": "USD per Second for RedactionTranscribeStreaming in US East (N. Virginia), 250K min to 1M min",
+                    "appliesTo": [],
+                    "rateCode": "NVBT383B7PJKZFRY.JRTCKXETXF.R5R9GNZZG6",
+                    "beginRange": "15000000",
+                    "pricePerUnit": {
+                      "USD": "0.0000250000"
+                    }
+                  },
+                  "NVBT383B7PJKZFRY.JRTCKXETXF.XEPN5HMENM": {
+                    "unit": "seconds",
+                    "endRange": "15000000",
+                    "description": "USD per Second for RedactionTranscribeStreaming in US East (N. Virginia), 0 to 250K min",
+                    "appliesTo": [],
+                    "rateCode": "NVBT383B7PJKZFRY.JRTCKXETXF.XEPN5HMENM",
+                    "beginRange": "0",
+                    "pricePerUnit": {
+                      "USD": "0.0000400000"
+                    }
+                  },
+                  "NVBT383B7PJKZFRY.JRTCKXETXF.Y5DREYKEMT": {
+                    "unit": "seconds",
+                    "endRange": "Inf",
+                    "description": "USD per Second for RedactionTranscribeStreaming in US East (N. Virginia), 5M min +",
+                    "appliesTo": [],
+                    "rateCode": "NVBT383B7PJKZFRY.JRTCKXETXF.Y5DREYKEMT",
+                    "beginRange": "300000000",
+                    "pricePerUnit": {
+                      "USD": "0.0000130000"
+                    }
+                  },
+                  "NVBT383B7PJKZFRY.JRTCKXETXF.EPWSATNW8X": {
+                    "unit": "seconds",
+                    "endRange": "300000000",
+                    "description": "USD per Second for RedactionTranscribeStreaming in US East (N. Virginia), 1M min to 5M min",
+                    "appliesTo": [],
+                    "rateCode": "NVBT383B7PJKZFRY.JRTCKXETXF.EPWSATNW8X",
+                    "beginRange": "60000000",
+                    "pricePerUnit": {
+                      "USD": "0.0000170000"
+                    }
+                  }
+                },
+                "sku": "NVBT383B7PJKZFRY",
+                "effectiveDate": "2026-06-01T00:00:00Z",
+                "offerTermCode": "JRTCKXETXF",
+                "termAttributes": {}
+              }
+            }
+          },
+          "version": "20260911124646",
+          "publicationDate": "2026-09-11T12:46:46Z"
+        },
+        {
+          "product": {
+            "productFamily": "Transcription Job",
+            "attributes": {
+              "regionCode": "us-east-1",
+              "servicecode": "transcribe",
+              "usagetype": "USE1-CallAnalyticsTranscribeAudio",
+              "locationType": "AWS Region",
+              "location": "US East (N. Virginia)",
+              "servicename": "Amazon Transcribe",
+              "supportedModes": "Transcribe Call Analytics",
+              "operation": "CallAnalyticsTranscribeAudio"
+            },
+            "sku": "P62R7VJTJDYSVXQU"
+          },
+          "serviceCode": "transcribe",
+          "terms": {
+            "OnDemand": {
+              "P62R7VJTJDYSVXQU.JRTCKXETXF": {
+                "priceDimensions": {
+                  "P62R7VJTJDYSVXQU.JRTCKXETXF.Y5DREYKEMT": {
+                    "unit": "seconds",
+                    "endRange": "Inf",
+                    "description": "USD per second for CallAnalytics:TranscribeAudio in US East (N. Virginia), 5M min+",
+                    "appliesTo": [],
+                    "rateCode": "P62R7VJTJDYSVXQU.JRTCKXETXF.Y5DREYKEMT",
+                    "beginRange": "300000000",
+                    "pricePerUnit": {
+                      "USD": "0.0001900000"
+                    }
+                  },
+                  "P62R7VJTJDYSVXQU.JRTCKXETXF.R5R9GNZZG6": {
+                    "unit": "seconds",
+                    "endRange": "60000000",
+                    "description": "USD per second for CallAnalytics:TranscribeAudio in US East (N. Virginia), 250K to 1M min",
+                    "appliesTo": [],
+                    "rateCode": "P62R7VJTJDYSVXQU.JRTCKXETXF.R5R9GNZZG6",
+                    "beginRange": "15000000",
+                    "pricePerUnit": {
+                      "USD": "0.0003100000"
+                    }
+                  },
+                  "P62R7VJTJDYSVXQU.JRTCKXETXF.XEPN5HMENM": {
+                    "unit": "seconds",
+                    "endRange": "15000000",
+                    "description": "USD per second for CallAnalytics:TranscribeAudio in US East (N. Virginia), 0 to 250K min",
+                    "appliesTo": [],
+                    "rateCode": "P62R7VJTJDYSVXQU.JRTCKXETXF.XEPN5HMENM",
+                    "beginRange": "0",
+                    "pricePerUnit": {
+                      "USD": "0.0005000000"
+                    }
+                  },
+                  "P62R7VJTJDYSVXQU.JRTCKXETXF.EPWSATNW8X": {
+                    "unit": "seconds",
+                    "endRange": "300000000",
+                    "description": "USD per second for CallAnalytics:TranscribeAudio in US East (N. Virginia), 1M to 5M min",
+                    "appliesTo": [],
+                    "rateCode": "P62R7VJTJDYSVXQU.JRTCKXETXF.EPWSATNW8X",
+                    "beginRange": "60000000",
+                    "pricePerUnit": {
+                      "USD": "0.0002300000"
+                    }
+                  }
+                },
+                "sku": "P62R7VJTJDYSVXQU",
+                "effectiveDate": "2026-06-01T00:00:00Z",
+                "offerTermCode": "JRTCKXETXF",
+                "termAttributes": {}
+              }
+            }
+          },
+          "version": "20260911124646",
+          "publicationDate": "2026-09-11T12:46:46Z"
+        },
+        {
+          "product": {
+            "productFamily": "Streaming",
+            "attributes": {
+              "regionCode": "us-east-1",
+              "servicecode": "transcribe",
+              "usagetype": "USE1-StreamingAudio",
+              "locationType": "AWS Region",
+              "location": "US East (N. Virginia)",
+              "servicename": "Amazon Transcribe",
+              "supportedModes": "Stream to Text",
+              "operation": "StreamingAudio"
+            },
+            "sku": "PPN4FWMUFC5Z4KFX"
+          },
+          "serviceCode": "transcribe",
+          "terms": {
+            "OnDemand": {
+              "PPN4FWMUFC5Z4KFX.JRTCKXETXF": {
+                "priceDimensions": {
+                  "PPN4FWMUFC5Z4KFX.JRTCKXETXF.6YS6EN2CT7": {
+                    "unit": "second",
+                    "endRange": "Inf",
+                    "description": "$0.0001667 per second for StreamingAudio in US East (N. Virginia)",
+                    "appliesTo": [],
+                    "rateCode": "PPN4FWMUFC5Z4KFX.JRTCKXETXF.6YS6EN2CT7",
+                    "beginRange": "0",
+                    "pricePerUnit": {
+                      "USD": "0.0001667000"
+                    }
+                  }
+                },
+                "sku": "PPN4FWMUFC5Z4KFX",
+                "effectiveDate": "2026-06-01T00:00:00Z",
+                "offerTermCode": "JRTCKXETXF",
+                "termAttributes": {}
+              }
+            }
+          },
+          "version": "20260911124646",
+          "publicationDate": "2026-09-11T12:46:46Z"
+        },
+        {
+          "product": {
+            "productFamily": "Transcription Job",
+            "attributes": {
+              "regionCode": "us-east-1",
+              "servicecode": "transcribe",
+              "usagetype": "USE1-HealthScribeBatch",
+              "locationType": "AWS Region",
+              "location": "US East (N. Virginia)",
+              "servicename": "Amazon Transcribe",
+              "supportedModes": "Health Scribe",
+              "operation": "HealthScribeBatch"
+            },
+            "sku": "Q4ZJT4UAPZCE24TN"
+          },
+          "serviceCode": "transcribe",
+          "terms": {
+            "OnDemand": {
+              "Q4ZJT4UAPZCE24TN.JRTCKXETXF": {
+                "priceDimensions": {
+                  "Q4ZJT4UAPZCE24TN.JRTCKXETXF.6YS6EN2CT7": {
+                    "unit": "seconds",
+                    "endRange": "Inf",
+                    "description": "$0.001667 per seconds for HealthScribe:HealthScribeBatch in US East (N. Virginia)",
+                    "appliesTo": [],
+                    "rateCode": "Q4ZJT4UAPZCE24TN.JRTCKXETXF.6YS6EN2CT7",
+                    "beginRange": "0",
+                    "pricePerUnit": {
+                      "USD": "0.0016670000"
+                    }
+                  }
+                },
+                "sku": "Q4ZJT4UAPZCE24TN",
+                "effectiveDate": "2026-06-01T00:00:00Z",
+                "offerTermCode": "JRTCKXETXF",
+                "termAttributes": {}
+              }
+            }
+          },
+          "version": "20260911124646",
+          "publicationDate": "2026-09-11T12:46:46Z"
+        },
+        {
+          "product": {
+            "productFamily": "Transcription Job",
+            "attributes": {
+              "regionCode": "us-east-1",
+              "servicecode": "transcribe",
+              "usagetype": "USE1-MedicalTranscribeAudio",
+              "locationType": "AWS Region",
+              "location": "US East (N. Virginia)",
+              "servicename": "Amazon Transcribe",
+              "supportedModes": "Medical Audio to Text",
+              "operation": "MedicalTranscribeAudio"
+            },
+            "sku": "T83665ZJGS3A9D2A"
+          },
+          "serviceCode": "transcribe",
+          "terms": {
+            "OnDemand": {
+              "T83665ZJGS3A9D2A.JRTCKXETXF": {
+                "priceDimensions": {
+                  "T83665ZJGS3A9D2A.JRTCKXETXF.6YS6EN2CT7": {
+                    "unit": "seconds",
+                    "endRange": "Inf",
+                    "description": "$0.00125 per seconds for MedicalTranscribeAudio:MedicalTranscribeAudio in US East (N. Virginia)",
+                    "appliesTo": [],
+                    "rateCode": "T83665ZJGS3A9D2A.JRTCKXETXF.6YS6EN2CT7",
+                    "beginRange": "0",
+                    "pricePerUnit": {
+                      "USD": "0.0012500000"
+                    }
+                  }
+                },
+                "sku": "T83665ZJGS3A9D2A",
+                "effectiveDate": "2026-06-01T00:00:00Z",
+                "offerTermCode": "JRTCKXETXF",
+                "termAttributes": {}
+              }
+            }
+          },
+          "version": "20260911124646",
+          "publicationDate": "2026-09-11T12:46:46Z"
+        },
+        {
+          "product": {
+            "productFamily": "Transcription Job",
+            "attributes": {
+              "regionCode": "us-east-1",
+              "servicecode": "transcribe",
+              "usagetype": "USE1-TranscribeAudio",
+              "locationType": "AWS Region",
+              "location": "US East (N. Virginia)",
+              "servicename": "Amazon Transcribe",
+              "supportedModes": "Audio to Text",
+              "operation": "TranscribeAudio"
+            },
+            "sku": "XG5JYDUXJ2JRGBD9"
+          },
+          "serviceCode": "transcribe",
+          "terms": {
+            "OnDemand": {
+              "XG5JYDUXJ2JRGBD9.JRTCKXETXF": {
+                "priceDimensions": {
+                  "XG5JYDUXJ2JRGBD9.JRTCKXETXF.6YS6EN2CT7": {
+                    "unit": "second",
+                    "endRange": "Inf",
+                    "description": "$0.0001 per second for TranscribeAudio in US East (N. Virginia)",
+                    "appliesTo": [],
+                    "rateCode": "XG5JYDUXJ2JRGBD9.JRTCKXETXF.6YS6EN2CT7",
+                    "beginRange": "0",
+                    "pricePerUnit": {
+                      "USD": "0.0001000000"
+                    }
+                  }
+                },
+                "sku": "XG5JYDUXJ2JRGBD9",
+                "effectiveDate": "2026-06-01T00:00:00Z",
+                "offerTermCode": "JRTCKXETXF",
+                "termAttributes": {}
+              }
+            }
+          },
+          "version": "20260911124646",
+          "publicationDate": "2026-09-11T12:46:46Z"
+        },
+        {
+          "product": {
+            "productFamily": "Streaming",
+            "attributes": {
+              "regionCode": "us-east-1",
+              "servicecode": "transcribe",
+              "usagetype": "USE1-CallAnalyticsStreamingAudio",
+              "locationType": "AWS Region",
+              "location": "US East (N. Virginia)",
+              "servicename": "Amazon Transcribe",
+              "supportedModes": "Transcribe Call Analytics",
+              "operation": "CallAnalyticsStreamingAudio"
+            },
+            "sku": "Y8A53BNMJVW5XZ55"
+          },
+          "serviceCode": "transcribe",
+          "terms": {
+            "OnDemand": {
+              "Y8A53BNMJVW5XZ55.JRTCKXETXF": {
+                "priceDimensions": {
+                  "Y8A53BNMJVW5XZ55.JRTCKXETXF.XEPN5HMENM": {
+                    "unit": "seconds",
+                    "endRange": "15000000",
+                    "description": "USD per second for CallAnalytics:StreamingAudio in US East (N. Virginia), 0 to 250K min",
+                    "appliesTo": [],
+                    "rateCode": "Y8A53BNMJVW5XZ55.JRTCKXETXF.XEPN5HMENM",
+                    "beginRange": "0",
+                    "pricePerUnit": {
+                      "USD": "0.0005000000"
+                    }
+                  },
+                  "Y8A53BNMJVW5XZ55.JRTCKXETXF.EPWSATNW8X": {
+                    "unit": "seconds",
+                    "endRange": "300000000",
+                    "description": "USD per second for CallAnalytics:StreamingAudio in US East (N. Virginia), 1M to 5M min",
+                    "appliesTo": [],
+                    "rateCode": "Y8A53BNMJVW5XZ55.JRTCKXETXF.EPWSATNW8X",
+                    "beginRange": "60000000",
+                    "pricePerUnit": {
+                      "USD": "0.0002300000"
+                    }
+                  },
+                  "Y8A53BNMJVW5XZ55.JRTCKXETXF.Y5DREYKEMT": {
+                    "unit": "seconds",
+                    "endRange": "Inf",
+                    "description": "USD per second for CallAnalytics:StreamingAudio in US East (N. Virginia), 5M min+",
+                    "appliesTo": [],
+                    "rateCode": "Y8A53BNMJVW5XZ55.JRTCKXETXF.Y5DREYKEMT",
+                    "beginRange": "300000000",
+                    "pricePerUnit": {
+                      "USD": "0.0001900000"
+                    }
+                  },
+                  "Y8A53BNMJVW5XZ55.JRTCKXETXF.R5R9GNZZG6": {
+                    "unit": "seconds",
+                    "endRange": "60000000",
+                    "description": "USD per second for CallAnalytics:StreamingAudio in US East (N. Virginia), 250K to 1M min",
+                    "appliesTo": [],
+                    "rateCode": "Y8A53BNMJVW5XZ55.JRTCKXETXF.R5R9GNZZG6",
+                    "beginRange": "15000000",
+                    "pricePerUnit": {
+                      "USD": "0.0003100000"
+                    }
+                  }
+                },
+                "sku": "Y8A53BNMJVW5XZ55",
+                "effectiveDate": "2026-06-01T00:00:00Z",
+                "offerTermCode": "JRTCKXETXF",
+                "termAttributes": {}
+              }
+            }
+          },
+          "version": "20260911124646",
+          "publicationDate": "2026-09-11T12:46:46Z"
+        }
+      ],
+      "next_token_present": false
+    }
+  ]
+}

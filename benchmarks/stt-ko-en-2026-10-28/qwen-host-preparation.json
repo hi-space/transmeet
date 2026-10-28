@@ -1,0 +1,5 @@
+{
+  "at": "2026-10-28T18:37:37.593566+00:00",
+  "purpose": "Prepare one GPU host on the existing Qwen endpoint after its component could not obtain capacity from zero; retain the existing endpoint and scale-to-zero configuration.",
+  "http_status": 200
+}

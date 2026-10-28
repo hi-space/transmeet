@@ -1,0 +1,52 @@
+{
+  "base_image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-ws-backend@sha256:424ccac9b65b7df8babc3981cff8740acb3b467d37ab70b5954623c04873a7a4",
+  "image": "913524902871.dkr.ecr.us-east-1.amazonaws.com/transmeet-ws-backend:stt-seoul-20261028-191848",
+  "tag": "stt-seoul-20261028-191848",
+  "service": "TransmeetStack-WsServiceF27E424E-6Sv7kqQAPFMC",
+  "previous_task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:26",
+  "files_sha256": {
+    "config.py": "4e478a4cba6b7fbad93b45ef0067cd819039774ee2af391ed61f887e130612ab",
+    "aws_clients.py": "7b2cec170a00f2005e3aecde8f547e45f86ccda57894d342c982980aad6b937c",
+    "stt.py": "363ea8ace5889e57ac2e6042a9e35c9afa437e1092ed877611528a8020e56ad8",
+    "stt_capacity.py": "f7e9aadffa80adc3c073174ff723605bb8f200e41e65908da8f34927b8501bc2",
+    "ws_handler.py": "de6293ee679611f27ad2e9275c6669e7865ce382047d346f0715393d6ca1c71e"
+  },
+  "patch_diff": "/tmp/transmeet-regional-backend-build/patch.diff",
+  "started_at": "2026-10-28T19:22:00.642052+00:00",
+  "task_definition": "arn:aws:ecs:us-east-1:913524902871:task-definition/TransmeetStackWsTaskDef7E775A03:27",
+  "status": "complete",
+  "latest_tag_updated": true,
+  "iam_policy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": [
+          "sagemaker:InvokeEndpoint",
+          "sagemaker:DescribeEndpoint"
+        ],
+        "Resource": [
+          "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-qwen3-asr",
+          "arn:aws:sagemaker:ap-northeast-2:913524902871:endpoint/transmeet-nemotron-asr"
+        ]
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "sagemaker:DescribeInferenceComponent",
+          "sagemaker:UpdateInferenceComponentRuntimeConfig"
+        ],
+        "Resource": [
+          "arn:aws:sagemaker:ap-northeast-2:913524902871:inference-component/transmeet-qwen3-asr-ic-v2",
+          "arn:aws:sagemaker:ap-northeast-2:913524902871:inference-component/transmeet-nemotron-asr-ic-v2"
+        ]
+      }
+    ]
+  },
+  "iam_simulation": "allowed",
+  "regions": {
+    "qwen3-asr": "ap-northeast-2",
+    "nemotron": "ap-northeast-2"
+  },
+  "completed_at": "2026-10-28T19:25:13.296156+00:00"
+}

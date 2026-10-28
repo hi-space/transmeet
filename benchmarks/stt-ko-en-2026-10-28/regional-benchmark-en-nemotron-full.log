@@ -1,0 +1,21 @@
+fleurs-en-test-row-0 / nemotron: CER=0.247
+fleurs-en-test-row-1 / nemotron: CER=0.034
+fleurs-en-test-row-2 / nemotron: CER=0.039
+fleurs-en-test-row-3 / nemotron: CER=0.027
+fleurs-en-test-row-4 / nemotron: CER=0.324
+fleurs-en-test-row-5 / nemotron: CER=0.000
+fleurs-en-test-row-6 / nemotron: CER=0.000
+fleurs-en-test-row-7 / nemotron: CER=0.000
+fleurs-en-test-row-8 / nemotron: CER=0.092
+fleurs-en-test-row-9 / nemotron: CER=0.000
+{
+  "nemotron": {
+    "successful_samples": 10,
+    "failed_samples": 0,
+    "cer": 0.06256206554121152,
+    "errors": 63,
+    "reference_chars": 1007,
+    "median_seconds": 3.3053999999999997,
+    "real_time_factor": 0.3406539898878874
+  }
+}

@@ -111,6 +111,28 @@ async def test_idle_release_sets_zero_without_deleting_endpoint(env):
     assert control.updates == [0]
 
 
+async def test_disabled_idle_timeout_keeps_the_ready_copy(env, monkeypatch):
+    manager, control, now = env
+    monkeypatch.setattr(config, "STT_IDLE_SECONDS", 0)
+    control.component["RuntimeConfig"] = {"DesiredCopyCount": 1, "CurrentCopyCount": 1}
+    control.endpoint["ProductionVariants"][0]["CurrentInstanceCount"] = 1
+    await manager.status("qwen3-asr")
+    manager.acquire("qwen3-asr", "connection")
+    manager.release("qwen3-asr", "connection")
+    now[0] += 86400
+    await manager.release_idle()
+    assert control.updates == []
+    assert (await manager.status("qwen3-asr", refresh=True))["status"] == "ready"
+
+
+async def test_disabled_idle_timeout_keeps_native_activity_active(env, monkeypatch):
+    manager, control, now = env
+    monkeypatch.setattr(config, "STT_IDLE_SECONDS", 0)
+    now[0] += 86400
+    await manager.publish_activity()
+    assert control.metrics["MetricData"][0]["Value"] == 1
+
+
 async def test_preparing_engine_gets_grace_period_after_it_becomes_ready(env):
     manager, control, now = env
     await manager.prepare("qwen3-asr")
@@ -163,3 +185,46 @@ async def test_transient_describe_failure_is_unknown_not_confirmed_failure(env):
 
     control.describe_endpoint = unavailable
     assert (await manager.status("qwen3-asr"))["status"] == "unknown"
+
+
+@pytest.mark.parametrize("instances,expected", [(1, "ready"), (0, "starting")])
+async def test_streaming_status_observes_single_model_endpoint_and_leaves_batch_component_alone(
+    monkeypatch, instances, expected,
+):
+    monkeypatch.setitem(config.__dict__, "NEMOTRON_STREAMING_ENABLED", True)
+    monkeypatch.setitem(config.__dict__, "NEMOTRON_STREAMING_ENDPOINT", "new-stream")
+    monkeypatch.setattr(config, "NEMOTRON_ASR_ENDPOINT", "old-batch")
+    monkeypatch.setattr(config, "NEMOTRON_ASR_INFERENCE_COMPONENT", "old-batch-ic")
+    monkeypatch.setattr(config, "QWEN_ASR_INFERENCE_COMPONENT", "")
+    monkeypatch.setattr(config, "STT_IDLE_SECONDS", 1)
+    observed = []
+
+    class StreamingControl:
+        async def describe_endpoint(self, **kwargs):
+            observed.append(kwargs["EndpointName"])
+            return {"EndpointStatus": "InService", "ProductionVariants": [
+                {"CurrentInstanceCount": instances},
+            ]}
+
+    @asynccontextmanager
+    async def client():
+        yield StreamingControl()
+
+    manager = stt_capacity.CapacityManager(client_factory=client, metrics_client_factory=client)
+    status = await manager.start_session("nemotron", "recording")
+    assert status["status"] == expected
+    assert status["streaming"] is True
+    assert status["managed"] is False
+    assert observed == ["new-stream"]
+    assert (await manager.status("nemotron"))["streaming"] is True
+    await manager.release_idle()
+    await manager.publish_activity()
+
+
+async def test_streaming_capability_is_reported_when_endpoint_is_unavailable(monkeypatch):
+    monkeypatch.setitem(config.__dict__, "NEMOTRON_STREAMING_ENABLED", True)
+    monkeypatch.setitem(config.__dict__, "NEMOTRON_STREAMING_ENDPOINT", "")
+    monkeypatch.setattr(config, "NEMOTRON_ASR_ENDPOINT", "old-batch")
+    result = await stt_capacity.CapacityManager().status("nemotron")
+    assert result["status"] == "unavailable"
+    assert result["streaming"] is True

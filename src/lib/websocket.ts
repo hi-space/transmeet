@@ -23,6 +23,9 @@ export interface SubtitleStreamServerMessage {
   translatedText?: string
   detectedLanguage?: 'ko' | 'en'
   targetLanguage?: 'ko' | 'en'
+  sttProvider?: SttProvider
+  streamId?: string
+  utteranceId?: number
 }
 
 export interface TtsStreamServerMessage {
@@ -107,7 +110,7 @@ export type WsServerMessage =
   | AudioReadyServerMessage
   | ErrorServerMessage
   | PongServerMessage
-import type { SttStatus } from '@/lib/sttProviders'
+import type { SttProvider, SttStatus } from '@/lib/sttProviders'
 
 export interface SttStatusServerMessage extends SttStatus {
   type: 'stt_status'

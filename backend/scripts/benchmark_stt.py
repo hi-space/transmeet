@@ -105,7 +105,7 @@ async def transcribe_clip(audio: bytes, language: str) -> STTResult:
         "language_code": {"ko": "ko-KR", "en": "en-US"}.get(language),
     }
     if language == "auto":
-        options.update(identify_language=True, language_options=["ko-KR", "en-US"])
+        options.update(identify_multiple_languages=True, language_options=["ko-KR", "en-US"])
     client = TranscribeStreamingClient(region=config.REGION)
     stream = await client.start_stream_transcription(**options)
     final_text = []

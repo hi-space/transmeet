@@ -3,5 +3,6 @@ uvicorn[standard]==0.32.1
 aiobotocore==3.9.2
 boto3==1.43.106
 amazon-transcribe==0.6.4
+aws-sdk-sagemaker-runtime-http2==0.12.0
 pydantic-settings==2.7.0
 PyJWT[crypto]==2.12.1

@@ -139,15 +139,17 @@ def send_recording(provider, audio):
         assert ws.receive_json()["type"] == "pong"
 
 
-@pytest.mark.parametrize("provider", ["whisper", "qwen3-asr", "nemotron"])
-def test_gate_forwards_entire_long_chunk_when_it_contains_speech(recorded_requests, provider):
+@pytest.mark.parametrize("provider,language", [
+    ("whisper", "ko"), ("qwen3-asr", "auto"), ("nemotron", "ko"),
+])
+def test_gate_forwards_entire_long_chunk_when_it_contains_speech(recorded_requests, provider, language):
     audio = wav(tone(2) + silence(4))
     assert aws_clients.compute_rms(audio) < aws_clients.SILENCE_RMS_THRESHOLD
 
     send_recording(provider, audio)
 
     assert len(recorded_requests) == 1
-    assert recorded_requests == [(provider, audio, "ko")]
+    assert recorded_requests == [(provider, audio, language)]
 
 
 @pytest.mark.parametrize("amplitude", [0, 160], ids=["silent", "quiet"])

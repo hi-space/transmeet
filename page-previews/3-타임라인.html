@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>비전 유통 아키텍처 변경 방안 논의 · 타임라인</title>
+<meta name="transmeet:meeting-id" content="c3ca294c-45c1-4d8a-b67d-e9cdc1c6c0b1">
+<meta name="transmeet:generated-at" content="2026-10-28T22:06:20.540279+09:00">
+<meta name="transmeet:model" content="global.anthropic.claude-opus-5-5">
+<meta name="transmeet:style" content="timeline">
+<style>
+:root{--tm-bg:#ffffff;--tm-fg:#172033;--tm-muted:#5d6779;--tm-faint:#8a93a3;--tm-line:#e2e6ec;--tm-card:#f5f7fa;--tm-card2:#eaeef3;
+  --tm-accent:#2f55d4;--tm-accent-soft:#e7ecfc;--tm-accent-ink:#1f3c9c;
+  --tm-ok:#0f7a55;--tm-ok-soft:#dcf5ea;--tm-warn:#a8570c;--tm-warn-soft:#fff0d4;--tm-bad:#b4321a;--tm-bad-soft:#fde4dd;
+  --tm-hl:#ffe46b;--tm-hl-ok:#a9ecca;--tm-hl-risk:#ffc8b6;--tm-quote:#f5f7fa;--tm-quote-line:#2f55d4;
+  --tm-seg1:#2f55d4;--tm-seg2:#7d95e6;
+  --tm-font:"Pretendard","Apple SD Gothic Neo","Noto Sans KR",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --tm-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;--tm-radius:12px}
+@media (prefers-color-scheme:dark){:root{--tm-bg:#0f141d;--tm-fg:#e6e9ef;--tm-muted:#a0a8b6;--tm-faint:#6f7888;--tm-line:#253041;
+  --tm-card:#161d29;--tm-card2:#1d2635;--tm-accent:#7f9cff;--tm-accent-soft:#1c2a4f;--tm-accent-ink:#b9c8ff;
+  --tm-ok:#5fd3a2;--tm-ok-soft:#0f3326;--tm-warn:#f2b45a;--tm-warn-soft:#3a2a10;--tm-bad:#ff8f78;--tm-bad-soft:#3d1a14;
+  --tm-hl:rgba(255,214,10,.34);--tm-hl-ok:rgba(64,214,150,.32);--tm-hl-risk:rgba(255,120,90,.34);--tm-quote:#161d29;--tm-quote-line:#7f9cff;
+  --tm-seg1:#6d8cf5;--tm-seg2:#3d5297}}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:16px}
+body{margin:0;background:var(--tm-bg);color:var(--tm-fg);font-family:var(--tm-font);line-height:1.7;font-size:16px;
+  -webkit-font-smoothing:antialiased;word-break:keep-all;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+main{max-width:1180px;margin:0 auto;padding:40px 24px 80px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:40px}
+@media (min-width:1100px){.layout{grid-template-columns:220px minmax(0,1fr)}}
+article{min-width:0;max-width:820px}
+a{color:var(--tm-accent);text-underline-offset:2px}a:hover{text-decoration-thickness:2px}
+a:focus-visible,summary:focus-visible{outline:2px solid var(--tm-accent);outline-offset:2px;border-radius:4px}
+h1,h2,h3,h4,h5{letter-spacing:-.015em;line-height:1.3}
+
+/* ── 강조: 의미별 형광펜 ── */
+mark{color:inherit;padding:0 .12em;border-radius:2px;box-decoration-break:clone;-webkit-box-decoration-break:clone;
+  background:linear-gradient(transparent 54%,var(--tm-hl) 54%,var(--tm-hl) 94%,transparent 94%)}
+mark.ok{background:linear-gradient(transparent 54%,var(--tm-hl-ok) 54%,var(--tm-hl-ok) 94%,transparent 94%)}
+mark.risk{background:linear-gradient(transparent 54%,var(--tm-hl-risk) 54%,var(--tm-hl-risk) 94%,transparent 94%)}
+b,strong{font-weight:700}
+
+/* ── 목차 ── */
+.toc{font-size:.9rem;line-height:1.45}
+@media (min-width:1100px){.toc{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;padding-right:6px}}
+.toc-title{margin:0 0 10px 10px;font-size:.82rem;font-weight:700;color:var(--tm-faint)}
+.toc ol{list-style:none;margin:0;padding:0}
+.toc>ol>li{margin:0 0 2px}
+.toc a{display:block;padding:5px 10px;border-radius:8px;color:var(--tm-fg);text-decoration:none}
+.toc a:hover{background:var(--tm-card)}
+.toc .n{display:inline-block;min-width:1.5em;color:var(--tm-faint);font-size:.8rem}
+.toc ol ol{margin:2px 0 8px 14px;border-left:2px solid var(--tm-line)}
+.toc ol ol a{padding:3px 10px;font-size:.84rem;color:var(--tm-muted)}
+.toc ol ol .time{margin-left:6px}
+@media (max-width:1099px){.toc{border:1px solid var(--tm-line);border-radius:var(--tm-radius);padding:14px 12px}.toc ol ol{display:none}}
+
+/* ── 헤더 ── */
+header[data-section=header]{margin:0 0 44px}
+.meeting-name{margin:0 0 10px;font-size:.95rem;font-weight:600;color:var(--tm-muted)}
+header h1{font-size:2.25rem;line-height:1.22;margin:0 0 16px;font-weight:800;letter-spacing:-.025em}
+.headline{font-size:2rem;line-height:1.3;max-width:24em}
+.meta{display:flex;flex-wrap:wrap;gap:4px 22px;margin:0 0 26px;padding:0;color:var(--tm-muted);font-size:.92rem}
+.meta div{display:flex;gap:6px}.meta dt{color:var(--tm-faint)}.meta dd{margin:0;color:var(--tm-fg);font-weight:600}
+
+/* ── 회의 리버: 주제 구간(시간 비례) + 결정·미결 핀 ── */
+.river{margin:0;padding:0;border:0;border-radius:0}
+.river-pins{position:relative;height:30px;margin:0 0 4px}
+.river-pins i{position:absolute;bottom:0;transform:translateX(-50%);font-style:normal;font-size:12px;line-height:1;cursor:default}
+.river-pins i.decide{color:var(--tm-ok)}.river-pins i.open{color:var(--tm-bad)}
+.river-pins i.r1{bottom:11px}.river-pins i.r2{bottom:22px}
+.river-band{display:flex;gap:2px;list-style:none;margin:0;padding:0;height:34px}
+.river-band li{flex-basis:0;min-width:3px;border-radius:3px;background:var(--tm-seg1);color:#fff;font-size:.74rem;font-weight:700;
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
+.river-band li:nth-child(even){background:var(--tm-seg2)}
+.river-band li.gap{background:transparent;border-top:2px dashed var(--tm-line);border-radius:0;height:0;align-self:center}
+.river-band a{color:inherit;text-decoration:none;display:flex;align-items:center;justify-content:center;width:100%;height:100%}
+.river-axis{display:flex;justify-content:space-between;margin:6px 0 0;font-size:.8rem;color:var(--tm-muted)}
+.river-legend{display:flex;flex-wrap:wrap;gap:4px 18px;margin:10px 0 0;padding:0;list-style:none;font-size:.86rem;color:var(--tm-muted)}
+.river-legend .decide::before{content:"◆ ";color:var(--tm-ok)}.river-legend .open::before{content:"● ";color:var(--tm-bad)}
+.river-legend .topics::before{content:"▬ ";color:var(--tm-seg1)}
+.river-legend b{color:var(--tm-fg)}
+
+/* ── 섹션 ── */
+section{margin:0 0 56px}
+section>h2{font-size:1.45rem;font-weight:800;margin:0 0 18px;padding:18px 0 0;border-top:1px solid var(--tm-line)}
+section>h2 .glyph{margin-right:8px;font-size:.9em}
+.glyph.decide{color:var(--tm-ok)}.glyph.open{color:var(--tm-bad)}.glyph.act{color:var(--tm-accent)}
+h4{margin:22px 0 8px;font-size:.95rem;font-weight:700;color:var(--tm-muted)}
+.prose>h4:first-child{margin-top:0}
+.points{margin:0 0 6px;padding-left:1.2em}.points li{margin:0 0 8px;padding-left:4px}.points li::marker{color:var(--tm-faint)}
+
+/* 한눈에 보기 */
+.takeaways{list-style:none;margin:0;padding:0}
+.takeaways li{padding:14px 0;border-bottom:1px solid var(--tm-line);font-size:1.12rem;line-height:1.6}
+.takeaways li:first-child{padding-top:0}.takeaways li:last-child{border-bottom:0}
+
+/* 결정·미결·할 일 목록 */
+.list{margin:0;padding:0;list-style:none}
+.list>li{position:relative;padding:12px 0 12px 30px;border-bottom:1px solid var(--tm-line)}
+.list>li:last-child{border-bottom:0}
+.list>li::before{position:absolute;left:4px;top:13px;font-size:.95rem}
+.list.decide>li::before{content:"◆";color:var(--tm-ok)}
+.list.open>li::before{content:"●";color:var(--tm-bad)}
+.list.act>li::before{content:"□";color:var(--tm-accent);font-weight:700}
+.list>li.time{padding-left:0}.list>li.time::before{display:none}
+.list .who{display:inline-block;margin-right:6px;padding:0 8px;border-radius:6px;background:var(--tm-accent-soft);color:var(--tm-accent-ink);font-size:.8rem;font-weight:700}
+.list .due{color:var(--tm-muted);font-size:.88rem}
+
+/* 표 */
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+th,td{text-align:left;padding:11px 10px;border-bottom:1px solid var(--tm-line);vertical-align:top}
+th{color:var(--tm-muted);font-weight:700;font-size:.84rem;white-space:nowrap;border-bottom:2px solid var(--tm-fg)}
+td:first-child{min-width:5.5em;font-weight:600}
+td code,.term{font-family:var(--tm-mono);font-size:.86em;background:var(--tm-card2);padding:1px 6px;border-radius:5px;overflow-wrap:break-word}
+.glossary{table-layout:fixed}.glossary th:nth-child(1),.glossary td:nth-child(1){width:24%}.glossary th:nth-child(3),.glossary td:nth-child(3){width:26%}
+.glossary td.time{line-height:1.5}
+
+/* 논의 흐름 (상세) */
+.topic{display:grid;grid-template-columns:52px minmax(0,1fr);gap:0 16px;padding:24px 0;border-bottom:1px solid var(--tm-line)}
+.topic:last-child{border-bottom:0}
+.topic-head{display:contents}
+.topic-head .num{grid-row:1/span 99;align-self:start;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;
+  border:2px solid var(--tm-seg1);color:var(--tm-accent-ink);font-weight:800;font-size:.95rem}
+.topic-head h3{grid-column:2;margin:0;font-size:1.2rem;font-weight:750}
+.topic-head .time{grid-column:2;margin:2px 0 10px}
+.topic>*{grid-column:2}
+.topic h4{margin:14px 0 6px}
+.topic>h4:first-of-type{display:none}
+.topic p{margin:0 0 10px}
+.topic dl{margin:0}
+.topic dt{font-weight:700;margin:8px 0 2px}.topic dt::before{content:"Q. ";color:var(--tm-accent)}
+.topic dd{margin:0 0 6px 1.6em;color:var(--tm-muted)}.topic dd::before{content:"A. ";font-weight:700}
+.time{font-size:.8rem;color:var(--tm-muted)}span.time{white-space:nowrap}
+blockquote{margin:8px 0;padding:6px 0 6px 16px;border-left:3px solid var(--tm-quote-line);font-size:1rem;color:var(--tm-fg)}
+blockquote .time{margin-right:8px}
+blockquote .orig,blockquote .spk{display:none}
+details.more{margin:6px 0 0}
+details.more>summary{cursor:pointer;color:var(--tm-accent);font-weight:600;font-size:.92rem;list-style:none}
+details.more>summary::-webkit-details-marker{display:none}
+details.more>summary::before{content:"+ "}details.more[open]>summary::before{content:"– "}
+details summary{cursor:pointer;color:var(--tm-accent);font-weight:600}
+
+/* 배지·카드·참고 자료 */
+.badge{display:inline-block;padding:1px 9px;border-radius:999px;font-size:.76rem;font-weight:700;vertical-align:middle;white-space:nowrap}
+.badge.ok,.badge.done{background:var(--tm-ok-soft);color:var(--tm-ok)}
+.badge.diff{background:var(--tm-warn-soft);color:var(--tm-warn)}
+.badge.na,.badge.todo{background:var(--tm-card2);color:var(--tm-muted)}
+.badge.infer,.badge.doing{background:var(--tm-accent-soft);color:var(--tm-accent-ink)}
+.card{background:var(--tm-card);border-radius:var(--tm-radius);padding:18px 22px}
+.card+.card{margin-top:10px}
+.card p{margin:0 0 8px}.card p:last-child{margin-bottom:0}
+section>h3{font-size:1.05rem;margin:26px 0 10px}
+.ref{margin:0 0 10px}.ref a{word-break:break-all;font-weight:600}
+.ref .why{color:var(--tm-muted);font-size:.9rem;margin-top:4px}
+figure{margin:16px 0;padding:16px;border:1px solid var(--tm-line);border-radius:var(--tm-radius)}
+figure svg{width:100%;height:auto;display:block}
+figcaption{color:var(--tm-muted);font-size:.86rem;margin-top:10px}
+
+/* ── 시각 컴포넌트 (모델이 VISUAL·주제 블록 안에 쓴다) ── */
+.visual{margin:0}
+section>.visual+h2{margin-top:48px}
+.visual>h3{font-size:1.15rem;margin:0 0 4px}.visual>.why{margin:0 0 16px;color:var(--tm-muted)}
+/* 단계 흐름 */
+.flow{display:flex;flex-wrap:wrap;gap:10px 0;list-style:none;margin:0;padding:0;counter-reset:step}
+.flow>li{flex:1 1 140px;position:relative;padding:14px 26px 14px 14px;background:var(--tm-card);counter-increment:step;
+  clip-path:polygon(0 0,calc(100% - 16px) 0,100% 50%,calc(100% - 16px) 100%,0 100%,16px 50%)}
+.flow>li:first-child{clip-path:polygon(0 0,calc(100% - 16px) 0,100% 50%,calc(100% - 16px) 100%,0 100%)}
+.flow>li:not(:first-child){padding-left:28px;margin-left:-6px}
+.flow>li b{display:block;font-size:.98rem}.flow>li b::before{content:counter(step) ". ";color:var(--tm-accent)}
+.flow>li span{display:block;font-size:.86rem;color:var(--tm-muted);line-height:1.5;margin-top:2px}
+.flow>li.pick{background:var(--tm-ok-soft)}.flow>li.risk{background:var(--tm-bad-soft)}
+@media (max-width:640px){.flow{flex-direction:column}.flow>li,.flow>li:first-child{clip-path:none;margin-left:0;padding:12px 14px;border-left:3px solid var(--tm-accent)}
+  .flow>li:not(:first-child){padding-left:14px;margin-left:0}}
+/* 계층 구조(아키텍처) */
+.arch{display:flex;flex-direction:column;gap:0}
+.arch .layer{display:grid;grid-template-columns:7.5em minmax(0,1fr);gap:12px;align-items:center;padding:14px;border-radius:var(--tm-radius);background:var(--tm-card)}
+.arch .layer>h5{margin:0;font-size:.88rem;color:var(--tm-muted)}
+.arch .nodes{display:flex;flex-wrap:wrap;gap:8px}
+.node{display:inline-block;padding:6px 12px;border-radius:8px;background:var(--tm-bg);border:1.5px solid var(--tm-line);font-weight:650;font-size:.92rem}
+.node small{display:block;font-weight:400;color:var(--tm-muted);font-size:.78rem}
+.node.key{border-color:var(--tm-accent);color:var(--tm-accent-ink)}.node.new{border-color:var(--tm-ok);border-style:dashed}
+.arch .link{margin:0;padding:3px 0 3px calc(7.5em + 26px);font-size:.82rem;color:var(--tm-muted)}
+.arch .link::before{content:"↕ ";color:var(--tm-accent);font-weight:700}
+@media (max-width:640px){.arch .layer{grid-template-columns:1fr}.arch .link{padding-left:14px}}
+/* 선택지 비교 */
+.compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.compare .opt{padding:16px;border-radius:var(--tm-radius);border:1.5px solid var(--tm-line)}
+.compare .opt.pick{border-color:var(--tm-ok);background:var(--tm-ok-soft)}
+.compare .opt>h5{margin:0 0 8px;font-size:1rem}
+.compare .opt>h5 .badge{margin-left:6px}
+.pc{list-style:none;margin:0;padding:0;font-size:.9rem}.pc li{padding:3px 0 3px 20px;position:relative}
+.pc li::before{position:absolute;left:0;font-weight:800}.pc .pro::before{content:"+";color:var(--tm-ok)}.pc .con::before{content:"−";color:var(--tm-bad)}
+/* 변경 전 → 후 */
+.shift{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:stretch}
+.shift>div{padding:16px;border-radius:var(--tm-radius);background:var(--tm-card)}
+.shift>div:last-child{background:var(--tm-accent-soft)}
+.shift>div>h5{margin:0 0 6px;font-size:.88rem;color:var(--tm-muted)}
+.shift>.arrow{align-self:center;background:none;padding:0;font-size:1.4rem;color:var(--tm-accent)}
+@media (max-width:640px){.shift{grid-template-columns:1fr}.shift>.arrow{justify-self:center;transform:rotate(90deg)}}
+
+/* ── 한 단 레이아웃(brief·timeline) ── */
+.solo article{max-width:860px;margin:0 auto}
+.triad{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:28px}
+.triad>section{margin:0}
+.triad>section>h2{font-size:1.1rem}
+.triad .list>li{font-size:.95rem;padding-top:9px;padding-bottom:9px}
+.triad .list>li::before{top:10px}
+@media (max-width:860px){.triad{grid-template-columns:1fr;gap:0}.triad>section{margin:0 0 40px}}
+
+/* ── 타임라인 ── */
+.stations{list-style:none;margin:0;padding:0;position:relative}
+.stations::before{content:"";position:absolute;left:66px;top:8px;bottom:8px;width:2px;background:var(--tm-line)}
+.station{display:grid;grid-template-columns:52px 30px minmax(0,1fr);gap:0 10px;padding:0 0 34px;position:relative}
+.station:last-child{padding-bottom:0}
+.st-time{text-align:right;font-weight:700;font-size:.92rem;padding-top:1px}
+.st-time small{display:block;font-weight:400;color:var(--tm-faint);font-size:.76rem}
+.st-dot{width:16px;height:16px;margin:5px 0 0 7px;border-radius:50%;background:var(--tm-bg);border:3px solid var(--tm-seg1);position:relative;z-index:1}
+.station:nth-child(even) .st-dot{border-color:var(--tm-seg2)}
+.st-body h3{margin:0 0 4px;font-size:1.2rem;font-weight:750}
+.st-body .gist{margin:0 0 8px}
+.st-body blockquote{margin:10px 0}
+.pins{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.pins li{padding:7px 12px 7px 30px;border-radius:8px;position:relative;font-size:.94rem}
+.pins li::before{position:absolute;left:11px;top:8px}
+.pins .decide{background:var(--tm-ok-soft)}.pins .decide::before{content:"◆";color:var(--tm-ok)}
+.pins .open{background:var(--tm-bad-soft)}.pins .open::before{content:"●";color:var(--tm-bad)}
+.pins .ask{background:var(--tm-card)}.pins .ask::before{content:"?";color:var(--tm-accent);font-weight:800}
+@media (max-width:560px){.stations::before{left:50px}.station{grid-template-columns:40px 24px minmax(0,1fr);gap:0 6px}.st-dot{margin-left:3px}}
+
+footer[data-section=footer]{border-top:1px solid var(--tm-line);padding-top:18px;color:var(--tm-faint);font-size:.82rem;line-height:1.6}
+@media (max-width:560px){body{font-size:15px}main{padding:22px 16px 56px}header h1{font-size:1.65rem}.headline{font-size:1.5rem}
+  th,td{padding:8px 6px}.card{padding:16px}td:first-child{min-width:4em}.takeaways li{font-size:1.04rem}
+  .topic{grid-template-columns:36px minmax(0,1fr);gap:0 12px}.topic-head .num{width:32px;height:32px;font-size:.85rem}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media print{main{max-width:none;padding:0}.layout{display:block}.toc{display:none}.topic,.card,.station{break-inside:avoid}details{display:block}details>summary{display:none}}
+</style>
+</head>
+<body class="solo">
+<main>
+<article>
+<header data-section="header">
+  <p class="meeting-name">비전 유통 아키텍처 변경 방안 논의</p>
+  <h1 class="headline">Vision 60을 Jetson Thor 중심으로 바꾸고 교육·워크숍 일정부터 잡기로 함</h1>
+  <dl class="meta">
+    <div><dt>일시</dt><dd>2026-07-27 10:33–12:24</dd></div>
+    <div><dt>소요</dt><dd>1시간 50분</dd></div>
+  </dl>
+  
+</header>
+
+<section data-section="discussion" id="sec-discussion"><h2>시간 순서로 보기</h2>
+<ol class="stations"><li class="station" id="topic-1">
+  <div class="st-time">10:33<small>2분</small></div>
+  <span class="st-dot"></span>
+  <div class="st-body">
+    <h3>회의 배경 — 아키텍처 공유와 교육 일정</h3>
+    <p class="gist">엣지 환경 구축 경험이 없어 <b>Jetson Thor 기반 아키텍처</b>를 먼저 듣고 교육 일정을 빨리 잡자는 목적이 제시됐다. 현장에 가기 전에 만들어 둔 에셋이 아키텍처와 맞지 않아 다시 못 쓰게 될 수 있어, <mark>아키텍처 정보를 빨리 받는 것이 우선</mark>이라고 했다.</p>
+    <blockquote><span class="time">[10:34]</span>오늘은 사실은 아키텍처를 좀 말씀을 듣고 그다음에 저희 교육이 좀 빠르게 잡고…</blockquote>
+  </div>
+</li>
+<li class="station" id="topic-2">
+  <div class="st-time">10:35<small>3분</small></div>
+  <span class="st-dot"></span>
+  <div class="st-body">
+    <h3>온보드 구성 — Jetson Xavier와 Jetson Thor의 역할</h3>
+    <p class="gist"><b>Jetson Xavier는 VCU</b>로 액추에이터 제어와 통신을 맡고, 새로 올리는 Jetson Thor가 관제·주행 플래닝·매핑 같은 상위 연산을 맡아 둘을 RJ45 이더넷으로 잇는 구조다. Jetson Thor 탑재로 전력 분배가 달라져 구동 시간이 줄 수 있다는 우려에는, Jetson Thor 없이 3시간 이상을 보고 있고 YOLO 객체 인식 전용 모델만 올려 <mark>전력 소모를 줄이겠다</mark>고 답했다.</p>
+    <blockquote><span class="time">[10:35]</span>Jetson Xavier는 약간 VCU 역할을 하는 거예요.</blockquote>
+    <ul class="pins">
+      <li class="decide">Jetson Xavier–Jetson Thor는 RJ45 이더넷으로 연결</li>
+      <li class="ask">배터리 영향은? → 객체 인식 전용 모델로 전력 절감</li>
+      <li class="open">Jetson Thor 탑재 후 실제 구동 시간은 미확인</li>
+    </ul>
+    <figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 998 272" role="img" font-family="var(--tm-font, sans-serif)" font-size="13">
+<title>Vision 60 온보드 구성</title>
+<desc>8개 단계와 7개 연결로 이루어진 흐름</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--tm-muted)"/></marker></defs>
+<path d="M194.0 52.0 C239.0 52.0 239.0 136.0 284.0 136.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="239.0" y="88.0" text-anchor="middle" fill="var(--tm-muted)" font-size="11">직접 연결</text>
+<path d="M194.0 136.0 C239.0 136.0 239.0 136.0 284.0 136.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="239.0" y="130.0" text-anchor="middle" fill="var(--tm-muted)" font-size="11">직접 연결</text>
+<path d="M194.0 220.0 C369.0 220.0 369.0 220.0 544.0 220.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="369.0" y="214.0" text-anchor="middle" fill="var(--tm-muted)" font-size="11">기존 내장</text>
+<path d="M454.0 136.0 C499.0 136.0 499.0 52.0 544.0 52.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="499.0" y="88.0" text-anchor="middle" fill="var(--tm-muted)" font-size="11">상위 연산</text>
+<path d="M454.0 136.0 C499.0 136.0 499.0 136.0 544.0 136.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="499.0" y="130.0" text-anchor="middle" fill="var(--tm-muted)" font-size="11">상위 연산</text>
+<path d="M454.0 136.0 C499.0 136.0 499.0 220.0 544.0 220.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="499.0" y="172.0" text-anchor="middle" fill="var(--tm-muted)" font-size="11">RJ45 이더넷</text>
+<path d="M714.0 220.0 C759.0 220.0 759.0 136.0 804.0 136.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="759.0" y="172.0" text-anchor="middle" fill="var(--tm-muted)" font-size="11">VCU 역할</text>
+<rect x="24" y="24.0" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="109.0" y="56.5" text-anchor="middle" fill="currentColor" font-weight="600">상부 카메라(신규)</text>
+<rect x="24" y="108.0" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="109.0" y="140.5" text-anchor="middle" fill="currentColor" font-weight="600">LiDAR(고정)</text>
+<rect x="24" y="192.0" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="109.0" y="224.5" text-anchor="middle" fill="currentColor" font-weight="600">Depth 카메라</text>
+<rect x="284" y="108.0" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="369.0" y="140.5" text-anchor="middle" fill="currentColor" font-weight="600">Jetson Thor</text>
+<rect x="544" y="24.0" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="629.0" y="56.5" text-anchor="middle" fill="currentColor" font-weight="600">YOLO 객체 인식</text>
+<rect x="544" y="108.0" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="629.0" y="140.5" text-anchor="middle" fill="currentColor" font-weight="600">관제·플래닝·매핑</text>
+<rect x="544" y="192.0" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="629.0" y="224.5" text-anchor="middle" fill="currentColor" font-weight="600">Jetson Xavier</text>
+<rect x="804" y="108.0" width="170" height="56" rx="28" fill="var(--tm-ok-soft)" stroke="var(--tm-ok)" stroke-width="1.5"/>
+<text x="889.0" y="140.5" text-anchor="middle" fill="currentColor" font-weight="600">액추에이터 제어</text>
+</svg><figcaption>Vision 60 온보드 구성 — Jetson Thor가 상부 카메라·LiDAR를 직접 받아 상위 연산을 맡고, RJ45 이더넷으로 VCU 역할의 Jetson Xavier를 제어 [10:35–10:40]</figcaption></figure>
+  </div>
+</li>
+<li class="station" id="topic-3">
+  <div class="st-time">10:38<small>3분</small></div>
+  <span class="st-dot"></span>
+  <div class="st-body">
+    <h3>센서 구성과 제조사 현황</h3>
+    <p class="gist">YOLO를 Jetson Thor에서 돌린다면 카메라도 Jetson Thor에 붙어야 빠르지 않냐는 질문이 나왔고, 내장 Depth 카메라는 바닥을 향하고 전면 광각 카메라 두 개로는 인식이 어려워 <mark class="ok">상부 카메라를 따로 달고 Depth 카메라·고정 LiDAR와 조합</mark>하기로 했다. LiDAR는 딜레이를 피하려 Jetson Thor에 직접 연결한다. <b>Ghost Robotics</b>는 데이터를 개방해 준다고 했지만 실제로는 미흡하다는 평가가 나왔고, 중국산을 뺀 기종을 분석해 그나마 나은 곳으로 골랐으며 국내 총판은 KRM이 올해 4월 종료되며 LIG Nex1으로 넘어갔다고 했다.</p>
+    <blockquote><span class="time">[10:38]</span>Depth 카메라가 아래쪽으로 보고 있습니다. 그래서 저희가 카메라를 따로 달려고 하고 있고요.</blockquote>
+    <ul class="pins">
+      <li class="decide">Jetson Thor에 퍼셉션용 상부 카메라 별도 장착</li>
+      <li class="decide">LiDAR 등 추가 센서는 Jetson Thor에 직접 연결</li>
+      <li class="open">Ghost Robotics의 실제 데이터 개방 범위</li>
+    </ul>
+  </div>
+</li>
+<li class="station" id="topic-4">
+  <div class="st-time">10:53<small>12분</small></div>
+  <span class="st-dot"></span>
+  <div class="st-body">
+    <h3>저장·SLAM·이동 제어</h3>
+    <p class="gist">Jetson Thor는 개발 키트가 아닌 모듈에 1TB SSD를 쓰고 필요하면 SSD를 추가하며, 자체 통신도 된다. 오도메트리는 시프트 문제로 내부 값을 쓰지 않고 <b>LiDAR 내장 IMU</b>로 하며, FAST-LIO2는 실사용 성능이 떨어져 <mark class="ok">SLAM을 자체 개발</mark> 중이다. 평지·경사 이동은 로봇에 맡기되, 자체 알고리즘에 얹기 위해 가감 제어는 Jetson Thor에서 직접 만들고 계단 전환 때는 모터단까지 제어해야 한다고 했다.</p>
+    <blockquote><span class="time">[11:04]</span>원래는 FAST-LIO2를 생각을 했었는데 … 떨어지더라고요. 실제 활용하기에는. 그래서 저희가 좀 따로 만들고 있습니다.</blockquote>
+    <ul class="pins">
+      <li class="decide">오도메트리는 LiDAR 내장 IMU로 구성</li>
+      <li class="decide">가감 제어는 Jetson Thor의 자체 로직으로 교체</li>
+      <li class="open">SLAM·내비게이션 모델에 필요한 리소스 규모</li>
+      <li class="open">계단 전환 시 모터단 제어 방식</li>
+    </ul>
+  </div>
+</li>
+<li class="station" id="topic-5">
+  <div class="st-time">11:16<small>2분</small></div>
+  <span class="st-dot"></span>
+  <div class="st-body">
+    <h3>AWS 핵심 서비스</h3>
+    <p class="gist">RL 폴리시만 학습한다면 시뮬레이션에 붙여 학습하면 돼 <b>Amazon SageMaker AI</b>는 이번엔 필수가 아니고, VLA 같은 별도 모델 학습에 MLOps 환경이 필요할 때 쓰며, LLM 서빙은 Amazon Bedrock이 맡는다. 데이터 수집·업로드와 모델 배포 단계가 핵심이어서 <mark>AWS IoT Greengrass·AWS IoT Core와 실시간 영상용 Amazon Kinesis Video Streams 세 가지만 기억하면 된다</mark>고 정리됐고, 파이프라인은 워크숍으로 실습하길 권했다.</p>
+    <blockquote><span class="time">[11:17]</span>중요한 부분은 1번이랑 4번 부분일 것 같거든요. … 주요되게 제공하고 있는 서비스는 AWS IoT Greengrass랑 AWS IoT Core 두 가지라고 보시면 될 것 같고.</blockquote>
+    <ul class="pins">
+      <li class="decide">핵심 서비스는 워크숍에서 직접 테스트해 보기로</li>
+    </ul>
+  </div>
+</li>
+<li class="station" id="topic-6">
+  <div class="st-time">11:18<small>18분</small></div>
+  <span class="st-dot"></span>
+  <div class="st-body">
+    <h3>데이터 파이프라인과 레퍼런스 사례</h3>
+    <p class="gist">Amazon S3의 원시 데이터를 Amazon EKS(여러 EC2)로 처리해 다시 저장하고 Amazon SageMaker AI 학습으로 넘기는 레퍼런스가 소개됐고, 어떤 데이터를 취득·폐기하고 타임스탬프를 어떻게 맞출지는 직접 개발할 로직으로 <b>컴퓨터와 스토리지의 위치만 클라우드로 바뀐다</b>고 했다. 비슷한 프로젝트 경험으로 Hive 파티셔닝을 쓴 L0/L1/L2 계층과 Amazon DynamoDB 메타정보 구성이 추가로 설명됐다. WIRobotics(MQTT·Amazon Kinesis Video Streams 수집)와 이동 로봇인 뉴빌리티 사례, 약 4초 지연으로 CCTV처럼 되돌려 보는 재생 기능, Isaac Lab의 학습·시뮬레이션 분리와 Isaac Sim AMI도 다뤄졌으며, <mark class="risk">LiDAR 데이터는 무거워 온프레미스 처리가 더 빠르다</mark>는 의견이 나왔다.</p>
+    <blockquote><span class="time">[11:31]</span>비디오 데이터가 오는 90% 이상은 다 쓸모없는 데이터입니다.</blockquote>
+    <ul class="pins">
+      <li class="ask">이동 로봇 사례는? → 실시간 영상을 올리는 뉴빌리티 사례</li>
+      <li class="ask">LiDAR 데이터 업로드는? → 가능하나 온프레미스가 빠름</li>
+    </ul>
+    <figure><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 630 860" role="img" font-family="var(--tm-font, sans-serif)" font-size="13">
+<title>AWS 데이터·학습 파이프라인</title>
+<desc>12개 단계와 11개 연결로 이루어진 흐름</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--tm-muted)"/></marker></defs>
+<path d="M315.0 80.0 C315.0 106.0 109.0 106.0 109.0 132.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="220.0" y="110.0" text-anchor="start" fill="var(--tm-muted)" font-size="11">MQTT 지표·명령</text>
+<path d="M315.0 80.0 C315.0 106.0 315.0 106.0 315.0 132.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="323.0" y="110.0" text-anchor="start" fill="var(--tm-muted)" font-size="11">실시간 영상</text>
+<path d="M315.0 80.0 C315.0 106.0 521.0 106.0 521.0 132.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="426.0" y="110.0" text-anchor="start" fill="var(--tm-muted)" font-size="11">저신뢰 시 추론</text>
+<path d="M109.0 188.0 C109.0 214.0 212.0 214.0 212.0 240.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="168.5" y="218.0" text-anchor="start" fill="var(--tm-muted)" font-size="11">지표 시각화</text>
+<path d="M315.0 188.0 C315.0 214.0 418.0 214.0 418.0 240.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="374.5" y="218.0" text-anchor="start" fill="var(--tm-muted)" font-size="11">원시 저장</text>
+<path d="M418.0 296.0 C418.0 322.0 315.0 322.0 315.0 348.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="374.5" y="326.0" text-anchor="start" fill="var(--tm-muted)" font-size="11">처리</text>
+<path d="M315.0 404.0 C315.0 430.0 315.0 430.0 315.0 456.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="323.0" y="434.0" text-anchor="start" fill="var(--tm-muted)" font-size="11">가공 저장</text>
+<path d="M315.0 512.0 C315.0 538.0 212.0 538.0 212.0 564.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="271.5" y="542.0" text-anchor="start" fill="var(--tm-muted)" font-size="11">인덱스</text>
+<path d="M315.0 512.0 C315.0 538.0 418.0 538.0 418.0 564.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="374.5" y="542.0" text-anchor="start" fill="var(--tm-muted)" font-size="11">학습 데이터</text>
+<path d="M418.0 620.0 C418.0 646.0 315.0 646.0 315.0 672.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="374.5" y="650.0" text-anchor="start" fill="var(--tm-muted)" font-size="11">학습 모델</text>
+<path d="M315.0 728.0 C315.0 754.0 315.0 754.0 315.0 780.0" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>
+<text x="323.0" y="758.0" text-anchor="start" fill="var(--tm-muted)" font-size="11">배포</text>
+<rect x="230.0" y="24" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="315.0" y="56.5" text-anchor="middle" fill="currentColor" font-weight="600">로봇 Jetson Thor</text>
+<rect x="24.0" y="132" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="109.0" y="164.5" text-anchor="middle" fill="currentColor" font-weight="600">IoT Core</text>
+<rect x="230.0" y="132" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="315.0" y="164.5" text-anchor="middle" fill="currentColor" font-weight="600">Kinesis Video Streams</text>
+<rect x="436.0" y="132" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="521.0" y="164.5" text-anchor="middle" fill="currentColor" font-weight="600">Bedrock VLM</text>
+<rect x="127.0" y="240" width="170" height="56" rx="28" fill="var(--tm-ok-soft)" stroke="var(--tm-ok)" stroke-width="1.5"/>
+<text x="212.0" y="272.5" text-anchor="middle" fill="currentColor" font-weight="600">Grafana 대시보드</text>
+<rect x="333.0" y="240" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="418.0" y="272.5" text-anchor="middle" fill="currentColor" font-weight="600">S3 L0 원시</text>
+<rect x="230.0" y="348" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="315.0" y="380.5" text-anchor="middle" fill="currentColor" font-weight="600">EKS 병렬 처리</text>
+<rect x="230.0" y="456" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="315.0" y="488.5" text-anchor="middle" fill="currentColor" font-weight="600">S3 L1 가공</text>
+<rect x="127.0" y="564" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="212.0" y="596.5" text-anchor="middle" fill="currentColor" font-weight="600">DynamoDB 메타</text>
+<rect x="333.0" y="564" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="418.0" y="596.5" text-anchor="middle" fill="currentColor" font-weight="600">SageMaker AI 학습</text>
+<rect x="230.0" y="672" width="170" height="56" rx="10" fill="var(--tm-card)" stroke="var(--tm-accent)" stroke-width="1.5"/>
+<text x="315.0" y="704.5" text-anchor="middle" fill="currentColor" font-weight="600">IoT Greengrass</text>
+<rect x="230.0" y="780" width="170" height="56" rx="28" fill="var(--tm-ok-soft)" stroke="var(--tm-ok)" stroke-width="1.5"/>
+<text x="315.0" y="812.5" text-anchor="middle" fill="currentColor" font-weight="600">로봇에 모델 배포</text>
+</svg><figcaption>AWS 데이터·학습 파이프라인 — AWS IoT Core·Amazon Kinesis Video Streams로 올린 데이터를 Amazon S3 L0/L1·Amazon EKS로 가공해 학습하고, AWS IoT Greengrass로 로봇에 배포 [11:16–11:44]</figcaption></figure>
+  </div>
+</li>
+<li class="station" id="topic-7">
+  <div class="st-time">11:36<small>11분</small></div>
+  <span class="st-dot"></span>
+  <div class="st-body">
+    <h3>산업안전 로봇 데모</h3>
+    <p class="gist">Unitree Go2가 공장을 돌며 화재·쓰러진 사람·제스처를 감지해 보고서를 만드는 데모로, RGB-D 영상은 Amazon Kinesis Video Streams의 WebRTC로, CPU·메모리·배터리·위치 지표는 MQTT로 올려 Grafana에서 보고, YOLO 모델은 AWS IoT Greengrass로 로봇에 배포하고 ROS 명령은 AWS IoT Core로 원격 제어했다. 대시보드는 직접 개발해야 하고 네트워크가 연결된 상태에서만 동작한다. 판단이 어려운 경우는 에이전트 AI로 Amazon Bedrock의 VLM에 맡겼는데, <b>시간과 비용</b>을 고려해 <mark>엣지 YOLO로 먼저 거르고 confidence가 낮을 때만 VLM에 보내는 방식</mark>이 제안됐다. 현장용 파운데이션 모델은 따로 없어 Amazon Bedrock의 여러 모델을 테스트해 고르면 되고, AI가 제어 명령을 직접 만드는 방식도 가능하다고 했다.</p>
+    <blockquote><span class="time">[11:45]</span>confidence 값이 나올 거잖아요. 그게 너무 낮다 하면은 여기 추론을 보내는 형태로 저는 할 것 같아요.</blockquote>
+    <ul class="pins">
+      <li class="ask">비용은? → 토큰 기반 과금, AWS IoT 서비스가 가장 저렴</li>
+      <li class="ask">사용자 구축 모델이 필요한가? → 파운데이션 모델 테스트 후 선정</li>
+      <li class="open">VLM의 현장 인식 성능·속도는 테스트 필요</li>
+    </ul>
+  </div>
+</li>
+<li class="station" id="topic-8">
+  <div class="st-time">11:47<small>10분</small></div>
+  <span class="st-dot"></span>
+  <div class="st-body">
+    <h3>Isaac Sim 클라우드 학습</h3>
+    <p class="gist">현 시스템에 맞춰 ROS·Isaac Sim·통신 프로토콜을 세팅한 <b>EC2 하나를 복제</b>해 쓰고, 파라미터는 AWS Batch로 환경 ID·로봇·에폭·GPU 수·이터레이션을 일괄 설정하거나 SSH·Amazon DCV로 개별 제어할 수 있으며, Slurm·AWS ParallelCluster로 직접 제어하는 선택지도 나왔다. 보상·학습 시작·환경 설정을 어떻게 제어할지 고민 중이라는 질문에, 여러 노드의 경험 데이터를 스토리지로 동기화해 모델 하나를 학습하고 로그와 폴리시 동작도 클라우드에서 본다고 답했다. 다만 로컬 PC보다 느려 <mark>환경·알고리즘을 PC에서 정의한 뒤 확장 단계에서 클라우드로 옮기길</mark> 권했다.</p>
+    <blockquote><span class="time">[11:56]</span>확장시켜서 한꺼번에 테스트를 해야 된다 했을 때 클라우드로 옮기시는 걸 추천드려요.</blockquote>
+    <ul class="pins">
+      <li class="ask">현 시스템을 Isaac Sim에 구현 가능? → 가능, EC2 하나만 세팅</li>
+      <li class="ask">파라미터 일괄·개별 제어? → 둘 다 가능(AWS Batch·SSH)</li>
+    </ul>
+  </div>
+</li>
+<li class="station" id="topic-9">
+  <div class="st-time">11:57<small>6분</small></div>
+  <span class="st-dot"></span>
+  <div class="st-body">
+    <h3>학습 필요성과 대용량 영상 업로드</h3>
+    <p class="gist">규칙 기반 하드코딩 플래너는 잘 되지만 바닥의 물 같은 예상 못한 경우가 있어 학습 활용 가능성이 언급됐다. 1시간 동안 찍은 360 영상을 무선으로 올리면 오래 걸린다는 문제에는, <b>이더넷은 느리고 불안정</b>해 SSD를 직접 옮기는 것이 가장 빠르고 다음은 창고 같은 Wi-Fi 구역에서 자동 업로드하는 방식인데 이마저 밤새 걸렸다고 했다. Jetson Thor 내부 SSD는 그래픽카드를 떼야 해 USB SSD를 외부에 다는 안이 나왔고, NVIDIA 인코더로 압축하면 용량이 10배 이상 줄어 <mark class="risk">충전 시간 동안 올릴 수 있을지는 미확인</mark>으로 남았다.</p>
+    <blockquote><span class="time">[12:01]</span>이더넷으로 데이터를 전송하는 건 진짜 너무 느립니다.</blockquote>
+    <ul class="pins">
+      <li class="ask">독에 이더넷 연결하면 빠른가? → 가능하나 매우 느림</li>
+      <li class="open">360 영상 업로드 방식(SSD 교체·Wi-Fi·압축) 미정</li>
+    </ul>
+  </div>
+</li>
+<li class="station" id="topic-10">
+  <div class="st-time">12:16<small>4분</small></div>
+  <span class="st-dot"></span>
+  <div class="st-body">
+    <h3>현장과 일정</h3>
+    <p class="gist">현장은 두 번 나눠 들어가는 일정으로 <mark class="ok">용인을 기본으로 잡았고</mark>, 울산은 시험장으로 어렵고 Amazon AIDC가 가장 적합하다는 의견이 나왔다. 현장 방문은 하루 종일 걸리지만 <b>자주 갈수록 실측 데이터로 튜닝</b>해 개발이 빨라지며, 처음에는 자율주행 없이 수동으로 8월 중순쯤부터 운용할 수 있다고 했다. 용인 현장 실측과 플랜트 LiDAR 스캐닝 데이터 제공, 설계·시공을 분리하는 법 때문에 설계를 직접 할 수 없다는 사정도 언급됐다.</p>
+    <blockquote><span class="time">[12:17]</span>로봇은 현장에 자주 가면 좋습니다. 저희 입장에서도 개발하기 편하고.</blockquote>
+    <ul class="pins">
+      <li class="decide">용인을 기본 현장으로 잡음</li>
+      <li class="ask">현장 수동 운용 시점은? → 8월 중순쯤부터</li>
+      <li class="open">현장 방문 빈도와 Amazon AIDC 활용 여부</li>
+    </ul>
+  </div>
+</li>
+<li class="station" id="topic-11">
+  <div class="st-time">12:20<small>4분</small></div>
+  <span class="st-dot"></span>
+  <div class="st-body">
+    <h3>지원 체계와 후속 일정</h3>
+    <p class="gist">파트너 지원은 별도 파트너 팀이 맡고 이번 건은 <mark class="ok">고객을 지원하는 프로그램으로 이해해 달라</mark>고 정리됐다. 기초 교육만으로는 초점이 흐려질 수 있어 교육·워크숍 아젠다와 가능한 날짜를 빨리 뽑아 8월 말이나 9월 초 투입 전에 세팅을 끝내고, 이후 Q&amp;A 세션과 <b>메일 루프</b>로 질의를 받기로 했다. 건설 산업 첫 사례를 3사 공동 레퍼런스로 만들어 외부에 공유하자는 취지도 공유됐다.</p>
+    <blockquote><span class="time">[12:23]</span>삼개사가 다 윈윈하는 포인트를 갖고 있는 거예요.</blockquote>
+    <ul class="pins">
+      <li class="decide">이번 지원은 고객 지원 프로그램으로 운영</li>
+      <li class="decide">교육·워크숍 아젠다와 날짜를 먼저 뽑기로</li>
+      <li class="decide">질의는 메일 루프로 보내고 에셋을 공유받기로</li>
+    </ul>
+  </div>
+</li></ol></section>
+
+<div class="triad">
+<section data-section="decisions" id="sec-decisions"><h2><span class="glyph decide">◆</span>결정</h2>
+<ul class="list decide"><li><b>상부 퍼셉션 카메라 별도 장착</b> — Depth 카메라가 바닥을 향해 Jetson Thor에 따로 단다 <span class="time">[10:38]</span></li>
+<li><b>LiDAR는 Jetson Thor에 직접 연결</b> — 딜레이를 피하기 위해 <span class="time">[10:38]</span></li>
+<li><b>오도메트리는 LiDAR 내장 IMU로</b> — 내부 값은 시프트가 생겨 쓰지 않음 <span class="time">[10:58]</span></li>
+<li><b>SLAM 자체 개발</b> — FAST-LIO2는 실사용 성능이 부족 <span class="time">[11:04]</span></li>
+<li><b>가감 제어는 Jetson Thor 자체 로직으로</b> — 자체 알고리즘에 얹기 위해 <span class="time">[11:04]</span></li>
+<li><b>용인을 기본 현장으로</b> — 울산은 시험장으로 어려움 <span class="time">[12:16]</span></li>
+<li><b>이번 지원은 고객 지원 프로그램</b> — 파트너 지원은 별도 팀 담당 <span class="time">[12:20]</span></li>
+<li><b>교육·워크숍 아젠다와 날짜를 먼저 뽑기</b> — 기초 교육만으로는 초점이 흐려짐 <span class="time">[12:21]</span></li>
+<li><b>질의는 메일 루프로</b> — 전문가가 답하고 에셋을 공유 <span class="time">[12:22]</span></li></ul></section>
+
+<section data-section="action-items" id="sec-actions"><h2><span class="glyph act">□</span>할 일</h2>
+<ul class="list act"><li><span class="who">교육 지원팀</span>교육 아젠다를 짜고 가능한 날짜 뽑기</li>
+<li><span class="who">교육 지원팀</span>워크숍 형식·일정·아젠다 정리</li>
+<li><span class="who">미정</span>현장 투입 전 세팅 완료 <span class="due">기한 8월 말~9월 초</span></li>
+<li><span class="who">미정</span>궁금한 점을 메일 루프로 질의</li>
+<li><span class="who">미정</span>현장 가기 전 기존 Vision 60 제품 직접 확인</li>
+<li><span class="who">미정</span>Amazon Bedrock 파운데이션 모델을 테스트해 비전 판단용 모델 선정</li></ul></section>
+
+<section data-section="open-questions" id="sec-open"><h2><span class="glyph open">●</span>확인할 것</h2>
+<ul class="list open"><li><b>Jetson Thor 탑재 후 구동 시간</b> — 3시간 이상은 Jetson Thor 없는 기준 <span class="time">[10:37]</span></li>
+<li><b>Ghost Robotics 데이터 개방 범위</b> — 약속과 달리 미흡하다는 평가 <span class="time">[10:40]</span></li>
+<li><b>SLAM·내비게이션에 필요한 리소스</b> — 모델 규모 질문에 답이 끊김 <span class="time">[10:59]</span></li>
+<li><b>계단 전환 시 모터단 제어 방식</b> — 직접 제어가 필요하다는 데서 멈춤 <span class="time">[11:04]</span></li>
+<li><b>VLM의 현장 인식 성능·속도</b> — 테스트해 봐야 안다고 함 <span class="time">[11:46]</span></li>
+<li><b>360 영상 업로드 방식</b> — SSD 교체·Wi-Fi·압축 중 결정 안 됨 <span class="time">[12:02]</span></li>
+<li><b>현장 방문 빈도와 Amazon AIDC 활용</b> — 적합하다는 의견만 나옴 <span class="time">[12:17]</span></li></ul></section>
+</div>
+
+<footer data-section="footer">
+  TransMeet로 생성한 타임라인입니다. 모델 global.anthropic.claude-opus-5-5, 미팅 ID c3ca294c-45c1-4d8a-b67d-e9cdc1c6c0b1, 생성 2026-10-28 22:06 (Seoul)
+</footer>
+</article>
+</main>
+</body>
+</html>

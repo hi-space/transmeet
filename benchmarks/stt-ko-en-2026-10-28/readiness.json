@@ -1,0 +1,24 @@
+{
+  "qwen3-asr": {
+    "started_at": "2026-10-28T18:32:51.409847+00:00",
+    "initial": {
+      "provider": "qwen3-asr",
+      "managed": true,
+      "instances": 0,
+      "desiredCopies": 0,
+      "currentCopies": 0,
+      "status": "sleeping"
+    }
+  },
+  "nemotron": {
+    "started_at": "2026-10-28T18:32:51.413130+00:00",
+    "initial": {
+      "provider": "nemotron",
+      "managed": true,
+      "instances": 0,
+      "desiredCopies": 0,
+      "currentCopies": 0,
+      "status": "sleeping"
+    }
+  }
+}
