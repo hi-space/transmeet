@@ -607,9 +607,6 @@ export class TransmeetStack extends cdk.Stack {
         REGION,
         PAGES_BUCKET: pagesBucket.bucketName,
         PAGES_PUBLIC_BASE_URL: `https://${APP_DOMAIN}/p`,
-        AUDIO_BUCKET: audioBucket.bucketName,
-        MAIL_FROM,
-        APP_BASE_URL: `https://${APP_DOMAIN}`,
         MEETINGS_TABLE: meetingsTable.tableName,
         PAGES_TABLE: pagesTable.tableName,
         WEB_SEARCH_GATEWAY_URL: webSearchGateway.getAtt('GatewayUrl').toString(),
@@ -661,6 +658,10 @@ export class TransmeetStack extends cdk.Stack {
         PAGE_AGENT_FALLBACK_MODEL_ID,
         PAGES_BUCKET: pagesBucket.bucketName,
         PAGES_PUBLIC_BASE_URL: `https://${APP_DOMAIN}/p`,
+        // 녹음 구간·MP3 와 미팅 종료 메일 (backend/app/audio_store.py, mailer.py)
+        AUDIO_BUCKET: audioBucket.bucketName,
+        MAIL_FROM,
+        APP_BASE_URL: `https://${APP_DOMAIN}`,
         // WebSocket 연결 시 ID 토큰 검증(발급자·audience)
         COGNITO_USER_POOL_ID: userPool.userPoolId,
         COGNITO_CLIENT_ID: userPoolClient.userPoolClientId,
