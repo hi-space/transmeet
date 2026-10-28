@@ -1,0 +1,162 @@
+{
+  "created_at": "2026-10-28T09:57:36.337525+00:00",
+  "region": "us-east-1",
+  "source": {
+    "dataset": "google/fleurs",
+    "config": "ko_kr",
+    "split": "test",
+    "rows": "0-9",
+    "url": "https://huggingface.co/datasets/google/fleurs"
+  },
+  "license": "CC-BY-4.0",
+  "conditions": {
+    "input": "identical pre-recorded 16 kHz mono PCM clips",
+    "timing": "completed-clip wall time; Transcribe sent without real-time pacing",
+    "normalization": "NFKC, casefold, alphanumeric characters; no number/abbreviation rewriting",
+    "sagemaker_chunk_seconds": 6.0,
+    "repetitions": 1
+  },
+  "summary": {
+    "whisper": {
+      "successful_samples": 10,
+      "failed_samples": 0,
+      "cer": 0.15436241610738255,
+      "errors": 69,
+      "reference_chars": 447,
+      "median_seconds": 4.4489,
+      "real_time_factor": 0.4112347012239021
+    }
+  },
+  "results": [
+    {
+      "provider": "whisper",
+      "audio_seconds": 12.48,
+      "reference": "다리 밑 수직 간격은 15미터이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년 3월까지이다",
+      "text": "다리미 수직 간격은 15m이며 공사는 2011년 8월에 마무리되었으며 해당 달의의 통행금지는 2017년 3월까지이다. Thank you.",
+      "language": "",
+      "errors": 13,
+      "reference_chars": 53,
+      "cer": 0.24528301886792453,
+      "elapsed_seconds": 5.5521,
+      "sample_id": "fleurs-ko-test-row-0",
+      "repeat": 1
+    },
+    {
+      "provider": "whisper",
+      "audio_seconds": 10.8,
+      "reference": "델 포트로가 2세트에서 먼저 어드밴티지를 얻었지만 6 대 6이 된 후 다시 타이 브레이크가 필요했다",
+      "text": "델포트로가 2세트에서 먼저 어드밴티지를 얻었지만 6대 6에서 다시 타이 브레이크가 필요했다.",
+      "language": "",
+      "errors": 3,
+      "reference_chars": 41,
+      "cer": 0.07317073170731707,
+      "elapsed_seconds": 3.8276,
+      "sample_id": "fleurs-ko-test-row-1",
+      "repeat": 1
+    },
+    {
+      "provider": "whisper",
+      "audio_seconds": 8.94,
+      "reference": "염소 사육은 대략 일만 년 전에 이란의 자그로스산맥에서 시작한 것으로 보입니다",
+      "text": "염소사육은 대략 1만 년 전에 이란의 자그로스 산맥에서 시작한 것으로 보입니다. 감사합니다.",
+      "language": "",
+      "errors": 6,
+      "reference_chars": 33,
+      "cer": 0.18181818181818182,
+      "elapsed_seconds": 3.606,
+      "sample_id": "fleurs-ko-test-row-2",
+      "repeat": 1
+    },
+    {
+      "provider": "whisper",
+      "audio_seconds": 12.54,
+      "reference": "겨울에 북발트해를 건널 경우에는 빙판을 통과하면서 꽤 끔찍한 소음이 발생하기 때문에 객실의 위치를 확인하는 것이 좋다",
+      "text": "겨울에 북바이트해를 건널 경우에는 빙판을 통과하면서 끔찍한 소음이 발생하기 때문에 객실의 위치를 확인하는 것이 좋다 Thank you.",
+      "language": "",
+      "errors": 11,
+      "reference_chars": 50,
+      "cer": 0.22,
+      "elapsed_seconds": 5.4964,
+      "sample_id": "fleurs-ko-test-row-3",
+      "repeat": 1
+    },
+    {
+      "provider": "whisper",
+      "audio_seconds": 12.12,
+      "reference": "홍콩의 스카이라인을 이루는 빌딩 행렬은 빅토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대그래프에 비유된다",
+      "text": "홍콩의 스카이라인을 이루는 빌딩 행렬은 빅토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대 그래프에 비유된다. Thank you.",
+      "language": "",
+      "errors": 8,
+      "reference_chars": 52,
+      "cer": 0.15384615384615385,
+      "elapsed_seconds": 5.0702,
+      "sample_id": "fleurs-ko-test-row-4",
+      "repeat": 1
+    },
+    {
+      "provider": "whisper",
+      "audio_seconds": 9.9,
+      "reference": "합금은 기본적으로 금속 두 개 이상의 혼합물이다 주기율표 상에 원소가 많이 있다는 것을 잊지 마라",
+      "text": "합금은 기본적으로 금속 2개 이상의 혼합물이다. 주기율표상의 원소가 반성되다. 많이 있다는 것을 잊지 마라.",
+      "language": "",
+      "errors": 6,
+      "reference_chars": 40,
+      "cer": 0.15,
+      "elapsed_seconds": 3.6794,
+      "sample_id": "fleurs-ko-test-row-5",
+      "repeat": 1
+    },
+    {
+      "provider": "whisper",
+      "audio_seconds": 13.62,
+      "reference": "\"1940년 8월 15일 연합군은 프랑스 남부를 침략했고 이 침략은 \"드래군 작전\"\"이라 불렸다. ",
+      "text": "1940년 8월 15일 연합군은 프랑스 남부를 침략했고 이 침략은 드래군 작전이라 불렸다. Thank you.",
+      "language": "",
+      "errors": 8,
+      "reference_chars": 38,
+      "cer": 0.21052631578947367,
+      "elapsed_seconds": 5.6077,
+      "sample_id": "fleurs-ko-test-row-6",
+      "repeat": 1
+    },
+    {
+      "provider": "whisper",
+      "audio_seconds": 7.02,
+      "reference": "그래도 관계자의 조언을 듣고 모든 표지판을 지키고 안전 경고에 세심한 주의를 기울여야 합니다",
+      "text": "그래도 관계자의 조언을 듣고 모든 표지판을 지키고 안전 경고에 세심한 주의를 기울여야 합니다. 감사합니다.",
+      "language": "",
+      "errors": 5,
+      "reference_chars": 39,
+      "cer": 0.1282051282051282,
+      "elapsed_seconds": 3.5172,
+      "sample_id": "fleurs-ko-test-row-7",
+      "repeat": 1
+    },
+    {
+      "provider": "whisper",
+      "audio_seconds": 18.9,
+      "reference": "지하철의 정규 안내 방송은 카탈로니아어로만 제공되나 계획에 없던 운행 중단 시에는 자동 시스템을 통해 스페인어 영어 프랑스어 아라비아어 일본어를 포함한 다양한 언어로 방송됩니다",
+      "text": "지하철의 정규 안내 방송은 카탈로니아어로만 제공되나 계획이 없던 운행 중단 시에는 자동 시스템을 통해 스페인어 영어 프랑스어, 아라비아어, 일본어를 포함한 다양한 언어로 방송됩니다. Thank you.",
+      "language": "",
+      "errors": 9,
+      "reference_chars": 76,
+      "cer": 0.11842105263157894,
+      "elapsed_seconds": 7.4721,
+      "sample_id": "fleurs-ko-test-row-8",
+      "repeat": 1
+    },
+    {
+      "provider": "whisper",
+      "audio_seconds": 4.8,
+      "reference": "교전이 발발한 직후 영국은 독일에 대한 해상 봉쇄를 시작한다",
+      "text": "교전이 발발한 직후 영국은 독일에 대한 해상봉쇄를 시작한다",
+      "language": "",
+      "errors": 0,
+      "reference_chars": 25,
+      "cer": 0.0,
+      "elapsed_seconds": 1.8677,
+      "sample_id": "fleurs-ko-test-row-9",
+      "repeat": 1
+    }
+  ]
+}

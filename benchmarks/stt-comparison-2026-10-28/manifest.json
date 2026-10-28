@@ -1,0 +1,112 @@
+{
+  "source": {
+    "dataset": "google/fleurs",
+    "config": "ko_kr",
+    "split": "test",
+    "rows": "0-9",
+    "url": "https://huggingface.co/datasets/google/fleurs"
+  },
+  "license": "CC-BY-4.0",
+  "samples": [
+    {
+      "id": "fleurs-ko-test-row-0",
+      "dataset_id": 1883,
+      "row_index": 0,
+      "audio": "audio/ko-00.wav",
+      "language": "ko",
+      "reference": "다리 밑 수직 간격은 15미터이며 공사는 2011년 8월에 마무리되었으며 해당 다리의 통행금지는 2017년 3월까지이다",
+      "audio_seconds": 12.48,
+      "sha256": "692ead3d5546b300c37b0bb6b5eae299f1023d1452651ba4ae0e93173e6d9067"
+    },
+    {
+      "id": "fleurs-ko-test-row-1",
+      "dataset_id": 1929,
+      "row_index": 1,
+      "audio": "audio/ko-01.wav",
+      "language": "ko",
+      "reference": "델 포트로가 2세트에서 먼저 어드밴티지를 얻었지만 6 대 6이 된 후 다시 타이 브레이크가 필요했다",
+      "audio_seconds": 10.8,
+      "sha256": "8dff9bb3597dcc33c4b98c916cfb91ba682f51019144630530de5deb72481c1f"
+    },
+    {
+      "id": "fleurs-ko-test-row-2",
+      "dataset_id": 1701,
+      "row_index": 2,
+      "audio": "audio/ko-02.wav",
+      "language": "ko",
+      "reference": "염소 사육은 대략 일만 년 전에 이란의 자그로스산맥에서 시작한 것으로 보입니다",
+      "audio_seconds": 8.94,
+      "sha256": "27d54da0d7627cfd223c3028f773fe83cff4d3e102b40aeed771035198a18e36"
+    },
+    {
+      "id": "fleurs-ko-test-row-3",
+      "dataset_id": 2000,
+      "row_index": 3,
+      "audio": "audio/ko-03.wav",
+      "language": "ko",
+      "reference": "겨울에 북발트해를 건널 경우에는 빙판을 통과하면서 꽤 끔찍한 소음이 발생하기 때문에 객실의 위치를 확인하는 것이 좋다",
+      "audio_seconds": 12.54,
+      "sha256": "8214291abc74551abca9612b7504ae1b2988ecd29d4c3b8f4e1e42a389b56527"
+    },
+    {
+      "id": "fleurs-ko-test-row-4",
+      "dataset_id": 1801,
+      "row_index": 4,
+      "audio": "audio/ko-04.wav",
+      "language": "ko",
+      "reference": "홍콩의 스카이라인을 이루는 빌딩 행렬은 빅토리아 항구의 수면에 선명히 비치는 모습 때문에 반짝이는 막대그래프에 비유된다",
+      "audio_seconds": 12.12,
+      "sha256": "e28117e5ba80cdfff918199eec2350cd47d5878aca2abe689f35db47ed91bb35"
+    },
+    {
+      "id": "fleurs-ko-test-row-5",
+      "dataset_id": 1662,
+      "row_index": 5,
+      "audio": "audio/ko-05.wav",
+      "language": "ko",
+      "reference": "합금은 기본적으로 금속 두 개 이상의 혼합물이다 주기율표 상에 원소가 많이 있다는 것을 잊지 마라",
+      "audio_seconds": 9.9,
+      "sha256": "98e7a8d6b9f12cad30fee3fcfbea51e64505a9e85f9e989db8df8f7a730d3ac7"
+    },
+    {
+      "id": "fleurs-ko-test-row-6",
+      "dataset_id": 1705,
+      "row_index": 6,
+      "audio": "audio/ko-06.wav",
+      "language": "ko",
+      "reference": "\"1940년 8월 15일 연합군은 프랑스 남부를 침략했고 이 침략은 \"드래군 작전\"\"이라 불렸다. ",
+      "audio_seconds": 13.62,
+      "sha256": "af557e078402208382ad74605ddcd861b056acedd8a8feae7b497d3d03bae351"
+    },
+    {
+      "id": "fleurs-ko-test-row-7",
+      "dataset_id": 1959,
+      "row_index": 7,
+      "audio": "audio/ko-07.wav",
+      "language": "ko",
+      "reference": "그래도 관계자의 조언을 듣고 모든 표지판을 지키고 안전 경고에 세심한 주의를 기울여야 합니다",
+      "audio_seconds": 7.02,
+      "sha256": "d5baf05d8a3b72b94d3696bd77179cf64f85b4b579b2241a63ecb20f1ea3bcd0"
+    },
+    {
+      "id": "fleurs-ko-test-row-8",
+      "dataset_id": 1715,
+      "row_index": 8,
+      "audio": "audio/ko-08.wav",
+      "language": "ko",
+      "reference": "지하철의 정규 안내 방송은 카탈로니아어로만 제공되나 계획에 없던 운행 중단 시에는 자동 시스템을 통해 스페인어 영어 프랑스어 아라비아어 일본어를 포함한 다양한 언어로 방송됩니다",
+      "audio_seconds": 18.9,
+      "sha256": "03d9bd245ed0a22e3f18f69aa43c9aa23f9bd0d348f06c47f5ad6d72c06a4d68"
+    },
+    {
+      "id": "fleurs-ko-test-row-9",
+      "dataset_id": 1907,
+      "row_index": 9,
+      "audio": "audio/ko-09.wav",
+      "language": "ko",
+      "reference": "교전이 발발한 직후 영국은 독일에 대한 해상 봉쇄를 시작한다",
+      "audio_seconds": 4.8,
+      "sha256": "ece2fcf7473eb903bbf380f71137be4259d08bf438f32af3acd92d1bdc94e155"
+    }
+  ]
+}

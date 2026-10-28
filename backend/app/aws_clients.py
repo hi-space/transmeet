@@ -146,17 +146,32 @@ def resolve_detected_language(reported: str, text: str) -> str:
 
 
 SILENCE_RMS_THRESHOLD = 0.01
+_RMS_WINDOW_BYTES = 16_000 * 2 * 2  # Original 2-second chunks: 16 kHz, 16-bit mono.
 
 
-def compute_rms(wav_bytes: bytes) -> float:
-    """Compute normalized RMS energy of a WAV buffer (skips 44-byte header)."""
-    pcm = wav_bytes[44:]
+def _pcm_rms(pcm: bytes) -> float:
+    """Compute normalized RMS energy of little-endian 16-bit PCM."""
     if len(pcm) < 2:
         return 0.0
     num_samples = len(pcm) // 2
     samples = struct.unpack_from(f"<{num_samples}h", pcm)
     rms = (sum(s * s for s in samples) / num_samples) ** 0.5
     return min(rms / 32768.0, 1.0)
+
+
+def compute_rms(wav_bytes: bytes) -> float:
+    """Compute normalized RMS energy of a WAV buffer (skips 44-byte header)."""
+    return _pcm_rms(wav_bytes[44:])
+
+
+def compute_peak_rms(wav_bytes: bytes) -> float:
+    """Use the loudest original-size window so longer pauses do not hide speech."""
+    pcm = wav_bytes[44:]
+    return max(
+        (_pcm_rms(pcm[start:start + _RMS_WINDOW_BYTES])
+         for start in range(0, len(pcm), _RMS_WINDOW_BYTES)),
+        default=0.0,
+    )
 
 
 _HALLUCINATION_PATTERNS = [

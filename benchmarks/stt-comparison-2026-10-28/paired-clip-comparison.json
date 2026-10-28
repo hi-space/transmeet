@@ -1,0 +1,17 @@
+{
+  "transcribe": {
+    "qwen_fewer_errors": 4,
+    "tie": 3,
+    "qwen_more_errors": 3
+  },
+  "whisper": {
+    "qwen_fewer_errors": 2,
+    "tie": 7,
+    "qwen_more_errors": 1
+  },
+  "nemotron": {
+    "qwen_fewer_errors": 8,
+    "tie": 1,
+    "qwen_more_errors": 1
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "benchmark_script": "backend/scripts/benchmark_stt.py",
+  "current_git_revision": "7e507fd66a073c9ffad6fdfc980f5f75ce7311f6",
+  "benchmark_script_sha256": "1ec2b1c5b8f1a23aae4a3751abd51c770018ee19ca1d38ee8cc87916f044e647",
+  "historical_results": "Saved measurements from the interrupted session; not rerun or edited.",
+  "historical_conditions": {
+    "language": "Korean",
+    "samples": 10,
+    "audio_seconds": 111.12,
+    "normalized_reference_characters": 447,
+    "repetitions": 1
+  }
+}

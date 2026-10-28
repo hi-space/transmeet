@@ -1,0 +1,147 @@
+{
+  "generated_at": "2026-10-28T12:08:53.540745+00:00",
+  "language": "ko",
+  "samples": 10,
+  "audio_seconds": 111.12,
+  "reference_chars": 447,
+  "results": [
+    {
+      "provider": "transcribe",
+      "label": "Amazon Transcribe",
+      "whole": {
+        "successful_samples": 10,
+        "failed_samples": 0,
+        "cer": 0.026845637583892617,
+        "errors": 12,
+        "reference_chars": 447,
+        "median_seconds": 2.785,
+        "real_time_factor": 0.25043286537077036
+      },
+      "six_seconds": null,
+      "two_seconds": null
+    },
+    {
+      "provider": "qwen3-asr",
+      "label": "Qwen3-ASR 1.7B",
+      "whole": {
+        "successful_samples": 10,
+        "failed_samples": 0,
+        "cer": 0.026845637583892617,
+        "errors": 12,
+        "reference_chars": 447,
+        "median_seconds": 2.4978,
+        "real_time_factor": 0.22825323974082076
+      },
+      "six_seconds": {
+        "successful_samples": 10,
+        "failed_samples": 0,
+        "cer": 0.058165548098434,
+        "errors": 26,
+        "reference_chars": 447,
+        "median_seconds": 4.38055,
+        "real_time_factor": 0.39101511879049683
+      },
+      "two_seconds": {
+        "successful_samples": 10,
+        "failed_samples": 0,
+        "cer": 0.19686800894854586,
+        "errors": 88,
+        "reference_chars": 447,
+        "median_seconds": 8.45225,
+        "real_time_factor": 0.7253896688264939
+      }
+    },
+    {
+      "provider": "whisper",
+      "label": "Whisper large-v3-turbo",
+      "whole": {
+        "successful_samples": 10,
+        "failed_samples": 0,
+        "cer": 0.035794183445190156,
+        "errors": 16,
+        "reference_chars": 447,
+        "median_seconds": 2.24525,
+        "real_time_factor": 0.2062437005039597
+      },
+      "six_seconds": {
+        "successful_samples": 10,
+        "failed_samples": 0,
+        "cer": 0.15436241610738255,
+        "errors": 69,
+        "reference_chars": 447,
+        "median_seconds": 4.4489,
+        "real_time_factor": 0.4112347012239021
+      },
+      "two_seconds": {
+        "successful_samples": 10,
+        "failed_samples": 0,
+        "cer": 0.43400447427293065,
+        "errors": 194,
+        "reference_chars": 447,
+        "median_seconds": 10.2152,
+        "real_time_factor": 0.872803275737941
+      }
+    },
+    {
+      "provider": "nemotron",
+      "label": "Nemotron 3.5 ASR 0.6B",
+      "whole": {
+        "successful_samples": 10,
+        "failed_samples": 0,
+        "cer": 0.09843400447427293,
+        "errors": 44,
+        "reference_chars": 447,
+        "median_seconds": 1.92295,
+        "real_time_factor": 0.17528887688984884
+      },
+      "six_seconds": null,
+      "two_seconds": {
+        "successful_samples": 10,
+        "failed_samples": 0,
+        "cer": 0.2371364653243848,
+        "errors": 106,
+        "reference_chars": 447,
+        "median_seconds": 7.57335,
+        "real_time_factor": 0.6566252699784019
+      }
+    }
+  ],
+  "qwen_readiness": {
+    "measured_at": "2026-10-28T12:03:44.383869+00:00",
+    "wait_seconds": 385.56,
+    "initial_component_status": "Updating",
+    "initial_runtime": {
+      "DesiredCopyCount": 0,
+      "CurrentCopyCount": 0
+    },
+    "initial_instances": 1,
+    "final_variant": [
+      {
+        "VariantName": "AllTraffic",
+        "CurrentInstanceCount": 1,
+        "DesiredInstanceCount": 1,
+        "InstancePools": [
+          {
+            "InstanceType": "ml.g6.2xlarge",
+            "CurrentInstanceCount": 1
+          }
+        ],
+        "ManagedInstanceScaling": {
+          "Status": "ENABLED",
+          "MinInstanceCount": 0,
+          "MaxInstanceCount": 1,
+          "ScaleInPolicy": {
+            "Strategy": "IDLE_RELEASE"
+          }
+        }
+      }
+    ]
+  },
+  "limits": [
+    "First 10 Korean FLEURS test clips, not a representative meeting benchmark.",
+    "One run per condition; historical baselines and resumed Qwen runs used different times and serving configurations.",
+    "Latency is completed-clip request-to-result time, not live subtitle latency.",
+    "CER counts digit/word and unit-spelling differences.",
+    "English, noisy meetings, overlap, diarization and downstream translation were not evaluated."
+  ]
+}

@@ -6,7 +6,14 @@ import { supportsSystemAudio } from '@/lib/platform'
 import ThemeSettings from '@/components/ThemeSettings'
 import EmailNotifySetting from '@/components/EmailNotifySetting'
 import { TRANSLATION_MODELS } from '@/lib/translationModels'
-import { STT_PROVIDERS, isManagedStt, type SttProvider, type SttStatus } from '@/lib/sttProviders'
+import {
+  STT_CHUNK_SECONDS,
+  STT_PROVIDERS,
+  isManagedStt,
+  sttChunkDuration,
+  type SttProvider,
+  type SttStatus,
+} from '@/lib/sttProviders'
 import SttStatusPanel from '@/components/SttStatusPanel'
 import Dialog from '@/components/ui/Dialog'
 import Icon from '@/components/ui/Icon'
@@ -267,7 +274,7 @@ export default function SettingsPanel({
                   hint={
                     settings.sttProvider === 'transcribe'
                       ? '발화 중에도 인식 결과를 표시합니다.'
-                      : '짧은 발화 구간을 모아 인식합니다. 결과가 나오기까지 잠시 걸릴 수 있습니다.'
+                      : `음성을 약 ${sttChunkDuration(settings.sttProvider, settings.sttChunkSeconds) / 1000}초씩 모아 인식하므로 첫 결과까지 시간이 걸릴 수 있습니다.`
                   }
                 />
                 {isManagedStt(settings.sttProvider) && (
@@ -275,6 +282,18 @@ export default function SettingsPanel({
                     state={sttStatus}
                     connected={sttConnected}
                     onPrepare={onPrepareStt}
+                  />
+                )}
+                {settings.sttProvider !== 'transcribe' && (
+                  <Choices
+                    label="음성 처리 구간"
+                    value={settings.sttChunkSeconds}
+                    options={STT_CHUNK_SECONDS.map((seconds) => ({
+                      value: seconds,
+                      label: `${seconds}초`,
+                    }))}
+                    onChange={(sttChunkSeconds) => handleUpdate({ sttChunkSeconds })}
+                    hint="기본 6초. 짧게 잡으면 반응이 빨라지고, 길게 잡으면 문맥을 더 확보할 수 있습니다."
                   />
                 )}
                 <Choices

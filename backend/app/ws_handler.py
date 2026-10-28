@@ -60,7 +60,7 @@ from .aws_clients import (
     SUMMARY_CLIENT_CONFIG,
     SILENCE_RMS_THRESHOLD,
     bedrock_client,
-    compute_rms,
+    compute_peak_rms,
     dynamodb_client,
     generate_message_id,
     is_hallucination,
@@ -1843,7 +1843,7 @@ async def ws_endpoint(
                             await state.audio_queue.put(pcm)
                     else:
                         # SageMaker: silence-gated buffer/flush
-                        energy = compute_rms(audio_bytes)
+                        energy = compute_peak_rms(audio_bytes)
                         if energy >= SILENCE_RMS_THRESHOLD:
                             state.audio_buffer.append(audio_bytes)
                             total_size = sum(len(c) for c in state.audio_buffer)

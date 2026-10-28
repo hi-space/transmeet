@@ -1,7 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { normalizeSttProvider, type SttProvider } from '@/lib/sttProviders'
+import {
+  DEFAULT_STT_CHUNK_SECONDS,
+  normalizeSttChunkSeconds,
+  normalizeSttProvider,
+  type SttChunkSeconds,
+  type SttProvider,
+} from '@/lib/sttProviders'
 import {
   DEFAULT_TRANSLATION_MODEL_ID,
   normalizeTranslationModel,
@@ -19,6 +25,7 @@ export interface Settings {
   targetLang: 'ko' | 'en'
   audioSource: 'mic' | 'system' | 'both'
   sttProvider: SttProvider
+  sttChunkSeconds: SttChunkSeconds
   ttsAutoPlay: boolean
   pollyEngine: 'generative' | 'neural' | 'standard'
   pollyVoiceId: string
@@ -52,6 +59,7 @@ const DEFAULT: Settings = {
   targetLang: 'ko',
   audioSource: 'mic',
   sttProvider: 'transcribe',
+  sttChunkSeconds: DEFAULT_STT_CHUNK_SECONDS,
   ttsAutoPlay: true,
   pollyEngine: 'generative',
   pollyVoiceId: 'Ruth',
@@ -79,6 +87,7 @@ export function useSettings() {
         // 이전 모델 선택도 현재 제공하는 글로벌 추론 프로필로 정리한다.
         loaded.translationModel = normalizeTranslationModel(loaded.translationModel)
         loaded.sttProvider = normalizeSttProvider(loaded.sttProvider)
+        loaded.sttChunkSeconds = normalizeSttChunkSeconds(loaded.sttChunkSeconds)
         // engine이 sourceLang을 지원하지 않으면 기본값으로 자동 수정
         const ttsLang = loaded.sourceLang === 'auto' ? 'en' : loaded.sourceLang
         const supportedEngines = LANG_VOICE_ENGINES[ttsLang]
@@ -100,6 +109,7 @@ export function useSettings() {
       const next = { ...prev, ...patch }
       next.translationModel = normalizeTranslationModel(next.translationModel)
       next.sttProvider = normalizeSttProvider(next.sttProvider)
+      next.sttChunkSeconds = normalizeSttChunkSeconds(next.sttChunkSeconds)
 
       // sourceLang 이 바뀌면 TTS 목소리/엔진을 해당 언어 기본값으로 되돌린다.
       // (ko 는 Seoyeon/neural 만 지원하므로 en 설정이 그대로 남으면 재생이 실패한다)

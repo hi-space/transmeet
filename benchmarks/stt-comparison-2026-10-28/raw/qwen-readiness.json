@@ -1,0 +1,31 @@
+{
+  "measured_at": "2026-10-28T12:03:44.383869+00:00",
+  "wait_seconds": 385.56,
+  "initial_component_status": "Updating",
+  "initial_runtime": {
+    "DesiredCopyCount": 0,
+    "CurrentCopyCount": 0
+  },
+  "initial_instances": 1,
+  "final_variant": [
+    {
+      "VariantName": "AllTraffic",
+      "CurrentInstanceCount": 1,
+      "DesiredInstanceCount": 1,
+      "InstancePools": [
+        {
+          "InstanceType": "ml.g6.2xlarge",
+          "CurrentInstanceCount": 1
+        }
+      ],
+      "ManagedInstanceScaling": {
+        "Status": "ENABLED",
+        "MinInstanceCount": 0,
+        "MaxInstanceCount": 1,
+        "ScaleInPolicy": {
+          "Strategy": "IDLE_RELEASE"
+        }
+      }
+    }
+  ]
+}

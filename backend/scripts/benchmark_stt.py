@@ -224,7 +224,7 @@ def main():
     parser.add_argument("--repeat", type=int, default=1)
     parser.add_argument("--timeout", type=float, default=90)
     parser.add_argument("--chunk-seconds", type=float, default=0,
-                        help="Split SageMaker input into chunks; 2 approximates app input, 0 uses whole clips.")
+                        help="Split SageMaker input into chunks; 6 approximates the default app input, 2 reproduces the previous baseline, 0 uses whole clips.")
     args = parser.parse_args()
     if args.repeat < 1 or args.timeout <= 0 or args.chunk_seconds < 0:
         parser.error("repeat/timeout must be positive and chunk-seconds nonnegative")

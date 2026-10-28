@@ -1317,7 +1317,7 @@ export default function Home() {
     flush: flushAudio,
   } = useAudioCapture({
     onChunk: handleChunk,
-    chunkDurationMs: sttChunkDuration(settings.sttProvider),
+    chunkDurationMs: sttChunkDuration(settings.sttProvider, settings.sttChunkSeconds),
     audioSource: settings.audioSource,
   })
 

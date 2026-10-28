@@ -7,6 +7,10 @@ export const STT_PROVIDERS = [
 
 export type SttProvider = (typeof STT_PROVIDERS)[number]['id']
 
+export const STT_CHUNK_SECONDS = [2, 4, 6, 8, 10] as const
+export const DEFAULT_STT_CHUNK_SECONDS = 6
+export type SttChunkSeconds = (typeof STT_CHUNK_SECONDS)[number]
+
 export interface SttStatus {
   provider: SttProvider
   status:
@@ -54,6 +58,14 @@ export function normalizeSttProvider(value: unknown): SttProvider {
   return STT_PROVIDERS.find((provider) => provider.id === value)?.id ?? 'transcribe'
 }
 
-export function sttChunkDuration(provider: SttProvider): number {
-  return provider === 'transcribe' ? 700 : 2000
+export function normalizeSttChunkSeconds(value: unknown): SttChunkSeconds {
+  return STT_CHUNK_SECONDS.find((seconds) => seconds === value) ?? DEFAULT_STT_CHUNK_SECONDS
+}
+
+export function sttChunkDuration(
+  provider: SttProvider,
+  seconds: SttChunkSeconds = DEFAULT_STT_CHUNK_SECONDS
+): number {
+  // Batch requests need more context; Transcribe retains context across sends.
+  return provider === 'transcribe' ? 700 : normalizeSttChunkSeconds(seconds) * 1000
 }

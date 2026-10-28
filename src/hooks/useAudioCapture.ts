@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { isIOS, supportsSystemAudio } from '@/lib/platform'
 
-// Transcribe streams 700ms chunks; the SageMaker providers use 2000ms for context.
+// Streaming defaults to 700ms; the provider policy requests longer batch context.
 const CHUNK_DURATION_MS = 700
 const SCRIPT_PROCESSOR_BUFFER_SIZE = 4096
 
@@ -95,11 +95,6 @@ export function useAudioCapture({
     onChunkRef.current = onChunk
   }, [onChunk])
 
-  useEffect(() => {
-    // The worker restarts its interval when the user switches speech engines.
-    workerRef.current?.postMessage({ type: 'start', interval: chunkDurationMs })
-  }, [chunkDurationMs])
-
   const flushChunk = useCallback(() => {
     if (samplesRef.current.length === 0) return
 
@@ -120,6 +115,14 @@ export function useAudioCapture({
     const b64 = arrayBufferToBase64(wavBuffer)
     onChunkRef.current(b64)
   }, [])
+
+  useEffect(() => {
+    const worker = workerRef.current
+    if (!worker) return
+    // Finish the previous window before restarting the timer with a new duration.
+    flushChunk()
+    worker.postMessage({ type: 'start', interval: chunkDurationMs })
+  }, [chunkDurationMs, flushChunk])
 
   const updateLevel = useCallback(() => {
     if (!analyserRef.current) return
