@@ -170,10 +170,11 @@
 
 **Interfaces:**
 - Consumes: Task 2 `sort_key`(같은 키 규칙)
-- Produces: CLI `python -m scripts.migrate_messages {copy,verify,remove} [--execute] [--meeting-id ID]`. 기본은 드라이런이고 할 일만 출력한다. 함수:
-  - `copy_meeting(ddb, meeting: dict) -> int`: 원본 `messages`를 BatchWrite(Put, 25개씩, 미처리분 재시도)하고 복사한 개수를 돌려준다
-  - `verify_meeting(ddb, meeting: dict) -> tuple[bool, int, int]`: (일치 여부, 원본 개수, 테이블 개수). 일치 = id 집합이 같고 개수가 같음
-  - `remove_meeting(ddb, meeting_id: str, verified_count: int) -> bool`: `REMOVE messages SET messageCount = :n`, 조건 `size(messages) = :n`. 조건 실패면 False
+- Produces: CLI `python -m scripts.migrate_messages {copy,verify,remove,orphans} [--execute] [--meeting-id ID]`. 기본은 드라이런이고 할 일만 출력한다. 종료 코드: copy·verify·remove 는 불일치·조건 실패가 있으면 1, orphans 는 드라이런에서 고아가 있으면 1. 함수:
+  - `copy_meeting(ddb, meeting: dict) -> int`: 원본 `messages`를 BatchWrite(Put, 25개씩, 미처리분 재시도)하고 쓴 개수를 돌려준다. 같은 sk 가 겹치면 나중 것 하나만 쓰고 `run` 이 중복으로 보고한다
+  - `verify_meeting(ddb, meeting: dict) -> tuple[bool, int, int]`: (일치 여부, 원본 개수, 테이블 개수). 일치 = 원본 id ⊆ 테이블 id(전환 뒤 새 발언은 테이블에만 있으므로 테이블이 더 많아도 일치). id 가 없거나 빈 원본 메시지가 있으면 불일치. messageCount 가 테이블 개수와 다르면 경고만
+  - `remove_meeting(ddb, meeting_id: str, verified_count: int) -> bool`: `REMOVE messages` 만(messageCount 는 앱이 트랜잭션 ADD 로 올리므로 건드리지 않는다), 조건 `size(messages) = :n`. 조건 실패면 False, 트랜잭션 충돌이면 재시도
+  - `run_orphans(ddb, *, execute, meeting_id) -> dict`: 메시지 테이블 키만 스캔해 회의 항목이 없는 meetingId 의 메시지를 회의별 개수로 보고하고, `--execute` 면 25개씩 지운다
 
 - [ ] **Step 1: 실패하는 테스트를 쓴다**(가짜 boto3 클라이언트):
   - `test_copy_is_idempotent`: 두 번 돌려도 테이블의 항목 수가 원본 개수와 같음
