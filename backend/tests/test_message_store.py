@@ -109,6 +109,15 @@ def test_load_messages_limit():
     out = run(message_store.load_messages(ddb, "mtg", limit=3))
     assert [m["id"] for m in out] == ["m-1", "m-2", "m-3"]
     assert len(ddb.queries) == 2
+    # 두 번째 요청은 남은 개수만큼만 달라고 한다
+    assert [q["Limit"] for q in ddb.queries] == [3, 1]
+
+
+def test_load_messages_non_positive_limit_skips_query():
+    ddb = FakeDdb([{"Items": [_item(1)]}])
+    assert run(message_store.load_messages(ddb, "mtg", limit=0)) == []
+    assert run(message_store.load_messages(ddb, "mtg", limit=-1)) == []
+    assert ddb.queries == []
 
 
 def test_load_messages_custom_table_and_missing_attrs():
@@ -200,8 +209,11 @@ def test_append_message_gives_up_after_four_retries(monkeypatch):
     assert ddb.attempts == 5
     assert ddb.transactions == []
     assert len(delays) == 4
-    # 간격은 시도마다 늘어난다(지터 포함해도 단조 증가하도록 상한을 둔다)
-    assert all(d > 0 for d in delays)
+    # 간격은 시도마다 두 배로 늘어난다. 지터는 [0, 기본 간격) 이므로 구간이 겹치지 않는다
+    for attempt, d in enumerate(delays):
+        base = message_store.BASE_DELAY * (2 ** attempt)
+        assert base <= d <= base * 2
+    assert delays == sorted(delays)
 
 
 def test_append_message_does_not_retry_missing_meeting(monkeypatch):

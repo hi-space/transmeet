@@ -105,7 +105,10 @@ async def load_messages(
     """회의의 메시지를 정렬 키 오름차순으로 읽는다(강한 일관성, 페이지 끝까지).
 
     limit 이 있으면 앞에서부터 그 개수까지만 읽고, 채우면 더 요청하지 않는다.
+    limit 이 0 이하면 읽지 않고 빈 목록을 돌려준다(DynamoDB 는 Limit<1 을 거부한다).
     """
+    if limit is not None and limit <= 0:
+        return []
     messages: List[Dict[str, str]] = []
     start_key = None
     while True:

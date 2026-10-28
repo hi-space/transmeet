@@ -70,6 +70,16 @@ test('loadMessages honours limit', async () => {
   const result = await loadMessages(ddb, 'm1', { limit: 20 })
   assert.equal(result.length, 20)
   assert.equal(ddb.calls.length, 2)
+  // 두 번째 요청은 남은 개수만큼만 달라고 한다
+  assert.deepEqual(ddb.calls.map((c) => c.input.Limit), [20, 10])
+})
+
+test('loadMessages returns [] without querying when limit <= 0', async () => {
+  const { loadMessages } = load()
+  const ddb = fakeDdb([item(1)], 10)
+  assert.deepEqual(await loadMessages(ddb, 'm1', { limit: 0 }), [])
+  assert.deepEqual(await loadMessages(ddb, 'm1', { limit: -1 }), [])
+  assert.equal(ddb.calls.length, 0)
 })
 
 test('deleteMessages batches by 25', async () => {
@@ -96,12 +106,18 @@ test('deleteMessages retries unprocessed items', async () => {
   const ddb = fakeDdb([item(1), item(2)], 10, () =>
     n++ === 0 ? { UnprocessedItems: { 'transmeet-messages': unprocessed } } : {}
   )
-  await deleteMessages(ddb, 'm1')
+  const waits = []
+  const sleep = async (ms) => { waits.push(ms) }
+  await deleteMessages(ddb, 'm1', { sleep })
+  assert.deepEqual(waits, [50])
   const batches = ddb.calls.filter((c) => c instanceof BatchWriteCommand)
   assert.equal(batches.length, 2)
   assert.deepEqual(batches[1].input.RequestItems['transmeet-messages'], unprocessed)
 
   const always = fakeDdb([item(1)], 10, () => ({ UnprocessedItems: { 'transmeet-messages': unprocessed } }))
-  await assert.rejects(deleteMessages(always, 'm1'), /Could not delete meeting messages/)
+  waits.length = 0
+  await assert.rejects(deleteMessages(always, 'm1', { sleep }), /Could not delete meeting messages/)
   assert.equal(always.calls.filter((c) => c instanceof BatchWriteCommand).length, 4)
+  // 재시도 간격은 늘어난다. 마지막 실패 뒤에는 기다리지 않는다
+  assert.deepEqual(waits, [50, 100, 200])
 })
