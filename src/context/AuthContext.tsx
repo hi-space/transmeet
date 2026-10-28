@@ -30,7 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   function logout() {
     if (user) cognitoSignOut(user)
-    setUser(null)
+    // 화면에 남은 미팅·연결·캐시는 전 사용자 것이다 — 다음 사용자가 보지 않도록 새로 불러온다
+    window.location.reload()
   }
 
   return (

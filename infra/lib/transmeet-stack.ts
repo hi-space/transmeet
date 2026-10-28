@@ -57,12 +57,43 @@ export class TransmeetStack extends cdk.Stack {
       sortKey: { name: 'createdAt', type: dynamodb.AttributeType.STRING },
     });
 
+    // 사용자별 목록. 정렬 키를 두지 않는다 — createdAt 이 없는 과거 항목도 인덱스에서 빠지지 않게 하고 정렬은 Lambda 가 한다.
+    meetingsTable.addGlobalSecondaryIndex({
+      indexName: 'userId-index',
+      partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.INCLUDE,
+      nonKeyAttributes: ['title', 'createdAt', 'status', 'messageCount'],
+    });
+
     const pagesTable = new dynamodb.Table(this, 'PagesTable', {
       tableName: PAGES_TABLE,
       partitionKey: { name: 'meetingId', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
       pointInTimeRecovery: true,
       removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    // ─── Cognito ────────────────────────────────────────────────────────────────
+    // REST Authorizer 와 WebSocket 백엔드(토큰 검증)가 쓰므로 둘보다 먼저 만든다.
+
+    const userPool = new cognito.UserPool(this, 'UserPool', {
+      userPoolName: 'transmeet-users',
+      selfSignUpEnabled: true,
+      signInAliases: { email: true },
+      autoVerify: { email: true },
+      passwordPolicy: {
+        minLength: 8,
+        requireLowercase: false,
+        requireUppercase: false,
+        requireDigits: false,
+        requireSymbols: false,
+      },
+      removalPolicy: cdk.RemovalPolicy.RETAIN,
+    });
+
+    const userPoolClient = userPool.addClient('WebClient', {
+      authFlows: { userSrp: true },
+      preventUserExistenceErrors: true,
     });
 
     // ─── IAM Role (REST Lambda functions only) ──────────────────────────────────
@@ -167,33 +198,51 @@ export class TransmeetStack extends cdk.Stack {
       },
     });
 
+    // 모든 메서드가 Cognito ID 토큰을 요구한다. Lambda 는 claims.sub 로 미팅 소유자를 가린다.
+    const authorizer = new apigateway.CognitoUserPoolsAuthorizer(this, 'RestAuthorizer', {
+      cognitoUserPools: [userPool],
+    });
+    const authed: apigateway.MethodOptions = {
+      authorizer,
+      authorizationType: apigateway.AuthorizationType.COGNITO,
+    };
+
+    // Authorizer 가 거절한 401 에도 CORS 헤더가 있어야 브라우저가 CORS 오류 대신 401 을 본다.
+    for (const type of [apigateway.ResponseType.DEFAULT_4XX, apigateway.ResponseType.DEFAULT_5XX]) {
+      restApi.addGatewayResponse(`Cors${type.responseType}`, {
+        type,
+        responseHeaders: { 'Access-Control-Allow-Origin': "'*'" },
+      });
+    }
+
     const meetingsIntegration = new apigateway.LambdaIntegration(meetingsFn);
     const summarizeIntegration = new apigateway.LambdaIntegration(summarizeFn);
     const ttsIntegration = new apigateway.LambdaIntegration(ttsFn);
 
     // /meetings
     const meetingsResource = restApi.root.addResource('meetings');
-    meetingsResource.addMethod('GET', meetingsIntegration);
-    meetingsResource.addMethod('POST', meetingsIntegration);
+    meetingsResource.addMethod('GET', meetingsIntegration, authed);
+    meetingsResource.addMethod('POST', meetingsIntegration, authed);
 
     // /meetings/{id}
     const meetingResource = meetingsResource.addResource('{id}');
-    meetingResource.addMethod('GET', meetingsIntegration);
-    meetingResource.addMethod('DELETE', meetingsIntegration);
+    meetingResource.addMethod('GET', meetingsIntegration, authed);
+    meetingResource.addMethod('DELETE', meetingsIntegration, authed);
 
     // /meetings/{id}/summarize
     meetingResource.addResource('summarize').addMethod(
       'POST',
-      summarizeIntegration
+      summarizeIntegration,
+      authed
     );
 
     // /meetings/{id}/title
     const titleResource = meetingResource.addResource('title');
-    titleResource.addMethod('POST', meetingsIntegration);
-    titleResource.addMethod('PUT', meetingsIntegration);
+    titleResource.addMethod('POST', meetingsIntegration, authed);
+    titleResource.addMethod('PUT', meetingsIntegration, authed);
 
     // /tts
-    restApi.root.addResource('tts').addMethod('POST', ttsIntegration);
+    restApi.root.addResource('tts').addMethod('POST', ttsIntegration, authed);
 
     // ─── S3 + CloudFront (Frontend Hosting) ────────────────────────────────────
 
@@ -522,6 +571,9 @@ export class TransmeetStack extends cdk.Stack {
         PAGE_AGENT_FALLBACK_MODEL_ID,
         PAGES_BUCKET: pagesBucket.bucketName,
         PAGES_PUBLIC_BASE_URL: `https://${APP_DOMAIN}/p`,
+        // WebSocket 연결 시 ID 토큰 검증(발급자·audience)
+        COGNITO_USER_POOL_ID: userPool.userPoolId,
+        COGNITO_CLIENT_ID: userPoolClient.userPoolClientId,
       },
       logging: ecs.LogDrivers.awsLogs({ streamPrefix: 'transmeet-ws' }),
     });
@@ -620,28 +672,6 @@ export class TransmeetStack extends cdk.Stack {
         responseHeadersPolicy: pagesHeadersPolicy,
       }
     );
-
-    // ─── Cognito ────────────────────────────────────────────────────────────────
-
-    const userPool = new cognito.UserPool(this, 'UserPool', {
-      userPoolName: 'transmeet-users',
-      selfSignUpEnabled: true,
-      signInAliases: { email: true },
-      autoVerify: { email: true },
-      passwordPolicy: {
-        minLength: 8,
-        requireLowercase: false,
-        requireUppercase: false,
-        requireDigits: false,
-        requireSymbols: false,
-      },
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-    });
-
-    const userPoolClient = userPool.addClient('WebClient', {
-      authFlows: { userSrp: true },
-      preventUserExistenceErrors: true,
-    });
 
     // ─── Outputs ────────────────────────────────────────────────────────────────
 

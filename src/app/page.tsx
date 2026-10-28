@@ -330,6 +330,8 @@ export default function Home() {
 
   useEffect(() => {
     if (!HAS_API) return
+    // 목록은 사용자별이다 — 로그인 전에 부르면 401 로 목업에 빠지므로 로그인 뒤에 한 번 불러온다
+    if (HAS_COGNITO && !user) return
     // StrictMode 는 개발 중 effect 를 두 번 실행한다 — 회의가 두 개 생기지 않도록 막는다
     if (didInitRef.current) return
     didInitRef.current = true
@@ -377,7 +379,7 @@ export default function Home() {
     }
 
     init()
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── Task #10: Create new meeting ──────────────────────────────────────────
 

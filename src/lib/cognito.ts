@@ -3,6 +3,7 @@ import {
   CognitoUser,
   AuthenticationDetails,
   CognitoUserAttribute,
+  type CognitoUserSession,
   type ISignUpResult,
 } from 'amazon-cognito-identity-js'
 
@@ -73,6 +74,20 @@ export function refreshSession(): Promise<CognitoUser | null> {
     user.getSession((err: Error | null) => {
       if (err) return resolve(null)
       resolve(user)
+    })
+  })
+}
+
+// REST(Authorization 헤더)·WebSocket(token 쿼리)에 실어 보내는 ID 토큰. 서버는 sub 로 미팅 소유자를 가린다.
+// getSession 이 만료된 토큰을 refresh 토큰으로 갱신하므로 매 요청마다 불러도 된다. Cognito 미설정·미로그인이면 null.
+export function getIdToken(): Promise<string | null> {
+  return new Promise((resolve) => {
+    if (!process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID) return resolve(null)
+    const user = getPool().getCurrentUser()
+    if (!user) return resolve(null)
+    user.getSession((err: Error | null, session: CognitoUserSession | null) => {
+      if (err || !session?.isValid()) return resolve(null)
+      resolve(session.getIdToken().getJwtToken())
     })
   })
 }

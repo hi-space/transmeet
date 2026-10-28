@@ -4,3 +4,4 @@ aiobotocore==3.9.2
 boto3==1.43.106
 amazon-transcribe==0.6.4
 pydantic-settings==2.7.0
+PyJWT[crypto]==2.12.1

@@ -69,6 +69,7 @@ from .aws_clients import (
     resolve_detected_language,
     sagemaker_client,
 )
+from .auth import AuthError, owns_meeting, verify_id_token_async
 from .config import config
 from .page_agent import (
     PageRequestError,
@@ -124,7 +125,10 @@ def _auto_target_lang(detected_language: str) -> str:
 @dataclass
 class ConnectionState:
     ws: WebSocket
+    # 연결 시 검증한 Cognito sub. meeting_id 는 이 사용자가 소유한 미팅만 들어간다 (_claim_meeting)
+    user_id: str = ""
     meeting_id: Optional[str] = None
+    owned_meetings: set = field(default_factory=set)
     stt_provider: str = "whisper"
     target_lang: str = "ko"
     source_lang: str = "auto"
@@ -1224,14 +1228,62 @@ async def _stream_qa_answer(
 
 # ─── WebSocket endpoint ──────────────────────────────────────────────────────
 
+# 토큰이 없거나 검증에 실패한 연결을 닫는 코드. 프런트는 이 코드면 재연결하지 않는다.
+WS_CLOSE_UNAUTHORIZED = 4401
+# 연결 후 첫 메시지 {action: "auth", token} 를 기다리는 시간.
+# 토큰을 URL 쿼리로 받지 않는 이유: uvicorn 이 WebSocket 접속 로그에 쿼리 문자열을 그대로 남긴다.
+WS_AUTH_TIMEOUT_SECS = 10.0
+
+
+async def _authenticate(ws: WebSocket) -> str:
+    """첫 메시지의 Cognito ID 토큰을 검증해 사용자 ID(sub)를 돌려준다. 실패하면 AuthError."""
+    try:
+        first = await asyncio.wait_for(ws.receive_json(), timeout=WS_AUTH_TIMEOUT_SECS)
+    except asyncio.TimeoutError as e:
+        raise AuthError("auth message timeout") from e
+    except (ValueError, KeyError) as e:
+        raise AuthError("malformed auth message") from e
+    if not isinstance(first, dict) or first.get("action") != "auth":
+        raise AuthError("first message must be auth")
+    return await verify_id_token_async(first.get("token") or "")
+
+
+async def _claim_meeting(state: ConnectionState, meeting_id: Optional[str]) -> Optional[str]:
+    """연결 사용자가 소유한 미팅이면 그 ID 를, 아니면 None 을 돌려준다. 확인된 ID 는 연결 동안 캐시한다."""
+    if not meeting_id:
+        return None
+    if meeting_id in state.owned_meetings:
+        return meeting_id
+    try:
+        owned = await owns_meeting(state.user_id, meeting_id)
+    except Exception:
+        logger.exception("[ws] ownership check failed meeting_id=%s", meeting_id)
+        return None
+    if not owned:
+        logger.warning("[ws] meeting not owned by caller: meeting_id=%s user_id=%s", meeting_id, state.user_id)
+        return None
+    state.owned_meetings.add(meeting_id)
+    return meeting_id
+
+
 @router.websocket("/ws")
 async def ws_endpoint(
     ws: WebSocket,
     meetingId: Optional[str] = None,
 ):
+    # 먼저 수락해야 브라우저가 닫힘 코드(4401)를 받는다 — 수락 전에 닫으면 1006 만 보인다
     await ws.accept()
+    try:
+        user_id = await _authenticate(ws)
+    except WebSocketDisconnect:
+        return
+    except AuthError as e:
+        logger.warning("[ws] rejected unauthenticated connection: %s", e)
+        await ws.close(code=WS_CLOSE_UNAUTHORIZED, reason="unauthorized")
+        return
     connection_id = str(uuid4())
-    state = ConnectionState(ws=ws, meeting_id=meetingId)
+    state = ConnectionState(ws=ws, user_id=user_id)
+    state.meeting_id = await _claim_meeting(state, meetingId)
     active_connections[connection_id] = state
     logger.info("[ws] Connected: connection_id=%s meetingId=%s", connection_id, meetingId)
 
@@ -1262,7 +1314,9 @@ async def ws_endpoint(
                 state.target_lang = data.get("targetLang", "ko") or "ko"
                 state.source_lang = data.get("sourceLang", "auto") or "auto"
                 state.model_id = data.get("modelId") or config.BEDROCK_MODEL_ID
-                state.meeting_id = data.get("meetingId") or state.meeting_id
+                if data.get("meetingId"):
+                    # 남의 미팅이면 None — 발언은 저장되지 않는다
+                    state.meeting_id = await _claim_meeting(state, data.get("meetingId"))
                 state.speaker = data.get("speaker", "speaker1")
                 state.translation_timing = data.get("translationTiming", "sentence") or "sentence"
                 state.seg_buffer.clear()
@@ -1315,7 +1369,7 @@ async def ws_endpoint(
                     await _flush_audio_buffer(state, ws, connection_id)
 
             elif action == "summarize":
-                mid = data.get("meetingId") or state.meeting_id
+                mid = await _claim_meeting(state, data.get("meetingId") or state.meeting_id)
                 inline_messages = data.get("messages")
                 if mid:
                     # 결과는 요청한 소켓이 아니라 이 미팅을 보고 있는 현재 연결 전부에 간다 (_stream_summary 참고)
@@ -1325,7 +1379,7 @@ async def ws_endpoint(
                     )
 
             elif action == "generate_page":
-                mid = data.get("meetingId") or state.meeting_id
+                mid = await _claim_meeting(state, data.get("meetingId") or state.meeting_id)
                 if not mid:
                     await _safe_send(ws, {"type": "page_stream", "phase": "error", "error": "미팅이 선택되지 않았습니다"})
                 elif state.page_task and not state.page_task.done():
@@ -1341,12 +1395,12 @@ async def ws_endpoint(
 
             elif action == "page_status":
                 # 재접속한 클라이언트가 '아직 생성 중인가?' 를 묻는다 — 놓친 done/error 를 되돌려 준다
-                mid = data.get("meetingId") or state.meeting_id
+                mid = await _claim_meeting(state, data.get("meetingId") or state.meeting_id)
                 if mid:
                     await _safe_send(ws, page_status_event(mid))
 
             elif action == "unpublish_page":
-                mid = data.get("meetingId") or state.meeting_id
+                mid = await _claim_meeting(state, data.get("meetingId") or state.meeting_id)
                 if mid:
                     try:
                         check_meeting_id(mid)

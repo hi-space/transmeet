@@ -5,12 +5,13 @@ import {
   GetCommand,
   PutCommand,
   DeleteCommand,
-  ScanCommand,
+  QueryCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb'
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime'
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { randomUUID } from 'crypto'
+import { callerId, ownsMeeting } from '../shared/owner'
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({ region: process.env.REGION }))
 const s3 = new S3Client({ region: process.env.REGION })
@@ -83,8 +84,17 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
   const method = event.httpMethod
   const meetingId = event.pathParameters?.id
   const resource = event.resource ?? ''
+  const userId = callerId(event)
+  if (!userId) {
+    return respond(401, { error: 'Unauthorized' })
+  }
 
   try {
+    // /meetings/{id}/* 는 모두 호출자 소유 미팅만 다룬다
+    if (meetingId && !(await ownsMeeting(ddb, meetingId, userId))) {
+      return respond(404, { error: 'Meeting not found' })
+    }
+
     switch (method) {
       case 'GET': {
         if (meetingId) {
@@ -102,15 +112,18 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           return respond(200, page ? { ...result.Item, page: toMeetingPage(page) } : result.Item)
         }
 
-        // GET /meetings - list all (paginate through ScanCommand 1MB pages)
+        // GET /meetings - 호출자의 미팅 전부 (userId-index, 1MB 페이지 단위로 이어 받는다)
         const items: Record<string, unknown>[] = []
         let lastKey: Record<string, unknown> | undefined
         do {
           const page = await ddb.send(
-            new ScanCommand({
+            new QueryCommand({
               TableName: process.env.MEETINGS_TABLE,
+              IndexName: 'userId-index',
+              KeyConditionExpression: 'userId = :uid',
               ProjectionExpression: 'meetingId, title, createdAt, #st, messageCount',
               ExpressionAttributeNames: { '#st': 'status' },
+              ExpressionAttributeValues: { ':uid': userId },
               ExclusiveStartKey: lastKey,
             })
           )
@@ -193,6 +206,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
         const now = new Date().toISOString()
         const newMeeting = {
           meetingId: randomUUID(),
+          userId,
           title: body.title ?? `Meeting ${new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })}`,
           status: 'active',
           createdAt: now,

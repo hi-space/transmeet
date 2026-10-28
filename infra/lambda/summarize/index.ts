@@ -9,6 +9,7 @@ import {
   BedrockRuntimeClient,
   ConverseCommand,
 } from '@aws-sdk/client-bedrock-runtime';
+import { callerId } from '../shared/owner';
 
 const ddb = DynamoDBDocumentClient.from(
   new DynamoDBClient({ region: process.env.REGION })
@@ -117,7 +118,9 @@ export const handler = async (
       })
     );
 
-    if (!result.Item) {
+    // 남의 미팅도 없는 미팅과 같은 404. userId 가 없는 항목은 누구의 것도 아니다.
+    const userId = callerId(event);
+    if (!result.Item || !userId || result.Item.userId !== userId) {
       return {
         statusCode: 404,
         headers,

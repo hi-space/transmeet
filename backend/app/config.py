@@ -37,6 +37,10 @@ class Config(BaseSettings):
     PAGES_BUCKET: str = ""
     PAGES_PUBLIC_BASE_URL: str = "https://transmeet.hi-yoo.com/p"
 
+    # WebSocket 연결의 ID 토큰 검증. 비어 있으면 모든 연결을 거절한다.
+    COGNITO_USER_POOL_ID: str = ""
+    COGNITO_CLIENT_ID: str = ""
+
     class Config:
         env_file = ".env"
 

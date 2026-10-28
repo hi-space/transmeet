@@ -1,4 +1,5 @@
 import type { Meeting, MeetingPage, Message, SpeakerRole } from '@/types/meeting'
+import { getIdToken } from '@/lib/cognito'
 
 // ─── Server-side types ──────────────────────────────────────────────────────
 
@@ -91,9 +92,14 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const base = process.env.NEXT_PUBLIC_API_ENDPOINT
   if (!base) throw new Error('NEXT_PUBLIC_API_ENDPOINT is not configured')
 
+  const token = await getIdToken()
   const res = await fetch(`${base}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: token }),
+      ...options?.headers,
+    },
   })
 
   if (!res.ok) {

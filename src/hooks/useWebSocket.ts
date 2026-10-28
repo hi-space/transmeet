@@ -2,10 +2,13 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react'
 import type { WsStatus, WsServerMessage } from '@/lib/websocket'
+import { getIdToken } from '@/lib/cognito'
 
 const RECONNECT_DELAY_MS = 2000
 const MAX_RECONNECT_ATTEMPTS = 50
 const PONG_TIMEOUT_MS = 60000
+// 백엔드가 토큰 없음·검증 실패로 닫는 코드 (backend/app/ws_handler.py WS_CLOSE_UNAUTHORIZED). 재연결해도 소용없다.
+const WS_CLOSE_UNAUTHORIZED = 4401
 
 interface UseWebSocketOptions {
   meetingId?: string
@@ -26,6 +29,8 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
   const shouldReconnectRef = useRef(false)
   // Track the meetingId of the active connection to avoid redundant reconnects
   const connectedMeetingIdRef = useRef<string | undefined>(undefined)
+  // connect 가 토큰을 기다리는 사이 다른 connect/disconnect 가 오면 먼저 시작한 시도를 버린다
+  const connectSeqRef = useRef(0)
 
   useEffect(() => {
     onMessageRef.current = onMessage
@@ -73,93 +78,108 @@ export function useWebSocket({ meetingId, onMessage }: UseWebSocketOptions) {
     const url = targetMeetingId
       ? `${endpoint}?meetingId=${encodeURIComponent(targetMeetingId)}`
       : endpoint
+    const seq = ++connectSeqRef.current
 
     setStatus('connecting')
-    const ws = new WebSocket(url)
-    wsRef.current = ws
+    getIdToken().then((token) => {
+      if (seq !== connectSeqRef.current || !shouldReconnectRef.current) return
+      const ws = new WebSocket(url)
+      wsRef.current = ws
 
-    ws.onopen = () => {
-      // Reset counter only on successful connection (preserves backoff on reconnect)
-      reconnectCountRef.current = 0
-      setStatus('connected')
-      // Keepalive: send ping every 30s to prevent API Gateway idle timeout
-      keepaliveRef.current = setInterval(() => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({ action: 'ping' }))
-          // Clear previous pong timeout before setting a new one (prevents accumulation)
-          if (pongTimeoutRef.current) {
-            clearTimeout(pongTimeoutRef.current)
-            pongTimeoutRef.current = null
+      ws.onopen = () => {
+        // 첫 메시지는 인증 — 서버는 이걸 확인한 뒤에야 다른 메시지를 읽는다.
+        // 토큰을 URL 에 싣지 않는 건 접속 로그에 남지 않게 하려는 것이다.
+        ws.send(JSON.stringify({ action: 'auth', token }))
+        // Reset counter only on successful connection (preserves backoff on reconnect)
+        reconnectCountRef.current = 0
+        setStatus('connected')
+        // Keepalive: send ping every 30s to prevent API Gateway idle timeout
+        keepaliveRef.current = setInterval(() => {
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({ action: 'ping' }))
+            // Clear previous pong timeout before setting a new one (prevents accumulation)
+            if (pongTimeoutRef.current) {
+              clearTimeout(pongTimeoutRef.current)
+              pongTimeoutRef.current = null
+            }
+            // If no pong within 60s, connection is dead — force reconnect
+            pongTimeoutRef.current = setTimeout(() => {
+              console.warn('[WS] Pong timeout — forcing reconnect')
+              wsRef.current?.close()
+            }, PONG_TIMEOUT_MS)
           }
-          // If no pong within 60s, connection is dead — force reconnect
-          pongTimeoutRef.current = setTimeout(() => {
-            console.warn('[WS] Pong timeout — forcing reconnect')
-            wsRef.current?.close()
-          }, PONG_TIMEOUT_MS)
+        }, 30000)
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data as string) as WsServerMessage
+          if (msg.type === 'pong') {
+            if (pongTimeoutRef.current) {
+              clearTimeout(pongTimeoutRef.current)
+              pongTimeoutRef.current = null
+            }
+            return
+          }
+          onMessageRef.current(msg)
+        } catch (err) {
+          console.error('[WS] Failed to parse message:', err)
         }
-      }, 30000)
-    }
+      }
 
-    ws.onmessage = (event) => {
-      try {
-        const msg = JSON.parse(event.data as string) as WsServerMessage
-        if (msg.type === 'pong') {
-          if (pongTimeoutRef.current) {
-            clearTimeout(pongTimeoutRef.current)
-            pongTimeoutRef.current = null
-          }
+      ws.onclose = (event) => {
+        if (keepaliveRef.current) {
+          clearInterval(keepaliveRef.current)
+          keepaliveRef.current = null
+        }
+        if (pongTimeoutRef.current) {
+          clearTimeout(pongTimeoutRef.current)
+          pongTimeoutRef.current = null
+        }
+        wsRef.current = null
+        connectedMeetingIdRef.current = undefined
+
+        // Normal close (code 1000) or explicitly disconnected
+        if (!shouldReconnectRef.current || event.code === 1000) {
+          setStatus('disconnected')
           return
         }
-        onMessageRef.current(msg)
-      } catch (err) {
-        console.error('[WS] Failed to parse message:', err)
-      }
-    }
 
-    ws.onclose = (event) => {
-      if (keepaliveRef.current) {
-        clearInterval(keepaliveRef.current)
-        keepaliveRef.current = null
-      }
-      if (pongTimeoutRef.current) {
-        clearTimeout(pongTimeoutRef.current)
-        pongTimeoutRef.current = null
-      }
-      wsRef.current = null
-      connectedMeetingIdRef.current = undefined
+        if (event.code === WS_CLOSE_UNAUTHORIZED) {
+          console.error('[WS] Unauthorized — not reconnecting')
+          setStatus('error')
+          shouldReconnectRef.current = false
+          return
+        }
 
-      // Normal close (code 1000) or explicitly disconnected
-      if (!shouldReconnectRef.current || event.code === 1000) {
-        setStatus('disconnected')
-        return
+        // Unexpected close — attempt reconnect with exponential backoff
+        if (reconnectCountRef.current < MAX_RECONNECT_ATTEMPTS) {
+          reconnectCountRef.current++
+          const delay = RECONNECT_DELAY_MS * reconnectCountRef.current
+          console.warn(
+            '[WS] Unexpected close (code=%d), reconnecting in %dms (attempt %d/%d)',
+            event.code,
+            delay,
+            reconnectCountRef.current,
+            MAX_RECONNECT_ATTEMPTS
+          )
+          setStatus('connecting')
+          reconnectTimerRef.current = setTimeout(connect, delay)
+        } else {
+          console.error('[WS] Max reconnect attempts reached, giving up')
+          setStatus('error')
+          shouldReconnectRef.current = false
+        }
       }
 
-      // Unexpected close — attempt reconnect with exponential backoff
-      if (reconnectCountRef.current < MAX_RECONNECT_ATTEMPTS) {
-        reconnectCountRef.current++
-        const delay = RECONNECT_DELAY_MS * reconnectCountRef.current
-        console.warn(
-          '[WS] Unexpected close (code=%d), reconnecting in %dms (attempt %d/%d)',
-          event.code,
-          delay,
-          reconnectCountRef.current,
-          MAX_RECONNECT_ATTEMPTS
-        )
-        setStatus('connecting')
-        reconnectTimerRef.current = setTimeout(connect, delay)
-      } else {
-        console.error('[WS] Max reconnect attempts reached, giving up')
-        setStatus('error')
-        shouldReconnectRef.current = false
+      ws.onerror = () => {
+        // onerror always precedes onclose; let onclose handle state transition
       }
-    }
-
-    ws.onerror = () => {
-      // onerror always precedes onclose; let onclose handle state transition
-    }
+    })
   }, []) // stable — all deps via refs
 
   const disconnect = useCallback(() => {
+    connectSeqRef.current++
     shouldReconnectRef.current = false
     reconnectCountRef.current = MAX_RECONNECT_ATTEMPTS
 
