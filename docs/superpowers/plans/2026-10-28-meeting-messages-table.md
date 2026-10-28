@@ -36,7 +36,7 @@
 
 **Files:** 없음(작업 환경)
 
-- [ ] **Step 1:** 사용자에게 확인한다. main 작업 트리의 커밋되지 않은 변경(`ws_handler.py`, `page_agent.py`, `infra/lambda/meetings/index.ts`, `infra/lambda/summarize/index.ts`, `infra/lib/transmeet-stack.ts` 외 다수)이 커밋됐는지, 아니면 기다려야 하는지. 커밋됐으면 `git -C ../transmeet-messages-table rebase main`
+- [x] **Step 1:** (2026-10-28 완료) 사용자 결정: main 작업 트리의 미커밋 상태를 기준으로 시작한다. 그 상태를 커밋 `d06f38b`(기준 스냅샷)로 옮겼고, 원본과 파일 해시가 같음을 확인했다. 병합 때 main 에 따로 커밋된 같은 변경과 맞춰야 한다(Task 8 Step 1)
 - [ ] **Step 2:** worktree 에 의존성을 설치한다. `npm ci`(루트), `npm ci --prefix infra`, `python3 -m venv backend/.venv && backend/.venv/bin/pip install -r backend/requirements-dev.txt`
 - [ ] **Step 3:** 기준 테스트를 돌린다
   Run: `cd backend && .venv/bin/pytest -q` 그리고 루트에서 `npm run test:ui && node --test tests/meetingTitle.test.mjs`
