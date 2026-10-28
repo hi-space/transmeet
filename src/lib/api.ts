@@ -1,4 +1,4 @@
-import type { Meeting, MeetingPage, Message } from '@/types/meeting'
+import type { Meeting, MeetingBrief, MeetingPage, Message } from '@/types/meeting'
 import { getIdToken } from '@/lib/cognito'
 import { normalizeSpeaker } from '@/lib/speakers'
 
@@ -13,7 +13,7 @@ interface ApiMessage {
   timestamp: string
 }
 
-export interface ApiMeeting {
+export interface ApiMeeting extends Partial<MeetingBrief> {
   meetingId: string
   title: string
   status?: string
@@ -78,14 +78,37 @@ export function toMeeting(m: ApiMeeting): Meeting {
       timestamp: msg.timestamp,
     })
   )
+  // Concurrent translations can finish (and be saved) out of conversation order.
+  rawMessages.sort((a, b) => {
+    const aTime = Date.parse(a.timestamp)
+    const bTime = Date.parse(b.timestamp)
+    if (!Number.isFinite(aTime)) return Number.isFinite(bTime) ? 1 : 0
+    if (!Number.isFinite(bTime)) return -1
+    return aTime - bTime
+  })
+  const messages = mergeLoadedMessages(rawMessages)
+  const briefIndex = rawMessages.findIndex((message) => message.id === m.briefLastMessageId)
+  // Saved utterances may merge into fewer display bubbles when a meeting is reopened.
+  // Tied timestamps or late saves must not advance the checkpoint beyond its original count.
+  const briefMessageCount =
+    briefIndex >= 0
+      ? Math.min(
+          m.briefMessageCount ?? messages.length,
+          mergeLoadedMessages(rawMessages.slice(0, briefIndex + 1)).length
+        )
+      : Math.min(m.briefMessageCount ?? 0, messages.length)
   return {
     id: m.meetingId,
     title: m.title,
     startedAt: m.createdAt,
-    messages: mergeLoadedMessages(rawMessages),
+    messages,
     messageCount: m.messageCount,
     hasAudio: m.hasAudio,
     summary: m.summary ? parseSummary(m.summary) : undefined,
+    brief: m.brief,
+    briefUpdatedAt: m.briefUpdatedAt,
+    briefMessageCount,
+    briefLastMessageId: m.briefLastMessageId,
     page: m.page,
   }
 }
@@ -134,6 +157,12 @@ export const api = {
           method: 'POST',
         }
       ),
+    brief: (id: string, messages: Pick<Message, 'id' | 'original'>[]) =>
+      apiFetch<MeetingBrief & { meetingId: string }>(`/meetings/${id}/summarize`, {
+        method: 'POST',
+        body: JSON.stringify({ mode: 'brief', messages }),
+        signal: AbortSignal.timeout(30_000),
+      }),
     generateTitle: (id: string) =>
       apiFetch<{ title: string; meetingId: string }>(`/meetings/${id}/title`, {
         method: 'POST',

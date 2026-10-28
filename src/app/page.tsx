@@ -24,11 +24,12 @@ import MeetingActions, {
   type AudioPrepState,
   type MeetingEndState,
 } from '@/components/MeetingActions'
-import { Meeting, Message } from '@/types/meeting'
+import { Meeting, Message, type MeetingBrief } from '@/types/meeting'
 import { useAudioCapture } from '@/hooks/useAudioCapture'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import { useSettings, type Settings } from '@/hooks/useSettings'
 import { useSummaryResize } from '@/hooks/useSummaryResize'
+import { useMeetingBrief } from '@/hooks/useMeetingBrief'
 import { useAuth } from '@/context/AuthContext'
 import type { WsServerMessage } from '@/lib/websocket'
 import { api, toMeeting, parseSummary } from '@/lib/api'
@@ -361,6 +362,21 @@ export default function Home() {
 
   const activeMeeting = meetings.find((m) => m.id === activeMeetingId)
   const activeMeetingLoadState = meetingLoadStates[activeMeetingId]
+  const handleBriefUpdate = useCallback((meetingId: string, brief: MeetingBrief) => {
+    setMeetings((prev) =>
+      prev.map((meeting) =>
+        meeting.id === meetingId &&
+        (!meeting.briefUpdatedAt || brief.briefUpdatedAt >= meeting.briefUpdatedAt)
+          ? { ...meeting, ...brief }
+          : meeting
+      )
+    )
+  }, [])
+  const isBriefRefreshing = useMeetingBrief(
+    activeMeeting,
+    HAS_API && !activeMeetingLoadState,
+    handleBriefUpdate
+  )
 
   // 탭 배지: 비활성 탭에 새 메시지 도착 시 표시
   useEffect(() => {
@@ -397,7 +413,25 @@ export default function Home() {
       if (meeting.summary) {
         lastSummarizedCountRef.current[id] = meeting.messages.length
       }
-      setMeetings((prev) => prev.map((m) => (m.id === id ? meeting : m)))
+      setMeetings((prev) =>
+        prev.map((current) => {
+          if (current.id !== id) return current
+          // A brief may finish while this older meeting snapshot is in flight.
+          if (
+            current.briefUpdatedAt &&
+            (!meeting.briefUpdatedAt || current.briefUpdatedAt > meeting.briefUpdatedAt)
+          ) {
+            return toMeeting({
+              ...full,
+              brief: current.brief,
+              briefUpdatedAt: current.briefUpdatedAt,
+              briefMessageCount: current.briefMessageCount,
+              briefLastMessageId: current.briefLastMessageId,
+            })
+          }
+          return meeting
+        })
+      )
       setMeetingLoadStates((prev) => {
         const next = { ...prev }
         delete next[id]
@@ -2151,72 +2185,90 @@ export default function Home() {
         </aside>
 
         <main className="relative flex min-w-0 flex-1 flex-col">
-          <div className="meeting-heading flex h-12 shrink-0 items-center gap-2 px-4 sm:px-5">
-            <div className="flex min-w-0 flex-1 items-center gap-2.5">
-              <div className="min-w-0 flex-1">
-                {activeMeeting ? (
-                  <EditableTitle
-                    key={activeMeeting.id}
-                    title={activeMeeting.title}
-                    onSave={(newTitle) => handleUpdateTitle(activeMeeting.id, newTitle)}
-                    className="min-w-0 text-sm font-semibold tracking-tight text-ink"
-                  />
-                ) : (
-                  <h1 className="truncate text-sm font-semibold text-ink">새 회의</h1>
-                )}
-              </div>
-              <div className="meeting-metadata flex shrink-0 items-center gap-2 whitespace-nowrap text-[0.6875rem] text-muted">
-                {activeMeeting ? (
-                  <>
-                    {meetingDate && (
-                      <time dateTime={activeMeeting.startedAt} title={meetingDate}>
-                        <span className="sm:hidden">
-                          {new Date(activeMeeting.startedAt)
-                            .toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })
-                            .replace(/\s/g, '')
-                            .replace(/\.$/, '')}
-                        </span>
-                        <span className="hidden sm:inline">{meetingDate}</span>
-                      </time>
-                    )}
-                    <span
-                      className="flex items-center gap-1"
-                      aria-label={`대화 ${activeMeeting.messages.length}개`}
-                      title={`대화 ${activeMeeting.messages.length}개`}
-                    >
-                      <Icon name="message" className="h-3 w-3" />
-                      {activeMeeting.messages.length}
+          <div className="meeting-heading shrink-0">
+            <div className="flex h-12 items-center gap-2 px-4 sm:px-5">
+              <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                <div className="min-w-0 flex-1">
+                  {activeMeeting ? (
+                    <EditableTitle
+                      key={activeMeeting.id}
+                      title={activeMeeting.title}
+                      onSave={(newTitle) => handleUpdateTitle(activeMeeting.id, newTitle)}
+                      className="min-w-0 text-sm font-semibold tracking-tight text-ink"
+                    />
+                  ) : (
+                    <h1 className="truncate text-sm font-semibold text-ink">새 회의</h1>
+                  )}
+                </div>
+                <div className="meeting-metadata flex shrink-0 items-center gap-2 whitespace-nowrap text-[0.6875rem] text-muted">
+                  {activeMeeting ? (
+                    <>
+                      {meetingDate && (
+                        <time dateTime={activeMeeting.startedAt} title={meetingDate}>
+                          <span className="sm:hidden">
+                            {new Date(activeMeeting.startedAt)
+                              .toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })
+                              .replace(/\s/g, '')
+                              .replace(/\.$/, '')}
+                          </span>
+                          <span className="hidden sm:inline">{meetingDate}</span>
+                        </time>
+                      )}
+                      <span
+                        className="flex items-center gap-1"
+                        aria-label={`대화 ${activeMeeting.messages.length}개`}
+                        title={`대화 ${activeMeeting.messages.length}개`}
+                      >
+                        <Icon name="message" className="h-3 w-3" />
+                        {activeMeeting.messages.length}
+                      </span>
+                    </>
+                  ) : (
+                    <span role="status">
+                      {isLoadingMeetings || isCreatingMeeting
+                        ? '회의 준비 중…'
+                        : '새 회의를 만들어 시작하세요'}
                     </span>
-                  </>
-                ) : (
-                  <span role="status">
-                    {isLoadingMeetings || isCreatingMeeting
-                      ? '회의 준비 중…'
-                      : '새 회의를 만들어 시작하세요'}
-                  </span>
+                  )}
+                </div>
+              </div>
+              <div className="meeting-language w-[6rem] shrink-0 sm:hidden">
+                <LanguageDirection
+                  compact
+                  sourceLang={settings.sourceLang}
+                  onChange={changeDirection}
+                />
+              </div>
+              <div className="hidden items-center gap-2 lg:flex">
+                {!summaryOpen && (
+                  <button
+                    type="button"
+                    className="ui-button ui-button-secondary"
+                    onClick={() => setSummaryOpen(true)}
+                    aria-label="회의 도구 펼치기"
+                  >
+                    <Icon name="panelRight" />
+                    메모 · 요약
+                  </button>
                 )}
               </div>
             </div>
-            <div className="meeting-language w-[6rem] shrink-0 sm:hidden">
-              <LanguageDirection
-                compact
-                sourceLang={settings.sourceLang}
-                onChange={changeDirection}
-              />
-            </div>
-            <div className="hidden items-center gap-2 lg:flex">
-              {!summaryOpen && (
-                <button
-                  type="button"
-                  className="ui-button ui-button-secondary"
-                  onClick={() => setSummaryOpen(true)}
-                  aria-label="회의 도구 펼치기"
-                >
-                  <Icon name="panelRight" />
-                  메모 · 요약
-                </button>
-              )}
-            </div>
+            {(activeMeeting?.brief || isBriefRefreshing) && (
+              <div
+                role="status"
+                aria-label="회의 한 줄 요약"
+                aria-busy={isBriefRefreshing}
+                className="flex items-start gap-2 px-4 pb-3 text-xs leading-5 text-muted sm:px-5"
+              >
+                <Icon
+                  name="sparkles"
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent-600 dark:text-accent-400"
+                />
+                <p className="min-w-0 break-words">
+                  {activeMeeting?.brief ?? '회의 내용을 한 줄로 정리하고 있어요…'}
+                </p>
+              </div>
+            )}
           </div>
 
           <MobileTabBar

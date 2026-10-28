@@ -12,7 +12,14 @@ export interface Message {
   qaStreamPhase?: 'streaming' | 'done' | 'error'
 }
 
-export interface Meeting {
+export interface MeetingBrief {
+  brief: string
+  briefUpdatedAt: string
+  briefMessageCount: number
+  briefLastMessageId: string
+}
+
+export interface Meeting extends Partial<MeetingBrief> {
   id: string
   title: string
   startedAt: string
