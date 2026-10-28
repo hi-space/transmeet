@@ -197,6 +197,8 @@ export default function Home() {
   const selectedSttStatus = sttStatuses[settings.sttProvider]
   const {
     width: summaryWidth,
+    minWidth: summaryMinWidth,
+    maxWidth: summaryMaxWidth,
     handlePointerDown: handleSummaryResize,
     handleKeyDown: handleResizeKeyDown,
   } = useSummaryResize(360)
@@ -2326,7 +2328,7 @@ export default function Home() {
             {summaryOpen && (
               <aside
                 aria-label="회의 도구"
-                className={`relative min-w-0 w-full shrink-0 flex-col lg:w-[var(--utility-width)] lg:max-w-[45%] ${activeTab === 'voice' ? 'hidden lg:flex' : 'flex'}`}
+                className={`relative min-w-0 w-full shrink-0 flex-col lg:w-[var(--utility-width)] lg:max-w-[70%] ${activeTab === 'voice' ? 'hidden lg:flex' : 'flex'}`}
                 data-summary-width={summaryWidth}
                 style={{ '--utility-width': `${summaryWidth}px` } as CSSProperties}
               >
@@ -2334,8 +2336,8 @@ export default function Home() {
                   role="separator"
                   aria-label="회의 도구 너비 조절"
                   aria-orientation="vertical"
-                  aria-valuemin={280}
-                  aria-valuemax={600}
+                  aria-valuemin={summaryMinWidth}
+                  aria-valuemax={summaryMaxWidth}
                   aria-valuenow={summaryWidth}
                   tabIndex={0}
                   onPointerDown={handleSummaryResize}

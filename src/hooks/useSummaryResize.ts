@@ -7,7 +7,7 @@ export function useSummaryResize(defaultWidth = 360) {
     storageKey: 'transmeet-summary-width',
     defaultWidth,
     minWidth: 280,
-    maxWidth: 600,
+    maxWidth: 960,
     edge: 'left',
   })
 }
