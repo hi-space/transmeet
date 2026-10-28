@@ -165,6 +165,8 @@ class ConnectionState:
     # 아직 S3 에 올리지 않은 녹음 PCM 과 그 PCM 이 속한 미팅. 미팅을 바꾸면 이전 미팅 몫을 먼저 올린다.
     audio_pcm: bytearray = field(default_factory=bytearray)
     audio_meeting_id: Optional[str] = None
+    # 버퍼의 첫 조각을 받은 시각 — 구간 키의 정렬 기준
+    audio_started_at: Optional[datetime] = None
 
 
 # In-memory connection registry (single-process; scales with one Fargate task)
@@ -175,6 +177,22 @@ _ws_send_locks: Dict[int, asyncio.Lock] = {}
 
 # 미팅별로 진행 중인 구간 업로드. 합치기 전에 기다려야 방금 올린 구간이 빠지지 않는다.
 _pending_uploads: Dict[str, set] = {}
+# 이 프로세스에서 hasAudio 를 이미 기록한 미팅 — 구간마다 DynamoDB 를 쓰지 않게
+_audio_marked: set = set()
+
+
+async def _mark_has_audio(meeting_id: str) -> None:
+    """녹음이 있는 미팅은 발언이 0개여도 '빈 미팅 정리'에서 지우지 않는다 (meetings Lambda 목록이 hasAudio 를 돌려준다)."""
+    if meeting_id in _audio_marked:
+        return
+    async with dynamodb_client() as ddb:
+        await ddb.update_item(
+            TableName=config.MEETINGS_TABLE,
+            Key={"meetingId": {"S": meeting_id}},
+            UpdateExpression="SET hasAudio = :t",
+            ExpressionAttributeValues={":t": {"BOOL": True}},
+        )
+    _audio_marked.add(meeting_id)
 
 
 # ─── 녹음 오디오 보관 ─────────────────────────────────────────────────────────
@@ -185,18 +203,27 @@ def _start_flush(state: "ConnectionState", conn_id: str) -> None:
     if not meeting_id or not state.audio_pcm:
         return
     pcm = bytes(state.audio_pcm)
+    started_at = state.audio_started_at
     state.audio_pcm.clear()
+    state.audio_started_at = None
 
     async def _upload() -> None:
         try:
-            await audio_store.upload_part(meeting_id, conn_id, pcm)
+            await audio_store.upload_part(meeting_id, conn_id, pcm, started_at)
+            await _mark_has_audio(meeting_id)
         except Exception:
             logger.exception("[audio] part upload failed meeting_id=%s bytes=%d", meeting_id, len(pcm))
 
     task = asyncio.create_task(_upload())
     pending = _pending_uploads.setdefault(meeting_id, set())
     pending.add(task)
-    task.add_done_callback(pending.discard)
+
+    def _done(t: asyncio.Task) -> None:
+        pending.discard(t)
+        if not pending and _pending_uploads.get(meeting_id) is pending:
+            _pending_uploads.pop(meeting_id, None)
+
+    task.add_done_callback(_done)
 
 
 def _buffer_audio(state: "ConnectionState", conn_id: str, pcm: bytes) -> None:
@@ -206,6 +233,8 @@ def _buffer_audio(state: "ConnectionState", conn_id: str, pcm: bytes) -> None:
     if state.audio_meeting_id != state.meeting_id:
         _start_flush(state, conn_id)
         state.audio_meeting_id = state.meeting_id
+    if not state.audio_pcm:
+        state.audio_started_at = datetime.now(timezone.utc)
     state.audio_pcm.extend(pcm)
     if len(state.audio_pcm) >= AUDIO_PART_BYTES:
         _start_flush(state, conn_id)

@@ -17,7 +17,7 @@ def test_email_includes_links():
     for body in (mail["html"], mail["text"]):
         assert "https://s3.example/audio.mp3?sig" in body
         assert MEETING_URL in body
-        assert "6시간 동안 유효" in body
+        assert "미팅 화면의 &#x27;녹음 파일&#x27; 버튼" in body or "미팅 화면의 '녹음 파일' 버튼" in body
     assert "<strong>출시</strong>" in mail["html"]
     assert "<li>" in mail["html"]
 

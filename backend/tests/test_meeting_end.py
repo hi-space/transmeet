@@ -36,6 +36,8 @@ class FakeDDB:
             if "emailSentAt" in self.item:
                 raise ClientError({"Error": {"Code": "ConditionalCheckFailedException"}}, "UpdateItem")
             self.item["emailSentAt"] = {"S": "now"}
+        elif expr.startswith("SET hasAudio"):
+            self.item["hasAudio"] = {"BOOL": True}
         elif expr.startswith("REMOVE emailSentAt"):
             self.item.pop("emailSentAt", None)
 
@@ -52,8 +54,9 @@ def env(monkeypatch):
     async def fake_ddb():
         yield ddb
 
-    async def upload_part(meeting_id, conn_id, pcm):
+    async def upload_part(meeting_id, conn_id, pcm, started_at=None):
         calls["uploads"].append((meeting_id, bytes(pcm)))
+        calls.setdefault("started", []).append((bytes(pcm), started_at))
         return "k"
 
     async def ensure_merged(meeting_id):
@@ -84,6 +87,7 @@ def env(monkeypatch):
     monkeypatch.setattr(ws_handler.mailer, "send_meeting_email", send_meeting_email)
     monkeypatch.setattr(ws_handler, "active_connections", {})
     ws_handler._pending_uploads.clear()
+    ws_handler._audio_marked.clear()
     return dict(ddb=ddb, calls=calls, summary=summary, verified=verified, send_fails=send_fails)
 
 
@@ -177,3 +181,26 @@ async def test_buffer_switches_meeting_flushes_old(env):
     await ws_handler._flush_meeting_audio("m2")
     await ws_handler._await_uploads("m1")
     assert sorted(env["calls"]["uploads"]) == [("m1", b"\x01\x00"), ("m2", b"\x02\x00")]
+
+
+async def test_late_flush_keeps_capture_order(env):
+    """끊긴 연결의 구간이 재접속 후 구간보다 늦게 올라가도 키는 녹음 시작 시각을 따른다."""
+    old, _ = make_state()
+    ws_handler._buffer_audio(old, "conn-old", b"\x01\x00")
+    await asyncio.sleep(0.001)
+    new = ConnectionState(ws=FakeWS(), user_id="u1")
+    new.meeting_id = "m1"
+    ws_handler._buffer_audio(new, "conn-new", b"\x02\x00")
+    ws_handler._start_flush(new, "conn-new")  # 새 연결이 먼저 올린다
+    ws_handler._start_flush(old, "conn-old")  # ping 타임아웃 뒤에야 옛 연결이 올린다
+    await ws_handler._await_uploads("m1")
+    started = dict(env["calls"]["started"])
+    assert started[b"\x01\x00"] < started[b"\x02\x00"]
+
+
+async def test_upload_marks_has_audio(env):
+    state, _ = make_state()
+    ws_handler._buffer_audio(state, "conn-1", b"\x01\x00")
+    await ws_handler._flush_meeting_audio("m1")
+    assert env["ddb"].item["hasAudio"] == {"BOOL": True}
+    assert "m1" not in ws_handler._pending_uploads  # 끝난 업로드 집합은 정리된다

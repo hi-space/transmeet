@@ -167,7 +167,7 @@ function resolveDirection(
  * undefined 는 "알 수 없음"으로 보고 절대 삭제하지 않는다 (메시지 있는 회의 유실 방지).
  */
 function isPrunable(m: Meeting): boolean {
-  if (m.summary) return false
+  if (m.summary || m.hasAudio) return false
   return m.messageCount === 0
 }
 
@@ -372,13 +372,14 @@ export default function Home() {
         return
       }
 
-      // 이전에 만들어졌지만 아무 내용도 없는 회의는 정리한다
-      const stale = list.filter(isPrunable)
-      const staleIds = new Set(stale.map((m) => m.id))
-      setMeetings([created, ...list.filter((m) => !staleIds.has(m.id))])
-      // 종료 메일의 "미팅 화면에서 보기" 링크(?meeting=<id>)로 들어오면 그 미팅을 연다
+      // 종료 메일의 "미팅 화면에서 보기" 링크(?meeting=<id>)로 들어오면 그 미팅을 연다 — 정리 대상에서도 뺀다
       const linked = new URLSearchParams(window.location.search).get('meeting')
       if (linked) window.history.replaceState(null, '', window.location.pathname)
+
+      // 이전에 만들어졌지만 아무 내용도 없는 회의는 정리한다
+      const stale = list.filter((m) => m.id !== linked && isPrunable(m))
+      const staleIds = new Set(stale.map((m) => m.id))
+      setMeetings([created, ...list.filter((m) => !staleIds.has(m.id))])
       if (linked && list.some((m) => m.id === linked)) {
         setActiveMeetingId(linked)
         loadMeetingMessages(linked)
@@ -1432,7 +1433,21 @@ export default function Home() {
       return
     }
     if (isRecording) resetLocalRecording()
-    setMeetingEnd({ meetingId: activeMeetingId, phase: 'audio' })
+    const meetingId = activeMeetingId
+    setMeetingEnd({ meetingId, phase: 'audio' })
+    // 진행 중에 다른 미팅으로 옮기거나 소켓이 끊기면 결과 이벤트를 못 받는다 — 버튼이 "종료 중"에 갇히지 않게.
+    // 서버 쪽 처리(요약 최대 수 분 + 메일)는 그와 무관하게 끝까지 간다.
+    setTimeout(() => {
+      setMeetingEnd((s) =>
+        s?.meetingId === meetingId && (s.phase === 'audio' || s.phase === 'summary')
+          ? {
+              meetingId,
+              phase: 'error',
+              error: '종료 결과를 받지 못했습니다. 메일함이나 요약 패널을 확인해 주세요.',
+            }
+          : s
+      )
+    }, 360_000)
     // 서버 요약이 summary_stream 으로 흘러 들어온다 — 요약 패널을 열어 둔다
     if (currentMessages.length > 0) {
       lastSummarizedCountRef.current[activeMeetingId] = currentMessages.length

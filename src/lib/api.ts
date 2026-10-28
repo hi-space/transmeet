@@ -20,6 +20,8 @@ export interface ApiMeeting {
   updatedAt?: string
   messages?: ApiMessage[]
   messageCount?: number
+  /** 녹음이 저장된 미팅 — 발언이 0개여도 빈 미팅으로 정리하지 않는다 */
+  hasAudio?: boolean
   summary?: string
   summarizedAt?: string
   page?: MeetingPage
@@ -87,6 +89,7 @@ export function toMeeting(m: ApiMeeting): Meeting {
     startedAt: m.createdAt,
     messages: mergeLoadedMessages(rawMessages),
     messageCount: m.messageCount,
+    hasAudio: m.hasAudio,
     summary: m.summary ? parseSummary(m.summary) : undefined,
     page: m.page,
   }

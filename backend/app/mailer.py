@@ -16,7 +16,8 @@ from .config import config
 
 logger = logging.getLogger(__name__)
 
-# 메일 속 서명 URL 의 유효 시간. 태스크 역할 임시 자격 증명으로 서명하므로 이보다 길게 줘도 먼저 만료된다.
+# 메일 속 서명 URL 에 요청하는 유효 시간. 태스크 역할 임시 자격 증명으로 서명하므로 그 자격 증명이 먼저
+# 만료되면 URL 도 같이 죽는다(남은 수명은 수 분~수 시간). 그래서 메일에 시간을 약속하지 않고 미팅 화면을 안내한다.
 EMAIL_AUDIO_URL_EXPIRES = 6 * 3600
 SUMMARY_FAILED_TEXT = "요약을 만들지 못했습니다. 미팅 화면에서 다시 시도해 주세요."
 
@@ -80,23 +81,20 @@ def build_meeting_email(
 ) -> dict:
     title = title or "제목 없는 미팅"
     when = _format_started(started_at)
-    hours = EMAIL_AUDIO_URL_EXPIRES // 3600
     audio_label = "녹음 파일 다운로드"
+    expiry_note = "다운로드 링크는 몇 시간 안에 만료됩니다. 만료됐으면 미팅 화면의 '녹음 파일' 버튼으로 받으세요."
 
     buttons = []
     text_links = []
     if audio_url:
         buttons.append(_button(audio_url, audio_label, primary=True))
-        text_links.append(f"{audio_label} ({hours}시간 동안 유효): {audio_url}")
+        text_links.append(f"{audio_label}: {audio_url}")
+        text_links.append(f"({expiry_note})")
     buttons.append(_button(meeting_url, "미팅 화면에서 보기", primary=not audio_url))
     text_links.append(f"미팅 화면에서 보기: {meeting_url}")
 
     summary_html = summary_to_html(summary) if summary else f"<p>{SUMMARY_FAILED_TEXT}</p>"
-    note = (
-        f'<p style="color:#64748b;font-size:13px">다운로드 링크는 {hours}시간 동안 유효합니다. '
-        "이후에는 미팅 화면에서 받으세요.</p>"
-        if audio_url else ""
-    )
+    note = f'<p style="color:#64748b;font-size:13px">{html.escape(expiry_note)}</p>' if audio_url else ""
     body_html = f"""<!doctype html>
 <html><body style="font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#0f172a;line-height:1.6;max-width:640px;margin:0 auto;padding:24px">
 <h2 style="margin:0 0 4px">{html.escape(title)}</h2>
