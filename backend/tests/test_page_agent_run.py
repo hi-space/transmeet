@@ -299,7 +299,7 @@ async def test_second_generate_for_same_meeting_is_rejected(monkeypatch):
     started = []
 
     async def fake_run(send, meeting_id, *, inline_messages=None, deps=None, reuse_existing=False,
-                       prefer_stored_messages=False):
+                       prefer_stored_messages=False, style="visual"):
         started.append(meeting_id)
         await release.wait()
 

@@ -23,8 +23,12 @@ _SVG = (
 )
 
 
-def page(body_extra: str = "", head_extra: str = "", css: str = "body{font-family:sans-serif}", html_attrs: str = 'lang="ko"') -> str:
-    secs = "".join(f'<section data-section="{s}"><h2>{s}</h2><p>해당 없음</p></section>' for s in SECTIONS)
+VISUAL_SECTIONS = ["header", "tldr", "summary", "decisions", "action-items", "open-questions", "discussion", "references"]
+
+
+def page(body_extra: str = "", head_extra: str = "", css: str = "body{font-family:sans-serif}", html_attrs: str = 'lang="ko"',
+         sections=SECTIONS) -> str:
+    secs = "".join(f'<section data-section="{s}"><h2>{s}</h2><p>해당 없음</p></section>' for s in sections)
     return (
         f"<!doctype html><html {html_attrs}><head><meta charset=\"utf-8\">"
         '<meta name="viewport" content="width=device-width, initial-scale=1"><title>미팅 · 미팅록</title>'
@@ -79,10 +83,16 @@ BAD_PAGES = {
     "svg_without_title": page('<svg viewBox="0 0 1 1"><rect/></svg>'),
     "missing_section": page().replace('data-section="glossary"', 'data-section="other"'),
     "wrong_lang": page(html_attrs='lang="en"'),
+    "visual_missing_discussion": page(head_extra='<meta name="transmeet:style" content="visual">',
+                                      sections=[s for s in VISUAL_SECTIONS if s != "discussion"]),
+    "unknown_style": page(head_extra='<meta name="transmeet:style" content="poster">'),
 }
 
 GOOD_PAGES = {
     "minimal": page(),
+    "detailed_explicit": page(head_extra='<meta name="transmeet:style" content="detailed">'),
+    "visual_without_footer": page(head_extra='<meta name="transmeet:style" content="visual">', sections=VISUAL_SECTIONS,
+                                  body_extra='<details class="topic" open><summary>주제</summary><p><mark class="ok">합의</mark> <mark class="risk">리스크</mark></p></details>'),
     "links_and_svg": page(
         '<p><a href="https://docs.aws.amazon.com/x.html" target="_blank">문서</a> · '
         '<a href="#topic-1">주제 1</a> · <a href="mailto:team@example.com">메일</a></p>'

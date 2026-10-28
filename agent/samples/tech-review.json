@@ -7,7 +7,7 @@
     "speakers": ["Speaker 1", "Me"],
     "languages": ["en", "ko"],
     "generatedAt": "2026-10-08T09:00:00+09:00",
-    "modelId": "us.anthropic.claude-opus-5-5"
+    "modelId": "global.anthropic.claude-opus-5-5"
   },
   "messages": [
     {"timestamp": "2026-10-07T15:00:10+09:00", "speaker": "speaker1", "original": "Let's walk through the architecture — I want to check the CloudFront to S3 and ALB paths before the review.", "translation": "아키텍처를 한번 훑어보죠 — 리뷰 전에 CloudFront에서 S3, ALB로 가는 경로를 확인하고 싶어요.", "detectedLanguage": "en"},

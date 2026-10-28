@@ -13,7 +13,7 @@ SKILLS = Path(__file__).resolve().parents[1] / "skills"
 PAYLOAD = {
     "meeting": {"meetingId": "m1", "title": "주간 1:1 — 배포", "startedAt": "2026-10-06T10:00:00+09:00",
                 "endedAt": "2026-10-06T10:30:00+09:00", "speakers": ["Speaker 1", "Me"], "languages": ["en", "ko"],
-                "generatedAt": "2026-10-08T09:00:00+09:00", "modelId": "global.anthropic.claude-opus-5-5"},
+                "generatedAt": "2026-10-08T09:00:00+09:00", "modelId": "global.anthropic.claude-opus-5-5", "style": "detailed"},
     "messages": [
         {"timestamp": "2026-10-06T10:00:10+09:00", "speaker": "speaker1", "original": "Where are we on the pipeline?",
          "translation": "파이프라인은 어디까지 됐나요?", "detectedLanguage": "en"},
@@ -149,8 +149,9 @@ async def test_full_path_publishes_once(tmp_path):
     meeting_id, html, title, summary = pub.calls[0]
     assert meeting_id == "m1" and title == "주간 1:1 — 배포" and summary == "두 문장."
     assert "{{" not in html
-    assert html.count("<svg") == 2  # 타임라인 + 흐름도가 인라인됐다
-    assert "<figcaption>결정 흐름 [10:20]</figcaption>" in html and "<figcaption>주제 타임라인</figcaption>" in html
+    assert html.count("<svg") == 1  # 흐름도가 인라인됐다(회의 전체 타임라인은 더 그리지 않는다)
+    assert "<figcaption>결정 흐름 [10:20]</figcaption>" in html
+    assert 'name="transmeet:style" content="detailed"' in html and "{{CSS}}" not in html and ".takeaways" in html
     assert 'data-section="references"' in html and "docs.aws.amazon.com/codedeploy" in html
     assert "마감이 촉박하다" in html
     assert "2026-10-06" in html and "10:00–10:30" in html and "30분" in html  # 헤더는 코드가 채웠다
@@ -162,8 +163,7 @@ async def test_full_path_publishes_once(tmp_path):
     assert '<span class="term">OIDC</span>' in html and "코드 디플로이" in html  # 횟수 순: OIDC(5) 가 먼저
     assert html.index('<span class="term">OIDC</span>') < html.index('<span class="term">CodeDeploy</span>')
     assert '<a href="#topic-2">일정 합의<span class="time">10:15</span></a>' in html and '<a href="#sec-glossary">' in html
-    assert "<li><b>2</b><span>주제</span></li>" in html and "<li><b>1</b><span>결정</span></li>" in html
-    assert "<li><b>1</b><span>액션</span></li>" in html and "<li><b>0</b><span>미결</span></li>" in html and "<li><b>1</b><span>참고 자료</span></li>" in html
+    assert "river" not in html  # 상단 시간 막대는 없앴다
     # 노드 순서: research/diagrams 가 insights 앞, insights 가 assemble 앞
     order = [list(u)[0] for u in updates]
     assert order.index("research") < order.index("insights") and order.index("diagrams") < order.index("insights")
@@ -183,7 +183,7 @@ async def test_full_path_publishes_once(tmp_path):
     for stage in ("research", "insights", "assemble"):
         assert "용어 표기" in message_text(models[stage].calls[0][1]) and "MACC" not in message_text(models[stage].calls[0][1])
         assert "**CodeDeploy** (녹취 표기: 코드 디플로이)" in message_text(models[stage].calls[0][1])
-    assert (root / "diagrams" / "timeline.svg").exists()
+    assert not (root / "diagrams" / "timeline.svg").exists()
 
 
 async def test_empty_research_targets_skip_model(tmp_path):
@@ -195,7 +195,7 @@ async def test_empty_research_targets_skip_model(tmp_path):
     assert research.calls == []
     html = pub.calls[0][1]
     assert G.NO_RESEARCH_TEXT in html
-    assert html.count("<svg") == 1  # 타임라인만
+    assert html.count("<svg") == 0
     assert "{{" not in html  # 사용되지 않은 DIAGRAM 마커는 제거됐다
     assert any("외부 사실이 없습니다" in c.get("text", "") for c in customs)
 
@@ -269,7 +269,11 @@ def test_system_prompts_exist_for_all_stages():
         text = G.system_prompt(stage)
         assert "TransMeet" in text and "이 단계" in text and "원문만" in text
     assert "publish_page" not in G.system_prompt("assemble") and "code_interpreter" not in G.system_prompt("assemble")
-    assert "GLOSSARY_ROWS" not in G.system_prompt("assemble") and "{{STATS}}" in G.system_prompt("assemble")
+    assert "GLOSSARY_ROWS" not in G.system_prompt("assemble") and "{{RIVER}}" not in G.system_prompt("assemble")
+    for style in (s for s in G.STYLES.values() if not s.staged):  # 템플릿 스타일 프롬프트가 자기 자리표시자를 전부 설명한다
+        assert all("{{" + ph + "}}" in G.system_prompt(style.prompt) for ph in style.placeholders), style.prompt
+        assert all("{{" + ph + "}}" in (SKILLS / "meeting-minutes-page/assets" / style.template).read_text() for ph in style.placeholders)
+    assert "숫자·일정·기한은 강조하지 않습니다" in G.system_prompt("analyze")
     assert "Analysis" in G.system_prompt("analyze") and "summary" in G.system_prompt("analyze")
 
 
@@ -282,25 +286,17 @@ async def test_analyze_retries_once_on_bad_structured_output(tmp_path):
     assert "스키마" in bad_then_good.calls[1][-1].content
 
 
-def test_stats_ignore_empty_placeholder_items():
-    html = ('<section data-section="decisions"><ol class="list"><li class="time">결정된 사항 없음</li></ol></section>'
-            '<section data-section="action-items"><table><thead><tr><th>a</th></tr></thead><tbody><tr><td colspan="4" class="time">해당 없음</td></tr></tbody></table></section>'
-            '<section data-section="open-questions"><ul><li>누가 채널을 만드나 <span class="time">[10:05]</span></li><li>기한은? </li></ul></section>'
-            '<section data-section="references"><p class="time">리서치 대상이 되는 외부 사실이 없었습니다.</p></section>')
-    stats = G._stats_html(html)
-    assert "<li><b>0</b><span>주제</span></li>" in stats and "<li><b>0</b><span>결정</span></li>" in stats
-    assert "<li><b>0</b><span>액션</span></li>" in stats and "<li><b>2</b><span>미결</span></li>" in stats and "<li><b>0</b><span>참고 자료</span></li>" in stats
-
-
 def test_summary_html_groups_points_and_keeps_only_highlight_tags():
     html = G._summary_html({"summary": [
-        {"heading": "주요 <논의>", "points": ["<b>OIDC</b> 채택 & <mark>15분</mark> 토큰", " ", "<script>x</script> <i>no</i>"]},
+        {"heading": "주요 <논의>", "points": ["<b>OIDC</b> 채택 & <mark>15분</mark> 토큰", " ", "<script>x</script> <i>no</i>",
+                                         '<mark class="ok">합의</mark> <mark class="risk">위험</mark> <mark class="x">no</mark>']},
         {"heading": "빈 그룹", "points": []},
     ]})
     assert html.startswith('<h4>주요 &lt;논의&gt;</h4><ul class="points">')
     assert "<li><b>OIDC</b> 채택 &amp; <mark>15분</mark> 토큰</li>" in html
     assert "<li>&lt;script&gt;x&lt;/script&gt; &lt;i&gt;no&lt;/i&gt;</li>" in html  # b·mark 외의 태그는 글자로
-    assert html.count("<li>") == 2 and "빈 그룹" not in html  # 공백 항목·빈 그룹은 생략
+    assert '<li><mark class="ok">합의</mark> <mark class="risk">위험</mark> &lt;mark class="x"&gt;no</mark></li>' in html
+    assert html.count("<li>") == 3 and "빈 그룹" not in html  # 공백 항목·빈 그룹은 생략
 
 
 def test_summary_html_accepts_legacy_paragraph_strings():
@@ -315,3 +311,78 @@ def test_glossary_and_summary_fallbacks_and_escaping():
     assert "A&lt;B" in rows and "a &amp; b" in rows and rows.count("x") == 1  # 정식 표기와 같은 변형은 생략
     toc = G._toc_html({"topics": [{"title": "<T>", "start": "10:00"}]})
     assert '<a href="#topic-1">&lt;T&gt;<span class="time">10:00</span></a>' in toc and toc.count("<li>") == len(G.TOC_SECTIONS) + 1
+
+
+SVG = '<svg viewBox="0 0 560 200" role="img"><title>흐름</title><rect x="1" y="1" width="50" height="20" fill="var(--ok-bg)"/></svg>'
+PLAN = {"headline": "금요일 마감", "overview": {"kind": "flow", "design": "두 단계", "points": [{"n": 1, "target": "파이프라인", "facts": ["금요일"]}]},
+        "topics": [{"id": "t1", "title_hint": "현황", "facts": ["진행 중"], "figure": {"kind": "steps", "design": "두 단계"}}],
+        "decisions": [], "actions": [], "opens": [], "references": [], "implications": []}
+WRITTEN = {"about": "배포 파이프라인 점검", "headline": "<mark>금요일까지 파이프라인을 끝냅니다.</mark>",
+           "tldr": [{"lead": "마감", "text": "금요일 완료"}], "background": ["<b>현황</b> — 진행 중"], "discussion": ["<b>일정</b> — 금요일"],
+           "overview_caption": "두 단계", "points": [{"n": 1, "title": "파이프라인", "bullets": ["금요일 완료"]}],
+           "decisions": [{"title": "금요일 마감", "detail": "알림은 다음 주에 붙입니다."}],
+           "actions": [{"who": "", "what": "파이프라인 마무리", "due": "금요일"}], "opens": [],
+           "topics": [{"id": "t1", "title": "파이프라인 금요일 완료", "paras": [{"lead": "현황", "text": "CodeDeploy 는 진행 중입니다. <script>x</script>"}], "caption": "두 단계"}],
+           "references": [{"title": "CodeDeploy", "url": "https://docs.aws.amazon.com/codedeploy/", "verdict": "ok", "note": "일치합니다."}],
+           "implications": [{"title": "마감", "bullets": ["촉박합니다(추정)."]}]}
+
+
+def visual_models():
+    return {
+        "analyze": analyze_model(analysis(targets=1, flow=True)), "research": research_model(), "insights": insights_model(),
+        "plan": FakeChatModel(responses=[ai("기획입니다\n" + json.dumps(PLAN, ensure_ascii=False))]),
+        "write": FakeChatModel(responses=[ai("```json\n" + json.dumps(WRITTEN, ensure_ascii=False) + "\n```")]),
+        # 그림 3개(개요 넓은 판·세로 판, 주제 t1) — 첫 응답은 검증 실패(<title> 없음)라 한 번 더 그린다
+        "draw": FakeChatModel(responses=[ai('<svg viewBox="0 0 1 1"><rect/></svg>')] + [ai(SVG) for _ in range(3)]),
+        "review": FakeChatModel(responses=[ai(json.dumps({"fixes": [
+            {"path": "topics.0.paras.0.text", "problem": "띄어쓰기", "text": "CodeDeploy 는 진행 중입니다."},
+            {"path": "nope.3", "problem": "없는 경로", "text": "x"}]}, ensure_ascii=False))]),
+    }
+
+
+async def test_visual_style_builds_page_in_stages_and_publishes(tmp_path):
+    models = visual_models()  # diagrams·assemble 모델이 없다 — 쓰이면 factory 가 AssertionError 를 낸다
+    pub = Recorder()
+    payload = {**PAYLOAD, "meeting": {**PAYLOAD["meeting"], "style": "visual"}}
+    customs, updates = await run(make_deps(tmp_path, models, publisher=pub), payload)
+    assert len(pub.calls) == 1
+    _, html, title, summary = pub.calls[0]
+    assert 'content="visual"' in html and "<footer" not in html and "{{" not in html
+    assert "CodeDeploy는 진행 중입니다." in html  # 리뷰 수정 적용 + 조사 띄어쓰기 보정
+    assert "&lt;script&gt;" not in html and "<script" not in html
+    assert html.count("<svg") == 3 and 'href="#topic-1"' in html and "파이프라인 마무리" in html
+    assert summary.startswith("금요일까지 파이프라인을 끝냅니다.") and title == PAYLOAD["meeting"]["title"]
+    from runtime.stage import message_text
+    plan_prompt = message_text(models["plan"].calls[0][1])
+    assert "CodeDeploy" in plan_prompt and "### 인사이트" in plan_prompt  # 리서치·인사이트 결과가 기획에 들어간다
+    assert "### 문장 규칙" in message_text(models["write"].calls[0][0]) and "### 문장 규칙" not in message_text(models["plan"].calls[0][0])
+    statuses = [c.get("text", "") for c in customs if isinstance(c, dict)]
+    assert any("그림 3개" in x for x in statuses) and any("1곳을 고쳤습니다" in x for x in statuses)
+    root = next(tmp_path.iterdir())
+    assert (root / "visual" / "final.json").exists() and (root / "visual" / "plan.json").exists()
+
+
+async def test_visual_style_retry_rerenders_without_figures(tmp_path, monkeypatch):
+    calls = {"n": 0}
+    real = G.validate_html
+
+    def flaky(html, max_bytes=1_500_000):
+        calls["n"] += 1
+        return ["bad svg"] if calls["n"] == 1 else real(html, max_bytes)
+    monkeypatch.setattr(G, "validate_html", flaky)
+    pub = Recorder()
+    payload = {**PAYLOAD, "meeting": {**PAYLOAD["meeting"], "style": "visual"}}
+    await run(make_deps(tmp_path, visual_models(), publisher=pub), payload)
+    assert len(pub.calls) == 1 and "<svg" not in pub.calls[0][1] and "파이프라인 마무리" in pub.calls[0][1]
+
+
+def test_default_style_is_visual(tmp_path):
+    deps = make_deps(tmp_path, {})
+    meeting = {k: v for k, v in PAYLOAD["meeting"].items() if k != "style"}
+    assert G.initial_state({**PAYLOAD, "meeting": meeting}, "s" * 33, deps)["style"] == "visual"
+
+
+def test_unknown_style_rejected(tmp_path):
+    deps = make_deps(tmp_path, {})
+    with pytest.raises(G.PayloadError, match="style"):
+        G.initial_state({**PAYLOAD, "meeting": {**PAYLOAD["meeting"], "style": "poster"}}, "s" * 33, deps)

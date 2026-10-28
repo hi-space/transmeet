@@ -3,13 +3,16 @@
 
 Usage: python3 flow_svg.py input.json > flow.svg
 input: {"title":"...","nodes":[{"id","label","kind":"step|decision|outcome"}],"edges":[{"from","to","label"?}]}
-Keep it under ~12 nodes; the layout is a simple longest-path layering.
+Keep it under ~12 nodes; the layout is a simple longest-path layering. Up to MAX_COLS layers run
+left-to-right; deeper flows run top-to-bottom so a long pipeline stays readable instead of shrinking.
 """
 import json
 import sys
 from html import escape
 
 NODE_W, NODE_H, GAP_X, GAP_Y, PAD = 170, 56, 90, 28, 24
+MAX_COLS = 5          # 이보다 깊은 흐름은 세로(위→아래)로 그린다
+V_GAP_X, V_GAP_Y = 36, 52
 
 
 def _layers(nodes, edges):
@@ -33,14 +36,24 @@ def render_flow(data: dict) -> str:
     nodes = {n["id"]: n for n in data["nodes"]}
     cols = _layers(data["nodes"], data["edges"])
     ncols, nrows = len(cols), max(len(v) for v in cols.values())
-    width = PAD * 2 + ncols * NODE_W + (ncols - 1) * GAP_X
-    height = PAD * 2 + nrows * NODE_H + (nrows - 1) * GAP_Y
+    vertical = ncols > MAX_COLS
     pos = {}
-    for c, ids in sorted(cols.items()):
-        col_h = len(ids) * NODE_H + (len(ids) - 1) * GAP_Y
-        y0 = (height - col_h) / 2
-        for r, i in enumerate(ids):
-            pos[i] = (PAD + c * (NODE_W + GAP_X), y0 + r * (NODE_H + GAP_Y))
+    if vertical:
+        width = PAD * 2 + nrows * NODE_W + (nrows - 1) * V_GAP_X
+        height = PAD * 2 + ncols * NODE_H + (ncols - 1) * V_GAP_Y
+        for c, ids in sorted(cols.items()):
+            row_w = len(ids) * NODE_W + (len(ids) - 1) * V_GAP_X
+            x0 = (width - row_w) / 2
+            for r, i in enumerate(ids):
+                pos[i] = (x0 + r * (NODE_W + V_GAP_X), PAD + c * (NODE_H + V_GAP_Y))
+    else:
+        width = PAD * 2 + ncols * NODE_W + (ncols - 1) * GAP_X
+        height = PAD * 2 + nrows * NODE_H + (nrows - 1) * GAP_Y
+        for c, ids in sorted(cols.items()):
+            col_h = len(ids) * NODE_H + (len(ids) - 1) * GAP_Y
+            y0 = (height - col_h) / 2
+            for r, i in enumerate(ids):
+                pos[i] = (PAD + c * (NODE_W + GAP_X), y0 + r * (NODE_H + GAP_Y))
     out = [
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" font-family="var(--tm-font, sans-serif)" font-size="13">',
         f"<title>{escape(data.get('title', '흐름도'))}</title>",
@@ -50,11 +63,19 @@ def render_flow(data: dict) -> str:
     for e in data["edges"]:
         x1, y1 = pos[e["from"]]
         x2, y2 = pos[e["to"]]
-        sx, sy, ex, ey = x1 + NODE_W, y1 + NODE_H / 2, x2, y2 + NODE_H / 2
-        mx = (sx + ex) / 2
-        out.append(f'<path d="M{sx:.1f} {sy:.1f} C{mx:.1f} {sy:.1f} {mx:.1f} {ey:.1f} {ex:.1f} {ey:.1f}" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>')
+        if vertical:
+            sx, sy, ex, ey = x1 + NODE_W / 2, y1 + NODE_H, x2 + NODE_W / 2, y2
+            my = (sy + ey) / 2
+            d = f"M{sx:.1f} {sy:.1f} C{sx:.1f} {my:.1f} {ex:.1f} {my:.1f} {ex:.1f} {ey:.1f}"
+            lx, ly, anchor = (sx + ex) / 2 + 8, my + 4, "start"
+        else:
+            sx, sy, ex, ey = x1 + NODE_W, y1 + NODE_H / 2, x2, y2 + NODE_H / 2
+            mx = (sx + ex) / 2
+            d = f"M{sx:.1f} {sy:.1f} C{mx:.1f} {sy:.1f} {mx:.1f} {ey:.1f} {ex:.1f} {ey:.1f}"
+            lx, ly, anchor = mx, (sy + ey) / 2 - 6, "middle"
+        out.append(f'<path d="{d}" fill="none" stroke="var(--tm-muted)" stroke-width="1.5" marker-end="url(#arrow)"/>')
         if e.get("label"):
-            out.append(f'<text x="{mx:.1f}" y="{(sy + ey) / 2 - 6:.1f}" text-anchor="middle" fill="var(--tm-muted)" font-size="11">{escape(e["label"])}</text>')
+            out.append(f'<text x="{lx:.1f}" y="{ly:.1f}" text-anchor="{anchor}" fill="var(--tm-muted)" font-size="11">{escape(e["label"])}</text>')
     for i, (x, y) in pos.items():
         n = nodes[i]
         kind = n.get("kind", "step")

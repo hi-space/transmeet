@@ -7,7 +7,7 @@
     "speakers": ["Speaker 1", "Me"],
     "languages": ["en", "ko"],
     "generatedAt": "2026-10-08T09:00:00+09:00",
-    "modelId": "us.anthropic.claude-opus-5-5"
+    "modelId": "global.anthropic.claude-opus-5-5"
   },
   "messages": [
     {"timestamp": "2026-10-06T10:00:10+09:00", "speaker": "speaker1", "original": "Quick one today. Where are we on moving the backend deploy into the pipeline?", "translation": "오늘은 짧게요. 백엔드 배포를 파이프라인으로 옮기는 건 어디까지 됐나요?", "detectedLanguage": "en"},

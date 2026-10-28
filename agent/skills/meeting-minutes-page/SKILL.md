@@ -17,7 +17,12 @@ description: TransMeet 미팅 트랜스크립트로 공유용 단일 HTML 미팅
 
 ## 페이지 구조
 
-목차(코드) · header(코드) · 1 한눈에 보기 · 2 회의 요약(코드, `analysis.summary`) · 3 결정 사항 · 4 액션 아이템 · 5 논의 흐름(타임라인은 코드, 주제 블록은 모델) · 6 미결 사항 · 7 관련 공식 자료(코드, `research.html`) · 8 인사이트 보고서(코드, `insights.html`) · 9 용어 사전(코드, `analysis.terms`) · footer(코드).
+스타일(`meeting.json` 의 `style`)은 두 가지다.
+
+- `visual` (기본, 시각 회의록): 이 스킬을 쓰지 않는다. `runtime/visual.py` 가 기획 → 글쓰기 ∥ 그림 → 리뷰 단계로 본문 JSON 과 SVG 를 만들고, 코드가 고정 레이아웃(`assets/visual.css`)으로 렌더한다. 프롬프트는 `runtime/prompts/page_*.md`.
+- `detailed` (`template.html`, 상세 회의록): 이 스킬의 규칙으로 assemble 단계가 자리표시자를 채운다. 목차(코드) · header · 한눈에 보기 · 회의 요약(코드) · 결정 사항 · 액션 아이템 · 논의 흐름 · 미결 사항 · 관련 공식 자료(코드) · 인사이트 보고서(코드) · 용어 사전(코드) · footer. CSS 는 `assets/page.css`(코드가 `{{CSS}}` 자리에 넣는다).
+
+필수 섹션은 검증기가 `<meta name="transmeet:style">` 로 고른다.
 
 ## 작업 순서
 
@@ -25,9 +30,9 @@ description: TransMeet 미팅 트랜스크립트로 공유용 단일 HTML 미팅
 
 1. `transcript.txt`를 끝까지 읽는다. 주제 분할은 `analysis.json`의 `topics` 순서를 따른다 (`id="topic-1"`부터 — 목차가 이 앵커로 링크한다).
 2. `references/section-rules.md`를 읽는다. 섹션별 규칙과 주제 블록 HTML 구조가 전부 거기 있다.
-3. `page.html`은 `assets/template.html`에서 **이미 생성**돼 있고 코드가 채우는 부분은 채워져 있다. 남은 자리표시자 다섯 개(`{{TLDR_ITEMS}}`, `{{DECISIONS}}`, `{{ACTION_ROWS}}`, `{{TOPIC_BLOCKS}}`, `{{OPEN_QUESTIONS}}`)를 `edit_file`로 하나씩 내용으로 바꾼다. 파일 전체를 다시 쓰지 않는다. 바깥 태그(`<ol class="list">`, `<tbody>`)는 템플릿에 있으니 안쪽 항목만 넣는다.
+3. `page.html`은 스타일의 템플릿에서 **이미 생성**돼 있고 코드가 채우는 부분은 채워져 있다. 남은 자리표시자(단계 프롬프트의 "채울 자리표시자" 목록)를 `edit_file`로 하나씩 내용으로 바꾼다. 파일 전체를 다시 쓰지 않는다. 바깥 태그(`<ol class="list">`, `<tbody>`)는 템플릿에 있으니 안쪽 항목만 넣는다.
 4. `diagrams/manifest.json`의 flow/relations 다이어그램은 해당 주제 블록 안에 `{{DIAGRAM:파일명.svg}}` 한 줄로 넣는다. 시스템이 `<figure>`와 캡션을 붙여 SVG를 인라인한다.
-5. `bash python3 skills/meeting-minutes-page/scripts/validate_page.py page.html`을 실행한다. `ok`가 `false`면 `errors`를 고치고 다시 실행한다. 남은 `{{...}}` 자리표시자가 없어야 한다 (`{{DIAGRAM:...}}`, `{{STATS}}`는 예외 — 코드가 채운다).
+5. `bash python3 skills/meeting-minutes-page/scripts/validate_page.py page.html`을 실행한다. `ok`가 `false`면 `errors`를 고치고 다시 실행한다. 남은 `{{...}}` 자리표시자가 없어야 한다 (`{{DIAGRAM:...}}`는 예외 — 코드가 채운다).
 6. `page.meta.json`에 `{"title": "<페이지 제목>", "share_summary": "<2문장>"}`을 저장한다. `share_summary`는 미팅을 모르는 사람에게 보낼 2문장.
 7. 한 줄짜리 한국어 문장으로 마무리한다. 발행은 시스템이 한다.
 
@@ -40,7 +45,8 @@ description: TransMeet 미팅 트랜스크립트로 공유용 단일 HTML 미팅
 - 사실은 트랜스크립트와 검색 출처에서만. 추론은 insights 섹션에서만, "추정" 배지와 함께.
 - 담당자·기한·수치를 지어내지 않는다. 없으면 "미정" 또는 "확인 불가". 담당은 역할·팀만, 사람 이름·화자 라벨 금지.
 - 발언을 요약하되 **빠뜨리지 않는다**. 긴 미팅이면 주제 블록이 많아지는 것이 정상이다.
-- 템플릿의 CSS 클래스(`.topic`, `.topic-head`, `.num`, `.time`, `.badge`, `.list`)와 변수(`--tm-*`)만 쓴다. 새 색상 코드·인라인 스타일을 넣지 않는다.
+- `page.css` 의 클래스(`.topic`, `.station`, `.pins`, `.list`, `.who`, `.due`, `.time`, `.badge`, 그림 컴포넌트 `.arch`·`.compare`·`.shift`·`.flow`)와 변수(`--tm-*`)만 쓴다. 새 색상 코드·인라인 스타일을 넣지 않는다.
+- 강조: 리드 구절 `<b>`, 결론에만 형광펜 `<mark>`(합의 `class="ok"`, 리스크 `class="risk"`). 숫자·일정은 강조하지 않는다.
 
 ## 자주 하는 실수
 

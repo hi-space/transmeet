@@ -7,7 +7,7 @@
     "speakers": ["Speaker 1", "Speaker 2", "Me"],
     "languages": ["en", "ko"],
     "generatedAt": "2026-10-08T09:00:00+09:00",
-    "modelId": "us.anthropic.claude-opus-5-5"
+    "modelId": "global.anthropic.claude-opus-5-5"
   },
   "messages": [
     {"timestamp": "2026-10-07T14:00:10+09:00", "speaker": "speaker1", "original": "Let's lock the Q4 scope today — release scope, GA timing, security review owner, cost, then next steps.", "translation": "오늘은 4분기 범위를 확정하죠 — 출시 범위, GA 일정, 보안 리뷰 담당, 비용, 그다음 다음 단계 순으로요.", "detectedLanguage": "en"},

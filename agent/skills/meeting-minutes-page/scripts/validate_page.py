@@ -20,6 +20,12 @@ REQUIRED_SECTIONS = [
     "header", "tldr", "summary", "decisions", "action-items", "discussion",
     "open-questions", "references", "insights", "glossary", "footer",
 ]
+# 스타일별 필수 섹션 — `<meta name="transmeet:style">` 로 고른다(없으면 detailed: 스타일 도입 전 페이지).
+REQUIRED_SECTIONS_BY_STYLE = {
+    "detailed": REQUIRED_SECTIONS,
+    # 시각 회의록(runtime/visual.py): 코드가 고정 레이아웃을 렌더한다 — 바닥글 없음
+    "visual": ["header", "tldr", "summary", "decisions", "action-items", "open-questions", "discussion", "references"],
+}
 REQUIRED_META = ["transmeet:meeting-id", "transmeet:generated-at", "transmeet:model"]
 
 # 허용 목록 방식: 여기에 없는 태그는 전부 거절한다 (script·iframe·object·embed·form·img·use·animate 등).
@@ -196,7 +202,12 @@ def _validate(html: str, max_bytes: int) -> List[str]:
         errors.append("unterminated raw-text element or unparsed trailing markup")
     if audit.lang != "ko":
         errors.append('<html lang="ko"> is required')
-    errors.extend(f'missing data-section="{s}"' for s in REQUIRED_SECTIONS if s not in audit.sections)
+    style = audit.meta.get("transmeet:style") or "detailed"
+    required = REQUIRED_SECTIONS_BY_STYLE.get(style)
+    if required is None:
+        errors.append(f"unknown transmeet:style: {style}")
+        required = REQUIRED_SECTIONS
+    errors.extend(f'missing data-section="{s}"' for s in required if s not in audit.sections)
     errors.extend(f'missing <meta name="{m}">' for m in REQUIRED_META if not audit.meta.get(m))
     errors.extend(_check_css("\n".join(audit.css)))
     return errors

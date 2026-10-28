@@ -32,6 +32,10 @@ MERGE_WINDOW_SECONDS = 10
 PAGE_AGENT_MODEL_ID = "global.anthropic.claude-opus-5-5"
 PAGE_AGENT_FALLBACK_MODEL_ID = "global.anthropic.claude-opus-5"
 
+# 페이지 스타일 — agent/runtime/graph.py 의 STYLES 키와 같다 (visual: 시각 회의록, detailed: 상세 회의록)
+PAGE_STYLES = ("visual", "detailed")
+DEFAULT_PAGE_STYLE = "visual"
+
 
 def _parse_ts(ts: str) -> Optional[datetime]:
     try:
@@ -83,6 +87,7 @@ def build_meeting_payload(
     inline_messages: Optional[List[Dict[str, Any]]] = None,
     now: Optional[datetime] = None,
     model_id: str,
+    style: str = DEFAULT_PAGE_STYLE,
 ) -> Dict[str, Any]:
     source = inline_messages if inline_messages else (item.get("messages") or [])
     messages = merge_messages(source)
@@ -109,6 +114,7 @@ def build_meeting_payload(
             "languages": languages,
             "generatedAt": generated,
             "modelId": model_id,
+            "style": style,
         },
         "messages": messages,
     }
@@ -161,6 +167,15 @@ MAX_INLINE_CHARS = 400_000
 
 class PageRequestError(Exception):
     """클라이언트 요청이 잘못됐을 때 — 메시지를 그대로 page_stream error 로 보낸다."""
+
+
+def check_page_style(style: Any) -> str:
+    """페이지 스타일(agent/runtime/graph.py STYLES 와 같은 값). 없으면 기본(시각 회의록)."""
+    if style is None or style == "":
+        return DEFAULT_PAGE_STYLE
+    if style not in PAGE_STYLES:
+        raise PageRequestError("알 수 없는 페이지 스타일입니다")
+    return style
 
 
 def check_meeting_id(meeting_id: Any) -> None:
@@ -390,6 +405,7 @@ async def run_page_generation(
     deps: Optional[PageAgentDeps] = None,
     reuse_existing: bool = False,
     prefer_stored_messages: bool = False,
+    style: str = DEFAULT_PAGE_STYLE,
 ) -> Optional[Dict[str, Any]]:
     deps = deps or PageAgentDeps.from_config()
     emit = _emitter(send, meeting_id)
@@ -413,7 +429,7 @@ async def run_page_generation(
         # 화면 말풍선은 여러 발언을 합칠 수 있어 두 기록을 단순 연결하면 중복된다.
         if prefer_stored_messages and item.get("messages"):
             inline_messages = None
-        payload = build_meeting_payload(item, inline_messages=inline_messages, model_id=deps.model_id)
+        payload = build_meeting_payload(item, inline_messages=inline_messages, model_id=deps.model_id, style=style)
         if not payload["messages"]:
             await emit("error", error="기록이 없습니다")
             return None
@@ -481,10 +497,12 @@ def start_page_generation(
     inline_messages: Any = None,
     reuse_existing: bool = False,
     prefer_stored_messages: bool = False,
+    style: Any = None,
 ) -> "asyncio.Task[Optional[Dict[str, Any]]]":
     """자동 생성은 진행 중·발행된 페이지를 재사용하고, 수동 생성의 중복 요청은 거절한다."""
     check_meeting_id(meeting_id)
     check_inline_messages(inline_messages)
+    style = check_page_style(style)
     running = _ACTIVE_PAGE_TASKS.get(meeting_id)
     if running is not None and not running.done():
         if reuse_existing:
@@ -492,7 +510,7 @@ def start_page_generation(
         raise PageRequestError("이미 생성 중입니다")
     task = asyncio.create_task(run_page_generation(
         send, meeting_id, inline_messages=inline_messages, reuse_existing=reuse_existing,
-        prefer_stored_messages=prefer_stored_messages,
+        prefer_stored_messages=prefer_stored_messages, style=style,
     ))
     _ACTIVE_PAGE_TASKS[meeting_id] = task
 

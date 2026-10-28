@@ -1,4 +1,5 @@
 import json
+import re
 import subprocess
 import sys
 from html import escape
@@ -91,3 +92,14 @@ def test_cli_roundtrip(tmp_path):
     p2.write_text(json.dumps(FLOW), encoding="utf-8")
     out2 = subprocess.run([sys.executable, str(SCRIPTS / "flow_svg.py"), str(p2)], capture_output=True, text=True, check=True).stdout
     assert out2.startswith("<svg")
+
+
+def test_deep_flow_switches_to_top_to_bottom_layout():
+    nodes = [{"id": f"n{i}", "label": f"단계 {i}", "kind": "step"} for i in range(8)]
+    edges = [{"from": f"n{i}", "to": f"n{i + 1}"} for i in range(7)]
+    svg = render_flow({"title": "긴 파이프라인", "nodes": nodes, "edges": edges})
+    w, h = map(float, re.search(r'viewBox="0 0 ([\d.]+) ([\d.]+)"', svg).groups())
+    assert h > w  # 8단계를 가로로 늘어놓지 않고 세로로 쌓는다
+    shallow = render_flow({"title": "짧음", "nodes": nodes[:3], "edges": edges[:2]})
+    w2, h2 = map(float, re.search(r'viewBox="0 0 ([\d.]+) ([\d.]+)"', shallow).groups())
+    assert w2 > h2

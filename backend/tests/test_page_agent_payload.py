@@ -94,3 +94,20 @@ def test_payload_preserves_additional_speakers():
     assert payload["meeting"]["speakers"] == ["Speaker 3", "Speaker 11"]
     assert [m["speaker"] for m in payload["messages"]] == ["speaker3", "speaker11"]
 
+
+
+def test_payload_carries_page_style_and_defaults_to_detailed():
+    item = {"meetingId": "m1", "messages": [msg("2026-10-06T10:00:00+09:00", "me", "hi")]}
+    assert build_meeting_payload(item, model_id=MODEL)["meeting"]["style"] == "visual"
+    assert build_meeting_payload(item, model_id=MODEL, style="detailed")["meeting"]["style"] == "detailed"
+
+
+def test_check_page_style_rejects_unknown_values():
+    import pytest
+    from app.page_agent import PageRequestError, check_page_style
+
+    assert check_page_style(None) == "visual" and check_page_style("") == "visual"
+    assert check_page_style("detailed") == "detailed"
+    for bad in ("poster", "brief", 3, ["visual"]):
+        with pytest.raises(PageRequestError):
+            check_page_style(bad)
