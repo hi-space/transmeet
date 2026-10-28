@@ -24,6 +24,7 @@ TYPE_REFERENCES = {
     **{name: "technical-illustration.md" for name in ILLUSTRATION_TYPES},
     "compare": "comparison.md",
     "matrix": "comparison.md",
+    "freeform": "freeform.md",
 }
 ALIASES = {"flow": "flowchart", "steps": "process", "schedule": "gantt"}
 SEMANTIC_TYPES = {"architecture", "data-flow", "flowchart", "layers", "process"}
@@ -53,7 +54,9 @@ def _reference(root: Path, name: str) -> str:
 def _context(root: Path, parts: list[str]) -> str:
     # The adaptation follows the original examples so its page contract wins.
     return "\n\n".join([
-        f"## 적용 스킬: {SKILL_NAME}\n아래는 실행 코드가 로드한 스킬 본문과 참조 문서입니다.",
+        f"## 참고 스킬: {SKILL_NAME}\n아래 문서는 선택적으로 활용할 디자인 참고 자료입니다. "
+        "원본의 mandatory·non-negotiable·never 같은 표현도 레이아웃을 강제하지 않습니다. "
+        "필수 조건은 뒤의 TransMeet 적용 규칙과 단계별 출력 계약입니다.",
         *parts,
         _reference(root, "transmeet.md"),
     ])
@@ -66,19 +69,32 @@ def planning_context(skills_dir: Path) -> str:
         "### figure.kind 코드\n" + ", ".join(TYPE_REFERENCES),
         _reference(root, "technical-illustration.md"),
         _reference(root, "comparison.md"),
+        _reference(root, "freeform.md"),
     ])
 
 
-def drawing_context(skills_dir: Path, kind: object) -> str:
-    root = skills_dir / SKILL_NAME
-    name = kind.strip().lower().replace("_", "-") if isinstance(kind, str) else ""
+def _known_kind(value: object) -> str:
+    name = value.strip().lower().replace("_", "-") if isinstance(value, str) else ""
     name = ALIASES.get(name, name)
-    parts = [_sections(root, (1, 4, 6, 7))]
-    reference = TYPE_REFERENCES.get(name)
-    if reference:
+    return name if name in TYPE_REFERENCES else ""
+
+
+def drawing_context(skills_dir: Path, kind: object, reference_kinds: object = None) -> str:
+    root = skills_dir / SKILL_NAME
+    names = [_known_kind(kind) or "freeform"]
+    if isinstance(reference_kinds, list):
+        for hint in reference_kinds:
+            name = _known_kind(hint)
+            if name and name not in names:
+                names.append(name)
+            if len(names) == 3:  # Bound reference context, not the drawing's composition.
+                break
+    # Keep the skill's design philosophy without imposing its node/grid budgets.
+    parts = [_sections(root, (1,))]
+    for reference in dict.fromkeys(TYPE_REFERENCES[name] for name in names):
         parts.append(_reference(root, reference))
-    if name in SEMANTIC_TYPES:
+    if any(name in SEMANTIC_TYPES for name in names):
         parts.append(_reference(root, "semantic-patterns.md"))
-    if name in ILLUSTRATION_TYPES:
+    if any(name in ILLUSTRATION_TYPES for name in names):
         parts.append(_reference(root, "primitive-annotation.md"))
     return _context(root, parts)

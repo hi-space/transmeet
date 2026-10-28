@@ -164,19 +164,21 @@ async def write_page(llm, inp: VisualInputs, plan: Dict[str, Any], usage: Dict[s
     return await _call_json(llm, system("page_tone", "page_write"), user, usage)
 
 
-def figure_jobs(plan: Dict[str, Any]) -> List[Dict[str, str]]:
+def figure_jobs(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
     ov = plan.get("overview") or {}
     points = "\n".join(f"{circled(p.get('n'))} {p.get('target', '')}: {'; '.join(p.get('facts') or [])}"
                        for p in ov.get("points") or [] if isinstance(p, dict))
     brief = f"개요 그림 ({ov.get('kind', '')})\n설계: {ov.get('design', '')}\n번호 지점:\n{points}"
-    jobs = [{"key": "overview-wide", "kind": "overview-wide", "figure_kind": ov.get("kind", ""), "brief": brief},
-            {"key": "overview-tall", "kind": "overview-tall", "figure_kind": ov.get("kind", ""), "brief": brief}] if ov else []
+    jobs = [{"key": key, "kind": key, "figure_kind": ov.get("kind", ""),
+             "reference_kinds": ov.get("reference_kinds", []), "brief": brief}
+            for key in ("overview-wide", "overview-tall")] if ov else []
     for t in plan.get("topics") or []:
         if not isinstance(t, dict) or not t.get("id"):
             continue
         fig = t.get("figure") or {}
         facts = "\n".join(f"- {f}" for f in t.get("facts") or [])
         jobs.append({"key": str(t["id"]), "kind": "topic", "figure_kind": fig.get("kind", ""),
+                     "reference_kinds": fig.get("reference_kinds", []),
                      "brief": f"주제 그림 ({fig.get('kind', '')}) — 주제: {t.get('title_hint', '')}\n설계: {fig.get('design', '')}\n이 주제의 사실:\n{facts}"})
     return jobs
 
@@ -189,10 +191,10 @@ def svg_errors(svg: str) -> List[str]:
     return validate_html(SVG_SKELETON.replace("{SVG}", svg)) if svg else ["SVG 가 없습니다"]
 
 
-async def draw_one(llm, inp: VisualInputs, job: Dict[str, str], usage: Dict[str, int]) -> str:
+async def draw_one(llm, inp: VisualInputs, job: Dict[str, Any], usage: Dict[str, int]) -> str:
     """그림 하나. 검증에 두 번 떨어지면 빈 문자열 — 페이지는 그 그림 없이 나간다."""
     user = f"{_head(inp)}\n\n### 그릴 그림: {DRAW_LABEL[job['kind']]}\nid 접두사: `{job['key']}-`\n\n{job['brief']}"
-    design = diagram_design.drawing_context(inp.skills_dir, job.get("figure_kind"))
+    design = diagram_design.drawing_context(inp.skills_dir, job.get("figure_kind"), job.get("reference_kinds"))
     msgs = [SystemMessage(content=system("page_draw", design_context=design)), HumanMessage(content=user)]
     for attempt in range(2):
         ai = await astream_with_retry(llm, msgs)
@@ -213,7 +215,7 @@ async def draw_all(llm_for: LlmFor, inp: VisualInputs, plan: Dict[str, Any], usa
     gate = asyncio.Semaphore(MAX_PARALLEL_DRAWS)
     done = 0
 
-    async def one(job: Dict[str, str]) -> str:
+    async def one(job: Dict[str, Any]) -> str:
         nonlocal done
         async with gate:
             try:

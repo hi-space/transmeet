@@ -22,9 +22,14 @@ TransMeet adds these files:
   and fields, cutaways, exploded views, motion, and sequential scenes.
 - `references/comparison.md`: compatibility with the existing comparison
   and matrix figure kinds.
+- `references/freeform.md`: open-ended compositions and optional combinations
+  of reference types.
 
 `runtime/diagram_design.py` loads the source skill's selection sections for
-planning and its drawing sections plus the chosen type's reference for drawing.
+planning and its design philosophy plus selected type references for drawing.
+Upstream layouts, grids, node budgets, and connector shapes are advisory.
+`freeform` permits new compositions; `reference_kinds` optionally selects up
+to two additional references, with duplicate documents loaded once.
 It appends the TransMeet adaptation; the stage's output prompt follows last.
 The main skill and reference files are not expected to be executed as a
 standalone Claude Code workflow inside this application.
@@ -40,5 +45,5 @@ No home directory, Claude Code installation, network lookup, or new dependency
 is required to load these documents.
 
 To update, replace the unchanged source documents and license from the desired
-installed plugin version, update this provenance, keep the three TransMeet
+installed plugin version, update this provenance, keep the four TransMeet
 references, and run `cd agent && .venv/bin/python -m pytest`.

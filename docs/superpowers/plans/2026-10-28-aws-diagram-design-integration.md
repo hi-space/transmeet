@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Apply the user's Claude Code `aws-diagram-design` skill to the visual page planner and every individual drawing call.
+**Goal:** Use the user's Claude Code `aws-diagram-design` skill as advisory design guidance, with freeform compositions and optional combinations of reference types.
 
-**Architecture:** Bundle the installed plugin's design documents in `agent/skills/aws-diagram-design`. A small runtime adapter selects planning guidance or common drawing guidance plus the chosen type reference. Keep the existing JSON → inline SVG → page renderer pipeline.
+**Architecture:** Bundle the installed plugin's design documents in `agent/skills/aws-diagram-design`. A small runtime adapter selects planning guidance or design philosophy plus optional type references. The model designs its own SVG composition; factual accuracy, readability, and the existing page/output contract remain mandatory.
 
 **Tech Stack:** Python, existing LangChain model interface, Markdown skill documents, pytest.
 
@@ -16,7 +16,7 @@
 - Preserve the original design documents and MIT license; identify TransMeet-specific additions separately.
 - Load the configured skills directory, never a developer's plugin cache, in production.
 - Retain inline SVG, theme variables, mobile typography, accessibility, and the existing validator.
-- Pass only the selected type's reference to a drawing call; preserve legacy figure kinds.
+- Load only selected references, deduplicated, with at most two additional reference hints; preserve legacy figure kinds and allow `freeform`.
 - Supplement the upstream catalog with physical illustrations, coverage, cutaways, exploded views, motion paths, and storyboards without inventing physical specifications.
 
 ## Review Focus
@@ -31,7 +31,7 @@
 
 **Files:** Create `agent/runtime/diagram_design.py`, `agent/skills/aws-diagram-design/`, and `agent/tests/test_visual_design.py`; modify `agent/runtime/visual.py`, `agent/runtime/graph.py`, and `agent/runtime/prompts/page_{plan,draw}.md`.
 
-**Interfaces:** `planning_context(skills_dir: Path) -> str`, `drawing_context(skills_dir: Path, kind: object) -> str`; `VisualInputs.skills_dir` carries the configured bundle root; drawing jobs carry `figure_kind` independently of their page slot.
+**Interfaces:** `planning_context(skills_dir: Path) -> str`, `drawing_context(skills_dir: Path, kind: object, reference_kinds: object = None) -> str`; `VisualInputs.skills_dir` carries the configured bundle root; drawing jobs carry `figure_kind` and optional `reference_kinds` independently of their page slot.
 
 - [x] Write integration tests using a temporary skill bundle with recognizable type-reference markers; inspect the actual model request and validated SVG result.
 - [x] Run the new tests and confirm they fail because the runtime does not yet load the skill.
@@ -57,3 +57,11 @@
 - Browser inspection exposed a sensor leader hidden behind the opaque body. A hit test reproduced the occlusion; the technical-illustration adapter now explicitly draws leaders after physical parts. Regeneration and hit tests confirmed all four leaders remain visible.
 - Desktop (1000px), mobile (390px), and dark-mode previews were inspected. The four figures have no duplicate IDs or horizontal page overflow.
 - Implementation verification completed before release. Deployment uses the committed agent image; the self-contained example is available at `aws-diagram-design-example.html` in the project root.
+
+## User-approved refinement before deployment
+
+- The user asked whether strict skills could limit creative drawing and approved advisory guidance with freeform compositions and combined types.
+- Layouts, fixed grids, node counts, connector shapes, and single-type composition are now suggestions. Existing SVG safety, page theme, factual accuracy, and readability remain required.
+- Unknown kinds use `freeform`; `reference_kinds` selects up to two additional known types, with duplicate documents loaded once.
+- Ten expected pre-change failures verified the missing freeform behavior. The complete updated suite passed **167 tests**, and the new delta received an independent review with no material defects.
+- A real-model freeform example combines sensor placement and a curved obstacle-avoidance route. It passed SVG validation and desktop/mobile rendering checks and is included as the fifth example in the root HTML file.

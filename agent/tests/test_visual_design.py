@@ -31,6 +31,7 @@ def skill_bundle(tmp_path):
         ("type-process.md", "DEPLOYED_PROCESS_GUIDANCE"),
         ("type-gantt.md", "DEPLOYED_GANTT_GUIDANCE"),
         ("technical-illustration.md", "DEPLOYED_ILLUSTRATION_GUIDANCE"),
+        ("freeform.md", "DEPLOYED_FREEFORM_GUIDANCE"),
     ):
         path = refs / name
         existing = path.read_text() if path.exists() else ""
@@ -58,6 +59,22 @@ async def test_planner_receives_the_deployed_skill_catalog(skill_bundle):
     assert "DEPLOYED_SEQUENCE_GUIDANCE" not in system  # selected later by draw
     assert "type-sequence.md" in system
     assert "type-gantt.md" in system
+
+
+async def test_freeform_drawing_can_combine_reference_types(skill_bundle):
+    plan = {
+        "topics": [{"id": "t1", "title_hint": "센서와 동작", "facts": [],
+                    "figure": {"kind": "freeform", "reference_kinds": ["coverage", "sequence", "coverage"],
+                               "design": "센서 배치와 동작을 하나의 장면으로 설명"}}],
+    }
+    model = FakeChatModel(responses=[ai(SVG)])
+    job = visual.figure_jobs(plan)[0]
+
+    assert await visual.draw_one(model, inputs(skill_bundle), job, {}) == SVG
+    system = model.calls[0][0].content
+    assert "DEPLOYED_FREEFORM_GUIDANCE" in system
+    assert system.count("DEPLOYED_ILLUSTRATION_GUIDANCE") == 1
+    assert system.count("DEPLOYED_SEQUENCE_GUIDANCE") == 1
 
 
 @pytest.mark.parametrize("illustration_kind", [
@@ -113,5 +130,18 @@ async def test_unrecognized_kind_uses_common_guidance_without_reading_a_path(ski
     assert await visual.draw_one(model, inputs(skill_bundle), job, {}) == SVG
     system = model.calls[0][0].content
     assert "aws-diagram-design" in system
+    assert "DEPLOYED_FREEFORM_GUIDANCE" in system
     assert "MUST_NOT_REACH_THE_MODEL" not in system
+    assert "DEPLOYED_SEQUENCE_GUIDANCE" not in system
+
+
+@pytest.mark.parametrize("references", ["sequence", {"kind": "sequence"}, ["../../private", None]])
+async def test_reference_hints_cannot_supply_file_paths(skill_bundle, references):
+    model = FakeChatModel(responses=[ai(SVG)])
+    job = {"key": "t1", "kind": "topic", "figure_kind": "freeform",
+           "reference_kinds": references, "brief": "자유롭게 설명"}
+
+    assert await visual.draw_one(model, inputs(skill_bundle), job, {}) == SVG
+    system = model.calls[0][0].content
+    assert "DEPLOYED_FREEFORM_GUIDANCE" in system
     assert "DEPLOYED_SEQUENCE_GUIDANCE" not in system
