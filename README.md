@@ -6,6 +6,8 @@ TransMeet은 **실시간 음성 번역 웹앱**입니다. 영어 화자의 발�
 
 브라우저만 열면 됩니다. PWA로 모바일에서도 설치 없이 사용할 수 있습니다.
 
+처음 사용한다면 [사용 가이드](https://archive.hi-yoo.com/transmeet/guide/)부터 열어 보세요. 메뉴마다 어떤 버튼을 누르는지 스크린샷과 함께 설명하고, 설정 항목도 하나씩 다룹니다. 인터넷 없이 읽을 파일 하나짜리 버전은 [`public/guide/index.html`](public/guide/index.html)에 있습니다. 두 가이드를 만드는 방법은 [사용 가이드와 공유 문서](#사용-가이드와-공유-문서)를 참고하세요.
+
 ### 주요 시나리오
 
 - 🎙️ 영어 회의 참석 → 실시간 한글 자막으로 내용 파악
@@ -34,10 +36,11 @@ TransMeet은 **실시간 음성 번역 웹앱**입니다. 영어 화자의 발�
 
 - **Frontend:** Next.js 14 (App Router, Static Export, PWA)
 - **STT:** AWS SageMaker (Whisper large-v3-turbo, Qwen3-ASR-1.7B, Nemotron 3.5 ASR 0.6B) / Amazon Transcribe
-- **Translation/Summary:** AWS Bedrock (Claude Haiku — 번역, Claude Sonnet — 요약)
+- **Translation/Summary:** AWS Bedrock — 번역 Claude Haiku 5.5(또는 GPT-6 Luna), 내 메모 Q&A Claude Sonnet 5.5, 요약·회의 페이지 Claude Opus 5.5(폴백 Opus 5). 모두 `global.` 추론 프로필
+- **Meeting Page Agent:** LangGraph + Amazon Bedrock AgentCore Runtime
 - **TTS:** AWS Polly (Generative / Neural / Standard)
 - **WebSocket:** ECS Fargate + ALB + CloudFront
-- **Database:** AWS DynamoDB
+- **Database:** AWS DynamoDB (회의·대화·페이지·요약 양식 테이블 분리)
 - **Auth:** AWS Cognito
 - **Hosting:** AWS S3 + CloudFront
 - **IaC:** AWS CDK (TypeScript)
@@ -113,6 +116,10 @@ src/
     SummaryPanel.tsx            # 요약 표시 (Markdown 렌더링 + 복사 + 글자 크기 조절)
     QuickTranslatePopup.tsx     # 글로벌 빠른 번역 팝업 (스트리밍 + 히스토리)
     SettingsPanel.tsx           # 앱 설정 패널
+    SttStatusPanel.tsx          # STT 엔진 준비 상태·엔진 준비 버튼
+    EmailNotifySetting.tsx      # 회의 종료 메일 수신 설정·인증
+    SummaryTemplateSettings.tsx # 내 요약 양식 관리
+    MeetingPagePanel.tsx        # 회의 페이지 생성·미리보기·공유
     AuthScreen.tsx              # 초대 계정 로그인·최초 비밀번호 설정
     PasswordResetForm.tsx       # 이메일 인증 코드로 비밀번호 복구
     AccountSettings.tsx         # 계정 이메일 인증·비밀번호 변경
@@ -145,11 +152,22 @@ backend/
     config.py                   # 환경 설정
     aws_clients.py              # AWS SDK 컨텍스트 매니저
     transcribe_session.py       # Amazon Transcribe 스트리밍 세션
+    message_store.py            # 회의 대화 읽기/쓰기 (transmeet-messages)
+    summary_prompt.py           # 요약 프롬프트 (summary_styles.json 공유)
+    page_agent.py               # 회의 페이지 에이전트 Runtime 호출·중계
+    mailer.py                   # 회의 종료 메일
   Dockerfile                    # Python 3.12 컨테이너
   requirements.txt              # Python 의존성
+agent/                          # 회의 페이지 에이전트 (아래 섹션 참고)
+infra/                          # AWS CDK
+docs/
+  guide/                        # 온라인 사용 가이드 + 캡처·업로드 스크립트
+  user-guide/                   # 오프라인 가이드 생성기 (→ public/guide)
+benchmarks/                     # STT 비교 결과
 public/
   manifest.json                 # PWA manifest
   icons/                        # App icons
+  guide/index.html              # 오프라인 사용 가이드 (생성물)
 ```
 
 ## 회의 종료 메일
@@ -168,11 +186,12 @@ public/
 
 검증: `npm run test:email`, `python3 tests/email_verification_browser.py` — 브라우저 테스트는 외부 인증·메일 요청을 가로채므로 실제 메일을 보내지 않습니다.
 
-## 미팅 페이지 에이전트 (AgentCore Harness)
+## 미팅 페이지 에이전트 (LangGraph + AgentCore Runtime)
 
-미팅 기록으로 공유용 HTML 미팅록 페이지를 만드는 에이전트입니다. 설계: [`docs/superpowers/specs/2026-10-08-meeting-page-agent-design.md`](docs/superpowers/specs/2026-10-08-meeting-page-agent-design.md)
+미팅 기록으로 공유용 HTML 미팅록 페이지를 만드는 에이전트입니다. 설계: [`docs/superpowers/specs/2026-10-09-meeting-page-langgraph-runtime-design.md`](docs/superpowers/specs/2026-10-09-meeting-page-langgraph-runtime-design.md) (초기 하네스 설계는 [2026-10-08 문서](docs/superpowers/specs/2026-10-08-meeting-page-agent-design.md))
 
-- **구성**: Amazon Bedrock AgentCore Harness · Claude Opus 5.5 · 스킬 4개(`agent/skills/`) · Code Interpreter · Web Search(AgentCore Gateway 커넥터)
+- **구성**: `agent/runtime/`의 LangGraph 그래프를 AgentCore Runtime(`transmeet_meeting_page`, ARM64 컨테이너)에서 실행 · Claude Opus 5.5(폴백 Opus 5) · Web Search(AgentCore Gateway 커넥터). 백엔드 `page_agent.py`는 Runtime 스트림을 WebSocket `page_stream`으로 전달합니다
+- **페이지 모양**: 시각 회의록(`visual`, 기본)과 상세 회의록(`detailed`)
 - **발행**: 에이전트가 `publish_page`를 호출하면 백엔드가 검증 후 S3에 올리고 `https://transmeet.hi-yoo.com/p/<meetingId>/<pageId>.html`로 공개
 - **UI**: 우측 패널 `회의 페이지` 탭 → 생성 · 미리보기 · 공유 · 재생성 · 공유 해제
 - **자동 생성**: `회의 종료`를 누르면 마지막 발언 저장과 제목 준비 후 **시각 회의록**을 기본으로 자동 생성하고 페이지 패널에 진행 상황과 결과를 표시합니다. 오디오 정리·요약 완료를 기다리지 않으며, 메일 발송 설정과 무관하게 동작합니다. 이미 생성 중이거나 발행된 페이지는 재사용합니다. 내용을 갱신하거나 이전 형식을 시각 회의록으로 바꾸려면 `다시 만들기`를 누르세요.
@@ -188,26 +207,63 @@ python3 backend/scripts/backfill_visual_pages.py --user-id <계정-ID> --apply  
 
 ```
 agent/
-  skills/              meeting-minutes-page / meeting-research / meeting-insights / meeting-diagrams
-  harness/             system_prompt.md (CDK가 하네스 정의에 포함)
-  samples/, evals/     스킬 평가용 샘플과 프롬프트
-  scripts/invoke_local.py  로컬에서 하네스 직접 호출
+  runtime/             LangGraph 그래프(graph.py)·단계별 프롬프트(prompts/)·시각 회의록(visual.py)·발행(publish.py)
+  skills/              단계에서 참고하는 미팅록·리서치·인사이트·도해 지침
+  samples/, evals/     평가용 샘플과 프롬프트
+  scripts/             invoke_local.py(--direct 로컬 실행 / --runtime 배포본 호출) · invoke_batch.py(일괄 재생성)
+  Dockerfile           Runtime 이미지 (cdk deploy 가 빌드·푸시)
 ```
 
 ### 배포 순서
 
+백엔드 이미지는 `deploy.sh` 범위 밖이므로 직접 빌드합니다. **고유 태그로 푸시**하고 그 태그로 CDK를 배포하세요. `latest`를 푸시한 뒤 강제 재배포하면 태스크 정의가 가리키는 예전 태그 이미지가 다시 뜹니다.
+
 ```bash
-./deploy.sh infra      # AgentCore 이미지·Gateway·버킷 반영 (agent/skills 포함)
-# 백엔드 이미지 (deploy.sh 범위 밖)
+TAG=$(git rev-parse --short HEAD)-$(date +%Y%m%d%H%M)
 aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <WsBackendEcrUri 호스트>
-docker build --platform linux/amd64 -t <WsBackendEcrUri>:latest backend && docker push <WsBackendEcrUri>:latest
-aws ecs update-service --cluster transmeet-ws-cluster --service <서비스명> --force-new-deployment --region us-east-1
+docker build --platform linux/amd64 -t <WsBackendEcrUri>:$TAG backend && docker push <WsBackendEcrUri>:$TAG
+
+# 백엔드 태그 지정 + 에이전트 Runtime 이미지·Gateway·버킷 반영
+cd infra && npx cdk deploy -c wsImageTag=$TAG --require-approval never --outputs-file outputs.json && cd ..
 ./deploy.sh frontend
 ```
 
-통합 확인: `cd backend && python3 ../agent/scripts/invoke_local.py --sample ../agent/samples/short-1on1.json` — 로컬 자격증명으로 에이전트를 직접 호출해 페이지 URL을 받는다. 스킬만 바꿨더라도 `./deploy.sh infra`로 AgentCore 이미지를 반영한 뒤 다시 실행한다.
+- `-c wsImageTag` 없이 `./deploy.sh infra`를 실행하면 태그가 `latest`로 돌아갑니다.
+- 에이전트 Runtime 이미지를 특정 버전으로 고정하려면 `-c agentImageUri=<이미지 URI>`를 함께 넘깁니다.
+- `--platform linux/amd64`를 빼면 Fargate 태스크가 기동하지 못합니다. 에이전트 이미지는 ARM64라서 CDK가 빌드할 때 qemu binfmt가 필요합니다.
 
-운영 릴리스에서는 백엔드 이미지를 커밋별 태그로 푸시하고, `cd infra && npx cdk deploy -c wsImageTag=<태그> --require-approval never --outputs-file outputs.json`으로 해당 버전을 지정할 수 있다. 이 경우 ECS 태스크 정의의 이미지가 변경되어 새 버전으로 교체된다.
+통합 확인은 `agent/.venv/bin/python agent/scripts/invoke_local.py --direct --sample agent/samples/short-1on1.json`로 합니다. 전체 그래프를 로컬 프로세스에서 실행해 실제 Bedrock·S3·DynamoDB로 페이지를 발행합니다(약 4~5분). 배포된 Runtime을 호출하려면 `--direct` 대신 `--runtime`을 씁니다.
+
+## 사용 가이드와 공유 문서
+
+가이드는 두 가지이며 용도가 다릅니다.
+
+| 가이드 | 위치 | 용도 |
+|---|---|---|
+| 온라인 사용 가이드 | `docs/guide/` → https://archive.hi-yoo.com/transmeet/guide/ | 링크로 공유. 22개 섹션, 스크린샷 38장, 목차 검색 |
+| 오프라인 가이드 | `docs/user-guide/` → `public/guide/index.html` | CSS·이미지를 넣은 파일 하나. 인쇄·PDF용 ([작성 안내](docs/user-guide/README.md)) |
+
+온라인 가이드의 스크린샷은 `docs/guide/capture/capture.py`가 Playwright로 찍습니다. REST·WebSocket·Cognito를 가짜 응답으로 대신하고 `capture/mock_data.py`의 예제 회의만 쓰므로, 실제 계정이나 회의 내용이 화면에 나오지 않습니다.
+
+```bash
+# 1) 가짜 엔드포인트로 개발 서버 실행
+NEXT_PUBLIC_API_ENDPOINT=https://api.guide.test NEXT_PUBLIC_WS_ENDPOINT=wss://ws.guide.test \
+NEXT_PUBLIC_COGNITO_USER_POOL_ID=us-east-1_GUIDE0000 NEXT_PUBLIC_COGNITO_CLIENT_ID=guideclient000 \
+NEXT_PUBLIC_COGNITO_REGION=us-east-1 npx next dev -p 3311
+
+# 2) 스크린샷 다시 찍기 (인자로 파일명 일부를 주면 해당 화면만)
+python3 docs/guide/capture/capture.py [이름]
+
+# 3) 가이드·STT 비교 리포트 업로드 + CloudFront 무효화
+docs/guide/publish.sh
+```
+
+- 캡처 브라우저는 `capture/fonts.conf`로 한글 글꼴을 Noto Sans KR로 고정합니다. 서버 기본 글꼴(WenQuanYi)을 쓰면 자간이 깨져 보입니다.
+- `publish.sh`는 아래 문서를 올립니다.
+  - `/transmeet/guide/`: 온라인 사용 가이드
+  - `/transmeet/stt-benchmark/`: [서울 리전 STT 스트리밍 비교](https://archive.hi-yoo.com/transmeet/stt-benchmark/) 리포트
+  - `/transmeet/`: 문서 목록 페이지
+- `archive.hi-yoo.com`(비공개 S3 + CloudFront OAC)은 TransMeet CDK 스택과 별도로 만든 공용 아카이브입니다. `deploy.sh`나 `cdk deploy`가 건드리지 않습니다. 공개 링크이므로 계정 ID, 엔드포인트, 실제 회의 내용이 없는지 확인한 뒤 올리세요.
 
 ## Architecture
 
@@ -243,8 +299,8 @@ graph LR
   end
 
   subgraph AI[AI / ML]
-    BR[Bedrock<br/>Claude Haiku]
-    BR_S[Bedrock<br/>Claude Sonnet]
+    BR[Bedrock<br/>Claude Haiku 5.5]
+    BR_S[Bedrock<br/>Claude Opus 5.5]
   end
 
   subgraph REST_Path[REST API Path]
@@ -331,9 +387,13 @@ graph LR
 | ALB | - | ECS 로드밸런싱 |
 | API Gateway REST | `transmeet-api` | 회의 CRUD, 요약, TTS |
 | Lambda | `transmeet-meetings` | 회의 생성/조회/삭제/제목 생성 |
-| Lambda | `transmeet-summarize` | Bedrock Claude 요약 생성 |
+| Lambda | `transmeet-summarize` | Bedrock Claude 요약 생성 (WebSocket 경로의 폴백) |
 | Lambda | `transmeet-tts` | Bedrock 번역 + Polly TTS |
-| DynamoDB | `transmeet-meetings` | 회의 기록 저장 |
+| DynamoDB | `transmeet-meetings` | 회의 정보(제목·요약·설정) |
+| DynamoDB | `transmeet-messages` | 회의 대화(발언) |
+| DynamoDB | `transmeet-pages` | 회의 페이지 발행 기록 |
+| DynamoDB | `transmeet-summary-templates` / `-snapshots` | 내 요약 양식과 회의별 사본 |
+| AgentCore | Runtime `transmeet_meeting_page` + Gateway | 회의 페이지 에이전트와 Web Search |
 | S3 | `transmeet-frontend-{account}` | 프론트엔드 정적 호스팅 |
 | CloudFront | - | CDN 배포 + WebSocket `/ws` 라우팅 |
 | Cognito | `transmeet-users` | 사용자 인증 (선택) |
@@ -395,7 +455,7 @@ infra/
     transmeet-stack.ts  # Main CDK stack
   lambda/
     meetings/           # CRUD + 제목 생성
-    summarize/          # 요약 생성 (Claude Sonnet)
+    summarize/          # 요약 생성 (Claude Opus 5.5)
     tts/                # 한→영 번역 + Polly TTS
   package.json
   tsconfig.json
