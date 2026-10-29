@@ -1,0 +1,993 @@
+{
+  "captured": "2026-10-29",
+  "source": "Actual src/app/page.tsx and components",
+  "data": "Invented meeting, account and AI responses; all external services intercepted",
+  "screenshots": {
+    "login": {
+      "file": "login.webp",
+      "caption": "이메일과 비밀번호로 로그인",
+      "alt": "TransMeet 로그인 화면. 이메일, 비밀번호 입력칸과 로그인 버튼.",
+      "width": 1500,
+      "height": 1080,
+      "pins": [
+        {
+          "number": 1,
+          "x": 50.0,
+          "y": 44.618,
+          "label": "이메일",
+          "rect": {
+            "left": 33.7,
+            "top": 41.701,
+            "width": 32.6,
+            "height": 5.833
+          }
+        },
+        {
+          "number": 2,
+          "x": 50.0,
+          "y": 56.007,
+          "label": "비밀번호",
+          "rect": {
+            "left": 33.7,
+            "top": 53.09,
+            "width": 32.6,
+            "height": 5.833
+          }
+        },
+        {
+          "number": 3,
+          "x": 50.0,
+          "y": 64.201,
+          "label": "로그인",
+          "rect": {
+            "left": 33.7,
+            "top": 61.146,
+            "width": 32.6,
+            "height": 6.111
+          }
+        }
+      ]
+    },
+    "workspace": {
+      "file": "workspace.webp",
+      "caption": "메뉴 위치를 한눈에 확인하세요",
+      "alt": "왼쪽 회의 목록, 가운데 대화, 오른쪽 내 메모·요약·회의 페이지, 상단 언어와 설정, 하단 녹음 버튼.",
+      "width": 2160,
+      "height": 1440,
+      "pins": [
+        {
+          "number": 1,
+          "x": 8.299,
+          "y": 14.375,
+          "label": "회의 목록 · 새 회의",
+          "rect": {
+            "left": 0.833,
+            "top": 12.5,
+            "width": 14.931,
+            "height": 3.75
+          }
+        },
+        {
+          "number": 2,
+          "x": 22.5,
+          "y": 2.865,
+          "label": "음성 언어 · 번역 대상",
+          "rect": {
+            "left": 17.778,
+            "top": 0.99,
+            "width": 9.444,
+            "height": 3.75
+          }
+        },
+        {
+          "number": 3,
+          "x": 43.333,
+          "y": 56.042,
+          "label": "대화",
+          "rect": {
+            "left": 18.056,
+            "top": 14.167,
+            "width": 50.556,
+            "height": 83.75
+          }
+        },
+        {
+          "number": 4,
+          "x": 82.778,
+          "y": 16.979,
+          "label": "내 메모 · 요약 · 회의 페이지",
+          "rect": {
+            "left": 70.069,
+            "top": 14.896,
+            "width": 25.417,
+            "height": 4.167
+          }
+        },
+        {
+          "number": 5,
+          "x": 63.333,
+          "y": 93.333,
+          "label": "녹음 시작",
+          "rect": {
+            "left": 59.167,
+            "top": 90.417,
+            "width": 8.333,
+            "height": 5.833
+          }
+        },
+        {
+          "number": 6,
+          "x": 94.861,
+          "y": 2.865,
+          "label": "설정",
+          "rect": {
+            "left": 93.611,
+            "top": 0.99,
+            "width": 2.5,
+            "height": 3.75
+          }
+        }
+      ]
+    },
+    "languages": {
+      "file": "languages.webp",
+      "caption": "입력 언어와 번역 대상을 각각 선택",
+      "alt": "상단의 입력 · English, 번역 · 한국어 드롭다운과 감지 전 표시.",
+      "width": 521,
+      "height": 56,
+      "pins": [
+        {
+          "number": 1,
+          "x": 19.597,
+          "y": 50.0,
+          "label": "실제로 말하는 언어",
+          "rect": {
+            "left": 0.0,
+            "top": 0.0,
+            "width": 39.193,
+            "height": 100.0
+          }
+        },
+        {
+          "number": 2,
+          "x": 62.248,
+          "y": 50.0,
+          "label": "읽고 싶은 언어",
+          "rect": {
+            "left": 41.499,
+            "top": 0.0,
+            "width": 41.499,
+            "height": 100.0
+          }
+        }
+      ]
+    },
+    "meeting-menu": {
+      "file": "meeting-menu.webp",
+      "caption": "회의 제목 옆 ··· 에서 기록 관리",
+      "alt": "회의 목록의 작업 메뉴. 제목 편집, 제목 자동 생성, 회의 삭제.",
+      "width": 360,
+      "height": 1356,
+      "pins": [
+        {
+          "number": 1,
+          "x": 49.792,
+          "y": 14.381,
+          "label": "제목으로 검색",
+          "rect": {
+            "left": 5.0,
+            "top": 12.389,
+            "width": 89.583,
+            "height": 3.982
+          }
+        },
+        {
+          "number": 2,
+          "x": 60.833,
+          "y": 38.274,
+          "label": "제목 편집",
+          "rect": {
+            "left": 29.583,
+            "top": 36.283,
+            "width": 62.5,
+            "height": 3.982
+          }
+        },
+        {
+          "number": 3,
+          "x": 60.833,
+          "y": 42.257,
+          "label": "제목 자동 생성",
+          "rect": {
+            "left": 29.583,
+            "top": 40.265,
+            "width": 62.5,
+            "height": 3.982
+          }
+        },
+        {
+          "number": 4,
+          "x": 60.833,
+          "y": 46.239,
+          "label": "회의 삭제",
+          "rect": {
+            "left": 29.583,
+            "top": 44.248,
+            "width": 62.5,
+            "height": 3.982
+          }
+        }
+      ]
+    },
+    "meeting-delete": {
+      "file": "meeting-delete.webp",
+      "caption": "삭제 전 회의 제목을 확인",
+      "alt": "회의 삭제 확인. 선택한 회의 제목, 취소 버튼과 삭제 버튼.",
+      "width": 332,
+      "height": 156,
+      "pins": []
+    },
+    "conversation": {
+      "file": "conversation.webp",
+      "caption": "원문과 번역, 화자와 시간을 함께 확인",
+      "alt": "실제 대화 패널. 화자별 영문 원문과 한국어 번역, 다시 번역, 원문 음성 재생, 대화 복사와 글자 크기.",
+      "width": 1092,
+      "height": 1206,
+      "pins": [
+        {
+          "number": 1,
+          "x": 74.82,
+          "y": 3.047,
+          "label": "전체 원문 복사",
+          "rect": {
+            "left": 68.707,
+            "top": 0.808,
+            "width": 12.225,
+            "height": 4.478
+          }
+        },
+        {
+          "number": 2,
+          "x": 91.003,
+          "y": 3.047,
+          "label": "글자 크기",
+          "rect": {
+            "left": 84.341,
+            "top": 1.057,
+            "width": 13.324,
+            "height": 3.98
+          }
+        },
+        {
+          "number": 3,
+          "x": 89.286,
+          "y": 10.945,
+          "label": "다시 번역",
+          "rect": {
+            "left": 87.363,
+            "top": 9.204,
+            "width": 3.846,
+            "height": 3.483
+          }
+        },
+        {
+          "number": 4,
+          "x": 93.407,
+          "y": 10.945,
+          "label": "원문 음성 재생",
+          "rect": {
+            "left": 91.484,
+            "top": 9.204,
+            "width": 3.846,
+            "height": 3.483
+          }
+        }
+      ]
+    },
+    "recording": {
+      "file": "recording.webp",
+      "caption": "녹음 중에는 일시정지와 회의 종료가 나란히 표시",
+      "alt": "녹음 중인 대화 패널의 일시정지 버튼, 빨간 회의 종료 버튼, 더보기 버튼.",
+      "width": 447,
+      "height": 84,
+      "pins": [
+        {
+          "number": 1,
+          "x": 37.248,
+          "y": 50.0,
+          "label": "잠시 멈추기",
+          "rect": {
+            "left": 17.45,
+            "top": 0.0,
+            "width": 39.597,
+            "height": 100.0
+          }
+        },
+        {
+          "number": 2,
+          "x": 79.866,
+          "y": 50.0,
+          "label": "회의 정리하기",
+          "rect": {
+            "left": 59.732,
+            "top": 0.0,
+            "width": 40.268,
+            "height": 100.0
+          }
+        }
+      ]
+    },
+    "paused": {
+      "file": "paused.webp",
+      "caption": "일시정지 후에는 녹음 재개",
+      "alt": "일시정지 상태의 녹음 재개와 회의 종료 버튼.",
+      "width": 453,
+      "height": 84,
+      "pins": []
+    },
+    "audio-menu": {
+      "file": "audio-menu.webp",
+      "caption": "··· 메뉴에서 녹음 다운로드",
+      "alt": "녹음 작업 더보기 메뉴의 녹음 다운로드 버튼.",
+      "width": 312,
+      "height": 135,
+      "pins": []
+    },
+    "notes": {
+      "file": "notes.webp",
+      "caption": "한글 메모를 입력하고 보내기",
+      "alt": "내 메모 탭의 한국어 입력과 영어 번역, 음성 재생 버튼, 입력창과 보내기 버튼.",
+      "width": 630,
+      "height": 1206,
+      "pins": [
+        {
+          "number": 1,
+          "x": 44.286,
+          "y": 93.937,
+          "label": "한국어로 입력",
+          "rect": {
+            "left": 5.238,
+            "top": 90.609,
+            "width": 78.095,
+            "height": 6.654
+          }
+        },
+        {
+          "number": 2,
+          "x": 90.0,
+          "y": 94.776,
+          "label": "보내기",
+          "rect": {
+            "left": 85.238,
+            "top": 92.289,
+            "width": 9.524,
+            "height": 4.975
+          }
+        },
+        {
+          "number": 3,
+          "x": 90.0,
+          "y": 11.816,
+          "label": "번역 음성 재생",
+          "rect": {
+            "left": 86.667,
+            "top": 10.075,
+            "width": 6.667,
+            "height": 3.483
+          }
+        }
+      ]
+    },
+    "notes-question": {
+      "file": "notes-question.webp",
+      "caption": "대화에 관한 질문의 답변 예시",
+      "alt": "내 메모에서 출시 일정에 관해 질문한 뒤, 번역문 아래에 대화 맥락을 바탕으로 표시된 답변 예시.",
+      "width": 630,
+      "height": 1206,
+      "pins": []
+    },
+    "quick-translate": {
+      "file": "quick-translate.webp",
+      "caption": "회의 입력과 별도로 짧은 문장을 빠르게 번역",
+      "alt": "빠른 번역 창의 두 번역 방향, 번역할 내용, 번역하기, 결과 음성 재생과 복사, 최근 번역.",
+      "width": 816,
+      "height": 1035,
+      "pins": [
+        {
+          "number": 1,
+          "x": 50.0,
+          "y": 15.094,
+          "label": "방향 선택",
+          "rect": {
+            "left": 3.86,
+            "top": 11.901,
+            "width": 92.279,
+            "height": 6.386
+          }
+        },
+        {
+          "number": 2,
+          "x": 85.846,
+          "y": 45.138,
+          "label": "번역하기",
+          "rect": {
+            "left": 75.551,
+            "top": 42.525,
+            "width": 20.588,
+            "height": 5.225
+          }
+        },
+        {
+          "number": 3,
+          "x": 15.901,
+          "y": 63.752,
+          "label": "음성 재생",
+          "rect": {
+            "left": 6.985,
+            "top": 61.139,
+            "width": 17.831,
+            "height": 5.225
+          }
+        },
+        {
+          "number": 4,
+          "x": 89.062,
+          "y": 76.814,
+          "label": "최근 번역 관리",
+          "rect": {
+            "left": 81.985,
+            "top": 74.202,
+            "width": 14.154,
+            "height": 5.225
+          }
+        }
+      ]
+    },
+    "summary": {
+      "file": "summary.webp",
+      "caption": "요약 방식을 선택한 뒤 새로 생성",
+      "alt": "요약 탭. 요약 방식 선택, 요약 복사, MD, 새로 생성, 생성된 요약 방식과 내용.",
+      "width": 630,
+      "height": 1206,
+      "pins": [
+        {
+          "number": 1,
+          "x": 57.5,
+          "y": 10.386,
+          "label": "요약 방식 선택",
+          "rect": {
+            "left": 18.095,
+            "top": 8.209,
+            "width": 78.81,
+            "height": 4.353
+          }
+        },
+        {
+          "number": 2,
+          "x": 93.571,
+          "y": 17.164,
+          "label": "새로 생성",
+          "rect": {
+            "left": 89.762,
+            "top": 15.174,
+            "width": 7.619,
+            "height": 3.98
+          }
+        },
+        {
+          "number": 3,
+          "x": 13.214,
+          "y": 17.164,
+          "label": "서식 복사",
+          "rect": {
+            "left": 2.619,
+            "top": 14.925,
+            "width": 21.19,
+            "height": 4.478
+          }
+        },
+        {
+          "number": 4,
+          "x": 38.214,
+          "y": 17.164,
+          "label": "마크다운 복사",
+          "rect": {
+            "left": 24.762,
+            "top": 14.925,
+            "width": 26.905,
+            "height": 4.478
+          }
+        }
+      ]
+    },
+    "page-create": {
+      "file": "page-create.webp",
+      "caption": "페이지 모양을 고르고 만들기",
+      "alt": "회의 페이지 탭. 시각 회의록과 상세 회의록 선택 및 페이지 만들기 버튼.",
+      "width": 630,
+      "height": 1206,
+      "pins": [
+        {
+          "number": 1,
+          "x": 50.0,
+          "y": 57.774,
+          "label": "페이지 모양",
+          "rect": {
+            "left": 11.905,
+            "top": 45.833,
+            "width": 76.19,
+            "height": 23.881
+          }
+        },
+        {
+          "number": 2,
+          "x": 50.0,
+          "y": 74.44,
+          "label": "페이지 만들기",
+          "rect": {
+            "left": 35.119,
+            "top": 72.201,
+            "width": 29.762,
+            "height": 4.478
+          }
+        }
+      ]
+    },
+    "page-generating": {
+      "file": "page-generating.webp",
+      "caption": "진행 상황 확인",
+      "alt": "페이지 생성 중 표시, 경과 시간과 작업 진행 내역.",
+      "width": 630,
+      "height": 1206,
+      "pins": []
+    },
+    "page-share": {
+      "file": "page-share.webp",
+      "caption": "미리보기 후 링크 공유",
+      "alt": "회의 페이지 미리보기 예제. 공유, 서식 복사, MD, 새 탭, 다시 만들기, 공유 해제.",
+      "width": 630,
+      "height": 1206,
+      "pins": [
+        {
+          "number": 1,
+          "x": 10.0,
+          "y": 9.701,
+          "label": "공유 / 링크 복사",
+          "rect": {
+            "left": 2.619,
+            "top": 7.463,
+            "width": 14.762,
+            "height": 4.478
+          }
+        },
+        {
+          "number": 2,
+          "x": 89.643,
+          "y": 9.701,
+          "label": "새 탭에서 열기",
+          "rect": {
+            "left": 81.905,
+            "top": 7.463,
+            "width": 15.476,
+            "height": 4.478
+          }
+        },
+        {
+          "number": 3,
+          "x": 67.024,
+          "y": 96.144,
+          "label": "새 페이지 생성",
+          "rect": {
+            "left": 56.429,
+            "top": 93.905,
+            "width": 21.19,
+            "height": 4.478
+          }
+        },
+        {
+          "number": 4,
+          "x": 87.738,
+          "y": 96.144,
+          "label": "공유 링크 해제",
+          "rect": {
+            "left": 78.571,
+            "top": 93.905,
+            "width": 18.333,
+            "height": 4.478
+          }
+        }
+      ]
+    },
+    "page-regenerate": {
+      "file": "page-regenerate.webp",
+      "caption": "다시 만들면 기존 공유 링크가 만료",
+      "alt": "페이지 다시 만들기 확인 화면의 페이지 모양, 기존 링크 만료 안내, 취소와 다시 만들기.",
+      "width": 627,
+      "height": 434,
+      "pins": []
+    },
+    "settings-general": {
+      "file": "settings-general.webp",
+      "caption": "설정 → 음성 · 번역",
+      "alt": "음성·번역 설정의 오디오 입력, 번역 모델, 번역 시점, 음성 자동 재생, 목소리, 자동 요약 주기, 종료 메일.",
+      "width": 816,
+      "height": 1203,
+      "pins": [
+        {
+          "number": 1,
+          "x": 50.0,
+          "y": 20.961,
+          "label": "오디오 입력",
+          "rect": {
+            "left": 3.86,
+            "top": 16.719,
+            "width": 92.279,
+            "height": 8.484
+          }
+        },
+        {
+          "number": 2,
+          "x": 50.0,
+          "y": 45.54,
+          "label": "번역 시점",
+          "rect": {
+            "left": 3.86,
+            "top": 41.298,
+            "width": 92.279,
+            "height": 8.484
+          }
+        },
+        {
+          "number": 3,
+          "x": 92.096,
+          "y": 56.568,
+          "label": "음성 자동 재생",
+          "rect": {
+            "left": 88.051,
+            "top": 53.823,
+            "width": 8.088,
+            "height": 5.49
+          }
+        },
+        {
+          "number": 4,
+          "x": 50.0,
+          "y": 74.035,
+          "label": "자동 요약",
+          "rect": {
+            "left": 3.86,
+            "top": 69.793,
+            "width": 92.279,
+            "height": 8.484
+          }
+        }
+      ]
+    },
+    "settings-theme": {
+      "file": "settings-theme.webp",
+      "caption": "설정 → 테마",
+      "alt": "화면 모드, 포인트 색상, 글꼴, 화면 크기, 말풍선 크기, 줄 간격, 미리보기와 테마 초기화.",
+      "width": 816,
+      "height": 978,
+      "pins": []
+    },
+    "templates-list": {
+      "file": "templates-list.webp",
+      "caption": "설정 → 요약 양식 → 내 양식",
+      "alt": "저장된 주간 팀 회의 양식과 수정, 삭제, 새 양식 버튼.",
+      "width": 816,
+      "height": 477,
+      "pins": []
+    },
+    "templates-editor": {
+      "file": "templates-editor.webp",
+      "caption": "이름과 내용을 입력한 뒤 저장",
+      "alt": "새 요약 양식 작성 화면. 양식 이름, 지시문 작성 또는 기존 회의록 붙여넣기, 양식 내용과 저장 버튼.",
+      "width": 816,
+      "height": 1134,
+      "pins": [
+        {
+          "number": 1,
+          "x": 50.0,
+          "y": 42.942,
+          "label": "이름",
+          "rect": {
+            "left": 6.25,
+            "top": 40.159,
+            "width": 87.5,
+            "height": 5.567
+          }
+        },
+        {
+          "number": 2,
+          "x": 27.849,
+          "y": 53.413,
+          "label": "만드는 방법",
+          "rect": {
+            "left": 6.25,
+            "top": 51.027,
+            "width": 43.199,
+            "height": 4.771
+          }
+        },
+        {
+          "number": 3,
+          "x": 50.0,
+          "y": 70.974,
+          "label": "원하는 요약 형식",
+          "rect": {
+            "left": 6.25,
+            "top": 60.371,
+            "width": 87.5,
+            "height": 21.206
+          }
+        },
+        {
+          "number": 4,
+          "x": 89.154,
+          "y": 93.108,
+          "label": "저장",
+          "rect": {
+            "left": 84.559,
+            "top": 90.722,
+            "width": 9.191,
+            "height": 4.771
+          }
+        }
+      ]
+    },
+    "settings-advanced": {
+      "file": "settings-advanced.webp",
+      "caption": "고급 설정 펼치기 · Transcribe",
+      "alt": "Transcribe의 음성 인식 엔진, 발화 중 번역, 무음 후 대화 나누기와 말풍선당 최대 문장.",
+      "width": 816,
+      "height": 1248,
+      "pins": []
+    },
+    "settings-interval": {
+      "file": "settings-interval.webp",
+      "caption": "일정 간격을 선택하면 번역 간격 표시",
+      "alt": "발화 중 번역 일정 간격 모드에서 0.5초, 1초, 1.5초, 2초, 3초 선택.",
+      "width": 816,
+      "height": 1248,
+      "pins": []
+    },
+    "settings-batch": {
+      "file": "settings-batch.webp",
+      "caption": "구간 처리 방식에서만 보이는 음성 처리 구간",
+      "alt": "Whisper 구간 처리 설정의 2초, 4초, 6초, 8초, 10초 선택. 연결한 엔진 방식에 따라 표시가 달라짐.",
+      "width": 816,
+      "height": 1248,
+      "pins": []
+    },
+    "settings-streaming": {
+      "file": "settings-streaming.webp",
+      "caption": "스트리밍 엔진의 준비 상태 확인",
+      "alt": "Qwen3-ASR 스트리밍 선택 후 사용 가능 상태와 확정된 발화 기준 번역 안내.",
+      "width": 816,
+      "height": 1248,
+      "pins": []
+    },
+    "email-code": {
+      "file": "email-code.webp",
+      "caption": "메일 받기 ① 계정 이메일 코드 확인",
+      "alt": "메일로 받기 설정을 켠 뒤 이메일 인증 코드 입력, 코드 확인, 인증 코드 다시 보내기.",
+      "width": 816,
+      "height": 1248,
+      "pins": []
+    },
+    "email-link": {
+      "file": "email-link.webp",
+      "caption": "메일 받기 ② 수신 인증 메일의 링크 확인",
+      "alt": "수신 인증 대기 상태. 메일 링크를 누르라는 안내, 인증 상태 확인 및 인증 메일 다시 보내기.",
+      "width": 816,
+      "height": 1248,
+      "pins": []
+    },
+    "email-ready": {
+      "file": "email-ready.webp",
+      "caption": "인증 완료를 확인하면 준비 끝",
+      "alt": "예제 계정 guide@example.com과 인증 완료 — 회의 종료 후 메일을 보냅니다 표시.",
+      "width": 816,
+      "height": 1248,
+      "pins": []
+    },
+    "mobile": {
+      "file": "mobile.webp",
+      "caption": "모바일에서는 네 개의 탭으로 이동",
+      "alt": "모바일 TransMeet 화면. 왼쪽 회의 목록 버튼, 오른쪽 설정, 대화·내 메모·요약·회의 페이지 탭.",
+      "width": 585,
+      "height": 1266,
+      "pins": [
+        {
+          "number": 1,
+          "x": 6.667,
+          "y": 2.784,
+          "label": "회의 목록",
+          "rect": {
+            "left": 2.051,
+            "top": 0.652,
+            "width": 9.231,
+            "height": 4.265
+          }
+        },
+        {
+          "number": 2,
+          "x": 50.0,
+          "y": 13.981,
+          "label": "화면 이동",
+          "rect": {
+            "left": 2.051,
+            "top": 10.9,
+            "width": 95.897,
+            "height": 6.161
+          }
+        },
+        {
+          "number": 3,
+          "x": 93.333,
+          "y": 2.784,
+          "label": "빠른 설정",
+          "rect": {
+            "left": 88.718,
+            "top": 0.652,
+            "width": 9.231,
+            "height": 4.265
+          }
+        }
+      ]
+    },
+    "mobile-settings": {
+      "file": "mobile-settings.webp",
+      "caption": "모바일 설정 → 전체 설정",
+      "alt": "모바일 빠른 설정 창. 음성 및 번역 언어, 어두운 화면으로 전환, 전체 설정, 로그아웃.",
+      "width": 585,
+      "height": 1266,
+      "pins": [
+        {
+          "number": 1,
+          "x": 50.0,
+          "y": 90.403,
+          "label": "전체 설정 열기",
+          "rect": {
+            "left": 4.359,
+            "top": 87.796,
+            "width": 91.282,
+            "height": 5.213
+          }
+        }
+      ]
+    },
+    "password-reset-start": {
+      "file": "password-reset-start.webp",
+      "caption": "비밀번호 찾기 → 인증 코드 받기",
+      "alt": "비밀번호 찾기 화면의 초대받은 이메일 입력, 인증 코드 받기와 로그인으로 돌아가기.",
+      "width": 576,
+      "height": 516,
+      "pins": [
+        {
+          "number": 1,
+          "x": 50.0,
+          "y": 52.77,
+          "label": "계정 이메일",
+          "rect": {
+            "left": 7.552,
+            "top": 46.647,
+            "width": 84.896,
+            "height": 12.245
+          }
+        },
+        {
+          "number": 2,
+          "x": 50.0,
+          "y": 69.971,
+          "label": "인증 코드 받기",
+          "rect": {
+            "left": 7.552,
+            "top": 63.557,
+            "width": 84.896,
+            "height": 12.828
+          }
+        }
+      ]
+    },
+    "password-reset-code": {
+      "file": "password-reset-code.webp",
+      "caption": "메일의 인증 코드와 새 비밀번호 입력",
+      "alt": "비밀번호 재설정 화면. 인증 코드, 새 비밀번호, 새 비밀번호 확인, 비밀번호 재설정과 코드 다시 받기.",
+      "width": 576,
+      "height": 1071,
+      "pins": []
+    },
+    "account-settings": {
+      "file": "account-settings.webp",
+      "caption": "설정 → 계정 → 비밀번호 변경",
+      "alt": "계정 설정의 인증된 이메일, 현재 비밀번호와 새 비밀번호, 새 비밀번호 확인, 비밀번호 변경 버튼.",
+      "width": 816,
+      "height": 933,
+      "pins": [
+        {
+          "number": 1,
+          "x": 50.0,
+          "y": 57.166,
+          "label": "현재 비밀번호",
+          "rect": {
+            "left": 3.86,
+            "top": 53.784,
+            "width": 92.279,
+            "height": 6.763
+          }
+        },
+        {
+          "number": 2,
+          "x": 50.0,
+          "y": 70.37,
+          "label": "새 비밀번호",
+          "rect": {
+            "left": 3.86,
+            "top": 66.989,
+            "width": 92.279,
+            "height": 6.763
+          }
+        },
+        {
+          "number": 3,
+          "x": 50.0,
+          "y": 83.575,
+          "label": "한 번 더 입력",
+          "rect": {
+            "left": 3.86,
+            "top": 80.193,
+            "width": 92.279,
+            "height": 6.763
+          }
+        },
+        {
+          "number": 4,
+          "x": 50.0,
+          "y": 93.076,
+          "label": "변경",
+          "rect": {
+            "left": 3.86,
+            "top": 89.533,
+            "width": 92.279,
+            "height": 7.085
+          }
+        }
+      ]
+    },
+    "account-email": {
+      "file": "account-email.webp",
+      "caption": "계정 이메일 인증을 미리 완료하세요",
+      "alt": "계정 탭에서 이메일 인증이 필요한 상태. 이메일 인증 코드 입력, 이메일 인증, 코드 다시 받기.",
+      "width": 816,
+      "height": 1182,
+      "pins": [
+        {
+          "number": 1,
+          "x": 50.0,
+          "y": 34.393,
+          "label": "6자리 코드",
+          "rect": {
+            "left": 3.86,
+            "top": 31.723,
+            "width": 92.279,
+            "height": 5.34
+          }
+        },
+        {
+          "number": 2,
+          "x": 12.04,
+          "y": 41.386,
+          "label": "인증 확인",
+          "rect": {
+            "left": 3.86,
+            "top": 38.589,
+            "width": 16.36,
+            "height": 5.594
+          }
+        }
+      ]
+    }
+  }
+}
