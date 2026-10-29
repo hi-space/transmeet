@@ -28,6 +28,7 @@ class FakeBedrock:
     def __init__(self, chunks):
         self.chunks = chunks
         self.calls = []
+        self.title_calls = []
 
     async def converse_stream(self, **kwargs):
         self.calls.append(kwargs)
@@ -39,6 +40,7 @@ class FakeBedrock:
         return {"stream": stream()}
 
     async def converse(self, **kwargs):
+        self.title_calls.append(kwargs)
         return {"output": {"message": {"content": [{"text": "제품 출시 일정 확정"}]}}}
 
 
@@ -181,6 +183,22 @@ async def test_summary_generates_titles_only_for_defaults(monkeypatch, title, ex
     assert len(title_updates) == (1 if expected_title else 0)
     if expected_title:
         assert title_updates[0]["ExpressionAttributeValues"][":t"] == {"S": expected_title}
+
+
+async def test_summary_reuses_and_announces_title_prepared_for_automatic_page(monkeypatch):
+    # Even a stale metadata read must not trigger a second title generation.
+    bedrock, ddb = FakeBedrock(["요약"]), FakeDDB("2026. 10. 29. 오전 10:00:00")
+    install(monkeypatch, bedrock, ddb)
+    ws = FakeWS()
+
+    await ws_handler._stream_summary(
+        ws.send_json, "m1", "x", inline_messages=MESSAGES, prepared_title="제품 출시 일정 확정",
+    )
+
+    assert ws.sent[-1]["title"] == "제품 출시 일정 확정"
+    assert "제품 출시 일정 확정" in bedrock.calls[0]["messages"][0]["content"][0]["text"]
+    assert bedrock.title_calls == []
+    assert all(not update["UpdateExpression"].startswith("SET title") for update in ddb.updates)
 
 
 # ─── Bedrock 일시 장애: 재시도 → 대체 모델 ──────────────────────────────────────

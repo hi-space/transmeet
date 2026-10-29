@@ -1303,6 +1303,10 @@ _DEFAULT_TITLE_PREFIX = "Meeting "
 _DEFAULT_TITLE_TIMESTAMP = re.compile(r"\d{4}\. \d{1,2}\. \d{1,2}\. (?:오전|오후) \d{1,2}:\d{2}:\d{2}")
 
 
+def _is_default_title(title: str) -> bool:
+    return title.startswith(_DEFAULT_TITLE_PREFIX) or bool(_DEFAULT_TITLE_TIMESTAMP.fullmatch(title))
+
+
 async def _generate_title_if_default(
     meeting_id: str,
     current_title: str,
@@ -1313,10 +1317,7 @@ async def _generate_title_if_default(
 
     Returns the new title on success, None if skipped or failed.
     """
-    if not (
-        current_title.startswith(_DEFAULT_TITLE_PREFIX)
-        or _DEFAULT_TITLE_TIMESTAMP.fullmatch(current_title)
-    ):
+    if not _is_default_title(current_title):
         return None
     if not transcript_lines:
         return None
@@ -1371,6 +1372,7 @@ async def _stream_summary(
     *,
     inline_messages: Optional[list] = None,
     summary_style: Optional[str] = None,
+    prepared_title: Optional[str] = None,
 ) -> Optional[str]:
     """Fetch meeting messages and stream a summary via converse_stream. 만든 요약을 돌려주고, 실패하면 None.
 
@@ -1412,6 +1414,9 @@ async def _stream_summary(
             current_title = result.get("Item", {}).get("title", {}).get("S", "")
             saved_style = result.get("Item", {}).get("summaryStyle", {}).get("S")
             lines = transcript_lines(stored)
+
+        # 종료 단계에서 준비한 제목을 써서 오래된 메타데이터가 읽혀도 중복 생성하지 않는다.
+        current_title = prepared_title or current_title
 
         # 내 양식은 고를 때 만든 사본(meetingId 키 테이블)으로만 만든다 — 양식 테이블을 읽지 않으므로 양식을 지워도 동작한다.
         if normalize_summary_style(summary_style if summary_style is not None else saved_style) == "custom":
@@ -1501,7 +1506,7 @@ async def _stream_summary(
                             "error": "미팅이 삭제되어 요약을 저장하지 못했습니다"})
                 return None
 
-        new_title = await _generate_title_if_default(meeting_id, current_title, lines, model_id)
+        new_title = prepared_title or await _generate_title_if_default(meeting_id, current_title, lines, model_id)
 
         done_payload: Dict[str, Any] = {
             "type": "summary_stream", "phase": "done", "meetingId": meeting_id,
@@ -1650,7 +1655,7 @@ async def _end_meeting(
     inline_messages: Optional[list] = None,
     summary_style: Optional[str] = None,
 ) -> None:
-    """오디오 마무리 → 요약 → 페이지 생성 시작·메일. 소켓이 바뀌어도 끝까지 간다.
+    """마지막 발언·제목 준비 → 페이지 자동 생성 시작 → 오디오·요약·메일 마무리.
 
     `inline_messages` 는 화면의 발언 — 녹음 직후엔 마지막 발언이 아직 저장 전일 수 있다 (summarize 와 같은 이유).
     """
@@ -1659,9 +1664,6 @@ async def _end_meeting(
         # Transcribe의 마지막 확정 발언은 정지 후에도 번역·저장 중일 수 있다.
         if state.segment_tasks:
             await asyncio.gather(*list(state.segment_tasks), return_exceptions=True)
-        # 메일을 안 보내도 합쳐 둔다 — 다운로드 버튼이 기다리지 않게
-        title, _ = await _meeting_meta(meeting_id)
-        await _merged_audio_url(meeting_id, title, DOWNLOAD_URL_EXPIRES)
         async with dynamodb_client() as ddb:
             try:
                 await ddb.update_item(
@@ -1680,13 +1682,24 @@ async def _end_meeting(
                             "error": "미팅이 삭제되어 종료 처리를 하지 못했습니다."})
                 return
 
-        await send({"type": "meeting_end", "meetingId": meeting_id, "phase": "summary"})
-        summary = await _stream_summary(
-            send, meeting_id, state.model_id, inline_messages=inline_messages, summary_style=summary_style,
-        )
+        # 새 회의의 날짜형 제목이 페이지에 고정되지 않도록 짧은 제목 생성만 먼저 한다.
+        # 요약에도 결과를 넘겨 같은 제목을 사용하고, 제목 생성 실패는 페이지를 막지 않는다.
+        title, _ = await _meeting_meta(meeting_id)
+        prepared_title = None
+        if _is_default_title(title):
+            try:
+                async with dynamodb_client() as ddb:
+                    messages = await message_store.load_messages(ddb, meeting_id)
+                prepared_title = await _generate_title_if_default(
+                    meeting_id, title, transcript_lines(messages or inline_messages or []), state.model_id,
+                )
+            except Exception:
+                logger.exception("[title] preparing automatic page title failed meeting_id=%s", meeting_id)
+            title = prepared_title or title
 
-        # 페이지는 수 분 걸리므로 완료를 기다리지 않는다. 생성기가 태스크를 보관하고
-        # page_stream 으로 진행·결과를 알린다. 종료 재시도는 기존 페이지 링크를 보존한다.
+        # 페이지는 원문으로 만든다. 오디오 정리·요약의 지연이나 실패가 자동 생성을 막지
+        # 않도록 먼저 시작한다. 생성기가 태스크를 보관하고 page_stream으로 진행·결과를
+        # 알리며, 종료 재시도는 진행 중인 작업과 기존 페이지 링크를 재사용한다.
         try:
             start_page_generation(
                 send, meeting_id, inline_messages=inline_messages, reuse_existing=True,
@@ -1698,6 +1711,14 @@ async def _end_meeting(
                 "type": "page_stream", "meetingId": meeting_id, "phase": "error",
                 "error": str(e) if isinstance(e, PageRequestError) else "페이지 생성을 시작하지 못했습니다",
             })
+
+        # 메일을 안 보내도 합쳐 둔다 — 다운로드 버튼이 기다리지 않게
+        await _merged_audio_url(meeting_id, title, DOWNLOAD_URL_EXPIRES)
+        await send({"type": "meeting_end", "meetingId": meeting_id, "phase": "summary"})
+        summary = await _stream_summary(
+            send, meeting_id, state.model_id, inline_messages=inline_messages, summary_style=summary_style,
+            prepared_title=prepared_title,
+        )
 
         status = await _send_end_email(state, meeting_id, summary) if email_on_end else "skipped"
         await send({"type": "meeting_end", "meetingId": meeting_id, "phase": "email", "status": status})

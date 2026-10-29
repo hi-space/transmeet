@@ -70,26 +70,32 @@ def token(access=False):
 
 async def scenario(browser, name, *, width, paused_end=False, disconnected=False, dark=False, narrow=False):
     context = await browser.new_context(
-        viewport={"width": width, "height": 900}, service_workers="block",
+        viewport={"width": width, "height": 900},
         permissions=["microphone"], color_scheme="dark" if dark else "light",
     )
-    await context.add_init_script("delete Navigator.prototype.serviceWorker")
-    await context.add_init_script(SOCKET)
+    # Block registration in the app frame. Playwright's global worker blocker
+    # accesses navigator.serviceWorker inside sandboxed previews and throws.
+    await context.add_init_script(
+        "if (window === window.top) { delete Navigator.prototype.serviceWorker;\n" + SOCKET + "\n}"
+    )
     settings = {"ttsAutoPlay": False, "audioSource": "mic", "sttProvider": "transcribe",
                 "autoSummarizeMessageCount": 0, "emailOnEnd": True,
                 "theme": "dark" if dark else "light"}
     await context.add_init_script(
-        "localStorage.setItem('transmeet-settings', JSON.stringify("
-        + json.dumps(settings) + "))"
+        "if (window === window.top) { localStorage.setItem('transmeet-settings', JSON.stringify("
+        + json.dumps(settings) + ")); }"
     )
     if narrow:
         await context.add_init_script("""
-          localStorage.setItem('transmeet-sidebar-width', '420');
-          localStorage.setItem('transmeet-summary-width', '960');
+          if (window === window.top) {
+            localStorage.setItem('transmeet-sidebar-width', '420');
+            localStorage.setItem('transmeet-summary-width', '960');
+          }
         """)
     if CLIENT_ID:
         config = {"client": CLIENT_ID, "id": token(), "access": token(True)}
         await context.add_init_script("""(config => {
+          if (window !== window.top) return;
           const prefix = `CognitoIdentityServiceProvider.${config.client}`;
           localStorage.setItem(`${prefix}.LastAuthUser`, 'controls-test');
           for (const [key, value] of Object.entries({
@@ -252,12 +258,56 @@ async def scenario(browser, name, *, width, paused_end=False, disconnected=False
             assert len(sent) == 1 and sent[0]["meetingId"] == "meeting-1", sent
             assert sent[0]["emailOnEnd"] is True, sent
             assert len(await requests("stopRecording")) == 1
+            # Automatic server generation opens the progress panel without a
+            # second user action or a duplicate generate_page request.
             await page.evaluate("""() => {
               window.__recordingSockets.filter(s => s.readyState === 1).forEach(s =>
-                s.emit({type: 'meeting_end', meetingId: 'meeting-1', phase: 'done', status: 'skipped'}));
+                s.emit({type: 'page_stream', meetingId: 'meeting-1', phase: 'status',
+                        started: true, text: '미팅 기록을 불러오는 중'}));
             }""")
+            progress = page.get_by_role("status").filter(has_text="페이지 생성 중")
+            await expect(progress).to_be_visible()
+            await expect(page.get_by_text("미팅 기록을 불러오는 중", exact=True)).to_be_visible()
+            assert not await requests("generate_page")
+            await page.evaluate("""() => {
+              window.__recordingSockets.filter(s => s.readyState === 1).forEach(s =>
+                s.emit({type: 'page_stream', meetingId: 'meeting-1', phase: 'status',
+                        text: '페이지 구성을 기획합니다'}));
+            }""")
+            await expect(page.get_by_text("페이지 구성을 기획합니다", exact=True)).to_be_visible()
+            # Summary and meeting-end events can arrive while page generation
+            # is still running; they must not close or reset its progress.
+            await page.evaluate("""() => {
+              window.__recordingSockets.filter(s => s.readyState === 1).forEach(s => {
+                s.emit({type: 'meeting_end', meetingId: 'meeting-1', phase: 'summary'});
+                s.emit({type: 'summary_stream', meetingId: 'meeting-1', phase: 'delta',
+                        text: '회의 요약'});
+                s.emit({type: 'summary_stream', meetingId: 'meeting-1', phase: 'done',
+                        summary: '회의 요약', summaryStyle: 'detailed'});
+                s.emit({type: 'meeting_end', meetingId: 'meeting-1', phase: 'done', status: 'skipped'});
+              });
+            }""")
+            await expect(progress).to_be_visible()
+            await expect(page.get_by_text("페이지 구성을 기획합니다", exact=True)).to_be_visible()
             await expect(start).to_be_enabled()
             await expect(resume).to_have_count(0)
+            await page.screenshot(path=str(ARTIFACTS / f"{name}-auto-page.png"), full_page=True)
+
+            published = {
+                "pageId": "auto-page-1", "url": BASE + "/__ui_page/auto-page-1.html",
+                "generatedAt": "2026-10-29T00:00:00Z", "title": "자동 생성 회의 페이지",
+            }
+            records["meeting-1"]["page"] = published
+            await page.route(published["url"], lambda route: route.fulfill(
+                content_type="text/html",
+                body="<!doctype html><html lang='ko'><title>회의 페이지</title><h1>회의 결과</h1></html>",
+            ))
+            await page.evaluate("""published => {
+              window.__recordingSockets.filter(s => s.readyState === 1).forEach(s =>
+                s.emit({type: 'page_stream', meetingId: 'meeting-1', phase: 'done', page: published}));
+            }""", published)
+            await expect(progress).to_have_count(0)
+            await expect(page.get_by_title("회의 페이지 미리보기", exact=True)).to_be_visible()
         assert not errors, errors
         print(json.dumps({"scenario": name, "passed": True, "runtimeErrors": errors}), flush=True)
     finally:

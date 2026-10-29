@@ -69,6 +69,8 @@ class FakeDDB:
             self.item["hasAudio"] = {"BOOL": True}
         elif expr.startswith("REMOVE emailSentAt"):
             self.item.pop("emailSentAt", None)
+        elif expr.startswith("SET title"):
+            self.item["title"] = kw["ExpressionAttributeValues"][":t"]
 
 
 @pytest.fixture
@@ -126,6 +128,7 @@ async def env(monkeypatch):
     async def stream_summary(send, meeting_id, model_id, **kw):
         calls["summaries"] += 1
         calls.setdefault("summary_styles", []).append(kw.get("summary_style"))
+        calls.setdefault("prepared_titles", []).append(kw.get("prepared_title"))
         return summary["value"]
 
     async def email_verified(email):
@@ -361,6 +364,100 @@ async def test_end_meeting_waits_for_final_transcribe_segment(env, monkeypatch):
     assert [m["original"] for m in env["calls"]["pages"][0]["messages"]] == [
         "Let's ship next week.", "Final decision: ship on Friday.",
     ]
+
+
+@pytest.mark.parametrize("operation", ["_merged_audio_url", "_stream_summary"])
+async def test_automatic_page_starts_while_end_processing_is_still_running(env, monkeypatch, operation):
+    processing_started = asyncio.Event()
+    release = asyncio.Event()
+    original = getattr(ws_handler, operation)
+
+    async def slow_operation(*args, **kwargs):
+        processing_started.set()
+        await release.wait()
+        return await original(*args, **kwargs)
+
+    monkeypatch.setattr(ws_handler, operation, slow_operation)
+    state, ws = make_state()
+    ending = asyncio.create_task(ws_handler._end_meeting(
+        ws_handler._meeting_broadcaster("m1"), state, "m1", email_on_end=False,
+    ))
+    try:
+        await asyncio.wait_for(processing_started.wait(), timeout=1)
+        await asyncio.wait_for(env["page_started"].wait(), timeout=1)
+        assert not ending.done()
+        assert events(ws, "page_stream")[0]["started"] is True
+        assert env["calls"]["pages"][0]["meeting"]["style"] == "visual"
+    finally:
+        release.set()
+        await ending
+
+
+async def test_summary_exception_does_not_prevent_automatic_page(env, monkeypatch):
+    async def failed_summary(*args, **kwargs):
+        raise RuntimeError("summary unavailable")
+
+    monkeypatch.setattr(ws_handler, "_stream_summary", failed_summary)
+    state, ws = make_state()
+    await ws_handler._end_meeting(
+        ws_handler._meeting_broadcaster("m1"), state, "m1", email_on_end=False,
+    )
+    await env["finish_pages"]()
+
+    assert events(ws, "page_stream")[-1]["page"] == PAGE
+    assert events(ws, "meeting_end")[-1]["phase"] == "error"
+
+
+@pytest.mark.parametrize(("original", "expected", "title_calls"), [
+    ("2026. 10. 29. 오전 10:00:00", "제품 출시 일정 확정", 1),
+    ("직접 정한 회의 제목", "직접 정한 회의 제목", 0),
+])
+async def test_automatic_page_uses_resolved_meeting_title(env, monkeypatch, original, expected, title_calls):
+    env["ddb"].item["title"] = {"S": original}
+    requests = []
+
+    class Bedrock:
+        async def converse(self, **kwargs):
+            requests.append(kwargs)
+            return {"output": {"message": {"content": [{"text": "제품 출시 일정 확정"}]}}}
+
+    @asynccontextmanager
+    async def bedrock():
+        yield Bedrock()
+
+    monkeypatch.setattr(ws_handler, "bedrock_client", bedrock)
+    state, ws = make_state()
+    await ws_handler._end_meeting(
+        ws_handler._meeting_broadcaster("m1"), state, "m1", email_on_end=False,
+    )
+    await env["finish_pages"]()
+
+    assert env["calls"]["pages"][0]["meeting"]["title"] == expected
+    assert env["ddb"].item["title"]["S"] == expected
+    assert len(requests) == title_calls
+    assert env["calls"]["prepared_titles"] == [expected if title_calls else None]
+
+
+async def test_title_failure_does_not_prevent_automatic_page(env, monkeypatch):
+    env["ddb"].item["title"] = {"S": "2026. 10. 29. 오전 10:00:00"}
+
+    class Bedrock:
+        async def converse(self, **kwargs):
+            raise RuntimeError("title unavailable")
+
+    @asynccontextmanager
+    async def bedrock():
+        yield Bedrock()
+
+    monkeypatch.setattr(ws_handler, "bedrock_client", bedrock)
+    state, ws = make_state()
+    await ws_handler._end_meeting(
+        ws_handler._meeting_broadcaster("m1"), state, "m1", email_on_end=False,
+    )
+    await env["finish_pages"]()
+
+    assert events(ws, "page_stream")[-1]["page"] == PAGE
+    assert events(ws, "meeting_end")[-1]["phase"] == "done"
 
 
 async def test_page_generation_does_not_delay_end_email(env):

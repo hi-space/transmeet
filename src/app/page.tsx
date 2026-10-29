@@ -1872,7 +1872,7 @@ export default function Home() {
 
   // ─── 미팅 종료 · 녹음 파일 ─────────────────────────────────────────────────
 
-  // 서버가 녹음 정지 → 오디오 합치기 → 요약 → 페이지 생성·메일을 끝까지 처리한다.
+  // 서버가 마지막 발언 저장 후 페이지를 자동 생성하고, 오디오·요약·메일을 마무리한다.
   const handleEndMeeting = useCallback(() => {
     if (
       !activeMeetingId ||
@@ -2760,15 +2760,16 @@ export default function Home() {
             }
             status={
               <>
-                {isManagedStt(settings.sttProvider, selectedSttStatus) && (
-                  <div className="ui-surface pointer-events-auto max-w-[min(24rem,calc(100vw-4rem))] px-3 pb-3 pt-1 shadow-lg">
-                    <SttStatusPanel
-                      state={selectedSttStatus}
-                      connected={wsStatus === 'connected'}
-                      compact
-                    />
-                  </div>
-                )}
+                {isManagedStt(settings.sttProvider, selectedSttStatus) &&
+                  (wsStatus !== 'connected' || selectedSttStatus?.status !== 'ready') && (
+                    <div className="ui-surface pointer-events-auto max-w-[min(24rem,calc(100vw-4rem))] px-3 pb-3 pt-1 shadow-lg">
+                      <SttStatusPanel
+                        state={selectedSttStatus}
+                        connected={wsStatus === 'connected'}
+                        compact
+                      />
+                    </div>
+                  )}
                 {HAS_API && activeMeetingId && (
                   <MeetingStatus endState={activeMeetingEnd} audioPrep={activeAudioPrep} />
                 )}
