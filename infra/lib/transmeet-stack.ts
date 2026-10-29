@@ -138,15 +138,25 @@ export class TransmeetStack extends cdk.Stack {
 
     const userPool = new cognito.UserPool(this, 'UserPool', {
       userPoolName: 'transmeet-users',
-      selfSignUpEnabled: true,
+      selfSignUpEnabled: false,
       signInAliases: { email: true },
       autoVerify: { email: true },
+      accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
+      userInvitation: {
+        emailSubject: 'TransMeet 사용 초대',
+        emailBody: `<p>TransMeet에 초대되었습니다.</p>
+<p><a href="https://${APP_DOMAIN}">TransMeet에 로그인하기</a></p>
+<p>로그인 이메일: {username}<br>임시 비밀번호: {####}</p>
+<p>7일 이내에 로그인한 뒤, 앞으로 사용할 비밀번호를 8자 이상으로 정해 주세요. 특수문자는 필수가 아닙니다.</p>
+<p>로그인 후 설정 → 계정에서 이메일을 인증해 두면 비밀번호를 잊었을 때 직접 재설정할 수 있습니다.</p>`,
+      },
       passwordPolicy: {
         minLength: 8,
         requireLowercase: false,
         requireUppercase: false,
         requireDigits: false,
         requireSymbols: false,
+        tempPasswordValidity: cdk.Duration.days(7),
       },
       removalPolicy: cdk.RemovalPolicy.RETAIN,
     });

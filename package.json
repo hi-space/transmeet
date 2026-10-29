@@ -12,6 +12,7 @@
     "test:ui": "node --experimental-strip-types --experimental-default-type=module --test tests/theme.test.mjs tests/translationModels.test.mjs tests/sttProviders.test.mjs tests/speechLanguages.test.mjs tests/workspace.test.mjs tests/speakers.test.mjs tests/meetingEnd.test.mjs tests/meetingBrief.test.mjs tests/meetingList.test.mjs tests/emailVerification.test.mjs",
     "test:speech": "node --experimental-strip-types --experimental-default-type=module --test tests/speechLanguages.test.mjs",
     "test:email": "node --test tests/emailVerification.test.mjs",
+    "test:auth": "node --test tests/passwords.test.mjs && python3 tests/auth_browser.py",
     "test:brief": "node --test tests/meetingBrief.test.mjs",
     "test:speakers": "node --test tests/speakers.test.mjs",
     "test:summary": "node --experimental-strip-types --experimental-default-type=module --test tests/summaryStyles.test.mjs tests/summaryTemplates.test.mjs tests/meetingEnd.test.mjs",

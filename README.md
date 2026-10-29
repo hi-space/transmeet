@@ -26,7 +26,7 @@ TransMeet은 **실시간 음성 번역 웹앱**입니다. 영어 화자의 발�
 - **회의 기록** — 생성, 조회, 삭제 + 자동 제목 생성
 - **회의 한 줄 요약** — 제목 아래에 회의 전체의 핵심·결론 표시. 새 대화 20개마다 갱신하며, 제목 및 상세 자동 요약 설정과 별도로 동작
 - **설정 패널** — 오디오 소스, STT 프로바이더, 번역 타이밍, Polly 엔진 등 커스터마이징
-- **인증** — AWS Cognito 기반 로그인/회원가입 (선택)
+- **인증** — AWS Cognito 기반 관리자 초대제 로그인, 비밀번호 변경·복구 (선택)
 - **테마 설정** — 시스템/라이트/다크, 오렌지 등 포인트 색상 6종, 글꼴 4종, 화면·말풍선 크기와 줄 간격 조절
 - **PWA** — 모바일 설치 가능, 오프라인 UI 지원
 
@@ -113,7 +113,9 @@ src/
     SummaryPanel.tsx            # 요약 표시 (Markdown 렌더링 + 복사 + 글자 크기 조절)
     QuickTranslatePopup.tsx     # 글로벌 빠른 번역 팝업 (스트리밍 + 히스토리)
     SettingsPanel.tsx           # 앱 설정 패널
-    AuthScreen.tsx              # Cognito 로그인/회원가입
+    AuthScreen.tsx              # 초대 계정 로그인·최초 비밀번호 설정
+    PasswordResetForm.tsx       # 이메일 인증 코드로 비밀번호 복구
+    AccountSettings.tsx         # 계정 이메일 인증·비밀번호 변경
     MobileTabBar.tsx            # 모바일 탭 네비게이션
     SubtitleArea.tsx            # 자막 표시 (레거시)
     ThemeProvider.tsx           # 테마 상태·저장·시스템 모드 동기화
@@ -399,6 +401,36 @@ infra/
   tsconfig.json
   cdk.json
 ```
+
+### 초대 계정과 비밀번호 관리
+
+공개 회원가입은 Cognito 사용자 풀에서 차단합니다. 승인한 사용자만 관리자가 계정을 생성해 초대합니다.
+
+1. AWS 콘솔에서 Cognito → `transmeet-users` → 사용자 생성으로 이동합니다.
+2. 승인한 사용자의 이메일을 입력하고 **초대 이메일 전송** 및 **임시 비밀번호 자동 생성**을 선택합니다.
+3. 사용자는 초대 메일의 접속 주소와 임시 비밀번호로 로그인하고 본인 비밀번호를 설정합니다.
+4. 로그인 후 **설정 → 계정**에서 이메일을 인증합니다. 인증된 이메일로만 비밀번호를 복구할 수 있습니다.
+
+현재 임시·일반 비밀번호 정책은 **최소 8자**이며, 대문자·소문자·숫자·특수문자 포함은 필수가 아닙니다.
+임시 비밀번호는 **7일** 동안 유효합니다. 만료되었다면 관리자가 초대를 재전송해 새 임시 비밀번호를 발급합니다.
+사용자의 이메일 소유권을 확인하지 않고 `email_verified` 속성을 임의로 설정하지 않습니다.
+
+CLI로 초대할 때도 `--temporary-password`를 생략하면 Cognito가 정책에 맞는 임시 비밀번호를 자동 생성하고 이메일로 보냅니다.
+`USER_POOL_ID`는 CDK 배포 결과의 `UserPoolId`를 사용합니다.
+
+```bash
+aws cognito-idp admin-create-user \
+  --region us-east-1 \
+  --user-pool-id "$USER_POOL_ID" \
+  --username "approved@example.com" \
+  --user-attributes Name=email,Value=approved@example.com \
+  --desired-delivery-mediums EMAIL
+```
+
+- 로그인 상태에서 변경: **설정 → 계정 → 비밀번호 변경**. 현재 비밀번호를 확인하고 변경하며, 진행 중인 회의는 유지합니다.
+- 비밀번호 분실: **로그인 → 비밀번호 찾기**. 이메일의 인증 코드와 새 비밀번호를 입력한 뒤 다시 로그인합니다.
+- 초대 메일만 받은 상태이거나 이메일을 아직 인증하지 않았다면, 복구 대신 관리자에게 초대 재전송을 요청합니다.
+- 계정 이메일 인증은 회의 종료 메일의 SES 수신 주소 인증과 별개입니다. 비밀번호 관리에는 회의 메일 수신 설정이 필요하지 않습니다.
 
 ## Backend (FastAPI)
 

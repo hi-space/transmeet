@@ -4,7 +4,6 @@ import {
   AuthenticationDetails,
   CognitoUserAttribute,
   type CognitoUserSession,
-  type ISignUpResult,
 } from 'amazon-cognito-identity-js'
 
 export type SignInResult =
@@ -47,22 +46,44 @@ export function completeNewPassword(user: CognitoUser, newPassword: string): Pro
   })
 }
 
-export function signUp(email: string, password: string): Promise<ISignUpResult> {
+export async function changeAccountPassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<void> {
+  const user = await authenticatedUser()
   return new Promise((resolve, reject) => {
-    const attrs = [new CognitoUserAttribute({ Name: 'email', Value: email })]
-    getPool().signUp(email, password, attrs, [], (err, result) => {
+    user.changePassword(currentPassword, newPassword, (err) => {
       if (err) return reject(err)
-      resolve(result!)
+      resolve()
     })
   })
 }
 
-export function confirmSignUp(email: string, code: string): Promise<void> {
+export function requestPasswordReset(email: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const user = new CognitoUser({ Username: email, Pool: getPool() })
-    user.confirmRegistration(code, true, (err) => {
-      if (err) return reject(err)
-      resolve()
+    const user = new CognitoUser({ Username: email.trim(), Pool: getPool() })
+    user.forgotPassword({
+      onSuccess: () => resolve(),
+      onFailure: (err) => {
+        // Older pool configurations can expose this error despite the client setting.
+        const code = (err as Error & { code?: string }).code ?? err.name
+        if (code === 'UserNotFoundException') return resolve()
+        reject(err)
+      },
+    })
+  })
+}
+
+export function confirmPasswordReset(
+  email: string,
+  code: string,
+  newPassword: string
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const user = new CognitoUser({ Username: email.trim(), Pool: getPool() })
+    user.confirmPassword(code.trim(), newPassword, {
+      onSuccess: () => resolve(),
+      onFailure: reject,
     })
   })
 }

@@ -6,6 +6,7 @@ import { supportsSystemAudio } from '@/lib/platform'
 import ThemeSettings from '@/components/ThemeSettings'
 import EmailNotifySetting from '@/components/EmailNotifySetting'
 import SummaryTemplateSettings from '@/components/SummaryTemplateSettings'
+import AccountSettings from '@/components/AccountSettings'
 import type { SummaryTemplateInput } from '@/lib/api'
 import type { SummaryTemplate } from '@/lib/summaryStyles'
 import { TRANSLATION_MODELS } from '@/lib/translationModels'
@@ -42,12 +43,15 @@ interface Props {
   }
 }
 
-export type SettingsTab = 'general' | 'theme' | 'summary'
+export type SettingsTab = 'general' | 'theme' | 'summary' | 'account'
+
+const HAS_COGNITO = !!process.env.NEXT_PUBLIC_COGNITO_USER_POOL_ID
 
 const TAB_LABELS: Record<SettingsTab, string> = {
   general: '음성 · 번역',
   theme: '테마',
   summary: '요약 양식',
+  account: '계정',
 }
 
 const VOICES: Record<'en' | 'ko', { id: string; label: string; engines: string[] }[]> = {
@@ -111,7 +115,9 @@ export default function SettingsPanel({
   summaryTemplates,
 }: Props) {
   const [activeTab, setActiveTab] = useState<SettingsTab>(
-    initialTab === 'summary' && !summaryTemplates ? 'general' : initialTab
+    (initialTab === 'summary' && !summaryTemplates) || (initialTab === 'account' && !HAS_COGNITO)
+      ? 'general'
+      : initialTab
   )
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canUseSystemAudio, setCanUseSystemAudio] = useState(true)
@@ -156,9 +162,11 @@ export default function SettingsPanel({
           <h2 id="settings-title" className="text-base font-semibold">
             설정
           </h2>
-          <span className="hidden text-[0.6875rem] text-muted min-[360px]:inline">
-            변경 즉시 적용
-          </span>
+          {activeTab !== 'account' && (
+            <span className="hidden text-[0.6875rem] text-muted min-[360px]:inline">
+              변경 즉시 적용
+            </span>
+          )}
         </div>
         <button
           type="button"
@@ -182,6 +190,7 @@ export default function SettingsPanel({
             ...(summaryTemplates
               ? [{ value: 'summary' as const, label: TAB_LABELS.summary, icon: 'summary' as const }]
               : []),
+            ...(HAS_COGNITO ? [{ value: 'account' as const, label: TAB_LABELS.account }] : []),
           ]}
         />
       </div>
@@ -193,7 +202,9 @@ export default function SettingsPanel({
         className="scrollbar-thin min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-subtle px-5 py-5"
         style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}
       >
-        {activeTab === 'summary' && summaryTemplates ? (
+        {activeTab === 'account' && HAS_COGNITO ? (
+          <AccountSettings />
+        ) : activeTab === 'summary' && summaryTemplates ? (
           <SummaryTemplateSettings
             templates={summaryTemplates.templates}
             error={summaryTemplates.error}
