@@ -222,7 +222,7 @@ export default function ControlPanel({
             aria-expanded={expanded}
             aria-controls={expanded ? menuId : undefined}
             title={showEndMeeting ? '녹음 다운로드' : '회의 종료 · 녹음 다운로드'}
-            className="ui-icon-button h-11 w-11 rounded-full border border-subtle bg-panel shadow-md"
+            className="recording-control ui-icon-button h-11 w-11 rounded-full border border-subtle bg-panel shadow-md"
           >
             <Icon name={expanded ? 'close' : 'more'} className="h-[18px] w-[18px]" />
           </button>
@@ -242,8 +242,8 @@ export default function ControlPanel({
             disabled={recordingDisabled && !isRecording}
             className={
               showEndMeeting || isRecording
-                ? 'ui-button ui-button-secondary h-12 max-w-full gap-1.5 rounded-full px-3 shadow-md sm:h-14 sm:gap-2 sm:px-4 sm:text-sm'
-                : 'flex h-12 max-w-full shrink-0 items-center justify-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50 sm:h-14'
+                ? 'recording-control ui-button ui-button-secondary h-12 max-w-full gap-1.5 rounded-full px-3 shadow-md sm:h-14 sm:gap-2 sm:px-4 sm:text-sm'
+                : 'recording-control flex h-12 max-w-full shrink-0 items-center justify-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-lg transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50 sm:h-14'
             }
           >
             <Icon
@@ -267,7 +267,7 @@ export default function ControlPanel({
             aria-busy={isEndingMeeting}
             title={endMeetingTitle}
             disabled={endMeetingDisabled || isEndingMeeting}
-            className="relative flex h-12 max-w-full shrink-0 items-center justify-center gap-2 rounded-full bg-red-600 px-4 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50 sm:h-14"
+            className="recording-control relative flex h-12 max-w-full shrink-0 items-center justify-center gap-2 rounded-full bg-red-600 px-4 text-sm font-semibold text-white shadow-lg transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50 sm:h-14"
             style={
               isRecording
                 ? {

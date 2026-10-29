@@ -2331,8 +2331,8 @@ export default function Home() {
   // Auth gate — show loading spinner while session is being restored
   if (HAS_COGNITO && authLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-white dark:bg-slate-950">
-        <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500 text-sm">
+      <div className="flex items-center justify-center h-screen bg-panel">
+        <div className="flex items-center gap-2 text-muted text-sm">
           <svg
             className="w-4 h-4 animate-spin"
             viewBox="0 0 24 24"
@@ -2450,10 +2450,12 @@ export default function Home() {
                       key={activeMeeting.id}
                       title={activeMeeting.title}
                       onSave={(newTitle) => handleUpdateTitle(activeMeeting.id, newTitle)}
-                      className="min-w-0 text-sm font-semibold tracking-tight text-ink"
+                      className="meeting-title min-w-0 text-sm font-semibold tracking-tight text-ink"
                     />
                   ) : (
-                    <h1 className="truncate text-sm font-semibold text-ink">새 회의</h1>
+                    <h1 className="meeting-title truncate text-sm font-semibold text-ink">
+                      새 회의
+                    </h1>
                   )}
                 </div>
                 <div className="meeting-metadata flex shrink-0 items-center gap-2 whitespace-nowrap text-[0.6875rem] text-muted">

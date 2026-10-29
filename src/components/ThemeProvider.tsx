@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, useState } f
 import {
   applyTheme,
   createDefaultTheme,
+  createPresetTheme,
   normalizeThemeSettings,
   resolveThemeMode,
   THEME_STORAGE_KEY,
@@ -15,6 +16,7 @@ interface ThemeContextValue {
   isDark: boolean
   storageUnavailable: boolean
   updateTheme: (patch: Partial<ThemeSettings>) => void
+  selectPreset: (preset: ThemeSettings['preset']) => void
   resetTheme: () => void
 }
 
@@ -85,6 +87,11 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
   }, [])
 
   const resetTheme = useCallback(() => updateTheme(createDefaultTheme()), [updateTheme])
+  const selectPreset = useCallback(
+    (preset: ThemeSettings['preset']) =>
+      updateTheme(createPresetTheme(currentTheme.current, preset)),
+    [updateTheme]
+  )
 
   return (
     <ThemeContext.Provider
@@ -93,6 +100,7 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
         isDark: resolveThemeMode(theme.mode, prefersDark) === 'dark',
         storageUnavailable,
         updateTheme,
+        selectPreset,
         resetTheme,
       }}
     >

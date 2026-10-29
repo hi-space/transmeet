@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import vm from 'node:vm'
+import * as themeModule from '../src/lib/theme.ts'
 import {
   createDefaultTheme,
   normalizeThemeSettings,
@@ -47,7 +48,11 @@ test('replaces the retired font while preserving the rest of a saved theme', () 
     scale: 120,
     lineSpacing: 'relaxed',
   })
-  assert.deepEqual(normalizeThemeSettings(saved), { ...saved, font: 'plex' })
+  assert.deepEqual(normalizeThemeSettings(saved), {
+    ...createDefaultTheme(),
+    ...saved,
+    font: 'plex',
+  })
   assert.equal(saved.font, 'serif')
 })
 
@@ -124,4 +129,124 @@ test('bootstrap rejects invalid fields without losing the saved accent', () => {
   assert.equal(root.dataset.accent, 'amazon')
   assert.equal(root.dataset.scale, String(createDefaultTheme().scale))
   assert.equal(root.dataset.font, createDefaultTheme().font)
+})
+
+test('older saved themes keep their custom appearance and gain the basic preset', () => {
+  const result = normalizeThemeSettings({
+    mode: 'dark',
+    accent: 'rose',
+    font: 'mono',
+    scale: 120,
+    lineSpacing: 'relaxed',
+  })
+  assert.deepEqual(result, {
+    preset: 'default',
+    mode: 'dark',
+    accent: 'rose',
+    font: 'mono',
+    scale: 120,
+    lineSpacing: 'relaxed',
+  })
+})
+
+test('approved presets survive storage while unknown presets fall back independently', () => {
+  for (const preset of ['paper', 'midnight', 'cobalt', 'clear']) {
+    assert.equal(normalizeThemeSettings({ preset, accent: 'theme' }).preset, preset)
+    assert.equal(normalizeThemeSettings({ preset, accent: 'theme' }).accent, 'theme')
+  }
+  for (const preset of ['sage', 'soft-sage', '__proto__', 'constructor', null]) {
+    const result = normalizeThemeSettings({ preset, accent: 'blue', scale: 110 })
+    assert.equal(result.preset, 'default')
+    assert.equal(result.accent, 'blue')
+    assert.equal(result.scale, 110)
+  }
+})
+
+test('selecting a preset applies its recommended look and keeps personal reading preferences', () => {
+  const current = Object.freeze({
+    preset: 'default',
+    mode: 'system',
+    accent: 'rose',
+    font: 'mono',
+    scale: 120,
+    lineSpacing: 'relaxed',
+  })
+  for (const [preset, mode] of [
+    ['paper', 'light'],
+    ['midnight', 'dark'],
+    ['cobalt', 'light'],
+    ['clear', 'light'],
+  ]) {
+    assert.deepEqual(themeModule.createPresetTheme(current, preset), {
+      preset,
+      mode,
+      accent: 'theme',
+      font: 'default',
+      scale: 120,
+      lineSpacing: 'relaxed',
+    })
+  }
+  assert.equal(current.font, 'mono')
+  assert.equal(current.accent, 'rose')
+})
+
+test('returning to basic styling preserves reading preferences until a full reset', () => {
+  assert.deepEqual(
+    themeModule.createPresetTheme(
+      {
+        preset: 'clear',
+        mode: 'light',
+        accent: 'theme',
+        font: 'default',
+        scale: 110,
+        lineSpacing: 'compact',
+      },
+      'default'
+    ),
+    {
+      preset: 'default',
+      mode: 'system',
+      accent: 'cyan',
+      font: 'default',
+      scale: 110,
+      lineSpacing: 'compact',
+    }
+  )
+})
+
+test('preset, custom mode and accents agree between first paint and runtime application', () => {
+  const originalDocument = globalThis.document
+  try {
+    for (const preset of ['default', 'paper', 'midnight', 'cobalt', 'clear']) {
+      for (const mode of ['light', 'dark', 'system']) {
+        const saved = {
+          preset,
+          mode,
+          accent: 'theme',
+          font: 'plex',
+          scale: 110,
+          lineSpacing: 'relaxed',
+        }
+        const early = bootstrap({ saved: JSON.stringify(saved), prefersDark: true })
+        const runtime = bootstrap()
+        globalThis.document = { documentElement: runtime.root }
+        themeModule.applyTheme(normalizeThemeSettings(saved), true)
+        assert.equal(early.root.dataset.preset, preset)
+        assert.equal(early.root.dataset.accent, 'theme')
+        assert.deepEqual(runtime.root.dataset, early.root.dataset)
+        assert.equal(runtime.root.style.colorScheme, early.root.style.colorScheme)
+      }
+    }
+  } finally {
+    if (originalDocument === undefined) delete globalThis.document
+    else globalThis.document = originalDocument
+  }
+})
+
+test('invalid and absent stored presets apply basic styling before the first paint', () => {
+  for (const saved of ['{"preset":"sage","accent":"amazon"}', '{"accent":"amazon"}']) {
+    const { root } = bootstrap({ saved })
+    assert.equal(root.dataset.preset, 'default')
+    assert.equal(root.dataset.accent, 'amazon')
+  }
 })

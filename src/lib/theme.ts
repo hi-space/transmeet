@@ -1,8 +1,9 @@
 export const THEME_STORAGE_KEY = 'transmeet-theme'
 
 export const THEME_VALUES = {
+  preset: ['default', 'paper', 'midnight', 'cobalt', 'clear'],
   mode: ['system', 'light', 'dark'],
-  accent: ['cyan', 'amazon', 'blue', 'violet', 'emerald', 'rose'],
+  accent: ['theme', 'cyan', 'amazon', 'blue', 'violet', 'emerald', 'rose'],
   font: ['default', 'sans', 'plex', 'mono'],
   scale: [90, 100, 110, 120],
   lineSpacing: ['compact', 'normal', 'relaxed'],
@@ -14,15 +15,59 @@ export type ThemeSettings = {
   [K in keyof typeof THEME_VALUES]: (typeof THEME_VALUES)[K][number]
 }
 
+export const THEME_PRESETS = [
+  {
+    value: 'paper',
+    label: 'Paper Atelier',
+    description: '종이색 · 명조 · 문서형 대화',
+    mode: 'light',
+  },
+  {
+    value: 'midnight',
+    label: 'Midnight Studio',
+    description: '차콜 · 민트 · 스튜디오',
+    mode: 'dark',
+  },
+  {
+    value: 'cobalt',
+    label: 'Cobalt Grid',
+    description: '코발트 · 직각 · 선명한 구획',
+    mode: 'light',
+  },
+  {
+    value: 'clear',
+    label: 'Clear Focus',
+    description: '큰 본문 · 진한 글자 · 오렌지',
+    mode: 'light',
+  },
+] as const
+
 /** New visits and the appearance reset use this same starting point. */
 export function createDefaultTheme(): ThemeSettings {
   // 기본 조합을 바꿔도 이미 저장된 사용자 선택은 유지됩니다.
   return {
+    preset: 'default',
     mode: 'system',
     accent: 'cyan',
     font: 'default',
     scale: 100,
     lineSpacing: 'normal',
+  }
+}
+
+/** A complete look changes together; personal reading sizes remain independent. */
+export function createPresetTheme(
+  current: ThemeSettings,
+  preset: ThemeSettings['preset']
+): ThemeSettings {
+  const selected = THEME_PRESETS.find((option) => option.value === preset)
+  const defaults = createDefaultTheme()
+  return {
+    ...current,
+    preset: selected?.value ?? defaults.preset,
+    mode: selected?.mode ?? defaults.mode,
+    accent: selected ? 'theme' : defaults.accent,
+    font: 'default',
   }
 }
 
@@ -56,6 +101,7 @@ export function applyTheme(theme: ThemeSettings, prefersDark: boolean) {
   root.classList.toggle('dark', mode === 'dark')
   root.style.colorScheme = mode
   root.dataset.themeMode = theme.mode
+  root.dataset.preset = theme.preset
   root.dataset.accent = theme.accent
   root.dataset.font = theme.font
   root.dataset.scale = String(theme.scale)
@@ -85,7 +131,7 @@ export const THEME_BOOTSTRAP_SCRIPT = `
   root.classList.toggle('dark', dark);
   root.style.colorScheme = dark ? 'dark' : 'light';
   root.dataset.themeMode = theme.mode;
-  ['accent', 'font', 'scale', 'lineSpacing'].forEach(function (key) {
+  ['preset', 'accent', 'font', 'scale', 'lineSpacing'].forEach(function (key) {
     root.dataset[key] = String(theme[key]);
   });
 })();

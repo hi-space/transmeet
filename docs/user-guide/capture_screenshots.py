@@ -215,6 +215,7 @@ require('./infra/node_modules/esbuild').buildSync({
     for var, family in [
         ("geist-sans", "Inter"), ("geist-mono", "JetBrains_Mono"),
         ("noto-sans", "Noto_Sans_KR"), ("ibm-plex", "IBM_Plex_Sans_KR"),
+        ("paper-serif", "Noto_Serif_KR"),
     ]:
         match = re.search(r"font-family:\s*['\"]?(__" + family + r"_\w+)", fonts)
         if match:

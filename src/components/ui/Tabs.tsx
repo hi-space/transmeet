@@ -56,7 +56,7 @@ export default function Tabs<T extends string>({
           }}
         >
           {item.icon && <Icon name={item.icon} className="h-3.5 w-3.5" />}
-          <span>{item.label}</span>
+          <span className="min-w-0 break-words">{item.label}</span>
           {item.badge && value !== item.value && (
             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent-500">
               <span className="sr-only">새 내용</span>

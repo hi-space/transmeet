@@ -227,17 +227,20 @@ export default function VoiceArea({
   return (
     <div
       ref={containerRef}
-      className="scrollbar-thin min-h-0 flex-1 overflow-y-auto bg-subtle"
+      className="voice-scroll scrollbar-thin min-h-0 flex-1 overflow-y-auto bg-subtle"
+      data-voice-size={fontSize}
       onScroll={(event) => {
         const element = event.currentTarget
         followLatest.current =
           element.scrollHeight - element.scrollTop - element.clientHeight < t.autoScrollThreshold
       }}
     >
-      <div className={t.container}>
+      <div className={`voice-stack ${t.container}`}>
         {voiceMessages.map((message) => {
+          const speakerNumber = Number(message.speaker.slice(7))
+          const speakerIndex = (speakerNumber - 1) % SPEAKER_COLORS.length
           const speaker = {
-            ...SPEAKER_COLORS[(Number(message.speaker.slice(7)) - 1) % SPEAKER_COLORS.length],
+            ...SPEAKER_COLORS[speakerIndex],
             label: getSpeakerLabel(message.speaker),
           }
           const playing = playingMessageId === message.id
@@ -246,17 +249,24 @@ export default function VoiceArea({
           return (
             <article
               key={message.id}
-              className={`border bg-panel ${t.card} ${latestActive ? 'border-accent-300 dark:border-accent-600' : 'border-subtle'}`}
+              data-speaker-index={speakerIndex}
+              className={`voice-message border bg-panel ${t.card} ${latestActive ? 'border-accent-300 dark:border-accent-600' : 'border-subtle'}`}
             >
-              <div className={t.inner}>
+              <div className={`voice-message-inner ${t.inner}`}>
                 <div className={`flex items-center justify-between gap-2 ${t.header}`}>
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${speaker.dot}`} />
-                    <span className={`font-semibold ${t.label} ${speaker.color}`}>
+                    <span
+                      aria-hidden="true"
+                      data-speaker-number={String(speakerNumber).padStart(2, '0')}
+                      className={`voice-speaker-dot h-1.5 w-1.5 shrink-0 rounded-full ${speaker.dot}`}
+                    />
+                    <span
+                      className={`voice-speaker-label font-semibold ${t.label} ${speaker.color}`}
+                    >
                       {speaker.label}
                     </span>
                     <time
-                      className={`${t.time} tabular-nums text-muted`}
+                      className={`voice-time ${t.time} tabular-nums text-muted`}
                       dateTime={message.timestamp}
                     >
                       {formatTime(message.timestamp)}
@@ -312,7 +322,7 @@ export default function VoiceArea({
                     )}
                   </div>
                 </div>
-                <p className={`${t.original} break-words text-muted`}>
+                <p className={`voice-original ${t.original} break-words text-muted`}>
                   {message.original}
                   {translating && !message.translation && (
                     <span
@@ -321,7 +331,7 @@ export default function VoiceArea({
                   )}
                 </p>
                 {(message.translation || translating) && (
-                  <p className={`${t.translation} break-words text-ink`}>
+                  <p className={`voice-translation ${t.translation} break-words text-ink`}>
                     {message.translation}
                     {translating && (
                       <span
@@ -337,9 +347,9 @@ export default function VoiceArea({
 
         {showPending && pendingTranscript && (
           <article
-            className={`border border-dashed border-accent-300 bg-panel dark:border-accent-700 ${t.card}`}
+            className={`voice-message border border-dashed border-accent-300 bg-panel dark:border-accent-700 ${t.card}`}
           >
-            <div className={t.inner}>
+            <div className={`voice-message-inner ${t.inner}`}>
               <div className={`flex items-center gap-2 ${t.header}`}>
                 <span className="h-1.5 w-1.5 rounded-full bg-accent-500" />
                 <span className={`${t.label} font-semibold text-accent-700 dark:text-accent-300`}>
@@ -347,12 +357,12 @@ export default function VoiceArea({
                 </span>
                 <span className="text-[0.6875rem] text-muted">듣는 중</span>
               </div>
-              <p className={`${t.original} break-words text-muted`}>
+              <p className={`voice-original ${t.original} break-words text-muted`}>
                 {pendingTranscript.text}
                 <span className={`inline-block animate-pulse bg-current align-middle ${t.caret}`} />
               </p>
               {pendingTranscript.translation && (
-                <p className={`${t.translation} break-words text-ink`}>
+                <p className={`voice-translation ${t.translation} break-words text-ink`}>
                   {pendingTranscript.translation}
                 </p>
               )}

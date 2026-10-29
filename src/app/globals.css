@@ -1,3 +1,5 @@
+@import './theme-presets.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -13,7 +15,7 @@
     --border: 226 232 236;
     --ink: 35 48 60;
     --muted: 97 112 126;
-    --app-font: var(--font-geist-sans), system-ui, sans-serif;
+    --app-font: var(--theme-font);
     --reading-line-height: 1.625;
     --accent-50: 240 247 246;
     --accent-100: 220 237 235;
@@ -222,8 +224,8 @@
   .ui-surface {
     background: rgb(var(--surface-panel));
     border: 1px solid rgb(var(--border));
-    border-radius: 0.875rem;
-    box-shadow: 0 1px 3px rgb(15 23 42 / 0.025);
+    border-radius: var(--panel-radius);
+    box-shadow: var(--panel-shadow);
   }
 
   .ui-panel-header {
@@ -237,6 +239,7 @@
     min-height: 2.25rem;
     padding: 0.5rem 0.75rem;
     color: rgb(var(--muted));
+    border-radius: var(--control-radius);
     border: 1px solid transparent;
     transition:
       color 150ms ease,
@@ -295,6 +298,7 @@
   .ui-input {
     @apply w-full min-w-0 rounded-lg px-3 py-2.5 text-sm;
     color: rgb(var(--ink));
+    border-radius: var(--control-radius);
     background: rgb(var(--surface-panel));
     border: 1px solid rgb(var(--border));
     transition:
@@ -320,12 +324,14 @@
   .ui-tabs {
     @apply flex min-w-0 items-center gap-1 rounded-lg p-1;
     background: rgb(var(--surface-hover) / 0.65);
+    border-radius: var(--control-radius);
   }
 
   .ui-tab {
-    @apply relative inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-3 py-2 text-xs font-medium;
+    @apply relative inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-normal rounded-md px-3 py-2 text-xs font-medium;
     min-height: 2rem;
     color: rgb(var(--muted));
+    border-radius: var(--tab-radius);
     transition:
       background-color 150ms ease,
       color 150ms ease,
@@ -337,17 +343,15 @@
   }
 
   .ui-tab[aria-selected='true'] {
-    color: rgb(var(--accent-700));
-    background: rgb(var(--surface-panel));
+    color: rgb(var(--tab-active-ink));
+    background: rgb(var(--tab-active-bg));
     font-weight: 600;
-    box-shadow:
-      0 1px 3px rgb(15 23 42 / 0.08),
-      inset 0 0 0 1px rgb(var(--border));
+    box-shadow: var(--tab-active-shadow);
   }
 
   .dark .ui-tab[aria-selected='true'] {
-    color: rgb(var(--accent-300));
-    background: rgb(var(--surface-hover));
+    color: rgb(var(--tab-active-ink));
+    background: rgb(var(--tab-active-bg));
   }
 
   .ui-badge {
@@ -382,7 +386,7 @@
     color: rgb(var(--ink));
     background: rgb(var(--surface-panel));
     border: 1px solid rgb(var(--border));
-    border-radius: 1rem;
+    border-radius: var(--dialog-radius);
     box-shadow: 0 24px 80px rgb(0 0 0 / 0.2);
   }
 
@@ -402,7 +406,7 @@
     height: 100dvh;
     max-height: none;
     margin: 0 auto 0 0;
-    border-radius: 0 0.875rem 0.875rem 0;
+    border-radius: 0 var(--dialog-radius) var(--dialog-radius) 0;
     border: 0;
   }
 
@@ -616,7 +620,7 @@
     width: 100%;
     max-height: 92dvh;
     margin: auto 0 0;
-    border-radius: 1rem 1rem 0 0;
+    border-radius: var(--dialog-radius) var(--dialog-radius) 0 0;
     border-bottom: 0;
   }
 }

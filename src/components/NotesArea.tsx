@@ -82,7 +82,7 @@ export default function NotesArea({
         const playing = playingMessageId === message.id
         const translating = message.streamPhase === 'translating' || message.streamPhase === 'stt'
         return (
-          <article key={message.id} className="rounded-xl border border-subtle bg-panel p-3.5">
+          <article key={message.id} className="note-message border border-subtle bg-panel p-3.5">
             <div className="mb-2 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-accent-700 dark:text-accent-300">

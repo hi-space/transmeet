@@ -2,6 +2,7 @@
 
 import { useState, type ReactNode } from 'react'
 import { useTheme } from '@/components/ThemeProvider'
+import ThemePresetPicker from '@/components/ThemePresetPicker'
 import type { Settings } from '@/hooks/useSettings'
 import type { ThemeSettings as ThemePreferences } from '@/lib/theme'
 
@@ -22,9 +23,9 @@ const FONTS: {
 }[] = [
   {
     value: 'default',
-    label: '기본 · Inter',
-    shortLabel: 'Inter',
-    family: 'var(--font-geist-sans), system-ui, sans-serif',
+    label: '테마 기본 글꼴',
+    shortLabel: '기본',
+    family: 'var(--theme-font)',
   },
   {
     value: 'sans',
@@ -81,11 +82,7 @@ function Choice({
       title={label}
       aria-pressed={selected}
       onClick={onClick}
-      className={`flex min-h-10 min-w-0 w-full items-center justify-center rounded-lg border px-1.5 py-1.5 text-xs font-medium transition-colors motion-reduce:transition-none [@media(pointer:coarse)]:min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-600 dark:focus-visible:outline-accent-400 ${
-        selected
-          ? 'border-accent-600 bg-accent-50 text-accent-700 dark:border-accent-400 dark:bg-accent-500/10 dark:text-accent-300'
-          : 'border-slate-200 bg-white/70 text-slate-600 hover:border-slate-400 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:border-slate-500'
-      }`}
+      className="theme-choice flex min-h-10 min-w-0 w-full items-center justify-center px-1.5 py-1.5 text-xs font-medium transition-colors motion-reduce:transition-none [@media(pointer:coarse)]:min-h-[44px]"
     >
       {children ?? (
         <span className="flex min-w-0 items-center justify-center gap-1">
@@ -112,9 +109,7 @@ function SettingRow({
     <div className={`grid gap-2 ${stacked ? '' : 'sm:grid-cols-[6rem_minmax(0,1fr)] sm:gap-4'}`}>
       <p
         id={`${id}-label`}
-        className={`text-[0.8125rem] font-medium leading-5 text-slate-700 dark:text-slate-200 ${
-          stacked ? '' : 'sm:pt-2.5'
-        }`}
+        className={`text-[0.8125rem] font-medium leading-5 text-ink ${stacked ? '' : 'sm:pt-2.5'}`}
       >
         {label}
       </p>
@@ -131,7 +126,7 @@ interface Props {
 }
 
 export default function ThemeSettings({ voiceFontSize, onVoiceFontSizeChange }: Props) {
-  const { theme, updateTheme, resetTheme, storageUnavailable } = useTheme()
+  const { theme, updateTheme, selectPreset, resetTheme, storageUnavailable } = useTheme()
   const [resetComplete, setResetComplete] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
 
@@ -147,6 +142,14 @@ export default function ThemeSettings({ voiceFontSize, onVoiceFontSizeChange }: 
           저장할 수 없어 이번 방문에만 적용됩니다.
         </p>
       )}
+
+      <ThemePresetPicker
+        value={theme.preset}
+        onChange={(preset) => {
+          setResetComplete(false)
+          selectPreset(preset)
+        }}
+      />
 
       <SettingRow id="theme-mode" label="화면 모드">
         <div className="grid grid-cols-3 gap-2">
@@ -169,6 +172,23 @@ export default function ThemeSettings({ voiceFontSize, onVoiceFontSizeChange }: 
 
       <SettingRow id="theme-accent" label="포인트 색상">
         <div className="grid grid-cols-2 gap-2 min-[360px]:grid-cols-3">
+          <div className="col-span-full">
+            <Choice
+              label="테마 기본 색상"
+              selected={theme.accent === 'theme'}
+              onClick={() => update({ accent: 'theme' })}
+            >
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="h-4 w-4 rounded-full border border-black/10"
+                  style={{ backgroundColor: 'rgb(var(--theme-primary))' }}
+                  aria-hidden="true"
+                />
+                테마 기본
+                {theme.accent === 'theme' && <CheckMark className="h-3 w-3" />}
+              </span>
+            </Choice>
+          </div>
           {ACCENTS.map(({ value, label, color }) => (
             <Choice
               key={value}
@@ -279,14 +299,14 @@ export default function ThemeSettings({ voiceFontSize, onVoiceFontSizeChange }: 
         </div>
       </SettingRow>
 
-      <div className="border-t border-slate-200 pt-3 dark:border-slate-800">
+      <div className="border-t border-subtle pt-3">
         <div className="grid grid-cols-2 gap-2">
           <button
             type="button"
             aria-expanded={previewOpen}
             aria-controls="theme-preview"
             onClick={() => setPreviewOpen((open) => !open)}
-            className="flex min-h-10 w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 [@media(pointer:coarse)]:min-h-[44px] hover:bg-slate-50 hover:text-accent-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-accent-300"
+            className="ui-button ui-button-secondary min-h-10 w-full"
           >
             <svg
               viewBox="0 0 24 24"
@@ -309,13 +329,13 @@ export default function ThemeSettings({ voiceFontSize, onVoiceFontSizeChange }: 
               onVoiceFontSizeChange('compact')
               setResetComplete(true)
             }}
-            className="min-h-10 w-full rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 [@media(pointer:coarse)]:min-h-[44px] hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-600 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
+            className="ui-button ui-button-secondary min-h-10 w-full"
           >
             테마 초기화
           </button>
         </div>
         {resetComplete && (
-          <p role="status" className="mt-1 text-[0.6875rem] text-slate-500 dark:text-slate-400">
+          <p role="status" className="mt-1 text-[0.6875rem] text-muted">
             기본 테마로 되돌렸습니다.
           </p>
         )}
@@ -323,17 +343,18 @@ export default function ThemeSettings({ voiceFontSize, onVoiceFontSizeChange }: 
           id="theme-preview"
           aria-label="테마 미리보기"
           hidden={!previewOpen}
-          className="mt-2 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700"
+          data-voice-size={voiceFontSize}
+          className="ui-surface mt-2 overflow-hidden"
         >
-          <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-slate-50 px-3 py-2 dark:border-slate-700 dark:bg-slate-900">
+          <div className="flex items-center justify-between gap-2 border-b border-subtle bg-subtle px-3 py-2">
             <p className="text-xs font-semibold text-accent-700 dark:text-accent-300">
-              화자 1 <span className="ml-1 font-normal text-slate-500">09:41</span>
+              화자 1 <span className="ml-1 font-normal text-muted">09:41</span>
             </p>
             <span className="rounded bg-primary px-1.5 py-0.5 text-[0.625rem] font-medium text-primary-foreground">
               번역 완료
             </span>
           </div>
-          <div className="bg-white/80 p-3 dark:bg-slate-950/50">
+          <div className="bg-panel p-3">
             <div
               className={`max-h-40 overflow-y-auto break-words leading-reading ${
                 {
@@ -344,12 +365,8 @@ export default function ThemeSettings({ voiceFontSize, onVoiceFontSizeChange }: 
                 }[voiceFontSize]
               }`}
             >
-              <p className="text-slate-800 dark:text-slate-100">
-                Let&apos;s make great things together.
-              </p>
-              <p className="mt-1 text-slate-600 dark:text-slate-400">
-                함께 멋진 일을 만들어 봅시다.
-              </p>
+              <p className="voice-original text-muted">Let&apos;s make great things together.</p>
+              <p className="voice-translation mt-1 text-ink">함께 멋진 일을 만들어 봅시다.</p>
             </div>
           </div>
         </section>

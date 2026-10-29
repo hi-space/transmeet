@@ -32,7 +32,7 @@ export default function NotesComposer({
         if (value.trim() && !isPending && !disabled) onSend()
       }}
     >
-      <div className="flex items-end gap-2 rounded-xl border border-subtle bg-subtle p-2 transition-colors focus-within:border-accent-400 focus-within:ring-2 focus-within:ring-accent-500/10">
+      <div className="notes-composer-input flex items-end gap-2 border border-subtle bg-subtle p-2 transition-colors focus-within:border-accent-400 focus-within:ring-2 focus-within:ring-accent-500/10">
         <textarea
           aria-label="내 메모 입력"
           value={value}

@@ -181,6 +181,7 @@ export default function SettingsPanel({
       <div className="shrink-0 px-5 pb-3">
         <Tabs
           label="설정 분류"
+          className="[&_.ui-tab]:px-1 sm:[&_.ui-tab]:px-3 [&_.ui-tab_svg]:hidden sm:[&_.ui-tab_svg]:block"
           value={activeTab}
           onChange={setActiveTab}
           panelId="settings-content"

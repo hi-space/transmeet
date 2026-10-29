@@ -34,18 +34,18 @@ const config: Config = {
       lineHeight: {
         reading: 'var(--reading-line-height)',
       },
-      typography: ({ theme }: { theme: (path: string) => string }) => ({
+      typography: {
         DEFAULT: {
           css: {
-            '--tw-prose-body': theme('colors.slate.600'),
+            '--tw-prose-body': 'rgb(var(--muted))',
             '--tw-prose-headings': 'rgb(var(--accent-700))',
             '--tw-prose-links': 'rgb(var(--accent-700))',
-            '--tw-prose-bold': theme('colors.slate.700'),
+            '--tw-prose-bold': 'rgb(var(--ink))',
             '--tw-prose-bullets': 'rgb(var(--accent-500))',
             '--tw-prose-counters': 'rgb(var(--accent-600))',
-            '--tw-prose-th-borders': theme('colors.slate.200'),
-            '--tw-prose-td-borders': theme('colors.slate.100'),
-            '--tw-prose-hr': theme('colors.slate.200'),
+            '--tw-prose-th-borders': 'rgb(var(--border))',
+            '--tw-prose-td-borders': 'rgb(var(--border) / 0.6)',
+            '--tw-prose-hr': 'rgb(var(--border))',
             lineHeight: 'var(--reading-line-height)',
             h1: {
               fontSize: '1rem',
@@ -149,18 +149,18 @@ const config: Config = {
         },
         invert: {
           css: {
-            '--tw-prose-body': theme('colors.slate.300'),
+            '--tw-prose-body': 'rgb(var(--muted))',
             '--tw-prose-headings': 'rgb(var(--accent-400))',
             '--tw-prose-links': 'rgb(var(--accent-300))',
-            '--tw-prose-bold': theme('colors.slate.200'),
+            '--tw-prose-bold': 'rgb(var(--ink))',
             '--tw-prose-bullets': 'rgb(var(--accent-400))',
             '--tw-prose-counters': 'rgb(var(--accent-400))',
-            '--tw-prose-th-borders': theme('colors.slate.700'),
-            '--tw-prose-td-borders': theme('colors.slate.800'),
-            '--tw-prose-hr': theme('colors.slate.800'),
+            '--tw-prose-th-borders': 'rgb(var(--border))',
+            '--tw-prose-td-borders': 'rgb(var(--border) / 0.6)',
+            '--tw-prose-hr': 'rgb(var(--border))',
           },
         },
-      }),
+      },
     },
   },
   plugins: [typography],

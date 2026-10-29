@@ -83,7 +83,7 @@ export default function SummaryPanel({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-panel">
+    <div className="meeting-summary flex min-h-0 flex-1 flex-col bg-panel">
       <div className="grid shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-1 border-b border-subtle px-2 py-1 lg:block lg:border-0 lg:p-0">
         {onStyleChange && (
           <div className="min-w-0 px-1 lg:shrink-0 lg:border-b lg:border-subtle lg:px-3 lg:py-3">
@@ -182,7 +182,7 @@ export default function SummaryPanel({
         )}
       </div>
       {summary ? (
-        <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto p-4">
+        <div className="summary-scroll scrollbar-thin min-h-0 flex-1 overflow-y-auto p-4">
           <div
             aria-label="생성된 요약 방식"
             className="mb-4 flex items-center gap-1.5 text-[0.6875rem] font-medium text-muted"
@@ -193,7 +193,7 @@ export default function SummaryPanel({
           </div>
           <div
             ref={contentRef}
-            className="prose max-w-none break-words text-sm leading-reading dark:prose-invert [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 prose-strong:text-slate-800 dark:prose-strong:text-slate-100"
+            className="summary-prose prose max-w-none break-words text-sm leading-reading dark:prose-invert [&>*:first-child]:mt-0 [&>*:last-child]:mb-0"
           >
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{summary}</ReactMarkdown>
             {isSummarizing && (

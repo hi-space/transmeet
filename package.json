@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "test:theme": "node --experimental-strip-types --experimental-default-type=module --test tests/theme.test.mjs",
+    "test:theme:browser": "python3 tests/theme_browser.py",
     "test:settings": "node --experimental-strip-types --experimental-default-type=module --test tests/theme.test.mjs tests/translationModels.test.mjs tests/sttProviders.test.mjs tests/speechLanguages.test.mjs",
     "test:ui": "node --experimental-strip-types --experimental-default-type=module --test tests/theme.test.mjs tests/translationModels.test.mjs tests/sttProviders.test.mjs tests/speechLanguages.test.mjs tests/workspace.test.mjs tests/speakers.test.mjs tests/meetingEnd.test.mjs tests/meetingBrief.test.mjs tests/meetingList.test.mjs tests/emailVerification.test.mjs",
     "test:speech": "node --experimental-strip-types --experimental-default-type=module --test tests/speechLanguages.test.mjs",

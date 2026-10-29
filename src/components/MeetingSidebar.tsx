@@ -226,7 +226,7 @@ export default function MeetingSidebar({
 
   if (isRail) {
     return (
-      <div className="flex h-full w-16 flex-col items-center gap-3 border-r border-subtle bg-subtle py-4">
+      <div className="meeting-sidebar flex h-full w-16 flex-col items-center gap-3 border-r border-subtle bg-subtle py-4">
         <button
           type="button"
           onClick={toggleRail}
@@ -240,7 +240,7 @@ export default function MeetingSidebar({
           type="button"
           onClick={onNewMeeting}
           disabled={isCreating}
-          className="ui-icon-button ui-button-primary"
+          className="sidebar-new-meeting ui-icon-button ui-button-secondary"
           aria-label="새 회의"
           title="새 회의"
         >
@@ -256,7 +256,7 @@ export default function MeetingSidebar({
 
   return (
     <div
-      className="relative flex h-full w-[17rem] max-w-full flex-col border-r border-subtle bg-subtle lg:w-[var(--sidebar-width)]"
+      className="meeting-sidebar relative flex h-full w-[17rem] max-w-full flex-col border-r border-subtle bg-subtle lg:w-[var(--sidebar-width)]"
       data-sidebar-width={width}
       style={{ '--sidebar-width': `${width}px` } as CSSProperties}
     >
@@ -308,7 +308,7 @@ export default function MeetingSidebar({
             onClose()
           }}
           disabled={isCreating}
-          className="ui-button ui-button-secondary w-full justify-start gap-2.5 px-3 text-xs"
+          className="sidebar-new-meeting ui-button ui-button-secondary w-full justify-start gap-2.5 px-3 text-xs"
         >
           <Icon
             name={isCreating ? 'loader' : 'plus'}
@@ -353,7 +353,10 @@ export default function MeetingSidebar({
           </div>
         )}
         {loadError && (
-          <p role="alert" className="px-3 py-4 text-xs text-red-600 dark:text-red-400">
+          <p
+            role="alert"
+            className="sidebar-status-error px-3 py-4 text-xs text-red-600 dark:text-red-400"
+          >
             {loadError}
           </p>
         )}
@@ -386,17 +389,13 @@ export default function MeetingSidebar({
                       type="button"
                       onClick={() => toggleGroup(group.key)}
                       aria-expanded={!collapsed}
-                      className="flex min-h-11 w-full items-center gap-1.5 rounded-lg border border-subtle bg-[rgb(var(--surface-hover))] px-2 text-left text-xs font-semibold text-ink transition-colors hover:border-slate-300 dark:hover:border-slate-600"
+                      className="sidebar-group-button flex min-h-11 w-full items-center gap-1.5 border border-subtle bg-[rgb(var(--surface-hover))] px-2 text-left text-xs font-semibold text-ink transition-colors hover:border-slate-300 dark:hover:border-slate-600"
                     >
                       <Icon
                         name="chevronDown"
                         className={`h-3 w-3 shrink-0 text-muted transition-transform ${collapsed ? '-rotate-90' : ''}`}
                       />
-                      <span
-                        className={`shrink-0 ${group.key === 'today' ? 'text-accent-700 dark:text-accent-300' : ''}`}
-                      >
-                        {group.label}
-                      </span>
+                      <span className="shrink-0 text-ink">{group.label}</span>
                       {groupDate && (
                         <span className="min-w-0 truncate text-[0.6875rem] font-normal text-muted">
                           {groupDate}
@@ -418,7 +417,8 @@ export default function MeetingSidebar({
                       return (
                         <div
                           key={meeting.id}
-                          className={`group relative mb-1 rounded-lg border transition-colors ${active ? 'border-accent-200/70 bg-accent-50 dark:border-accent-500/25 dark:bg-accent-500/10' : 'border-transparent hover:bg-slate-100 dark:hover:bg-slate-800/60'}`}
+                          data-active={active}
+                          className={`meeting-list-item group relative mb-1 border transition-colors ${active ? '' : 'border-transparent hover:bg-[rgb(var(--surface-hover))]'}`}
                         >
                           {editingId === meeting.id ? (
                             <form
@@ -499,14 +499,14 @@ export default function MeetingSidebar({
                                   onClose()
                                 }}
                                 aria-current={active ? 'page' : undefined}
-                                className="group/meeting w-full rounded-lg px-3 py-2.5 text-left"
+                                className="group/meeting w-full rounded-[var(--message-radius)] px-3 py-2.5 text-left"
                               >
                                 <div className="flex min-w-0 items-center gap-2 pr-7">
                                   <span
-                                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${active ? 'bg-accent-600 dark:bg-accent-400' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${active ? 'bg-[rgb(var(--ink))]' : 'bg-[rgb(var(--muted))]'}`}
                                   />
                                   <span
-                                    className={`truncate text-[0.8125rem] font-medium ${active ? 'text-accent-900 dark:text-accent-100' : 'text-ink'}`}
+                                    className="truncate text-[0.8125rem] font-medium text-ink"
                                     title={meeting.title}
                                   >
                                     {meeting.title}
@@ -553,7 +553,7 @@ export default function MeetingSidebar({
                                 </button>
                                 {menuId === meeting.id && (
                                   <div
-                                    className="ui-surface absolute right-0 top-full z-20 mt-1 flex w-40 flex-col p-1 shadow-lg"
+                                    className="sidebar-menu ui-surface absolute right-0 top-full z-20 mt-1 flex w-40 flex-col p-1 shadow-lg"
                                     role="group"
                                     aria-label="회의 작업"
                                   >
@@ -591,7 +591,7 @@ export default function MeetingSidebar({
                                         setMenuId(null)
                                         setConfirmId(meeting.id)
                                       }}
-                                      className="ui-button justify-start text-red-600 dark:text-red-400"
+                                      className="sidebar-danger ui-button justify-start text-red-600 dark:text-red-400"
                                     >
                                       <Icon name="trash" />
                                       회의 삭제

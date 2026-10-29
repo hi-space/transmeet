@@ -1,5 +1,11 @@
 import type { Metadata, Viewport } from 'next'
-import { IBM_Plex_Sans_KR, Inter, JetBrains_Mono, Noto_Sans_KR } from 'next/font/google'
+import {
+  IBM_Plex_Sans_KR,
+  Inter,
+  JetBrains_Mono,
+  Noto_Sans_KR,
+  Noto_Serif_KR,
+} from 'next/font/google'
 import './globals.css'
 import ThemeProvider from '@/components/ThemeProvider'
 import { AuthProvider } from '@/context/AuthContext'
@@ -25,6 +31,14 @@ const notoSans = Noto_Sans_KR({
 const ibmPlex = IBM_Plex_Sans_KR({
   variable: '--font-ibm-plex',
   weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+  preload: false,
+})
+
+const paperSerif = Noto_Serif_KR({
+  variable: '--font-paper-serif',
+  weight: ['400', '600', '700'],
   subsets: ['latin'],
   display: 'swap',
   preload: false,
@@ -65,7 +79,7 @@ export default function RootLayout({
   return (
     <html
       lang="ko"
-      className={`${inter.variable} ${jetbrainsMono.variable} ${notoSans.variable} ${ibmPlex.variable}`}
+      className={`${inter.variable} ${jetbrainsMono.variable} ${notoSans.variable} ${ibmPlex.variable} ${paperSerif.variable}`}
       suppressHydrationWarning
     >
       <head>
