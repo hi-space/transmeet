@@ -27,7 +27,9 @@ class InvokeModelCommand extends Command {}
 
 const generatedTitle = '제품 출시 일정 확정'
 
-function setup({ deleted = false } = {}) {
+// 실제 Haiku 5.5 응답처럼 thinking 블록이 텍스트보다 앞에 온다. thinkingOnly 는 max_tokens 를
+// 생각에 다 써서 텍스트 블록 없이 끝난 응답이다.
+function setup({ deleted = false, thinkingOnly = false } = {}) {
   process.env.MESSAGES_TABLE = 'transmeet-messages'
   let item
   let storedMessages = []
@@ -78,11 +80,16 @@ function setup({ deleted = false } = {}) {
         async send(command) {
           if (command instanceof InvokeModelCommand) {
             modelRequests.push(JSON.parse(command.input.body))
-            const body = JSON.stringify({ content: [{ text: generatedTitle }] })
+            const content = [{ type: 'thinking', thinking: '', signature: 'sig' }]
+            if (!thinkingOnly) content.push({ type: 'text', text: generatedTitle })
+            const body = JSON.stringify({ content, stop_reason: thinkingOnly ? 'max_tokens' : 'end_turn' })
             return { body: new TextEncoder().encode(body) }
           }
+          modelRequests.push(command.input)
           const text = command.input.inferenceConfig.maxTokens === 64 ? generatedTitle : '회의 요약'
-          return { output: { message: { content: [{ text }] } } }
+          const content = [{ reasoningContent: { reasoningText: { text: '', signature: 'sig' } } }]
+          if (!thinkingOnly) content.push({ text })
+          return { output: { message: { content } } }
         }
       },
     },
@@ -179,6 +186,26 @@ test('POST /meetings/{id}/title reads only the first 20 stored messages', async 
   assert.ok(prompt.includes('발언-19-끝'))
   assert.ok(!prompt.includes('발언-20-끝'))
   assert.equal(session.updates.at(-1).ConditionExpression, 'attribute_exists(meetingId)')
+  // 제목 한 줄에 생각은 필요 없다 — 켜 두면 max_tokens 를 생각에 다 써서 빈 제목이 나온다
+  assert.deepEqual(session.modelRequests[0].thinking, { type: 'disabled' })
+})
+
+test('POST /meetings/{id}/title never saves an empty title', async () => {
+  const session = setup({ thinkingOnly: true })
+  await session.create()
+  const res = await session.generateTitle([
+    { meetingId: 'm', sk: 't#0', id: 'message-0', speaker: 'A', originalText: '안녕하세요' },
+  ])
+  assert.equal(res.statusCode, 502)
+  assert.equal(session.updates.filter((u) => u.UpdateExpression.startsWith('SET title')).length, 0)
+})
+
+test('automatic title after summary disables thinking', async () => {
+  const session = setup()
+  await session.create()
+  await session.summarize()
+  const titleRequest = session.modelRequests.find((r) => r.inferenceConfig?.maxTokens === 64)
+  assert.deepEqual(titleRequest.additionalModelRequestFields, { thinking: { type: 'disabled' } })
 })
 
 test('title generation and summary return 404 when the meeting was deleted meanwhile', async () => {

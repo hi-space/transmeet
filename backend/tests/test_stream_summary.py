@@ -41,7 +41,11 @@ class FakeBedrock:
 
     async def converse(self, **kwargs):
         self.title_calls.append(kwargs)
-        return {"output": {"message": {"content": [{"text": "제품 출시 일정 확정"}]}}}
+        # 실제 Haiku 5.5 처럼 생각 블록이 텍스트보다 먼저 온다
+        return {"output": {"message": {"content": [
+            {"reasoningContent": {"reasoningText": {"text": "", "signature": "sig"}}},
+            {"text": "제품 출시 일정 확정"},
+        ]}}}
 
 
 class FakeDDB:
@@ -439,7 +443,7 @@ async def test_auto_title_for_deleted_meeting_warns(monkeypatch, caplog):
     install(monkeypatch, bedrock, ddb)
 
     with caplog.at_level(logging.WARNING):
-        title = await ws_handler._generate_title_if_default("m1", "2026. 10. 28. 오전 9:05:06", ["[me] 안녕"], "x")
+        title = await ws_handler._generate_title_if_default("m1", "2026. 10. 28. 오전 9:05:06", ["[me] 안녕"])
 
     assert title is None
     assert ddb.updates[0]["ConditionExpression"] == "attribute_exists(meetingId)"
@@ -463,3 +467,16 @@ async def test_custom_label_summary_for_deleted_meeting_reports_error(monkeypatc
     assert "summaryGeneratedLabel = :label" in ddb.updates[0]["UpdateExpression"]
     assert ddb.updates[0]["ConditionExpression"] == "attribute_exists(meetingId)"
     assert any(r.levelno == logging.WARNING and "meeting does not exist" in r.getMessage() for r in caplog.records)
+
+
+async def test_auto_title_reads_the_text_block_with_thinking_disabled(monkeypatch):
+    """요약 모델이 무엇이든 제목은 생각을 끈 번역 모델로 만든다 — 생각에 토큰을 다 쓰면 빈 제목이 된다."""
+    bedrock, ddb = FakeBedrock([]), FakeDDB()
+    install(monkeypatch, bedrock, ddb)
+
+    title = await ws_handler._generate_title_if_default("m1", "2026. 10. 28. 오전 9:05:06", ["[me] 안녕"])
+
+    assert title == "제품 출시 일정 확정"
+    call = bedrock.title_calls[0]
+    assert call["modelId"] == ws_handler.config.BEDROCK_MODEL_ID
+    assert call["additionalModelRequestFields"] == {"thinking": {"type": "disabled"}}

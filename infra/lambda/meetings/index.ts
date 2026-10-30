@@ -247,6 +247,9 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
               body: JSON.stringify({
                 anthropic_version: 'bedrock-2023-05-31',
                 max_tokens: 64,
+                // Haiku 5.5 는 기본으로 생각을 켜는데, 발언이 지저분하면 64토큰을 생각에 다 써서
+                // 텍스트 없이 끝난다(빈 제목). 제목 한 줄에는 생각이 필요 없다.
+                thinking: { type: 'disabled' },
                 messages: [
                   {
                     role: 'user',
@@ -259,9 +262,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
           const bedrockResult = JSON.parse(
             Buffer.from(bedrockRes.body as Uint8Array).toString('utf-8')
-          ) as { content?: Array<{ text: string }> }
+          ) as { content?: Array<{ type?: string; text?: string }> }
 
-          const title = (bedrockResult.content?.[0]?.text ?? '').trim()
+          const title = (bedrockResult.content?.find((block) => block.type === 'text')?.text ?? '').trim()
+          if (!title) {
+            // 빈 제목으로 덮어쓰지 않는다 — 기존 제목을 남기고 실패로 알린다
+            console.error('Title generation returned no text:', meetingId)
+            return respond(502, { error: 'Title generation returned no text' })
+          }
 
           try {
             await ddb.send(

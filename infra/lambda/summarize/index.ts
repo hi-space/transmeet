@@ -69,10 +69,12 @@ async function maybeGenerateTitle(args: {
           },
         ],
         inferenceConfig: { maxTokens: 64 },
+        // 생각이 켜져 있으면 64토큰을 생각에 다 써서 제목이 비는 경우가 있다.
+        additionalModelRequestFields: { thinking: { type: 'disabled' } },
       })
     );
 
-    const title = (res.output?.message?.content?.[0]?.text ?? '').trim();
+    const title = (res.output?.message?.content?.find((block) => block.text)?.text ?? '').trim();
     if (!title) return null;
 
     await ddb.send(

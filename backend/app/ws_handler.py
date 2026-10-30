@@ -1267,7 +1267,6 @@ async def _generate_title_if_default(
     meeting_id: str,
     current_title: str,
     transcript_lines: List[str],
-    model_id: str,
 ) -> Optional[str]:
     """Generate and persist an AI title only when the current title is the auto-default.
 
@@ -1284,12 +1283,16 @@ async def _generate_title_if_default(
             f"제목만 출력하세요.\n\n{head}"
         )
         async with bedrock_client() as br:
+            # 요약 모델(Opus 5.5)은 생각을 끌 수 없고, 켜 두면 64토큰을 생각에 다 써서 제목이
+            # 빈다. 제목 한 줄은 번역 모델(Haiku 5.5)에 생각을 끄고 맡긴다.
             resp = await br.converse(
-                modelId=model_id,
+                modelId=config.BEDROCK_MODEL_ID,
                 messages=[{"role": "user", "content": [{"text": prompt}]}],
                 inferenceConfig={"maxTokens": 64},
+                additionalModelRequestFields={"thinking": {"type": "disabled"}},
             )
-        title = (resp.get("output", {}).get("message", {}).get("content", [{}])[0].get("text", "") or "").strip()
+        blocks = resp.get("output", {}).get("message", {}).get("content", [])
+        title = next((b["text"] for b in blocks if b.get("text")), "").strip()
         if not title:
             return None
         async with dynamodb_client() as ddb:
@@ -1462,7 +1465,7 @@ async def _stream_summary(
                             "error": "미팅이 삭제되어 요약을 저장하지 못했습니다"})
                 return None
 
-        new_title = prepared_title or await _generate_title_if_default(meeting_id, current_title, lines, model_id)
+        new_title = prepared_title or await _generate_title_if_default(meeting_id, current_title, lines)
 
         done_payload: Dict[str, Any] = {
             "type": "summary_stream", "phase": "done", "meetingId": meeting_id,
@@ -1647,7 +1650,7 @@ async def _end_meeting(
                 async with dynamodb_client() as ddb:
                     messages = await message_store.load_messages(ddb, meeting_id)
                 prepared_title = await _generate_title_if_default(
-                    meeting_id, title, transcript_lines(messages or inline_messages or []), state.model_id,
+                    meeting_id, title, transcript_lines(messages or inline_messages or []),
                 )
             except Exception:
                 logger.exception("[title] preparing automatic page title failed meeting_id=%s", meeting_id)
