@@ -67,7 +67,7 @@ def test_plan_pins_seoul_artifact_gpu_ami_one_warm_host_and_network_isolation():
         "S3DataType": "S3Prefix", "CompressionType": "None",
     }
     assert model["EnableNetworkIsolation"] is True
-    assert variant["InstanceType"] == "ml.g6.2xlarge"
+    assert variant["InstanceType"] == "ml.g6e.xlarge"
     assert variant["InitialInstanceCount"] == 1
     assert variant["InferenceAmiVersion"] == "al2023-ami-sagemaker-inference-gpu-4-1"
     assert "ManagedInstanceScaling" not in variant

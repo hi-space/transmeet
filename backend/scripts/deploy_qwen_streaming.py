@@ -27,7 +27,7 @@ MODEL_ENV = {
 }
 
 
-def make_plan(image, role, *, region=REGION, endpoint="transmeet-qwen-streaming", instance="ml.g6.2xlarge"):
+def make_plan(image, role, *, region=REGION, endpoint="transmeet-qwen-streaming", instance="ml.g6e.xlarge"):
     if region != REGION:
         raise ValueError("Only the verified ap-northeast-2 artifact region is supported")
     if not re.fullmatch(
@@ -37,8 +37,10 @@ def make_plan(image, role, *, region=REGION, endpoint="transmeet-qwen-streaming"
         raise ValueError("An immutable ECR @sha256 image in the selected region is required")
     if not re.fullmatch(r"transmeet-qwen-streaming(?:-[a-z0-9-]{1,25})?", endpoint):
         raise ValueError("Only a scoped transmeet-qwen-streaming endpoint can be created")
-    if instance not in ("ml.g6.xlarge", "ml.g6.2xlarge"):
-        raise ValueError("Only the verified ml.g6.xlarge and ml.g6.2xlarge instances are supported")
+    # g6.xlarge/g6.2xlarge 는 같은 L4 한 장이라 실회의에서 디코더가 밀렸다(GPU 최대 95%, 2026-10-30).
+    # 기본은 L40S 한 장인 g6e.xlarge 다.
+    if instance not in ("ml.g6.xlarge", "ml.g6.2xlarge", "ml.g5.xlarge", "ml.g6e.xlarge"):
+        raise ValueError("Only ml.g6.xlarge, ml.g6.2xlarge, ml.g5.xlarge and ml.g6e.xlarge are supported")
     identity = json.dumps(
         [image, role, region, endpoint, instance, ARTIFACT, INFERENCE_AMI, MODEL_ENV],
         sort_keys=True, separators=(",", ":"),
@@ -145,7 +147,7 @@ def main():
     parser.add_argument("--image", required=True, help="Immutable regional ECR image URI including @sha256")
     parser.add_argument("--role", required=True)
     parser.add_argument("--endpoint", default="transmeet-qwen-streaming")
-    parser.add_argument("--instance", default="ml.g6.2xlarge")
+    parser.add_argument("--instance", default="ml.g6e.xlarge")
     parser.add_argument("--region", default=REGION)
     parser.add_argument("--apply", action="store_true")
     parser.add_argument("--update", action="store_true", help="Permit updating only the scoped Qwen streaming endpoint")
