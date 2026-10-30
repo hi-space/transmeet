@@ -121,20 +121,70 @@ async def test_slow_translation_does_not_block_new_hypotheses_or_change_old_sett
     assert processed == [("old", "ko", "en", "ko")]
 
 
-async def test_stream_failure_blocks_further_audio_and_releases_capacity(streaming):
+async def test_transient_stream_error_reconnects_without_stopping_the_recording(streaming):
+    """Qwen 'speech stream timed out' 같은 일시 오류로 녹음 전체가 멈추면 안 된다."""
+    ws = FakeWS()
+    state = ws_handler.ConnectionState(ws=ws, stt_provider="nemotron", stt_ready=True)
+    ws_handler.capacity.acquire("nemotron", "recording")
+    try:
+        ws_handler._start_nemotron_streaming(state, ws, "recording")
+        failed = state.speech_stream
+        await eventually(lambda: streaming.connections)
+        await streaming.connections[0].emit({"type": "error", "message": "speech stream timed out"})
+        await eventually(lambda: len(streaming.connections) == 2)
+        assert state.speech_stream is not failed
+        assert state.stt_ready is True
+        assert "recording" in ws_handler.capacity.sessions["nemotron"]
+        assert not any(event.get("recordingBlocked") for event in ws.sent)
+        assert not any(event["type"] == "error" for event in ws.sent)
+        await state.speech_stream.send_audio(b"\x01\x02")
+        await eventually(lambda: streaming.connections[1].audio)
+    finally:
+        await ws_handler._stop_recording(state, ws, "recording")
+        ws_handler.capacity.release("nemotron", "recording")
+
+
+async def test_repeated_stream_failures_block_further_audio_and_release_capacity(streaming):
     ws = FakeWS()
     state = ws_handler.ConnectionState(ws=ws, stt_provider="nemotron", stt_ready=True)
     ws_handler.capacity.acquire("nemotron", "failed-recording")
     ws_handler._start_nemotron_streaming(state, ws, "failed-recording")
-    await eventually(lambda: streaming.connections)
-    await streaming.connections[0].emit({"type": "error", "message": "GPU failed"})
+    for attempt in range(ws_handler.STREAM_MAX_RESTARTS + 1):
+        await eventually(lambda: len(streaming.connections) == attempt + 1)
+        assert state.stt_ready is True
+        await streaming.connections[attempt].emit({"type": "error", "message": "GPU failed"})
+    await eventually(lambda: state.stt_ready is False)
     await eventually(lambda: state.nemotron_stream.done)
-    assert state.stt_ready is False
+    assert len(streaming.connections) == ws_handler.STREAM_MAX_RESTARTS + 1
     assert "failed-recording" not in ws_handler.capacity.sessions["nemotron"]
     assert any(event["type"] == "error" for event in ws.sent)
     assert any(event["type"] == "stt_status" and event.get("recordingBlocked")
                and event.get("streaming") and event["status"] == "error" for event in ws.sent)
-    assert streaming.connections[0].closed
+    assert all(connection.closed for connection in streaming.connections)
+
+
+async def test_a_final_resets_the_restart_budget(streaming, monkeypatch):
+    ws = FakeWS()
+    state = ws_handler.ConnectionState(ws=ws, stt_provider="nemotron", stt_ready=True)
+
+    async def process(*args):
+        pass
+
+    monkeypatch.setattr(ws_handler, "_process_segment", process)
+    ws_handler._start_nemotron_streaming(state, ws, "recording")
+    try:
+        # 인식이 정상으로 돌아온 뒤의 오류는 새 오류다 — 예산을 처음부터 다시 쓴다.
+        for attempt in range(ws_handler.STREAM_MAX_RESTARTS + 2):
+            await eventually(lambda: len(streaming.connections) == attempt + 1)
+            await streaming.connections[attempt].emit({
+                "type": "final", "utterance_id": 1, "text": f"안건 {attempt}", "language": "ko-KR",
+            })
+            await streaming.connections[attempt].emit({"type": "error", "message": "decoder behind"})
+        await eventually(lambda: len(streaming.connections) == ws_handler.STREAM_MAX_RESTARTS + 3)
+        assert state.stt_ready is True
+        assert not any(event.get("recordingBlocked") for event in ws.sent)
+    finally:
+        await ws_handler._stop_recording(state, ws, "recording")
 
 
 async def test_old_stream_error_does_not_block_or_release_its_replacement(streaming):

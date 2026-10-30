@@ -131,16 +131,6 @@ LANG_CODE_MAP: dict = {
     "ko": "ko-KR",
 }
 
-# Speaker partitioning supports Korean streaming and language identification too.
-DIARIZATION_SUPPORTED_LANGS = {"en-US", "ko-KR", "de-DE", "es-US", "fr-FR", "it-IT", "pt-BR"}
-
-
-def _speaker_key(label: Optional[str], default_speaker: str = "speaker1") -> str:
-    """Preserve numeric streaming IDs and spk_N labels, including speakers beyond two."""
-    match = re.fullmatch(r"(?:spk_)?([0-9]+)", str(label) if label is not None else "")
-    return f"speaker{int(match[1]) + 1}" if match else default_speaker
-
-
 def _is_auto(source_lang: Optional[str]) -> bool:
     """sourceLang 이 자동 감지 모드인지."""
     return source_lang in ("auto", "", None)
@@ -191,6 +181,8 @@ class ConnectionState:
     # 세션 시작 연속 실패 횟수 / 다음 재시도 허용 시각 (event-loop time)
     transcribe_fail_count: int = 0
     transcribe_retry_at: float = 0.0
+    # SageMaker 스트리밍: 인식 결과 없이 연달아 다시 연결한 횟수
+    stream_restarts: int = 0
     # Transcribe mode: deferred segment accumulation (merges consecutive finals before translating)
     seg_buffer: List[tuple] = field(default_factory=list)  # [(text, speaker, detected_lang)]
     seg_flush_task: Optional[asyncio.Task] = None
@@ -420,71 +412,6 @@ def combine_wav_chunks(chunks: List[bytes]) -> bytes:
         data_size,
     )
     return header + pcm
-
-
-def _extract_segments(
-    alt, use_speaker_labels: bool, default_speaker: str
-) -> list[tuple[str, str]]:
-    """
-    Parse a Transcribe alternative into (text, speaker_key) segments.
-
-    When speaker labels are available, groups consecutive word-level items
-    by speaker. Otherwise returns a single segment with default_speaker.
-    """
-    items = alt.items or []
-    transcript_text = (alt.transcript or "").strip()
-
-    logger.debug(
-        "[_extract_segments] use_speaker_labels=%s items_count=%d transcript=%r",
-        use_speaker_labels, len(items), transcript_text,
-    )
-
-    if not use_speaker_labels or not items:
-        return [(transcript_text, default_speaker)] if transcript_text else []
-
-    segments: list[tuple[str, str]] = []
-    current_speaker: Optional[str] = None
-    current_words: list[str] = []
-    for item in items:
-        itype = getattr(item, "item_type", "") or ""
-        content = getattr(item, "content", "") or ""
-        if not content:
-            continue
-        if itype == "punctuation":
-            if current_words:
-                current_words[-1] += content
-        elif itype == "pronunciation":
-            # A missing label is not evidence of a speaker change. Normalize before
-            # grouping so numeric and spk_N forms cannot split the same speaker.
-            speaker = _speaker_key(
-                getattr(item, "speaker", None), current_speaker or default_speaker,
-            )
-            if current_speaker is not None and speaker != current_speaker:
-                text = " ".join(current_words).strip()
-                if text:
-                    segments.append((text, current_speaker))
-                current_words = []
-            current_speaker = speaker
-            current_words.append(content)
-    if current_words and current_speaker is not None:
-        text = " ".join(current_words).strip()
-        if text:
-            segments.append((text, current_speaker))
-    logger.debug("[_extract_segments] result segments=%s", [(t[:30], s) for t, s in segments])
-    return segments or ([(transcript_text, default_speaker)] if transcript_text else [])
-
-
-def _merge_consecutive_same_speaker(
-    segments: list[tuple[str, str]]
-) -> list[tuple[str, str]]:
-    """Merge adjacent segments from the same speaker into one."""
-    merged: list[tuple[str, str]] = []
-    for text, speaker in segments:
-        if merged and merged[-1][1] == speaker:
-            merged[-1] = (merged[-1][0] + " " + text, speaker)
-        else:
-            merged.append((text, speaker))
-    return merged
 
 
 async def _process_segment(
@@ -753,7 +680,6 @@ async def _run_transcribe_streaming(
         if lang_code not in ("auto", "", None)
         else None
     )
-    use_speaker_labels = _is_auto(lang_code) or mapped_lang in DIARIZATION_SUPPORTED_LANGS
 
     kwargs: dict = {"media_sample_rate_hz": 16000, "media_encoding": "pcm"}
     if _is_auto(lang_code):
@@ -767,17 +693,16 @@ async def _run_transcribe_streaming(
         kwargs["language_options"] = ["en-US", "ko-KR"]
     else:
         kwargs["language_code"] = mapped_lang
-    if use_speaker_labels:
-        kwargs["show_speaker_label"] = True
+    # 화자 분리(show_speaker_label)는 쓰지 않는다 — 실제 회의에서 화자 경계가 자주
+    # 틀려 한 문장이 쪼개지고 화자가 뒤섞였다. 모든 발화는 녹음 시작 시 화자로 남는다.
 
     try:
         client = TranscribeStreamingClient(region=config.REGION)
         stream = await client.start_stream_transcription(**kwargs)
         logger.info(
             "[Transcribe] Session started: connection_id=%s sourceLang=%s mapped_lang=%s "
-            "show_speaker_label=%s kwargs_keys=%s",
-            connection_id, lang_code, mapped_lang or "auto",
-            use_speaker_labels, list(kwargs.keys()),
+            "kwargs_keys=%s",
+            connection_id, lang_code, mapped_lang or "auto", list(kwargs.keys()),
         )
         state.transcribe_fail_count = 0
     except Exception:
@@ -875,8 +800,7 @@ async def _run_transcribe_streaming(
                             pass  # WS may be closing
                     else:
                         # Final sentence → accumulate for deferred translation
-                        segments = _extract_segments(alt, use_speaker_labels, state.speaker)
-                        segments = _merge_consecutive_same_speaker(segments)
+                        segments = [(transcript_text, state.speaker)]
                         logger.info(
                             "[Transcribe] Final result: transcript=%r segments=%s",
                             transcript_text, [(t[:40], s) for t, s in segments],
@@ -957,9 +881,19 @@ async def _run_transcribe_streaming(
         logger.exception("[Transcribe] Session failed for connection_id=%s", connection_id)
 
 
-def _start_sagemaker_streaming(state: ConnectionState, ws: WebSocket, connection_id: str) -> None:
+# 일시 오류(모델 지연·타임아웃) 뒤 같은 녹음을 새 연결로 이어 가는 횟수. 인식 결과가
+# 한 번이라도 나오면 다시 채워진다 — 엔드포인트가 실제로 죽었을 때만 녹음을 멈춘다.
+STREAM_MAX_RESTARTS = 3
+
+
+def _start_sagemaker_streaming(
+    state: ConnectionState, ws: WebSocket, connection_id: str,
+    snapshot: Optional[ConnectionState] = None,
+) -> None:
     """Snapshot one recording; partials stay live and only unique finals are saved."""
-    snapshot = replace(state)
+    if snapshot is None:
+        snapshot = replace(state)
+        state.stream_restarts = 0
     provider = snapshot.stt_provider
     stream_class, label = {
         "whisper": (WhisperStream, "Whisper"),
@@ -975,10 +909,13 @@ def _start_sagemaker_streaming(state: ConnectionState, ws: WebSocket, connection
         # All models share the isolated SageMaker SDK/CRT environment.
         worker_python=config.NEMOTRON_STREAM_PYTHON,
     )
+    # 재연결은 녹음 도중 바뀐 설정이 아니라 이 녹음의 설정으로 이어 간다.
+    stream.recording_snapshot = snapshot
     state.speech_stream = stream
     seen_finals = set()
     generation = None
     pending_utterance = None
+    backlog_overflow = False
 
     async def send(payload):
         try:
@@ -998,7 +935,7 @@ def _start_sagemaker_streaming(state: ConnectionState, ws: WebSocket, connection
             pending_utterance = None
 
     async def on_event(event):
-        nonlocal generation, pending_utterance
+        nonlocal generation, pending_utterance, backlog_overflow
         if event["stream_id"] != generation:
             generation = event["stream_id"]
             seen_finals.clear()  # IDs are local to a 25-minute model connection.
@@ -1006,11 +943,12 @@ def _start_sagemaker_streaming(state: ConnectionState, ws: WebSocket, connection
         kind = event["type"]
         if kind == "error":
             await clear_partial()
-            await _sagemaker_recording_failed(
-                state, ws, connection_id, stream,
-                f"{label} 실시간 음성 인식에 실패했습니다: {event['message']}",
-                provider=provider,
-            )
+            message = f"{label} 실시간 음성 인식에 실패했습니다: {event['message']}"
+            if backlog_overflow:
+                # 새 연결로는 밀린 번역이 풀리지 않는다.
+                await _sagemaker_recording_failed(state, ws, connection_id, stream, message, provider=provider)
+            else:
+                await _restart_sagemaker_streaming(state, ws, connection_id, stream, snapshot, message)
             return
         if kind == "ended":
             await clear_partial()
@@ -1041,6 +979,8 @@ def _start_sagemaker_streaming(state: ConnectionState, ws: WebSocket, connection
             return
         if pending_utterance == utterance_id:
             pending_utterance = None
+        if state.speech_stream is stream:
+            state.stream_restarts = 0
         # Keep translation separate from the audio receiver, with a bounded backlog.
         final_state = replace(snapshot, stt_stream_id=stream_id, stt_utterance_id=utterance_id)
         task = asyncio.create_task(_process_segment(
@@ -1051,6 +991,7 @@ def _start_sagemaker_streaming(state: ConnectionState, ws: WebSocket, connection
         if len(state.segment_tasks) > 64:
             # Preserve this already-confirmed original, then stop new input.
             # Raising ends the stream reader so no further overflow is scheduled.
+            backlog_overflow = True
             raise NemotronStreamError("번역 처리가 지연되어 음성 인식을 중단했습니다. 잠시 후 다시 시작해 주세요.")
 
     stream.start(on_event)
@@ -1058,6 +999,21 @@ def _start_sagemaker_streaming(state: ConnectionState, ws: WebSocket, connection
 
 def _start_nemotron_streaming(state: ConnectionState, ws: WebSocket, connection_id: str) -> None:
     _start_sagemaker_streaming(state, ws, connection_id)
+
+
+async def _restart_sagemaker_streaming(state, ws, connection_id, stream, snapshot, message):
+    """실패한 스트림을 같은 녹음 설정의 새 연결로 바꾼다. 예산을 다 쓰면 녹음을 막는다."""
+    # 이미 교체된 스트림, 멈추는 중인 녹음, 예산 소진은 예전처럼 오류로 알린다.
+    if state.speech_stream is not stream or not state.stt_ready or state.stream_restarts >= STREAM_MAX_RESTARTS:
+        await _sagemaker_recording_failed(state, ws, connection_id, stream, message, provider=snapshot.stt_provider)
+        return
+    state.stream_restarts += 1
+    logger.warning(
+        "[ws] %s stream failed, reconnecting (%d/%d): connection_id=%s error=%s",
+        snapshot.stt_provider, state.stream_restarts, STREAM_MAX_RESTARTS, connection_id, message,
+    )
+    # 실패한 연결에 남은 몇 초 분량의 오디오는 버려진다 — 녹음 전체를 잃는 것보다 낫다.
+    _start_sagemaker_streaming(state, ws, connection_id, snapshot)
 
 
 async def _sagemaker_recording_failed(state, ws, connection_id, stream, message, *, provider=None):
@@ -1969,18 +1925,9 @@ async def ws_endpoint(
                     state.seg_flush_task.cancel()
                     state.seg_flush_task = None
 
-                # startRecording 시 diarization 가능 여부 미리 계산해서 로그
-                _dbg_mapped = (
-                    LANG_CODE_MAP.get(state.source_lang)
-                    if state.source_lang not in ("auto", "", None)
-                    else None
-                )
-                _dbg_diarize = _is_auto(state.source_lang) or _dbg_mapped in DIARIZATION_SUPPORTED_LANGS
                 logger.info(
-                    "[ws] startRecording: provider=%s sourceLang=%s mapped_lang=%s "
-                    "use_speaker_labels=%s targetLang=%s speaker=%s",
-                    state.stt_provider, state.source_lang, _dbg_mapped,
-                    _dbg_diarize, state.target_lang, state.speaker,
+                    "[ws] startRecording: provider=%s sourceLang=%s targetLang=%s speaker=%s",
+                    state.stt_provider, state.source_lang, state.target_lang, state.speaker,
                 )
 
                 if state.stt_provider == "transcribe":
@@ -2128,17 +2075,27 @@ async def ws_endpoint(
                 audio_data: Optional[str] = data.get("audioData")
                 if audio_data:
                     if state.speech_stream is not None:
+                        stream = state.speech_stream
                         try:
                             pcm = _streaming_pcm(audio_data)
-                            _buffer_audio(state, connection_id, pcm)
+                        except ValueError as exc:
+                            # 브라우저 조각 하나가 깨진 것 — 녹음은 계속한다.
+                            logger.warning("[ws] dropped malformed audio chunk: %s", exc)
+                            continue
+                        _buffer_audio(state, connection_id, pcm)
+                        try:
                             # Silence drives model endpointing; even a tiny stop tail is valid.
-                            await state.speech_stream.send_audio(pcm)
+                            await stream.send_audio(pcm)
                         except Exception as exc:
-                            await _sagemaker_recording_failed(
-                                state, ws, connection_id, state.speech_stream,
-                                f"실시간 오디오 전송에 실패했습니다: {exc}",
-                            )
-                            await _stop_recording(state, ws, connection_id)
+                            # 스트림 오류 이벤트가 먼저 와서 이미 새 연결로 바꿨다면 이 조각만 잃는다.
+                            # 아니면(백프레셔 등) 여기서 바꾼다. 예산을 다 쓰면 녹음을 막는다.
+                            if stream is state.speech_stream:
+                                await _restart_sagemaker_streaming(
+                                    state, ws, connection_id, stream, stream.recording_snapshot,
+                                    f"실시간 오디오 전송에 실패했습니다: {exc}",
+                                )
+                                if not state.stt_ready:
+                                    await _stop_recording(state, ws, connection_id)
                         continue
                     audio_bytes = base64.b64decode(audio_data)
                     # 브라우저가 보내는 조각은 44바이트 헤더가 붙은 16 kHz mono 16-bit WAV 다

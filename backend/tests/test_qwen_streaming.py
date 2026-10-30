@@ -161,10 +161,12 @@ async def test_qwen_failure_releases_only_qwen_capacity(qwen_service):
     ws_handler.capacity.acquire("nemotron", "nemotron-running")
     try:
         ws_handler._start_sagemaker_streaming(state, ws, "qwen-failed")
-        await eventually(lambda: qwen_service)
-        await qwen_service[0].emit({"type": "error", "message": "GPU failed"})
+        # 일시 오류는 다시 연결한다 — 재연결이 전부 실패해야 녹음을 막는다.
+        for attempt in range(ws_handler.STREAM_MAX_RESTARTS + 1):
+            await eventually(lambda: len(qwen_service) == attempt + 1)
+            await qwen_service[attempt].emit({"type": "error", "message": "GPU failed"})
+        await eventually(lambda: not state.stt_ready)
         await eventually(lambda: state.speech_stream.done)
-        assert not state.stt_ready
         assert "qwen-failed" not in ws_handler.capacity.sessions["qwen3-asr"]
         assert "nemotron-running" in ws_handler.capacity.sessions["nemotron"]
         status = next(e for e in ws.sent if e["type"] == "stt_status")

@@ -1,4 +1,4 @@
-"""Transcribe 화자 ID가 변환·병합·스트리밍 과정에서 보존되는지 검증한다."""
+"""Transcribe 는 화자 분리 없이 녹음 시작 시 화자로 모든 발화를 남긴다."""
 import asyncio
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
@@ -14,75 +14,8 @@ def word(content, speaker=None):
     return Item(item_type="pronunciation", content=content, speaker=speaker)
 
 
-def punctuation(content):
-    return Item(item_type="punctuation", content=content)
-
-
-@pytest.mark.parametrize("labels", [("0", "1"), ("spk_0", "spk_1")])
-def test_different_speakers_are_not_merged(labels):
-    alt = Alternative(
-        transcript="Ready? Yes.",
-        items=[word("Ready", labels[0]), punctuation("?"), word("Yes", labels[1]), punctuation(".")],
-        entities=[],
-    )
-
-    segments = ws_handler._extract_segments(alt, True, "speaker1")
-
-    assert ws_handler._merge_consecutive_same_speaker(segments) == [
-        ("Ready?", "speaker1"), ("Yes.", "speaker2"),
-    ]
-
-
-def test_speakers_beyond_two_keep_distinct_ids():
-    alt = Alternative(
-        transcript="First second third eleventh.",
-        items=[
-            word("First", "0"), word("second", "1"), word("third", "2"),
-            word("eleventh", "spk_10"), punctuation("."),
-        ],
-        entities=[],
-    )
-
-    assert ws_handler._extract_segments(alt, True, "speaker1") == [
-        ("First", "speaker1"), ("second", "speaker2"),
-        ("third", "speaker3"), ("eleventh.", "speaker11"),
-    ]
-
-
-def test_unlabeled_words_do_not_create_a_new_speaker_turn():
-    alt = Alternative(
-        transcript="We can ship.",
-        items=[word("We", "spk_1"), word("can"), word("ship", "1"), punctuation(".")],
-        entities=[],
-    )
-
-    assert ws_handler._extract_segments(alt, True, "speaker1") == [("We can ship.", "speaker2")]
-
-
-@pytest.mark.parametrize("label", [None, "", "unknown", "spk_"])
-def test_unknown_labels_use_the_supplied_fallback(label):
-    alt = Alternative(transcript="Ready.", items=[word("Ready", label), punctuation(".")], entities=[])
-
-    assert ws_handler._extract_segments(alt, True, "speaker3") == [("Ready.", "speaker3")]
-
-
-@pytest.mark.parametrize("items", [[], [punctuation(".")]])
-def test_no_usable_words_preserves_the_transcript(items):
-    alt = Alternative(transcript="Keep this transcript.", items=items, entities=[])
-
-    assert ws_handler._extract_segments(alt, True, "speaker2") == [
-        ("Keep this transcript.", "speaker2"),
-    ]
-
-
-def test_disabled_diarization_keeps_the_default_speaker():
-    alt = Alternative(transcript="Ready? Yes.", items=[word("Ready", "0"), word("Yes", "1")], entities=[])
-
-    assert ws_handler._extract_segments(alt, False, "speaker3") == [("Ready? Yes.", "speaker3")]
-
-
 @pytest.mark.parametrize("source_lang", ["en", "ko", "auto"])
-async def test_streaming_emits_distinct_speakers_in_each_language_mode(monkeypatch, source_lang):
+async def test_streaming_keeps_one_speaker_in_each_language_mode(monkeypatch, source_lang):
     """AWS 경계만 대체하고 요청 옵션부터 실제 자막 이벤트까지 실행한다."""
     ws = SimpleNamespace(send_json=AsyncMock())
     state = ws_handler.ConnectionState(
@@ -96,8 +29,8 @@ async def test_streaming_emits_distinct_speakers_in_each_language_mode(monkeypat
 
     async def start_stream(**kwargs):
         requests.append(kwargs)
-        # 화자 분리를 요청하지 않으면 서비스도 화자 라벨을 돌려주지 않는다.
-        labels = ["0", "1"] if kwargs.get("show_speaker_label") else [None, None]
+        # 라벨이 섞여 와도 발화를 나누지 않는다.
+        labels = ["0", "1"]
         alt = Alternative(
             transcript=" ".join(texts),
             items=[word(text, label) for text, label in zip(texts, labels)],
@@ -136,10 +69,10 @@ async def test_streaming_emits_distinct_speakers_in_each_language_mode(monkeypat
 
     final_events = [call.args[0] for call in ws.send_json.call_args_list if call.args[0].get("phase") == "done"]
     assert [(event["originalText"], event["speaker"]) for event in final_events] == [
-        (texts[0], "speaker1"), (texts[1], "speaker2"),
+        (" ".join(texts), "speaker1"),
     ]
     assert len(requests) == 1
-    assert requests[0]["show_speaker_label"] is True
+    assert "show_speaker_label" not in requests[0]
     if source_lang == "auto":
         assert requests[0]["language_code"] is None
         assert requests[0]["identify_multiple_languages"] is True
@@ -147,10 +80,10 @@ async def test_streaming_emits_distinct_speakers_in_each_language_mode(monkeypat
         assert requests[0]["language_options"] == ["en-US", "ko-KR"]
     else:
         assert requests[0]["language_code"] == {"en": "en-US", "ko": "ko-KR"}[source_lang]
-    assert state.last_confirmed_speaker == "speaker2"
+    assert state.last_confirmed_speaker == "speaker1"
 
 
-async def test_multilingual_stream_preserves_language_and_speaker_as_speech_alternates(monkeypatch):
+async def test_multilingual_stream_preserves_language_without_splitting_speakers(monkeypatch):
     ws = SimpleNamespace(send_json=AsyncMock())
     state = ws_handler.ConnectionState(
         ws=ws, source_lang="auto", stt_provider="transcribe", translation_timing="realtime",
@@ -205,13 +138,13 @@ async def test_multilingual_stream_preserves_language_and_speaker_as_speech_alte
     assert requests[0]["identify_multiple_languages"] is True
     assert not requests[0].get("identify_language")
     assert requests[0]["language_options"] == ["en-US", "ko-KR"]
-    assert requests[0]["show_speaker_label"] is True
+    assert "show_speaker_label" not in requests[0]
     events = [call.args[0] for call in ws.send_json.call_args_list]
     finals = [event for event in events if event.get("phase") == "done"]
     partials = [event for event in events if event.get("phase") == "stt_partial"]
     assert [(event["originalText"], event["speaker"], event["detectedLanguage"]) for event in finals] == [
         (speech[0][1], "speaker1", "ko"),
-        (speech[1][1], "speaker2", "en"),
+        (speech[1][1], "speaker1", "en"),
         (speech[2][1], "speaker1", "ko"),
     ]
     assert [event["detectedLanguage"] for event in partials] == ["ko", "en", "ko"]
