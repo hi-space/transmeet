@@ -31,7 +31,7 @@ export default function ThemePresetPicker({ value, onChange }: Props) {
             aria-label={`${preset.label} 테마`}
             aria-pressed={value === preset.value}
             onClick={() => onChange(preset.value)}
-            className="theme-preset-option"
+            className="theme-preset-option last:odd:col-span-2"
           >
             <span
               aria-hidden="true"

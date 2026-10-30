@@ -72,7 +72,7 @@ export default function Header({
           : null
 
   return (
-    <header className="relative z-20 flex h-12 shrink-0 items-center border-b border-subtle bg-panel px-2 lg:h-14 lg:px-4">
+    <header className="app-header relative z-20 flex h-12 shrink-0 items-center border-b border-subtle bg-panel px-2 lg:h-14 lg:px-4">
       <div className="flex min-w-0 items-center gap-2 lg:w-[14rem] lg:shrink-0">
         <button
           type="button"

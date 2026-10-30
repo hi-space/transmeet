@@ -150,7 +150,7 @@ test('older saved themes keep their custom appearance and gain the basic preset'
 })
 
 test('approved presets survive storage while unknown presets fall back independently', () => {
-  for (const preset of ['paper', 'midnight', 'cobalt', 'clear']) {
+  for (const preset of ['paper', 'midnight', 'slate', 'navy', 'clear']) {
     assert.equal(normalizeThemeSettings({ preset, accent: 'theme' }).preset, preset)
     assert.equal(normalizeThemeSettings({ preset, accent: 'theme' }).accent, 'theme')
   }
@@ -174,7 +174,8 @@ test('selecting a preset applies its recommended look and keeps personal reading
   for (const [preset, mode] of [
     ['paper', 'light'],
     ['midnight', 'dark'],
-    ['cobalt', 'light'],
+    ['slate', 'light'],
+    ['navy', 'light'],
     ['clear', 'light'],
   ]) {
     assert.deepEqual(themeModule.createPresetTheme(current, preset), {
@@ -217,7 +218,7 @@ test('returning to basic styling preserves reading preferences until a full rese
 test('preset, custom mode and accents agree between first paint and runtime application', () => {
   const originalDocument = globalThis.document
   try {
-    for (const preset of ['default', 'paper', 'midnight', 'cobalt', 'clear']) {
+    for (const preset of ['default', 'paper', 'midnight', 'slate', 'navy', 'clear']) {
       for (const mode of ['light', 'dark', 'system']) {
         const saved = {
           preset,
@@ -249,4 +250,36 @@ test('invalid and absent stored presets apply basic styling before the first pai
     assert.equal(root.dataset.preset, 'default')
     assert.equal(root.dataset.accent, 'amazon')
   }
+})
+
+test('retired Cobalt migrates to Blue Slate without resetting custom appearance', () => {
+  const saved = Object.freeze({
+    preset: 'cobalt',
+    mode: 'dark',
+    accent: 'rose',
+    font: 'mono',
+    scale: 120,
+    lineSpacing: 'relaxed',
+  })
+  assert.deepEqual(normalizeThemeSettings(saved), { ...saved, preset: 'slate' })
+  assert.equal(saved.preset, 'cobalt')
+})
+
+test('Cobalt and retired-font migrations also apply together before the first paint', () => {
+  const saved = {
+    preset: 'cobalt',
+    mode: 'system',
+    accent: 'theme',
+    font: 'serif',
+    scale: 110,
+    lineSpacing: 'compact',
+  }
+  const { root, dark } = bootstrap({ saved: JSON.stringify(saved), prefersDark: true })
+  assert.equal(root.dataset.preset, 'slate')
+  assert.equal(root.dataset.font, 'plex')
+  assert.equal(root.dataset.accent, 'theme')
+  assert.equal(root.dataset.scale, '110')
+  assert.equal(root.dataset.lineSpacing, 'compact')
+  assert.equal(dark, true)
+  assert.deepEqual(normalizeThemeSettings(saved), { ...saved, preset: 'slate', font: 'plex' })
 })

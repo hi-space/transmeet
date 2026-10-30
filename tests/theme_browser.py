@@ -31,7 +31,8 @@ spec.loader.exec_module(guide)
 PRESETS = [
     ("paper", "Paper Atelier", "light"),
     ("midnight", "Midnight Studio", "dark"),
-    ("cobalt", "Cobalt Grid", "light"),
+    ("slate", "Blue Slate", "light"),
+    ("navy", "Navy Note", "light"),
     ("clear", "Clear Focus", "light"),
 ]
 
@@ -265,8 +266,9 @@ async def desktop(browser, base, errors, report):
     try:
         for preset, label, preferred_mode in PRESETS:
             dialog = await choose(page, preset, label)
-            assert await dialog.locator(".theme-preset-option").count() == 4
+            assert await dialog.locator(".theme-preset-option").count() == 5
             assert await dialog.get_by_role("button", name="Soft Sage 테마", exact=True).count() == 0
+            assert await dialog.get_by_role("button", name="Cobalt Grid 테마", exact=True).count() == 0
             await expect(page.locator("html")).to_have_attribute("data-theme-mode", preferred_mode)
             await close_settings(page)
             await check_layout(page, preset)
@@ -339,6 +341,10 @@ async def desktop(browser, base, errors, report):
         await expect(page.locator("html")).to_have_attribute("data-line-spacing", "relaxed")
         await close_settings(page)
         await page.get_by_role("combobox", name="대화 글자 크기", exact=True).select_option("lg")
+        await expect(page.locator(".voice-scroll")).to_have_attribute("data-voice-size", "lg")
+        await page.wait_for_function("""() =>
+          parseFloat(getComputedStyle(document.querySelector('.voice-translation')).fontSize)>30
+        """)
         larger = await page.locator(".voice-translation").first.evaluate(
             "el=>parseFloat(getComputedStyle(el).fontSize)"
         )
@@ -353,8 +359,13 @@ async def desktop(browser, base, errors, report):
         # Real storage events between pages in one browser profile.
         other = await context.new_page()
         await other.goto(base + "/?meeting=guide-meeting", wait_until="networkidle")
-        await choose(page, "cobalt", "Cobalt Grid")
-        await expect(other.locator("html")).to_have_attribute("data-preset", "cobalt")
+        await choose(page, "navy", "Navy Note")
+        await expect(other.locator("html")).to_have_attribute("data-preset", "navy")
+        await other.evaluate("""localStorage.setItem('transmeet-theme',JSON.stringify({
+          preset:'cobalt',mode:'dark',accent:'rose',font:'mono',scale:110,lineSpacing:'compact'
+        }))""")
+        await expect(page.locator("html")).to_have_attribute("data-preset", "slate")
+        await expect(page.locator("html")).to_have_attribute("data-font", "mono")
         await other.evaluate("localStorage.removeItem('transmeet-theme')")
         await expect(page.locator("html")).to_have_attribute("data-preset", "default")
         await other.close()
@@ -377,7 +388,7 @@ async def mobile(browser, base, errors):
                 await check_layout(page, f"{preset}-{width}")
                 if width == 375:
                     await screenshot(page, f"{preset}-mobile")
-            print(f"PASS {width}px: all four presets, 120% scale, settings and recording controls", flush=True)
+            print(f"PASS {width}px: all five presets, 120% scale, settings and recording controls", flush=True)
         finally:
             await context.close()
 
@@ -409,7 +420,7 @@ async def sidebar_states(browser, base, errors, report):
                 failures.append((name, result))
 
     try:
-        for preset, label in [("cobalt", "Cobalt Grid"), ("clear", "Clear Focus")]:
+        for preset, label in [("slate", "Blue Slate"), ("navy", "Navy Note"), ("clear", "Clear Focus")]:
             await choose(page, preset, label)
             await close_settings(page)
             more = page.locator('.meeting-list-item[data-active="true"] button[aria-expanded]')
@@ -441,7 +452,7 @@ async def sidebar_states(browser, base, errors, report):
             ])
             await cancel.click()
 
-        await choose(page, "cobalt", "Cobalt Grid")
+        await choose(page, "slate", "Blue Slate")
         await close_settings(page)
         await page.get_by_role("button", name="회의 목록 접기", exact=True).focus()
         for name, selector in [
@@ -456,14 +467,96 @@ async def sidebar_states(browser, base, errors, report):
                 width:parseFloat(getComputedStyle(el).outlineWidth)
             })""")
             if style["outline"] == "none" or style["width"] < 2:
-                failures.append(("cobalt-focus-" + name, style))
-            await measure("cobalt-focus-" + name, [{
+                failures.append(("slate-focus-" + name, style))
+            await measure("slate-focus-" + name, [{
                 "selector": selector,
                 "property": "outlineColor",
                 "backgroundSelector": ".meeting-sidebar",
             }], minimum=3)
         assert not failures, failures
         print("PASS colored sidebar hover, custom-accent title editing, keyboard focus", flush=True)
+    finally:
+        await context.close()
+
+
+async def blue_theme_states(browser, base, errors, report):
+    context, page = await new_context(browser, base, errors, theme={
+        "preset": "cobalt", "mode": "dark", "accent": "rose",
+        "font": "mono", "scale": 110, "lineSpacing": "compact",
+    })
+    try:
+        for _ in range(2):
+            await expect(page.locator("html")).to_have_attribute("data-preset", "slate")
+            await expect(page.locator("html")).to_have_attribute("data-font", "mono")
+            await expect(page.locator("html")).to_have_attribute("data-accent", "rose")
+            await expect(page.locator("html")).to_have_attribute("data-scale", "110")
+            await expect(page.locator("html")).to_have_attribute("data-line-spacing", "compact")
+            await page.reload(wait_until="networkidle")
+        await page.locator(f'.meeting-sidebar span[title="{guide.TITLE}"]').click()
+        await expect(page.locator(".voice-message")).to_have_count(4)
+
+        for preset, label in [("slate", "Blue Slate"), ("navy", "Navy Note")]:
+            dialog = await choose(page, preset, label)
+            await dialog.get_by_role("button", name="여유롭게", exact=True).click()
+            await close_settings(page)
+            await page.get_by_role("combobox", name="대화 글자 크기", exact=True).select_option("lg")
+            await expect(page.locator(".voice-scroll")).to_have_attribute("data-voice-size", "lg")
+            await page.wait_for_function("""() =>
+              parseFloat(getComputedStyle(document.querySelector('.voice-translation')).fontSize)>30
+            """)
+            text = await page.locator(".voice-translation").first.evaluate("""el => {
+              const style=getComputedStyle(el);
+              return {size:parseFloat(style.fontSize),line:parseFloat(style.lineHeight)};
+            }""")
+            assert text["size"] > 30, (preset, text)
+            assert abs(text["line"]/text["size"]-1.9) < .02, (preset, text)
+
+        await choose(page, "navy", "Navy Note")
+        await close_settings(page)
+        for mode in ["light", "dark"]:
+            dialog = await open_settings(page)
+            await dialog.get_by_role("button", name="라이트" if mode=="light" else "다크", exact=True).click()
+            await close_settings(page)
+            fields = [
+                ".app-header select",
+                '.app-header button[aria-label="빠른 번역"]',
+                '.app-header button[aria-label="설정"]',
+            ]
+            values = await page.evaluate(READABILITY, fields)
+            report["navy-header-"+mode] = values
+            assert all(not value.get("missing") and value["ratio"] >= 4.5 for value in values), values
+            language = page.locator(".app-header select").first
+            await language.focus()
+            await page.keyboard.press("Tab")
+            target = page.locator(".app-header select").nth(1)
+            await expect(target).to_be_focused()
+            outline = await target.evaluate("el=>getComputedStyle(el).outlineStyle")
+            assert outline != "none", outline
+            focus = await page.evaluate(READABILITY, [{
+                "selector": '.app-header select[aria-label="번역 대상"]',
+                "property": "outlineColor", "backgroundSelector": ".app-header",
+            }])
+            assert focus[0]["ratio"] >= 3, focus
+
+        await choose(page, "navy", "Navy Note")
+        await close_settings(page)
+        await page.set_viewport_size({"width":375,"height":812})
+        await page.get_by_role("button", name="설정", exact=True).click()
+        quick = page.get_by_role("dialog", name="빠른 설정", exact=True)
+        await expect(quick).to_be_visible()
+        await check_layout(page, "navy-quick-settings")
+        values = await page.evaluate(READABILITY, [
+            'dialog[aria-labelledby="mobile-settings-title"]',
+            'dialog[aria-labelledby="mobile-settings-title"] select',
+        ])
+        assert all(value["ratio"] >= 4.5 for value in values), values
+        await page.keyboard.press("Escape")
+        await page.set_viewport_size({"width":1440,"height":960})
+        await choose(page, "slate", "Blue Slate")
+        await close_settings(page)
+        header = await page.locator(".app-header").evaluate("el=>getComputedStyle(el).backgroundColor")
+        assert header == "rgb(255, 255, 255)", header
+        print("PASS Cobalt migration/reload, blue reading controls, Navy header/focus/mobile dialog, switching away", flush=True)
     finally:
         await context.close()
 
@@ -481,6 +574,8 @@ async def run(base, only):
                 await unavailable_storage(browser, base, errors)
             if not only or only == "sidebar":
                 await sidebar_states(browser, base, errors, report)
+            if not only or only == "blue":
+                await blue_theme_states(browser, base, errors, report)
         finally:
             await browser.close()
             (ARTIFACTS / "readability.json").write_text(json.dumps(report, ensure_ascii=False, indent=2))
@@ -490,7 +585,7 @@ async def run(base, only):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--only", choices=["desktop", "mobile", "storage", "sidebar"])
+    parser.add_argument("--only", choices=["desktop", "mobile", "storage", "sidebar", "blue"])
     args = parser.parse_args()
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="transmeet-theme-browser-") as temporary:

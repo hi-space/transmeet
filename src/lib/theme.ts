@@ -1,7 +1,7 @@
 export const THEME_STORAGE_KEY = 'transmeet-theme'
 
 export const THEME_VALUES = {
-  preset: ['default', 'paper', 'midnight', 'cobalt', 'clear'],
+  preset: ['default', 'paper', 'midnight', 'slate', 'navy', 'clear'],
   mode: ['system', 'light', 'dark'],
   accent: ['theme', 'cyan', 'amazon', 'blue', 'violet', 'emerald', 'rose'],
   font: ['default', 'sans', 'plex', 'mono'],
@@ -10,6 +10,7 @@ export const THEME_VALUES = {
 } as const
 
 const FONT_REPLACEMENT = { from: 'serif', to: 'plex' } as const
+const PRESET_REPLACEMENT = { from: 'cobalt', to: 'slate' } as const
 
 export type ThemeSettings = {
   [K in keyof typeof THEME_VALUES]: (typeof THEME_VALUES)[K][number]
@@ -29,9 +30,15 @@ export const THEME_PRESETS = [
     mode: 'dark',
   },
   {
-    value: 'cobalt',
-    label: 'Cobalt Grid',
-    description: '코발트 · 직각 · 선명한 구획',
+    value: 'slate',
+    label: 'Blue Slate',
+    description: '블루그레이 · 단정한 카드',
+    mode: 'light',
+  },
+  {
+    value: 'navy',
+    label: 'Navy Note',
+    description: '네이비 상단바 · 문서형 대화',
     mode: 'light',
   },
   {
@@ -78,6 +85,7 @@ export function normalizeThemeSettings(value: unknown): ThemeSettings {
 
   const saved = { ...(value as Record<string, unknown>) }
   if (saved.font === FONT_REPLACEMENT.from) saved.font = FONT_REPLACEMENT.to
+  if (saved.preset === PRESET_REPLACEMENT.from) saved.preset = PRESET_REPLACEMENT.to
   return Object.fromEntries(
     Object.entries(THEME_VALUES).map(([key, allowed]) => [
       key,
@@ -115,12 +123,14 @@ export const THEME_BOOTSTRAP_SCRIPT = `
   var defaults = ${JSON.stringify(createDefaultTheme())};
   var allowed = ${JSON.stringify(THEME_VALUES)};
   var fontReplacement = ${JSON.stringify(FONT_REPLACEMENT)};
+  var presetReplacement = ${JSON.stringify(PRESET_REPLACEMENT)};
   var saved = {};
   try {
     var parsed = JSON.parse(localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)}) || 'null');
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) saved = parsed;
   } catch (_) {}
   if (saved.font === fontReplacement.from) saved.font = fontReplacement.to;
+  if (saved.preset === presetReplacement.from) saved.preset = presetReplacement.to;
   var theme = {};
   Object.keys(defaults).forEach(function (key) {
     theme[key] = allowed[key].indexOf(saved[key]) !== -1 ? saved[key] : defaults[key];
