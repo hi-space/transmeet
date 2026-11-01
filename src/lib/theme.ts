@@ -26,7 +26,7 @@ export const THEME_PRESETS = [
   {
     value: 'paper',
     label: 'Paper Atelier',
-    description: '종이색 · 명조 · 문서형 대화',
+    description: '아이보리 · 잉크 · 명조 제목',
     mode: 'light',
   },
   {

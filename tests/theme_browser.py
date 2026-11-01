@@ -277,10 +277,13 @@ async def desktop(browser, base, errors, report):
             await check_readability(page, preset, report)
             await screenshot(page, f"{preset}-desktop")
             if preset == "paper":
-                font = await page.locator(".voice-original").first.evaluate(
-                    "el=>getComputedStyle(el).fontFamily"
-                )
-                assert "Noto_Serif_KR" in font, font
+                fonts = await page.evaluate("""() => Object.fromEntries(
+                  ['.meeting-title', '.voice-original', '.voice-translation'].map(selector =>
+                    [selector, getComputedStyle(document.querySelector(selector)).fontFamily])
+                )""")
+                assert "Noto_Serif_KR" in fonts[".meeting-title"], fonts
+                for selector in [".voice-original", ".voice-translation"]:
+                    assert "IBM_Plex" in fonts[selector] and "Noto_Serif" not in fonts[selector], fonts
             if preset == "clear":
                 size = await page.locator(".voice-translation").first.evaluate(
                     "el=>getComputedStyle(el).fontSize"
