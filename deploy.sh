@@ -15,15 +15,53 @@ warn()  { echo -e "${YELLOW}[deploy]${NC} $1"; }
 
 COMMAND="${1:-all}"
 
+die()   { echo -e "\033[0;31m[deploy]\033[0m $1" >&2; exit 1; }
+
+# 페이지 에이전트 이미지는 이 체크아웃의 agent/ 를 빌드한다. 오래된 체크아웃이나 커밋 안 된 작업이
+# 운영에 올라가지 않도록 origin/main 최신 커밋 + 깨끗한 agent/·infra/ 에서만 배포한다.
+# 급할 때만 ALLOW_STALE=1 로 건너뛴다.
+check_latest_main() {
+  [ "${ALLOW_STALE:-0}" = "1" ] && { warn "ALLOW_STALE=1 — 최신 main 확인을 건너뜁니다."; return; }
+  cd "$SCRIPT_DIR"
+  local branch; branch="$(git rev-parse --abbrev-ref HEAD)"
+  [ "$branch" = "main" ] || die "main 이 아닌 '$branch' 에서는 배포하지 않습니다."
+  git fetch -q origin main
+  local head remote; head="$(git rev-parse HEAD)"; remote="$(git rev-parse origin/main)"
+  if [ "$head" != "$remote" ]; then
+    git merge-base --is-ancestor "$remote" "$head" \
+      && die "origin/main 에 없는 커밋이 있습니다. 먼저 push 하세요." \
+      || die "origin/main 보다 뒤처졌습니다. 먼저 git pull 하세요."
+  fi
+  local dirty; dirty="$(git status --porcelain -- agent infra)"
+  [ -z "$dirty" ] || die "agent/·infra/ 에 커밋 안 된 변경이 있습니다:\n$dirty"
+  info "배포 기준: main $(git rev-parse --short HEAD)"
+}
+
+# deploy.sh 는 백엔드 이미지를 빌드하지 않는다. wsImageTag 기본값(latest)으로 배포하면 예전 이미지로
+# 돌아가므로, WS_IMAGE_TAG 를 주지 않으면 지금 서비스에서 돌고 있는 태그를 그대로 쓴다.
+running_ws_tag() {
+  local svc td
+  svc="$(aws ecs list-services --cluster transmeet-ws-cluster --query 'serviceArns[0]' --output text 2>/dev/null)" || return 0
+  [ -n "$svc" ] && [ "$svc" != "None" ] || return 0
+  td="$(aws ecs describe-services --cluster transmeet-ws-cluster --services "$svc" --query 'services[0].taskDefinition' --output text)"
+  aws ecs describe-task-definition --task-definition "$td" \
+    --query 'taskDefinition.containerDefinitions[0].image' --output text | sed -n 's/.*:\([^:@]*\)$/\1/p'
+}
+
 deploy_infra() {
+  check_latest_main
+  local ws_tag="${WS_IMAGE_TAG:-$(running_ws_tag)}"
+  local ctx=()
+  [ -n "$ws_tag" ] && { ctx+=(-c "wsImageTag=$ws_tag"); info "백엔드 이미지 태그: $ws_tag"; }
+
   info "Installing CDK dependencies..."
   cd "$INFRA_DIR" && npm install
 
   info "Synthesizing CloudFormation template (builds the agent image, linux/arm64)..."
-  npx cdk synth
+  npx cdk synth "${ctx[@]}"
 
   info "Deploying AWS infrastructure..."
-  npx cdk deploy --require-approval never --outputs-file outputs.json
+  npx cdk deploy --require-approval never --outputs-file outputs.json "${ctx[@]}"
 
   info "Infrastructure deployed. Outputs saved to infra/outputs.json"
   cat outputs.json
@@ -94,7 +132,8 @@ case "$COMMAND" in
     deploy_frontend
     ;;
   diff)
-    cd "$INFRA_DIR" && npm install --silent && npx cdk diff
+    ws_tag="${WS_IMAGE_TAG:-$(running_ws_tag)}"
+    cd "$INFRA_DIR" && npm install --silent && npx cdk diff ${ws_tag:+-c wsImageTag=$ws_tag}
     ;;
   destroy)
     warn "Destroying infrastructure..."
