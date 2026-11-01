@@ -334,6 +334,19 @@ def lead_item(x: Dict[str, Any]) -> str:
     return f'<li><b>{t(x.get("lead"))}</b> — {t(x.get("text"))}{ul(x.get("sub"), "sub")}</li>'
 
 
+def narrative(paras: Any) -> str:
+    """백그라운드처럼 이야기로 읽히는 서술 단락들."""
+    ps = "".join(f"<p>{t(x)}</p>" for x in _list(paras) if isinstance(x, str) and x.strip())
+    return f'<div class="narr">{ps}</div>' if ps else ""
+
+
+def lead_list(items: Any, cls: str = "bul") -> str:
+    """`{lead, text, sub}` 항목 목록. 예전 형식(문자열 불릿)이 섞여 있어도 그린다."""
+    lis = "".join(lead_item(x) if isinstance(x, dict) else f"<li>{t(x)}</li>"
+                  for x in _list(items) if (x.get("lead") or x.get("text") if isinstance(x, dict) else str(x or "").strip()))
+    return f'<ul class="{cls}">{lis}</ul>' if lis else ""
+
+
 def sec_head(title: str, anchor: str, hint: str = "") -> str:
     hint_html = f'<p class="hint">{hint}</p>' if hint else ""
     return f'<div class="sec-head"><h2>{title}</h2><a class="anchor" href="#{anchor}" aria-label="{title} 링크">#</a>{hint_html}</div>'
@@ -423,11 +436,11 @@ def render_page(inp: VisualInputs, w: Dict[str, Any], svgs: Dict[str, str], css:
       <ul class="takeaways">{"".join(lead_item(x) for x in _dicts(w.get('tldr')))}</ul>
     </section>
   </div>
-  <section class="block background" id="background"><h2 class="label">백그라운드</h2>{ul(w.get('background'), "bul cols") or none}</section>
+  <section class="block background" id="background"><h2 class="label">백그라운드</h2>{narrative(w.get('background')) or ul(w.get('background'), "bul cols") or none}</section>
 </header>
 
 <section class="sec" id="summary" data-section="summary">{sec_head("회의 요약", "summary")}
-  <h3>주요 논의</h3>{ul(w.get('discussion'), "bul cols") or none}
+  <h3>주요 논의</h3>{lead_list(w.get('discussion'), "bul cols") or none}
   {overview}
   <ol class="points">{points}</ol>
 </section>
@@ -437,6 +450,7 @@ def render_page(inp: VisualInputs, w: Dict[str, Any], svgs: Dict[str, str], css:
 </section>
 
 <section class="sec" id="outcomes">{sec_head("회의 결과", "outcomes")}
+  {f'<div class="wrap" id="wrapup"><h3>회의 정리</h3>{wrapup}</div>' if (wrapup := narrative(w.get('wrapup'))) else ''}
   <div class="out dec" id="decisions" data-section="decisions"><h3>결정 사항 <span class="count">{len(decisions)}건</span></h3>{f'<ul class="rows">{rows(decisions)}</ul>' if decisions else none}</div>
   <div class="out act" id="actions" data-section="action-items"><h3>액션 아이템 <span class="count">{len(actions)}건</span></h3>
     {f'<table class="actions"><thead><tr><th>할 일</th><th>담당</th><th>기한</th></tr></thead><tbody>{action_rows}</tbody></table>' if actions else none}</div>

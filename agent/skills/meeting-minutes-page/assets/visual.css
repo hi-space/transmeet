@@ -61,6 +61,8 @@ h4{font-size:17px;font-weight:700;margin:0 0 4px}
 .bul>li{margin:7px 0;padding-left:2px}
 .bul.cols{columns:2 360px;column-gap:44px}
 .bul.cols>li{break-inside:avoid}
+.narr>p{margin:0 0 12px;line-height:1.75}
+.narr>p:last-child{margin-bottom:0}
 .sub{margin:4px 0 2px;padding-left:1.1em;color:var(--muted);font-size:15.5px}
 .sub li{margin:2px 0;list-style:circle}
 
@@ -91,6 +93,8 @@ h4{font-size:17px;font-weight:700;margin:0 0 4px}
 .points .bul>li{margin:3px 0}
 
 /* 회의 결과: 위아래로 쌓고, 항목은 제목 | 설명 두 칸 */
+.wrap{margin-top:6px;padding:18px 22px;background:var(--soft);border:1px solid var(--line);border-radius:10px}
+.wrap h3{margin:0 0 10px}
 .out{margin-top:26px;border-left:6px solid var(--act);padding-left:20px}
 .out h3{margin:0 0 8px;display:flex;align-items:baseline;gap:10px}
 .out.dec{border-color:var(--ok)}

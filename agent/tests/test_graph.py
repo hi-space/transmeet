@@ -321,7 +321,9 @@ PLAN = {"headline": "금요일 마감", "overview": {"kind": "flow", "design": "
         "topics": [{"id": "t1", "title_hint": "현황", "facts": ["진행 중"], "figure": {"kind": "steps", "design": "두 단계"}}],
         "decisions": [], "actions": [], "opens": [], "references": [], "implications": []}
 WRITTEN = {"about": "배포 파이프라인 점검", "headline": "<mark>금요일까지 파이프라인을 끝냅니다.</mark>",
-           "tldr": [{"lead": "마감", "text": "금요일 완료"}], "background": ["<b>현황</b> — 진행 중"], "discussion": ["<b>일정</b> — 금요일"],
+           "tldr": [{"lead": "마감", "text": "금요일 완료"}], "background": ["배포 파이프라인은 지난주부터 진행 중입니다. <mark>금요일 마감</mark>을 지킬 수 있는지 확인해야 했습니다."],
+           "wrapup": ["파이프라인 완료 일정을 점검했습니다. <mark>금요일에 끝내기로 했습니다.</mark>"],
+           "discussion": [{"lead": "일정", "text": "금요일 완료", "sub": ["알림 연동은 다음 주"]}],
            "overview_caption": "두 단계", "points": [{"n": 1, "title": "파이프라인", "bullets": ["금요일 완료"]}],
            "decisions": [{"title": "금요일 마감", "detail": "알림은 다음 주에 붙입니다."}],
            "actions": [{"who": "", "what": "파이프라인 마무리", "due": "금요일"}], "opens": [],
@@ -356,6 +358,8 @@ async def test_visual_style_builds_page_in_stages_and_publishes(tmp_path):
     assert html.count("<svg") == 3 and 'href="#topic-1"' in html and "파이프라인 마무리" in html
     assert html.index('id="summary"') < html.index('id="flow"') < html.index('id="outcomes"') < html.index('id="refs"')
     assert html.index('href="#flow"') < html.index('href="#outcomes"')  # 목차도 같은 순서
+    assert '<div class="narr"><p>배포 파이프라인은' in html and "<b>일정</b> — 금요일 완료<ul class=\"sub\"><li>알림 연동은 다음 주" in html
+    assert html.index('id="outcomes"') < html.index('id="wrapup"') < html.index('id="decisions"')  # 회의 정리가 목록보다 먼저
     assert summary.startswith("금요일까지 파이프라인을 끝냅니다.") and title == PAYLOAD["meeting"]["title"]
     from runtime.stage import message_text
     plan_prompt = message_text(models["plan"].calls[0][1])
@@ -435,3 +439,15 @@ def test_unknown_style_rejected(tmp_path):
     deps = make_deps(tmp_path, {})
     with pytest.raises(G.PayloadError, match="style"):
         G.initial_state({**PAYLOAD, "meeting": {**PAYLOAD["meeting"], "style": "poster"}}, "s" * 33, deps)
+
+
+def test_visual_background_is_narrative_and_discussion_has_detail():
+    from runtime import visual
+    narr = visual.narrative(["첫 단락입니다. <mark>문제</mark>입니다.", " ", "둘째 단락입니다."])
+    assert narr == '<div class="narr"><p>첫 단락입니다. <mark>문제</mark>입니다.</p><p>둘째 단락입니다.</p></div>'
+    assert visual.narrative([]) == ""
+    detail = visual.lead_list([{"lead": "일정", "text": "금요일 완료", "sub": ["알림은 다음 주", "<script>"]}], "bul cols")
+    assert detail.startswith('<ul class="bul cols"><li><b>일정</b> — 금요일 완료<ul class="sub">')
+    assert "<li>알림은 다음 주</li>" in detail and "&lt;script&gt;" in detail
+    # 예전 형식(문자열 불릿)도 그대로 그린다
+    assert visual.lead_list(["<b>일정</b> — 금요일"], "bul") == '<ul class="bul"><li><b>일정</b> — 금요일</li></ul>'
