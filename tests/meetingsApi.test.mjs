@@ -203,3 +203,29 @@ test("a GET sub-route still runs the ownership check for another user's meeting"
   assert.equal(res.statusCode, 404)
   assert.ok(!sent.some((c) => c instanceof QueryCommand))
 })
+
+test('GET /meetings/{id}?messages=0 returns the meeting without reading messages', async () => {
+  const { call, sent } = setup({ meetingItem: { ...ownedMeeting(), summary: '요약' } })
+  const res = await call('GET', '/meetings/{id}', { queryStringParameters: { messages: '0' } })
+  assert.equal(res.statusCode, 200)
+  const body = JSON.parse(res.body)
+  assert.equal(body.summary, '요약')
+  assert.ok(!('messages' in body), 'messages must be omitted so the client knows they are not loaded')
+  assert.ok(!sent.some((c) => c instanceof QueryCommand))
+})
+
+test('GET /meetings/{id}/messages returns only the conversation', async () => {
+  const { call } = setup({ meetingItem: ownedMeeting() })
+  const res = await call('GET', '/meetings/{id}/messages')
+  assert.equal(res.statusCode, 200)
+  const body = JSON.parse(res.body)
+  assert.deepEqual(body.messages.map((m) => m.id), ['a', 'b'])
+  assert.ok(!('title' in body))
+})
+
+test("GET /meetings/{id}/messages hides another user's conversation as 404", async () => {
+  const { call, sent } = setup({ meetingItem: { ...ownedMeeting(), userId: 'someone-else' } })
+  const res = await call('GET', '/meetings/{id}/messages')
+  assert.equal(res.statusCode, 404)
+  assert.ok(!sent.some((c) => c instanceof QueryCommand))
+})

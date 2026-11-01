@@ -174,6 +174,10 @@ export const api = {
   meetings: {
     list: () => apiFetch<ApiMeeting[]>('/meetings'),
     get: (id: string) => apiFetch<ApiMeeting>(`/meetings/${id}`),
+    /** 대화 없이 회의 정보·요약·페이지만 — 대화는 messages() 로 동시에 받는다 */
+    getInfo: (id: string) => apiFetch<ApiMeeting>(`/meetings/${id}?messages=0`),
+    messages: (id: string) =>
+      apiFetch<{ messages: ApiMessage[] }>(`/meetings/${id}/messages`).then((r) => r.messages),
     create: (title?: string) =>
       apiFetch<ApiMeeting>('/meetings', {
         method: 'POST',

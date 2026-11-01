@@ -307,6 +307,8 @@ export class TransmeetStack extends cdk.Stack {
     const meetingResource = meetingsResource.addResource('{id}');
     meetingResource.addMethod('GET', meetingsIntegration, authed);
     meetingResource.addMethod('DELETE', meetingsIntegration, authed);
+    // 대화만 따로 — 회의 열기는 요약을 먼저(?messages=0) 띄우고 대화를 이 경로로 동시에 받는다.
+    meetingResource.addResource('messages').addMethod('GET', meetingsIntegration, authed);
 
     // /meetings/{id}/summarize
     meetingResource.addResource('summarize').addMethod(

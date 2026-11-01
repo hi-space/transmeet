@@ -256,6 +256,10 @@ export default function Home() {
   const [meetingLoadStates, setMeetingLoadStates] = useState<
     Record<string, 'loading' | 'error' | undefined>
   >({})
+  // 요약·페이지 탭은 회의 정보만 있으면 된다 — 대화(meetingLoadStates)를 기다리지 않는다.
+  const [meetingInfoLoadStates, setMeetingInfoLoadStates] = useState<
+    Record<string, 'loading' | 'error' | undefined>
+  >({})
   const loadingMeetingIdsRef = useRef(new Set<string>())
   const [meetingListError, setMeetingListError] = useState<string | null>(null)
   const [isCreatingMeeting, setIsCreatingMeeting] = useState(HAS_API)
@@ -384,6 +388,7 @@ export default function Home() {
 
   const activeMeeting = meetings.find((m) => m.id === activeMeetingId)
   const activeMeetingLoadState = meetingLoadStates[activeMeetingId]
+  const activeMeetingInfoLoadState = meetingInfoLoadStates[activeMeetingId]
   const handleBriefUpdate = useCallback((meetingId: string, brief: MeetingBrief) => {
     setMeetings((prev) =>
       prev.map((meeting) =>
@@ -427,8 +432,39 @@ export default function Home() {
     loadingMeetingIdsRef.current.add(id)
     openedMeetingIdsRef.current.add(id)
     setMeetingLoadStates((prev) => ({ ...prev, [id]: 'loading' }))
+    setMeetingInfoLoadStates((prev) => ({ ...prev, [id]: 'loading' }))
+    // 회의 정보(요약·페이지)와 대화를 동시에 받는다. 정보는 몇 KB 라 먼저 도착해
+    // 요약·페이지 탭을 바로 띄우고, 수백 KB 인 대화는 도착하면 채운다.
+    const infoRequest = api.meetings.getInfo(id)
+    const messagesRequest = api.meetings.messages(id)
+    infoRequest
+      .then((info) => {
+        const infoMeeting = toMeeting({ ...info, messages: [] })
+        setMeetings((prev) =>
+          prev.map((current) =>
+            current.id !== id
+              ? current
+              : {
+                  ...infoMeeting,
+                  // 대화와 brief 체크포인트는 대화가 도착한 뒤 아래에서 함께 맞춘다.
+                  messages: current.messages,
+                  brief: current.brief ?? infoMeeting.brief,
+                  briefUpdatedAt: current.briefUpdatedAt ?? infoMeeting.briefUpdatedAt,
+                  briefMessageCount: current.briefMessageCount,
+                  briefLastMessageId: current.briefLastMessageId ?? infoMeeting.briefLastMessageId,
+                }
+          )
+        )
+        setMeetingInfoLoadStates((prev) => {
+          const next = { ...prev }
+          delete next[id]
+          return next
+        })
+      })
+      .catch(() => setMeetingInfoLoadStates((prev) => ({ ...prev, [id]: 'error' })))
     try {
-      const full = await api.meetings.get(id)
+      const [info, messages] = await Promise.all([infoRequest, messagesRequest])
+      const full = { ...info, messages }
       const meeting = toMeeting(full)
       // 이미 요약이 있다면 현재 메시지 수를 마지막 요약 시점으로 간주 —
       // 로드 자체가 자동 요약을 재실행하지 않도록 한다.
@@ -2025,7 +2061,8 @@ export default function Home() {
     )
     for (const [meetingId, g] of pending) {
       try {
-        const page = (await api.meetings.get(meetingId)).page
+        // 페이지만 필요하다 — 대화 전체를 받지 않는다
+        const page = (await api.meetings.getInfo(meetingId)).page
         const isNew =
           !!page &&
           page.pageId !== g.prevPageId &&
@@ -2399,6 +2436,9 @@ export default function Home() {
     activeMeeting?.messages.filter((message) => message.speaker !== 'me').length ?? 0
   const panelLabels = { notes: '내 메모', summary: '요약', page: '회의 페이지' }
   const visibleUtilityTab = getVisibleUtilityTab(desktopLayout, activeTab, rightPanel)
+  // 메모 탭은 대화 목록을 그리므로 대화를, 요약·페이지 탭은 회의 정보만 기다린다.
+  const utilityLoadState =
+    visibleUtilityTab === 'notes' ? activeMeetingLoadState : activeMeetingInfoLoadState
   const activeMeetingEnd = meetingEnd?.meetingId === activeMeetingId ? meetingEnd : null
   const activeAudioPrep = audioPrep?.meetingId === activeMeetingId ? audioPrep : null
   const floatingAnchorRef = desktopLayout || activeTab === 'voice' ? voicePanelRef : utilityPanelRef
@@ -2648,12 +2688,12 @@ export default function Home() {
                     id="meeting-utility-panel"
                     role="tabpanel"
                     aria-label={panelLabels[visibleUtilityTab]}
-                    aria-busy={activeMeetingLoadState === 'loading'}
+                    aria-busy={utilityLoadState === 'loading'}
                     className="flex min-h-0 flex-1 flex-col"
                   >
-                    {activeMeetingLoadState ? (
+                    {utilityLoadState ? (
                       <MeetingContentStatus
-                        status={activeMeetingLoadState}
+                        status={utilityLoadState}
                         loadingMessage={`${panelLabels[visibleUtilityTab]} 불러오는 중…`}
                         onRetry={() => loadMeetingMessages(activeMeetingId)}
                       />

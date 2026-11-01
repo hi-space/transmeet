@@ -166,7 +166,14 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
 
     switch (method) {
       case 'GET': {
+        if (meetingId && resource.endsWith('/messages')) {
+          // GET /meetings/{id}/messages — 대화만. 소유권은 위 ownsMeeting 이 확인했다.
+          return respond(200, { messages: await loadMessages(ddb, meetingId) })
+        }
         if (meetingId) {
+          // ?messages=0 이면 대화를 빼고 돌려준다. 프런트가 요약을 먼저 띄우고 대화는
+          // /messages 로 따로 받는다. 기본값(대화 포함)은 이전 프런트와의 호환용.
+          const withMessages = event.queryStringParameters?.messages !== '0'
           // GET /meetings/{id}
           const result = await ddb.send(
             new GetCommand({
@@ -182,7 +189,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           const { messages: _legacyMessages, ...meeting } = result.Item
           // 세 테이블은 서로 의존하지 않으므로 동시에 읽는다.
           const [messages, page, summaryCustom] = await Promise.all([
-            loadMessages(ddb, meetingId),
+            withMessages ? loadMessages(ddb, meetingId) : Promise.resolve(undefined),
             loadPage(meetingId),
             result.Item.summaryStyle === CUSTOM_SUMMARY_STYLE
               ? loadSummaryCustom(meetingId, userId)
@@ -190,7 +197,7 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
           ])
           return respond(200, {
             ...meeting,
-            messages,
+            ...(messages ? { messages } : {}),
             ...(page ? { page: toMeetingPage(page) } : {}),
             ...(summaryCustom ? { summaryCustom } : {}),
           })
