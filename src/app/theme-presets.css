@@ -728,10 +728,6 @@
   min-height: 2.5rem;
 }
 
-:root[data-preset='slate'] .meeting-list-item[data-active='true'] {
-  box-shadow: inset 3px 0 0 rgb(var(--accent-500));
-}
-
 :root[data-preset='navy'] .voice-scroll {
   background: rgb(var(--surface-panel));
 }
