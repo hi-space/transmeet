@@ -156,8 +156,11 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
   }
 
   try {
-    // /meetings/{id}/* 는 모두 호출자 소유 미팅만 다룬다
-    if (meetingId && !(await ownsMeeting(ddb, meetingId, userId))) {
+    // /meetings/{id}/* 는 모두 호출자 소유 미팅만 다룬다.
+    // GET /meetings/{id} 는 어차피 항목 전체를 읽으므로 그 결과로 소유권을 확인한다(왕복 1회 절약).
+    // 정확히 이 리소스만 건너뛴다 — GET 하위 경로가 생겨도 검사가 빠지지 않게(fail-closed).
+    const isGetOne = method === 'GET' && resource === '/meetings/{id}'
+    if (meetingId && !isGetOne && !(await ownsMeeting(ddb, meetingId, userId))) {
       return respond(404, { error: 'Meeting not found' })
     }
 
@@ -171,15 +174,20 @@ export const handler = async (event: APIGatewayProxyEvent): Promise<APIGatewayPr
               Key: { meetingId },
             })
           )
-          if (!result.Item) {
+          // 남의 미팅과 없는 미팅을 구분하지 않는다 — 둘 다 404.
+          if (!result.Item || result.Item.userId !== userId) {
             return respond(404, { error: 'Meeting not found' })
           }
           // 대화는 메시지 테이블에 있다. 예전 항목에 남은 messages 속성은 버리고 테이블 값만 쓴다.
           const { messages: _legacyMessages, ...meeting } = result.Item
-          const messages = await loadMessages(ddb, meetingId)
-          const page = await loadPage(meetingId)
-          const summaryCustom =
-            result.Item.summaryStyle === CUSTOM_SUMMARY_STYLE ? await loadSummaryCustom(meetingId, userId) : undefined
+          // 세 테이블은 서로 의존하지 않으므로 동시에 읽는다.
+          const [messages, page, summaryCustom] = await Promise.all([
+            loadMessages(ddb, meetingId),
+            loadPage(meetingId),
+            result.Item.summaryStyle === CUSTOM_SUMMARY_STYLE
+              ? loadSummaryCustom(meetingId, userId)
+              : Promise.resolve(undefined),
+          ])
           return respond(200, {
             ...meeting,
             messages,

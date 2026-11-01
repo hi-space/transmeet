@@ -30,7 +30,7 @@ const stored = [
   { meetingId: 'm1', sk: '2026-10-28T00:00:01Z#b', id: 'b', speaker: 's2', originalText: '네', translatedText: 'yes', detectedLanguage: 'ko', timestamp: '2026-10-28T00:00:01Z' },
 ]
 
-function setup({ meetingItem, failBatch = false, updateError } = {}) {
+function setup({ meetingItem, failBatch = false, updateError, queryGate } = {}) {
   const sent = []
   const ddb = {
     async send(command) {
@@ -42,6 +42,7 @@ function setup({ meetingItem, failBatch = false, updateError } = {}) {
       }
       if (command instanceof QueryCommand) {
         assert.equal(command.input.TableName, 'transmeet-messages')
+        if (queryGate) await queryGate
         return { Items: stored.map((m) => ({ ...m })) }
       }
       if (command instanceof BatchWriteCommand) {
@@ -163,4 +164,42 @@ test('PUT /meetings/{id}/summary-style maps a failed condition to 404', async ()
   assert.equal(res.statusCode, 404)
   const update = sent.find((c) => c instanceof UpdateCommand)
   assert.equal(update.input.ConditionExpression, 'attribute_exists(meetingId) AND userId = :uid')
+})
+
+test('GET /meetings/{id} reads the meeting item once (ownership check folded in)', async () => {
+  const { call, sent } = setup({ meetingItem: ownedMeeting() })
+  const res = await call('GET', '/meetings/{id}')
+  assert.equal(res.statusCode, 200)
+  const meetingGets = sent.filter(
+    (c) => c instanceof GetCommand && c.input.TableName === 'transmeet-meetings'
+  )
+  assert.equal(meetingGets.length, 1)
+})
+
+test("GET /meetings/{id} hides another user's meeting as 404", async () => {
+  const { call, sent } = setup({ meetingItem: { ...ownedMeeting(), userId: 'someone-else' } })
+  const res = await call('GET', '/meetings/{id}')
+  assert.equal(res.statusCode, 404)
+  assert.ok(!sent.some((c) => c instanceof QueryCommand), 'must not read messages of a foreign meeting')
+})
+
+test('GET /meetings/{id} loads messages and page in parallel', async () => {
+  let release
+  const queryGate = new Promise((resolve) => { release = resolve })
+  const { call, sent } = setup({ meetingItem: ownedMeeting(), queryGate })
+  const pending = call('GET', '/meetings/{id}')
+  // 메시지 Query 가 끝나지 않은 동안에도 페이지 Get 이 이미 나가 있어야 한다.
+  await new Promise((resolve) => setTimeout(resolve, 10))
+  const pageSent = sent.some((c) => c instanceof GetCommand && c.input.TableName === 'transmeet-pages')
+  release()
+  const res = await pending
+  assert.equal(res.statusCode, 200)
+  assert.ok(pageSent, 'page read should not wait for messages')
+})
+
+test("a GET sub-route still runs the ownership check for another user's meeting", async () => {
+  const { call, sent } = setup({ meetingItem: { ...ownedMeeting(), userId: 'someone-else' } })
+  const res = await call('GET', '/meetings/{id}/future-sub-route')
+  assert.equal(res.statusCode, 404)
+  assert.ok(!sent.some((c) => c instanceof QueryCommand))
 })

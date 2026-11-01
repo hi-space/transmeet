@@ -237,6 +237,9 @@ export class TransmeetStack extends cdk.Stack {
       functionName: 'transmeet-meetings',
       entry: path.join(__dirname, '../lambda/meetings/index.ts'),
       timeout: cdk.Duration.seconds(15),
+      // 기본 128MB 는 vCPU 의 약 1/14 이라 SDK 처리만으로 웜 평균 450ms·콜드 1.5s 가 걸렸다(2026-11-01 실측).
+      // CPU 는 메모리에 비례하므로 올리면 목록·회의 열기가 빨라지고, 실행 시간이 줄어 비용은 비슷하다.
+      memorySize: 1024,
       ...commonNodejsFunctionProps,
     });
 
