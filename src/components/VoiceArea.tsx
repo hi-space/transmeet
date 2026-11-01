@@ -189,6 +189,13 @@ export default function VoiceArea({
   const showPending =
     isRecording && pendingTranscript?.text && isVoiceSpeaker(pendingTranscript.speaker)
   const latest = voiceMessages.at(-1)
+  // 실시간 STT 는 화자 분리를 하지 않아 모든 발언이 한 화자다. 같은 라벨이 반복되면 정보 없이
+  // 자리만 차지하므로, 화자가 둘 이상일 때(나중에 화자를 채운 정리본 등)만 라벨을 보인다.
+  const showSpeakers =
+    new Set([
+      ...voiceMessages.map((message) => message.speaker),
+      ...(showPending && pendingTranscript ? [pendingTranscript.speaker] : []),
+    ]).size > 1
 
   useEffect(() => {
     if (!isVisible) return
@@ -243,6 +250,8 @@ export default function VoiceArea({
             ...SPEAKER_COLORS[speakerIndex],
             label: getSpeakerLabel(message.speaker),
           }
+          // 접근성 이름: 라벨을 숨기면 버튼 이름에서도 화자를 뺀다
+          const who = showSpeakers ? `${speaker.label} ` : ''
           const playing = playingMessageId === message.id
           const translating = message.streamPhase === 'translating' || message.streamPhase === 'stt'
           const latestActive = isRecording && !showPending && message.id === latest?.id
@@ -255,16 +264,20 @@ export default function VoiceArea({
               <div className={`voice-message-inner ${t.inner}`}>
                 <div className={`flex items-center justify-between gap-2 ${t.header}`}>
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span
-                      aria-hidden="true"
-                      data-speaker-number={String(speakerNumber).padStart(2, '0')}
-                      className={`voice-speaker-dot h-1.5 w-1.5 shrink-0 rounded-full ${speaker.dot}`}
-                    />
-                    <span
-                      className={`voice-speaker-label font-semibold ${t.label} ${speaker.color}`}
-                    >
-                      {speaker.label}
-                    </span>
+                    {showSpeakers && (
+                      <>
+                        <span
+                          aria-hidden="true"
+                          data-speaker-number={String(speakerNumber).padStart(2, '0')}
+                          className={`voice-speaker-dot h-1.5 w-1.5 shrink-0 rounded-full ${speaker.dot}`}
+                        />
+                        <span
+                          className={`voice-speaker-label font-semibold ${t.label} ${speaker.color}`}
+                        >
+                          {speaker.label}
+                        </span>
+                      </>
+                    )}
                     <time
                       className={`voice-time ${t.time} tabular-nums text-muted`}
                       dateTime={message.timestamp}
@@ -290,7 +303,7 @@ export default function VoiceArea({
                           )
                         }
                         disabled={translating}
-                        aria-label={`${speaker.label} ${formatTime(message.timestamp)} ${message.translation ? '다시 번역' : '번역'}`}
+                        aria-label={`${who}${formatTime(message.timestamp)} ${message.translation ? '다시 번역' : '번역'}`}
                         title={message.translation ? '다시 번역' : '번역'}
                         className="ui-icon-button h-7 w-7 min-h-7 p-1"
                       >
@@ -309,7 +322,7 @@ export default function VoiceArea({
                         aria-label={
                           playing
                             ? '음성 재생 중지'
-                            : `${speaker.label} ${formatTime(message.timestamp)} 원문 음성 재생`
+                            : `${who}${formatTime(message.timestamp)} 원문 음성 재생`
                         }
                         title={playing ? '음성 재생 중지' : '원문 음성 재생'}
                         className={`ui-icon-button min-h-7 p-1 ${t.btn} ${playing ? 'text-red-500' : ''}`}
@@ -351,10 +364,18 @@ export default function VoiceArea({
           >
             <div className={`voice-message-inner ${t.inner}`}>
               <div className={`flex items-center gap-2 ${t.header}`}>
-                <span className="h-1.5 w-1.5 rounded-full bg-accent-500" />
-                <span className={`${t.label} font-semibold text-accent-700 dark:text-accent-300`}>
-                  {getSpeakerLabel(normalizeSpeaker(pendingTranscript.speaker))}
-                </span>
+                {showSpeakers ? (
+                  <>
+                    <span className="h-1.5 w-1.5 rounded-full bg-accent-500" />
+                    <span
+                      className={`${t.label} font-semibold text-accent-700 dark:text-accent-300`}
+                    >
+                      {getSpeakerLabel(normalizeSpeaker(pendingTranscript.speaker))}
+                    </span>
+                  </>
+                ) : (
+                  <span className="blink-dot h-1.5 w-1.5 rounded-full bg-accent-500" />
+                )}
                 <span className="text-[0.6875rem] text-muted">듣는 중</span>
               </div>
               <p className={`voice-original ${t.original} break-words text-muted`}>

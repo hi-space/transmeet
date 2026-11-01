@@ -22,6 +22,8 @@ export default function ConversationCopyButton({ messages, meetingTitle, disable
       disabled={disabled || conversation.length === 0}
       onCopy={() => {
         const header = meetingTitle ? `${meetingTitle}\n\n` : ''
+        // 화면과 같은 규칙: 화자가 한 명뿐이면 "화자 1:" 을 줄마다 붙이지 않는다
+        const showSpeakers = new Set(conversation.map((message) => message.speaker)).size > 1
         const body = conversation
           .map((message) => {
             const time = new Date(message.timestamp).toLocaleTimeString('ko-KR', {
@@ -29,7 +31,8 @@ export default function ConversationCopyButton({ messages, meetingTitle, disable
               minute: '2-digit',
               hour12: false,
             })
-            return `[${time}] ${getSpeakerLabel(message.speaker)}: ${message.original.trim()}`
+            const who = showSpeakers ? `${getSpeakerLabel(message.speaker)}: ` : ''
+            return `[${time}] ${who}${message.original.trim()}`
           })
           .join('\n')
         return copyText(header + body)

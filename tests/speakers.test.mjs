@@ -132,11 +132,29 @@ test('voice cards show all recognized speakers while keeping typed messages sepa
   assert.doesNotMatch(html, /Utterance 3\./)
 })
 
+test('a single-speaker meeting hides the speaker label on voice cards', () => {
+  // 실시간 STT 는 화자 분리를 하지 않아 모든 발언이 speaker1 이다 — 같은 라벨 반복은 정보가 없다.
+  const VoiceArea = loadSource('src/components/VoiceArea.tsx').default
+  const html = renderToStaticMarkup(
+    React.createElement(VoiceArea, {
+      messages: [message('speaker1'), message('speaker1', 1), message('me', 2)],
+      isRecording: true,
+      isProcessing: false,
+      pendingTranscript: { messageId: 'partial', speaker: 'speaker1', text: 'Still talking' },
+    })
+  )
+
+  assert.doesNotMatch(html, /화자 1/)
+  assert.doesNotMatch(html, /voice-speaker-dot/)
+  assert.match(html, /Utterance 1\./)
+  assert.match(html, /Still talking/)
+})
+
 test('the pending transcript remains visible for a third speaker', () => {
   const VoiceArea = loadSource('src/components/VoiceArea.tsx').default
   const html = renderToStaticMarkup(
     React.createElement(VoiceArea, {
-      messages: [],
+      messages: [message('speaker1')],
       isRecording: true,
       isProcessing: false,
       pendingTranscript: {
