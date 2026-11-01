@@ -152,58 +152,76 @@
   --theme-primary-foreground: 45 35 30;
 }
 
-/* Midnight defaults to dark, but still honors the explicit mode switch. */
+/* Midnight separates the dark stage, raised cards and bright mint controls. */
 :root[data-preset='midnight'] {
-  --surface-canvas: 237 241 240;
-  --surface-panel: 251 253 252;
-  --surface-subtle: 232 238 235;
-  --surface-hover: 219 229 223;
-  --border: 190 206 197;
-  --ink: 38 58 49;
-  --muted: 85 106 95;
-  --panel-radius: 0.5625rem;
-  --control-radius: 0.3125rem;
-  --tab-radius: 0.3125rem;
-  --message-radius: 0.375rem;
-  --dialog-radius: 0.625rem;
-  --record-radius: 0.375rem;
-  --panel-shadow: 0 2px 7px rgb(19 32 26 / 0.035);
-  --sidebar-bg: 226 233 229;
-  --sidebar-active-bg: 211 228 216;
-  --sidebar-active-ink: 39 77 56;
-  --sidebar-active-border: 158 185 166;
-  --sidebar-active-hover: 196 218 203;
-  --theme-accent-50: 239 247 240;
-  --theme-accent-100: 220 237 222;
-  --theme-accent-200: 196 226 200;
-  --theme-accent-300: 176 225 179;
-  --theme-accent-400: 131 189 145;
-  --theme-accent-500: 89 147 105;
-  --theme-accent-600: 62 113 78;
-  --theme-accent-700: 46 91 62;
-  --theme-accent-800: 36 74 50;
-  --theme-accent-900: 29 60 42;
-  --theme-accent-950: 18 37 26;
-  --theme-primary: 53 94 69;
-  --theme-primary-hover: 38 73 51;
+  --theme-font: var(--font-noto-sans), system-ui, sans-serif;
+  --surface-canvas: 239 245 245;
+  --surface-panel: 255 255 255;
+  --surface-subtle: 231 239 240;
+  --surface-hover: 216 233 232;
+  --border: 191 208 210;
+  --ink: 23 46 53;
+  --muted: 77 101 110;
+  --panel-radius: 0.875rem;
+  --control-radius: 0.5rem;
+  --tab-radius: 0.375rem;
+  --message-radius: 0.625rem;
+  --dialog-radius: 0.875rem;
+  --record-radius: 0.625rem;
+  --panel-shadow: 0 4px 16px rgb(8 43 42 / 0.045);
+  --tab-active-bg: var(--primary);
+  --tab-active-ink: var(--primary-foreground);
+  --tab-active-shadow: none;
+  --sidebar-bg: 226 237 237;
+  --sidebar-active-bg: var(--accent-50);
+  --sidebar-active-ink: var(--accent-900);
+  --sidebar-active-muted: var(--accent-800);
+  --sidebar-active-border: var(--accent-300);
+  --sidebar-active-hover: var(--accent-100);
+  --brand-main: 15 118 110;
+  --brand-secondary: 45 212 191;
+  --brand-wordmark: 23 46 53;
+  --theme-accent-50: 240 253 250;
+  --theme-accent-100: 204 251 241;
+  --theme-accent-200: 153 246 228;
+  --theme-accent-300: 94 234 212;
+  --theme-accent-400: 45 212 191;
+  --theme-accent-500: 20 184 166;
+  --theme-accent-600: 13 148 136;
+  --theme-accent-700: 15 118 110;
+  --theme-accent-800: 17 94 89;
+  --theme-accent-900: 19 78 74;
+  --theme-accent-950: 4 47 46;
+  --theme-primary: 15 118 110;
+  --theme-primary-hover: 17 94 89;
+  --midnight-card-bg: 255 255 255;
+  --midnight-lead-bg: var(--accent-50);
+  --midnight-lead-border: var(--accent-200);
 }
 
 :root[data-preset='midnight'].dark {
-  --surface-canvas: 19 23 25;
-  --surface-panel: 32 38 41;
-  --surface-subtle: 25 30 33;
-  --surface-hover: 45 56 55;
-  --border: 54 65 68;
-  --ink: 231 238 233;
-  --muted: 164 182 182;
-  --sidebar-bg: 23 28 31;
-  --sidebar-active-bg: 36 51 42;
-  --sidebar-active-ink: 198 232 202;
-  --sidebar-active-border: 70 91 72;
-  --sidebar-active-hover: 46 67 52;
-  --theme-primary: 176 225 179;
-  --theme-primary-hover: 202 240 204;
-  --theme-primary-foreground: 26 48 37;
+  --surface-canvas: 12 17 23;
+  --surface-panel: 26 37 47;
+  --surface-subtle: 17 27 35;
+  --surface-hover: 44 66 78;
+  --border: 66 89 103;
+  --ink: 243 247 250;
+  --muted: 184 199 209;
+  --panel-shadow: 0 6px 24px rgb(0 0 0 / 0.18);
+  --sidebar-bg: 16 25 32;
+  --sidebar-active-bg: var(--accent-900);
+  --sidebar-active-ink: var(--accent-50);
+  --sidebar-active-muted: var(--accent-100);
+  --sidebar-active-border: var(--accent-700);
+  --sidebar-active-hover: var(--accent-800);
+  --brand-main: 94 234 212;
+  --brand-wordmark: 243 247 250;
+  --theme-primary: 94 234 212;
+  --theme-primary-hover: 153 246 228;
+  --theme-primary-foreground: 4 47 46;
+  --midnight-card-bg: 34 51 63;
+  --midnight-lead-bg: var(--accent-950);
+  --midnight-lead-border: var(--accent-800);
 }
 
 /* A shared blue palette supports both the card and document layouts. */
@@ -571,12 +589,16 @@
 }
 
 .theme-preset-sample[data-preview-preset='midnight'] {
-  --sample-canvas: #131719;
-  --sample-panel: #252e32;
-  --sample-sidebar: #1b2225;
-  --sample-ink: #d5e3dc;
-  --sample-accent: #b0e1b3;
+  --sample-canvas: #0c1117;
+  --sample-panel: #22333f;
+  --sample-sidebar: #101920;
+  --sample-ink: #f3f7fa;
+  --sample-accent: #5eead4;
   --sample-radius: 3px;
+}
+
+.theme-preset-sample[data-preview-preset='midnight'] .theme-sample-card {
+  box-shadow: inset 0 0 0 1px #425967;
 }
 
 .theme-preset-sample[data-preview-preset='slate'] {
@@ -736,13 +758,59 @@
 }
 
 :root[data-preset='midnight'] .voice-message {
-  box-shadow: inset 0 1px 0 rgb(127 160 141 / 0.06);
+  background: rgb(var(--midnight-card-bg));
+  box-shadow: 0 3px 8px rgb(8 17 22 / 0.08);
+}
+
+:root[data-preset='midnight'] [data-voice-size='compact'] .voice-stack {
+  padding: 1rem;
+}
+
+:root[data-preset='midnight'] [data-voice-size='compact'] .voice-message + .voice-message {
+  margin-top: 0.75rem;
+}
+
+:root[data-preset='midnight'] [data-voice-size='compact'] .voice-message-inner {
+  padding: 1rem 1.125rem;
+}
+
+:root[data-preset='midnight'] [data-voice-size='compact'] .voice-original {
+  font-size: 0.9375rem;
+}
+
+:root[data-preset='midnight'] [data-voice-size='compact'] .voice-translation {
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+:root[data-preset='midnight'] .ui-tabs {
+  background: rgb(var(--surface-subtle));
+}
+
+:root[data-preset='midnight'] .sidebar-group-button {
+  border-color: transparent;
+  background: transparent;
+}
+
+:root[data-preset='midnight'] .summary-prose {
+  color: rgb(var(--ink));
+  font-size: 0.9375rem;
+}
+
+:root[data-preset='midnight'] .summary-prose :is(h1, h2, h3) {
+  color: rgb(var(--ink));
+  letter-spacing: -0.015em;
 }
 
 :root[data-preset='midnight'] .summary-prose > h2:first-child + p {
-  padding: 0.75rem 0.875rem;
-  background: rgb(var(--accent-500) / 0.12);
-  border-left: 2px solid rgb(var(--accent-500));
+  margin-block: 0.625rem 1.25rem;
+  padding: 1rem 1.125rem;
+  border: 1px solid rgb(var(--midnight-lead-border));
+  border-radius: 0.625rem;
+  background: rgb(var(--midnight-lead-bg));
+  color: rgb(var(--ink));
+  font-size: 1rem;
+  font-weight: 500;
 }
 
 :root:is([data-preset='slate'], [data-preset='navy']) .voice-message {

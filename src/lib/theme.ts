@@ -32,7 +32,7 @@ export const THEME_PRESETS = [
   {
     value: 'midnight',
     label: 'Midnight Studio',
-    description: '차콜 · 민트 · 스튜디오',
+    description: '딥 차콜 · 선명한 민트',
     mode: 'dark',
   },
   {
