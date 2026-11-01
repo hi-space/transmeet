@@ -450,7 +450,7 @@ def render_page(inp: VisualInputs, w: Dict[str, Any], svgs: Dict[str, str], css:
 </section>
 
 <section class="sec" id="outcomes">{sec_head("회의 결과", "outcomes")}
-  {f'<div class="wrap" id="wrapup"><h3>회의 정리</h3>{wrapup}</div>' if (wrapup := narrative(w.get('wrapup'))) else ''}
+  {f'<div class="wrap" id="wrapup"><h3>회의 정리</h3>{wrapup}</div>' if (wrapup := lead_list(w.get('wrapup'), "bul cols")) else ''}
   <div class="out dec" id="decisions" data-section="decisions"><h3>결정 사항 <span class="count">{len(decisions)}건</span></h3>{f'<ul class="rows">{rows(decisions)}</ul>' if decisions else none}</div>
   <div class="out act" id="actions" data-section="action-items"><h3>액션 아이템 <span class="count">{len(actions)}건</span></h3>
     {f'<table class="actions"><thead><tr><th>할 일</th><th>담당</th><th>기한</th></tr></thead><tbody>{action_rows}</tbody></table>' if actions else none}</div>
