@@ -29,6 +29,7 @@ guide = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(guide)
 
 PRESETS = [
+    ("default", "기본 스타일", "system"),
     ("paper", "Paper Atelier", "light"),
     ("midnight", "Midnight Studio", "dark"),
     ("slate", "Blue Slate", "light"),
@@ -207,6 +208,7 @@ async def choose(page, preset, label):
     button = dialog.get_by_role("button", name=f"{label} 테마", exact=True)
     await button.click()
     await expect(button).to_have_attribute("aria-pressed", "true")
+    await expect(dialog.locator('.theme-preset-option[aria-pressed="true"]')).to_have_count(1)
     await expect(page.locator("html")).to_have_attribute("data-preset", preset)
     return dialog
 
@@ -266,7 +268,7 @@ async def desktop(browser, base, errors, report):
     try:
         for preset, label, preferred_mode in PRESETS:
             dialog = await choose(page, preset, label)
-            assert await dialog.locator(".theme-preset-option").count() == 5
+            await expect(dialog.locator(".theme-preset-option")).to_have_count(6)
             assert await dialog.get_by_role("button", name="Soft Sage 테마", exact=True).count() == 0
             assert await dialog.get_by_role("button", name="Cobalt Grid 테마", exact=True).count() == 0
             await expect(page.locator("html")).to_have_attribute("data-theme-mode", preferred_mode)
@@ -336,6 +338,12 @@ async def desktop(browser, base, errors, report):
         # Reload can open a fresh meeting; select the saved sample for reading-size checks.
         await page.locator(f'.meeting-sidebar span[title="{guide.TITLE}"]').click()
         await expect(page.locator(".voice-message")).to_have_count(4)
+        await choose(page, "default", "기본 스타일")
+        await expect(page.locator("html")).to_have_attribute("data-theme-mode", "system")
+        await expect(page.locator("html")).to_have_attribute("data-accent", "cyan")
+        await expect(page.locator("html")).to_have_attribute("data-font", "default")
+        await expect(page.locator("html")).to_have_attribute("data-scale", "110")
+        await expect(page.locator("html")).to_have_attribute("data-line-spacing", "relaxed")
         await choose(page, "clear", "Clear Focus")
         await expect(page.locator("html")).to_have_attribute("data-scale", "110")
         await expect(page.locator("html")).to_have_attribute("data-line-spacing", "relaxed")
@@ -354,6 +362,9 @@ async def desktop(browser, base, errors, report):
         await page.get_by_role("button", name="테마 초기화", exact=True).click()
         await expect(page.locator("html")).to_have_attribute("data-preset", "default")
         await expect(page.locator("html")).to_have_attribute("data-scale", "100")
+        await expect(page.get_by_role("button", name="기본 스타일 테마", exact=True)).to_have_attribute(
+            "aria-pressed", "true"
+        )
         await close_settings(page)
 
         # Real storage events between pages in one browser profile.
@@ -388,7 +399,7 @@ async def mobile(browser, base, errors):
                 await check_layout(page, f"{preset}-{width}")
                 if width == 375:
                     await screenshot(page, f"{preset}-mobile")
-            print(f"PASS {width}px: all five presets, 120% scale, settings and recording controls", flush=True)
+            print(f"PASS {width}px: all six presets, 120% scale, settings and recording controls", flush=True)
         finally:
             await context.close()
 

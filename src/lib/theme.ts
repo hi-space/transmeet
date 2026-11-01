@@ -18,6 +18,12 @@ export type ThemeSettings = {
 
 export const THEME_PRESETS = [
   {
+    value: 'default',
+    label: '기본 스타일',
+    description: '화이트 · 청록 · 둥근 카드',
+    mode: 'system',
+  },
+  {
     value: 'paper',
     label: 'Paper Atelier',
     description: '종이색 · 명조 · 문서형 대화',
@@ -73,7 +79,7 @@ export function createPresetTheme(
     ...current,
     preset: selected?.value ?? defaults.preset,
     mode: selected?.mode ?? defaults.mode,
-    accent: selected ? 'theme' : defaults.accent,
+    accent: selected && selected.value !== 'default' ? 'theme' : defaults.accent,
     font: 'default',
   }
 }

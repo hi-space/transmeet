@@ -523,12 +523,12 @@
 }
 
 .theme-preset-sample {
-  --sample-canvas: #eee9e0;
-  --sample-panel: #fcfaf5;
-  --sample-sidebar: #e6dfd1;
-  --sample-ink: #34332e;
-  --sample-accent: #955139;
-  --sample-radius: 0;
+  --sample-canvas: #f5f7f8;
+  --sample-panel: #fff;
+  --sample-sidebar: #eaf0f2;
+  --sample-ink: #23303c;
+  --sample-accent: #34756f;
+  --sample-radius: 3px;
   display: grid;
   grid-template-columns: 22% 1fr;
   height: 3.75rem;
@@ -538,6 +538,15 @@
   border: 1px solid rgb(100 116 139 / 0.2);
   border-radius: 0.25rem;
   background: var(--sample-canvas);
+}
+
+.theme-preset-sample[data-preview-preset='paper'] {
+  --sample-canvas: #eee9e0;
+  --sample-panel: #fcfaf5;
+  --sample-sidebar: #e6dfd1;
+  --sample-ink: #34332e;
+  --sample-accent: #955139;
+  --sample-radius: 0;
 }
 
 .theme-preset-sample[data-preview-preset='midnight'] {

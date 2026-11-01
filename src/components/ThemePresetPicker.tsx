@@ -10,19 +10,9 @@ interface Props {
 export default function ThemePresetPicker({ value, onChange }: Props) {
   return (
     <section aria-labelledby="theme-preset-label" className="space-y-2.5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 id="theme-preset-label" className="ui-setting-label">
-          테마 스타일
-        </h3>
-        <button
-          type="button"
-          aria-pressed={value === 'default'}
-          onClick={() => onChange('default')}
-          className={`ui-button min-h-9 px-2 ${value === 'default' ? 'ui-button-tinted' : ''}`}
-        >
-          기본 스타일
-        </button>
-      </div>
+      <h3 id="theme-preset-label" className="ui-setting-label">
+        테마 스타일
+      </h3>
       <div role="group" aria-labelledby="theme-preset-label" className="grid grid-cols-2 gap-2.5">
         {THEME_PRESETS.map((preset) => (
           <button
@@ -31,7 +21,7 @@ export default function ThemePresetPicker({ value, onChange }: Props) {
             aria-label={`${preset.label} 테마`}
             aria-pressed={value === preset.value}
             onClick={() => onChange(preset.value)}
-            className="theme-preset-option last:odd:col-span-2"
+            className="theme-preset-option"
           >
             <span
               aria-hidden="true"
