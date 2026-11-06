@@ -15,9 +15,12 @@ from app import stt, ws_handler
 def translation_service(monkeypatch):
     ws = SimpleNamespace(send_json=AsyncMock())
     prompts = []
+    requests = []
 
     async def converse_stream(**kwargs):
-        prompts.append(kwargs["messages"][0]["content"][0]["text"])
+        # 방향은 system 에, 원문은 user 에 있다 — 둘 다 이어 붙여 검사한다
+        prompts.append(kwargs["system"][0]["text"] + "\n" + kwargs["messages"][0]["content"][0]["text"])
+        requests.append(kwargs)
 
         async def events():
             yield {"contentBlockDelta": {"delta": {"text": "Translated result."}}}
@@ -29,6 +32,7 @@ def translation_service(monkeypatch):
         yield SimpleNamespace(converse_stream=converse_stream)
 
     monkeypatch.setattr(ws_handler, "bedrock_client", bedrock)
+    ws.requests = requests
     return ws, prompts
 
 
@@ -192,3 +196,21 @@ async def test_buffered_utterance_keeps_its_translation_target_when_settings_cha
     await asyncio.wait_for(pending, 1)
     assert prompts == []
     assert final_events(ws)[0]["translatedText"] == "검토를 완료했습니다."
+
+
+async def test_translation_request_keeps_source_as_data_and_disables_thinking(translation_service):
+    """원문은 <source> 태그 안 데이터로만, 지시는 system 에. "Text: ..." 로 끝나던 예전
+    프롬프트는 "Translated: ..." 접두어를 불렀다. 자막 지연을 줄이려 생각은 끈다."""
+    ws, _ = translation_service
+    state = ws_handler.ConnectionState(ws=ws, source_lang="ko")
+    state.translation_target = "en"
+    await ws_handler._process_segment(ws, "다음 주에 배포할까요?", "speaker1", "ko", state, "now")
+    (req,) = ws.requests
+    assert req["messages"] == [
+        {"role": "user", "content": [{"text": "<source>다음 주에 배포할까요?</source>"}]}
+    ]
+    system = req["system"][0]["text"]
+    assert "Korean text to English" in system
+    assert "never answer" in system
+    assert "Text:" not in req["messages"][0]["content"][0]["text"]
+    assert req["additionalModelRequestFields"] == {"thinking": {"type": "disabled"}}

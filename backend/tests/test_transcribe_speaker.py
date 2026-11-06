@@ -115,7 +115,7 @@ async def test_multilingual_stream_preserves_language_without_splitting_speakers
         )
 
     async def converse_stream(**kwargs):
-        prompts.append(kwargs["messages"][0]["content"][0]["text"])
+        prompts.append(kwargs["system"][0]["text"] + "\n" + kwargs["messages"][0]["content"][0]["text"])
 
         async def events():
             yield {"contentBlockDelta": {"delta": {"text": "Translated."}}}
