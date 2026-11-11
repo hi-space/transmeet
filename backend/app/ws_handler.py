@@ -205,6 +205,8 @@ class ConnectionState:
     transcribe_retry_at: float = 0.0
     # SageMaker 스트리밍: 인식 결과 없이 연달아 다시 연결한 횟수
     stream_restarts: int = 0
+    # 백오프 뒤 새 연결을 여는 대기 태스크. 도는 동안 오디오는 녹음 파일에만 쌓는다.
+    stream_reconnect_task: Optional[asyncio.Task] = None
     # Transcribe mode: deferred segment accumulation (merges consecutive finals before translating)
     seg_buffer: List[tuple] = field(default_factory=list)  # [(text, speaker, detected_lang)]
     seg_flush_task: Optional[asyncio.Task] = None
@@ -892,7 +894,18 @@ async def _run_transcribe_streaming(
 
 # 일시 오류(모델 지연·타임아웃) 뒤 같은 녹음을 새 연결로 이어 가는 횟수. 인식 결과가
 # 한 번이라도 나오면 다시 채워진다 — 엔드포인트가 실제로 죽었을 때만 녹음을 멈춘다.
-STREAM_MAX_RESTARTS = 3
+# 백오프 합계 약 1분 30초(+ 시도마다 실패까지 걸리는 시간)를 버틴다.
+STREAM_MAX_RESTARTS = 8
+STREAM_RESTART_MAX_DELAY = 15.0
+
+
+def _stream_restart_delay(attempt: int) -> float:
+    """attempt 번째 재연결 전 대기(초): 2, 4, 8, 15, 15, …
+
+    확정 디코드가 타임아웃 나도 CUDA 호출은 끊기지 않아 GPU 락을 ~20초 더 잡는다.
+    그 사이 즉시 다시 붙으면 새 연결은 4초 큐만 채우고 'cannot keep up' 으로 죽는다.
+    """
+    return min(2.0 ** attempt, STREAM_RESTART_MAX_DELAY)
 
 
 def _start_sagemaker_streaming(
@@ -1011,18 +1024,32 @@ def _start_nemotron_streaming(state: ConnectionState, ws: WebSocket, connection_
 
 
 async def _restart_sagemaker_streaming(state, ws, connection_id, stream, snapshot, message):
-    """실패한 스트림을 같은 녹음 설정의 새 연결로 바꾼다. 예산을 다 쓰면 녹음을 막는다."""
-    # 이미 교체된 스트림, 멈추는 중인 녹음, 예산 소진은 예전처럼 오류로 알린다.
-    if state.speech_stream is not stream or not state.stt_ready or state.stream_restarts >= STREAM_MAX_RESTARTS:
+    """실패한 스트림을 백오프 뒤 같은 녹음 설정의 새 연결로 바꾼다. 예산을 다 쓰면 녹음을 막는다."""
+    if state.speech_stream is not stream:
+        # 이미 교체됐거나 녹음이 끝난 스트림의 뒤늦은 오류 — 사용자에게 알릴 일이 아니다.
+        logger.info("[ws] ignoring error from a replaced %s stream: %s", snapshot.stt_provider, message)
+        return
+    if state.stream_reconnect_task is not None and not state.stream_reconnect_task.done():
+        return  # 같은 실패에 대한 재연결이 이미 대기 중이다(오디오 전송 실패가 뒤따라 온 경우).
+    if not state.stt_ready or state.stream_restarts >= STREAM_MAX_RESTARTS:
         await _sagemaker_recording_failed(state, ws, connection_id, stream, message, provider=snapshot.stt_provider)
         return
     state.stream_restarts += 1
+    delay = _stream_restart_delay(state.stream_restarts)
     logger.warning(
-        "[ws] %s stream failed, reconnecting (%d/%d): connection_id=%s error=%s",
-        snapshot.stt_provider, state.stream_restarts, STREAM_MAX_RESTARTS, connection_id, message,
+        "[ws] %s stream failed, reconnecting in %.0fs (%d/%d): connection_id=%s error=%s",
+        snapshot.stt_provider, delay, state.stream_restarts, STREAM_MAX_RESTARTS, connection_id, message,
     )
-    # 실패한 연결에 남은 몇 초 분량의 오디오는 버려진다 — 녹음 전체를 잃는 것보다 낫다.
-    _start_sagemaker_streaming(state, ws, connection_id, snapshot)
+
+    async def reconnect() -> None:
+        await asyncio.sleep(delay)
+        # 기다리는 동안 녹음을 멈췄거나 다른 녹음이 시작됐으면 붙지 않는다.
+        if state.speech_stream is stream and state.stt_ready:
+            _start_sagemaker_streaming(state, ws, connection_id, snapshot)
+
+    # 실패한 스트림의 이벤트 핸들러 안에서 기다리면 그 스트림의 close() 가 막힌다 — 따로 돈다.
+    # 대기 동안의 오디오는 자막에서 빠지지만 녹음 파일에는 남는다.
+    state.stream_reconnect_task = asyncio.create_task(reconnect())
 
 
 async def _sagemaker_recording_failed(state, ws, connection_id, stream, message, *, provider=None):
@@ -1790,6 +1817,9 @@ async def _claim_meeting(state: ConnectionState, meeting_id: Optional[str]) -> O
 async def _stop_recording(state: ConnectionState, ws: WebSocket, connection_id: str) -> None:
     """녹음 정지: STT 를 마무리하고 아직 안 올린 녹음을 S3 로 올린다."""
     state.stt_ready = False
+    if state.stream_reconnect_task is not None:
+        state.stream_reconnect_task.cancel()
+        state.stream_reconnect_task = None
     if state.speech_stream is not None:
         await state.speech_stream.close()
         state.speech_stream = None
@@ -2089,6 +2119,8 @@ async def ws_endpoint(
                             logger.warning("[ws] dropped malformed audio chunk: %s", exc)
                             continue
                         _buffer_audio(state, connection_id, pcm)
+                        if state.stream_reconnect_task is not None and not state.stream_reconnect_task.done():
+                            continue  # 재연결 대기 중 — 녹음 파일에만 남긴다.
                         try:
                             # Silence drives model endpointing; even a tiny stop tail is valid.
                             await stream.send_audio(pcm)

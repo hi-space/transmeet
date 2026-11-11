@@ -12,6 +12,9 @@ from fastapi import WebSocketDisconnect
 from app import nemotron_stream, stt, ws_handler
 from tests.test_nemotron_stream import ModelService, eventually
 
+# conftest 가 테스트마다 지연을 0 으로 덮기 전에 실제 백오프 함수를 잡아 둔다.
+REAL_RESTART_DELAY = getattr(ws_handler, "_stream_restart_delay", None)
+
 
 class FakeWS:
     def __init__(self):
@@ -187,6 +190,54 @@ async def test_a_final_resets_the_restart_budget(streaming, monkeypatch):
         await ws_handler._stop_recording(state, ws, "recording")
 
 
+async def test_reconnect_waits_for_a_busy_decoder_instead_of_burning_the_budget(streaming, monkeypatch):
+    """2026-11-09 사고: 확정 디코드가 20초 넘게 GPU 를 잡은 동안 즉시 재연결 3번이
+    각 4초 만에 'cannot keep up' 으로 실패해 13초 만에 녹음이 멈췄다."""
+    delays = []
+    monkeypatch.setattr(ws_handler, "_stream_restart_delay", lambda attempt: delays.append(attempt) or 0.05)
+    ws = FakeWS()
+    state = ws_handler.ConnectionState(ws=ws, stt_provider="nemotron", stt_ready=True)
+    ws_handler._start_nemotron_streaming(state, ws, "recording")
+    try:
+        failed = state.speech_stream
+        await eventually(lambda: streaming.connections)
+        await streaming.connections[0].emit({"type": "error", "message": "speech stream timed out"})
+        await eventually(lambda: delays == [1])
+        # 대기 중에 들어온 오디오 전송 실패가 재연결을 한 번 더 걸면 안 된다.
+        await ws_handler._restart_sagemaker_streaming(
+            state, ws, "recording", failed, failed.recording_snapshot, "send failed",
+        )
+        assert len(streaming.connections) == 1 and state.stream_restarts == 1
+        await asyncio.sleep(0.1)
+        await eventually(lambda: len(streaming.connections) == 2)
+        assert delays == [1]
+        assert state.stt_ready is True
+        assert not any(event["type"] == "error" for event in ws.sent)
+    finally:
+        await ws_handler._stop_recording(state, ws, "recording")
+
+
+async def test_stopping_during_the_backoff_cancels_the_reconnect(streaming, monkeypatch):
+    monkeypatch.setattr(ws_handler, "_stream_restart_delay", lambda attempt: 0.05)
+    ws = FakeWS()
+    state = ws_handler.ConnectionState(ws=ws, stt_provider="nemotron", stt_ready=True)
+    ws_handler._start_nemotron_streaming(state, ws, "recording")
+    await eventually(lambda: streaming.connections)
+    await streaming.connections[0].emit({"type": "error", "message": "decoder behind"})
+    await eventually(lambda: state.stream_restarts == 1)
+    await ws_handler._stop_recording(state, ws, "recording")
+    await asyncio.sleep(0.1)
+    assert len(streaming.connections) == 1
+    assert state.speech_stream is None
+
+
+def test_the_restart_budget_rides_out_a_long_gpu_stall():
+    # 백오프 합계가 최소 1분은 되어야 확정 디코드 정체(관측 ~20초)를 넘긴다.
+    total = sum(REAL_RESTART_DELAY(n) for n in range(1, ws_handler.STREAM_MAX_RESTARTS + 1))
+    assert total >= 60
+    assert REAL_RESTART_DELAY(1) >= 1
+
+
 async def test_old_stream_error_does_not_block_or_release_its_replacement(streaming):
     ws = FakeWS()
     state = ws_handler.ConnectionState(ws=ws, stt_provider="nemotron", stt_ready=True)
@@ -201,6 +252,8 @@ async def test_old_stream_error_does_not_block_or_release_its_replacement(stream
         assert state.stt_ready is True
         assert "replacement-recording" in ws_handler.capacity.sessions["nemotron"]
         assert not any(event.get("recordingBlocked") for event in ws.sent)
+        # 이미 교체된 스트림의 오류로 alert 팝업을 띄우면 안 된다.
+        assert not any(event["type"] == "error" for event in ws.sent)
     finally:
         ws_handler.capacity.release("nemotron", "replacement-recording")
         await original.close()
