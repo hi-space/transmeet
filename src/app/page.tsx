@@ -361,6 +361,9 @@ export default function Home() {
   const [detectedLang, setDetectedLang] = useState<'ko' | 'en' | null>(null)
   // 같은 서버 에러가 반복될 때 alert 이 도배되지 않도록 마지막 메시지를 기억한다
   const lastWsErrorRef = useRef<string | null>(null)
+  // 녹음 중 서버 오류는 alert 대신 이 문구로 보인다 — 모달이 메인 스레드를 막으면 안 된다.
+  const [recordingNotice, setRecordingNotice] = useState<string | null>(null)
+  const isRecordingRef = useRef(false)
   // sendTranslate ref: handleWsMessage보다 먼저 선언되어야 하므로 ref 패턴 사용
   const sendTranslateRef = useRef<
     (
@@ -739,6 +742,10 @@ export default function Home() {
         // 이 분기가 없어서 백엔드 에러가 조용히 삼켜졌다 — STT 세션이 죽어도
         // 화면에는 아무 변화가 없어 마이크 문제로 오해하게 된다.
         console.error('[WS] server error:', msg.message)
+        if (isRecordingRef.current) {
+          setRecordingNotice(msg.message)
+          return
+        }
         if (lastWsErrorRef.current !== msg.message) {
           lastWsErrorRef.current = msg.message
           alert(msg.message)
@@ -1500,6 +1507,14 @@ export default function Home() {
     audioSource: settings.audioSource,
   })
 
+  isRecordingRef.current = isRecording
+
+  useEffect(() => {
+    if (!recordingNotice) return
+    const timer = setTimeout(() => setRecordingNotice(null), 8000)
+    return () => clearTimeout(timer)
+  }, [recordingNotice])
+
   const recordingAction = sttRecordingAction(
     settings.sttProvider,
     !HAS_API && settings.sttProvider === 'whisper'
@@ -1711,7 +1726,10 @@ export default function Home() {
   ])
 
   useEffect(() => {
-    if (!isRecording) setSttFallback(null)
+    if (!isRecording) {
+      setSttFallback(null)
+      setRecordingNotice(null)
+    }
   }, [isRecording])
 
   const handleSttSelect = useCallback(
@@ -2835,6 +2853,15 @@ export default function Home() {
             }
             status={
               <>
+                {recordingNotice && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="ui-surface pointer-events-auto max-w-[min(24rem,calc(100vw-4rem))] px-3 py-2 text-xs shadow-lg"
+                  >
+                    {recordingNotice}
+                  </div>
+                )}
                 {sttFallback && (
                   <div
                     role="status"

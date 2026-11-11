@@ -108,6 +108,9 @@ from .stt import (
 from .stt_capacity import capacity
 
 logger = logging.getLogger(__name__)
+
+# 실시간 엔진 확정 발화를 동시에 번역하는 최대 수. 넘치면 녹음을 멈추지 않고 순서대로 기다린다.
+TRANSLATION_CONCURRENCY = 8
 router = APIRouter()
 
 MAX_BUFFER_BYTES = 512_000   # ~16 seconds at 16 kHz 16-bit mono
@@ -211,6 +214,9 @@ class ConnectionState:
     seg_buffer: List[tuple] = field(default_factory=list)  # [(text, speaker, detected_lang)]
     seg_flush_task: Optional[asyncio.Task] = None
     segment_tasks: set[asyncio.Task] = field(default_factory=set)
+    # 실시간 엔진 확정 발화의 동시 번역 수. 녹음 스냅샷(replace)끼리 같은 객체를 공유한다.
+    translation_slots: asyncio.Semaphore = field(
+        default_factory=lambda: asyncio.Semaphore(TRANSLATION_CONCURRENCY))
     seg_last_speaker: Optional[str] = None  # 버퍼에 있는 마지막 화자 (화자 변경 감지용)
     # Translation timing: "sentence" | "realtime" | "manual"
     translation_timing: str = "sentence"
@@ -937,7 +943,6 @@ def _start_sagemaker_streaming(
     seen_finals = set()
     generation = None
     pending_utterance = None
-    backlog_overflow = False
 
     async def send(payload):
         try:
@@ -957,7 +962,7 @@ def _start_sagemaker_streaming(
             pending_utterance = None
 
     async def on_event(event):
-        nonlocal generation, pending_utterance, backlog_overflow
+        nonlocal generation, pending_utterance
         if event["stream_id"] != generation:
             generation = event["stream_id"]
             seen_finals.clear()  # IDs are local to a 25-minute model connection.
@@ -966,11 +971,7 @@ def _start_sagemaker_streaming(
         if kind == "error":
             await clear_partial()
             message = f"{label} 실시간 음성 인식에 실패했습니다: {event['message']}"
-            if backlog_overflow:
-                # 새 연결로는 밀린 번역이 풀리지 않는다.
-                await _sagemaker_recording_failed(state, ws, connection_id, stream, message, provider=provider)
-            else:
-                await _restart_sagemaker_streaming(state, ws, connection_id, stream, snapshot, message)
+            await _restart_sagemaker_streaming(state, ws, connection_id, stream, snapshot, message)
             return
         if kind == "ended":
             await clear_partial()
@@ -1003,20 +1004,22 @@ def _start_sagemaker_streaming(
             pending_utterance = None
         if state.speech_stream is stream:
             state.stream_restarts = 0
-        # Keep translation separate from the audio receiver, with a bounded backlog.
+        # 번역은 오디오 수신과 분리하고, 동시 번역 수만 제한한다. 밀리면 순서대로 기다릴 뿐
+        # 인식·녹음은 멈추지 않는다(예전엔 64건이 밀리면 녹음을 막았다).
         final_state = replace(snapshot, stt_stream_id=stream_id, stt_utterance_id=utterance_id)
-        task = asyncio.create_task(_process_segment(
-            ws, result.text, snapshot.speaker, language, final_state, _iso_now(),
+        task = asyncio.create_task(_translate_when_free(
+            state.translation_slots, ws, result.text, snapshot.speaker, language, final_state, _iso_now(),
         ))
         state.segment_tasks.add(task)
         task.add_done_callback(state.segment_tasks.discard)
-        if len(state.segment_tasks) > 64:
-            # Preserve this already-confirmed original, then stop new input.
-            # Raising ends the stream reader so no further overflow is scheduled.
-            backlog_overflow = True
-            raise NemotronStreamError("번역 처리가 지연되어 음성 인식을 중단했습니다. 잠시 후 다시 시작해 주세요.")
 
     stream.start(on_event)
+
+
+async def _translate_when_free(slots, ws, text, speaker, language, snapshot, timestamp) -> None:
+    # asyncio.Semaphore 는 기다린 순서대로 깨운다 — 발화 순서가 유지된다.
+    async with slots:
+        await _process_segment(ws, text, speaker, language, snapshot, timestamp)
 
 
 def _start_nemotron_streaming(state: ConnectionState, ws: WebSocket, connection_id: str) -> None:
@@ -1095,23 +1098,6 @@ async def _fallback_to_transcribe(state, ws, connection_id, failed_provider, rea
         }), timeout=1)
     except Exception:
         pass
-
-
-async def _sagemaker_recording_failed(state, ws, connection_id, stream, message, *, provider=None):
-    provider = provider or state.stt_provider
-    payloads = [{"type": "error", "message": message, "timestamp": _iso_now()}]
-    if state.speech_stream is stream:
-        state.stt_ready = False
-        capacity.release(provider, connection_id)
-        payloads.append({
-            "type": "stt_status", "provider": provider, "status": "error",
-            "streaming": True, "managed": False, "recordingBlocked": True, "message": message,
-        })
-    for payload in payloads:
-        try:
-            await asyncio.wait_for(_safe_send(ws, payload), timeout=1)
-        except Exception:
-            pass
 
 
 def _streaming_pcm(audio_data: str) -> bytes:
@@ -1193,13 +1179,7 @@ async def _flush_audio_buffer(
             })
         except Exception:
             pass
-        if inference_component_for(snapshot.stt_provider):
-            status = await capacity.status(snapshot.stt_provider, refresh=True)
-            if status["status"] != "ready":
-                try:
-                    await _safe_send(ws, {"type": "stt_status", **status, "recordingBlocked": True})
-                except Exception:
-                    pass
+        # 엔진이 내려가도 녹음은 막지 않는다 — 녹음 파일은 계속 쌓이고 다음 발화를 다시 시도한다.
     finally:
         capacity.release(snapshot.stt_provider, work_id)
 

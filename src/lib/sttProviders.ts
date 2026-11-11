@@ -72,10 +72,14 @@ export function matchesSttUtterance(
   )
 }
 
+/**
+ * 녹음 중 자동 정지는 백엔드가 명시적으로 막았을 때(recordingBlocked)만 한다.
+ * 5초마다 폴링하는 엔진 상태로 끊으면, 백엔드가 Transcribe 로 넘겨 녹음을 이어 가는
+ * 사이에 화면이 먼저 녹음을 끊는 경쟁이 생긴다(2026-11-11).
+ */
 export function shouldStopSttRecording(provider: SttProvider, state?: SttStatus): boolean {
   if (!isManagedStt(provider, state) || !state || state.provider !== provider) return false
-  if (state.recordingBlocked) return true
-  return state.status !== 'ready' && state.status !== 'unknown' && state.status !== 'checking'
+  return state.recordingBlocked === true
 }
 
 /** A saved provider selection never implies that its GPU is ready. */

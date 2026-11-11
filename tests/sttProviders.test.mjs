@@ -95,12 +95,13 @@ test('old and disabled Whisper capabilities retain batch capture without prepara
   assert.equal(isManagedStt('whisper'), false)
 })
 
-test('advertised Whisper requires readiness and stops on a confirmed stream failure', () => {
+test('advertised Whisper requires readiness and stops only when the backend blocks the recording', () => {
   const status = { provider: 'whisper', status: 'ready', streaming: true }
   assert.equal(sttRecordingAction('whisper', status, false), 'start')
   assert.equal(sttRecordingAction('whisper', { ...status, status: 'starting' }, false), 'wait')
   assert.equal(sttRecordingAction('whisper', { ...status, status: 'error' }, false), 'prepare')
-  assert.equal(shouldStopSttRecording('whisper', { ...status, status: 'error' }), true)
+  // 폴링한 엔진 상태만으로는 끊지 않는다 — 백엔드가 Transcribe 로 넘겨 녹음을 이어 간다.
+  assert.equal(shouldStopSttRecording('whisper', { ...status, status: 'error' }), false)
   assert.equal(shouldStopSttRecording('whisper', { ...status, status: 'unknown' }), false)
   assert.equal(
     shouldStopSttRecording('whisper', { ...status, status: 'unknown', recordingBlocked: true }),
@@ -204,14 +205,14 @@ test('recording can always be stopped even when the engine becomes unavailable',
   )
 })
 
-test('a transient status-query failure does not interrupt an established recording', () => {
+test('a polled engine status never interrupts an established recording', () => {
   assert.equal(
     shouldStopSttRecording('nemotron', { provider: 'nemotron', status: 'unknown' }),
     false
   )
   assert.equal(
     shouldStopSttRecording('nemotron', { provider: 'nemotron', status: 'sleeping' }),
-    true
+    false
   )
   assert.equal(
     shouldStopSttRecording('nemotron', {
