@@ -1,8 +1,11 @@
 """Official Qwen streaming API with isolated state and serialized GPU calls."""
 import asyncio
+import copy
 import logging
+import math
 import os
 import threading
+import time
 from collections import deque
 
 logger = logging.getLogger(__name__)
@@ -10,6 +13,30 @@ SAMPLE_RATE = 16000
 MAX_UTTERANCE_BYTES = 15 * SAMPLE_RATE * 2
 MAX_NEW_TOKENS = 512
 CANCEL_TIMEOUT = 5
+# 디코드 한 번이 만들 수 있는 토큰 수. 정상 발화는 초당 ~5토큰이라 3배 넘게 여유가 있고,
+# 반복 환각은 여기서 잘린다. 공식 스트리밍 데모는 prefix 를 쓰는 청크에 32 토큰을 준다.
+TOKEN_FLOOR = 32
+TOKENS_PER_SECOND = 16
+
+
+def token_budget(seconds):
+    """seconds 분량 오디오를 새로 받아 적는 디코드의 생성 토큰 상한."""
+    return min(MAX_NEW_TOKENS, TOKEN_FLOOR + math.ceil(seconds * TOKENS_PER_SECOND))
+
+
+def limit_tokens(model, max_tokens):
+    """다음 generate 의 max_tokens 를 바꾼다. 호출은 engine lock 안에서만 한다.
+
+    2026-11-09: 512 고정 상한 탓에 반복 환각이 청크마다 수 초씩 GPU 를 잡아 디코더가
+    실시간을 못 따라가고('cannot keep up'), 확정 디코드는 20초 타임아웃을 넘겼다.
+    CUDA 호출은 취소되지 않아 그 뒤 연결까지 막혔다.
+    """
+    params = getattr(model, "sampling_params", None)
+    if params is None or params.max_tokens == max_tokens:
+        return
+    limited = params.clone() if hasattr(params, "clone") else copy.copy(params)
+    limited.max_tokens = max_tokens
+    model.sampling_params = limited
 LANGUAGES = {"ko-KR": "Korean", "en-US": "English", "auto": None}
 
 
@@ -19,7 +46,8 @@ def finish_without_unsafe_prefix(model, state):
     qwen-asr 0.0.6's chunk path checks for U+FFFD after byte-BPE rollback;
     its finalizer instead keeps at least one token and can split Korean UTF-8.
     A final tail therefore uses no retained text prefix. The 512-token budget
-    covers re-decoding the entire bounded 15-second utterance.
+    covers re-decoding the entire bounded 15-second utterance; each call is
+    further capped by token_budget() for the audio it actually covers.
     """
     previous = state.unfixed_chunk_num
     state.unfixed_chunk_num = state.chunk_id + 1
@@ -172,9 +200,22 @@ class StreamingUtterance:
 
         def decode(pcm):
             audio = np.frombuffer(pcm, dtype="<i2").astype(np.float32) / 32768.0
+            samples = len(state.buffer) + len(audio)
+            # 청크가 차는 호출만 디코드한다. prefix 가 없는 첫 청크들은 누적 오디오 전체를,
+            # 그 뒤는 새 청크만 받아 적는다(이전 결과가 prefix 로 들어간다).
+            if state.chunk_id < state.unfixed_chunk_num:
+                seconds = (len(state.audio_accum) + samples) / SAMPLE_RATE
+            else:
+                seconds = samples / SAMPLE_RATE
             with self.runtime._engine_lock:
                 self._check_cancelled()
+                limit_tokens(self.runtime.model, token_budget(seconds))
+                started = time.monotonic()
                 self.runtime.model.streaming_transcribe(audio, state)
+                elapsed = time.monotonic() - started
+            if elapsed > self.chunk_ms / 1000:
+                logger.warning("Qwen decode slower than real time: %.2fs for %d ms chunk (budget %d)",
+                               elapsed, self.chunk_ms, token_budget(seconds))
             self._check_cancelled()
 
         while True:
@@ -194,7 +235,14 @@ class StreamingUtterance:
             decode(bytes(pending))
         with self.runtime._engine_lock:
             self._check_cancelled()
+            # 확정은 prefix 없이 발화 전체를 다시 받아 적는다.
+            seconds = (len(state.audio_accum) + len(state.buffer)) / SAMPLE_RATE
+            limit_tokens(self.runtime.model, token_budget(seconds))
+            started = time.monotonic()
             finish_without_unsafe_prefix(self.runtime.model, state)
+            elapsed = time.monotonic() - started
+        if elapsed > 3:
+            logger.warning("Qwen final decode took %.2fs for %.1fs of audio", elapsed, seconds)
         self._check_cancelled()
         if "\ufffd" in state.text:
             raise RuntimeError("Qwen returned an incomplete Unicode transcript")

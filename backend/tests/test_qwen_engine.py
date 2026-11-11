@@ -319,3 +319,64 @@ def test_initial_quiet_room_tone_does_not_create_repeated_short_utterances():
     assert not any(kind == "end" for kind, _ in events)
     events.extend(segmenter.finish())
     assert b"".join(data for kind, data in events if kind != "end") == room_tone * 3
+
+
+class SamplingParams:
+    """vLLM SamplingParams 의 clone/max_tokens 경계만 흉내 낸다."""
+
+    def __init__(self, max_tokens):
+        self.max_tokens = max_tokens
+        self.temperature = 0.0
+
+    def clone(self):
+        return SamplingParams(self.max_tokens)
+
+
+class BudgetModel(StreamingModel):
+    def __init__(self):
+        super().__init__()
+        self.sampling_params = SamplingParams(512)
+        self.budgets = []
+
+    def streaming_transcribe(self, audio, state):
+        before = state.chunk_id
+        result = super().streaming_transcribe(audio, state)
+        if state.chunk_id > before:
+            self.budgets.append(("stream", self.sampling_params.max_tokens))
+        return result
+
+    def finish_streaming_transcribe(self, state):
+        self.budgets.append(("finish", self.sampling_params.max_tokens))
+        return super().finish_streaming_transcribe(state)
+
+
+@pytest.mark.asyncio
+async def test_each_decode_is_capped_by_the_audio_it_must_transcribe():
+    """2026-11-09: 512 토큰 고정 상한 탓에 반복 환각이 청크마다 수 초씩 GPU 를 잡아
+    'cannot keep up' 과 20초 확정 타임아웃이 났다. 공식 데모는 32 토큰을 쓴다."""
+    module = runtime_module()
+    model = BudgetModel()
+    runtime = module.ModelRuntime(model)
+    utterance = runtime.start_utterance(language="ko-KR", chunk_ms=1000, on_partial=lambda *_: None)
+    try:
+        for _ in range(55):  # 0.1초씩 5.5초 — 실제 브라우저처럼 잘게, 큐 한도 안에서
+            utterance.feed(pcm(1600))
+            await asyncio.sleep(0.005)
+        await asyncio.wait_for(utterance.finish(), 5)
+    finally:
+        await utterance.cancel()
+    stream = [budget for kind, budget in model.budgets if kind == "stream"]
+    finish = [budget for kind, budget in model.budgets if kind == "finish"]
+    # prefix 가 없는 첫 두 청크는 누적 오디오 전체를, 그다음은 새 청크만 받아 적는다.
+    assert stream == [module.token_budget(1), module.token_budget(2)] + [module.token_budget(1)] * 3
+    # 확정은 prefix 없이 5.5초 전체를 다시 받아 적는다.
+    assert finish == [module.token_budget(5.5)]
+    assert module.token_budget(1) <= 64
+    assert module.token_budget(15) <= module.MAX_NEW_TOKENS
+    # 정상 발화(초당 ~5토큰)는 잘리지 않을 만큼 넉넉해야 한다.
+    assert module.token_budget(15) >= 15 * 12
+
+
+def test_long_utterances_never_exceed_the_engine_limit():
+    module = runtime_module()
+    assert module.token_budget(60) == module.MAX_NEW_TOKENS
