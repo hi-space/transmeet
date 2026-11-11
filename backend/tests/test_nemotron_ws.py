@@ -274,13 +274,17 @@ async def test_old_stream_error_does_not_block_or_release_its_replacement(stream
 async def test_translation_backlog_queues_in_order_without_stopping_the_recording(
     streaming, monkeypatch,
 ):
-    """번역이 밀려도 녹음·인식은 계속된다 — 동시에 번역하는 수만 제한하고 나머지는 순서대로 기다린다."""
+    """번역이 밀려도 녹음·인식은 계속된다. 동시 번역 수를 제한하고, 대기열이 상한을 넘으면
+    그 뒤 발화는 번역 없이 원문만 저장한다 — 대기 태스크가 끝없이 쌓이지 않는다."""
     ws = FakeWS()
     state = ws_handler.ConnectionState(ws=ws, stt_provider="nemotron", stt_ready=True)
     release = asyncio.Event()
-    started, finished = [], []
+    started, finished, untranslated = [], [], []
 
-    async def process(ws, text, speaker, language, snapshot, timestamp):
+    async def process(ws, text, speaker, language, snapshot, timestamp, *, translate=True):
+        if not translate:
+            untranslated.append(text)
+            return
         started.append(text)
         await release.wait()
         finished.append(text)
@@ -288,24 +292,46 @@ async def test_translation_backlog_queues_in_order_without_stopping_the_recordin
     monkeypatch.setattr(ws_handler, "_process_segment", process)
     ws_handler._start_nemotron_streaming(state, ws, "recording")
     await eventually(lambda: streaming.connections)
-    for number in range(1, 101):
+    limit = ws_handler.TRANSLATION_BACKLOG_LIMIT
+    for number in range(1, limit + 37):
         await streaming.connections[0].emit({
             "type": "final", "utterance_id": number, "text": f"안건 {number}", "language": "ko-KR",
         })
     try:
         await eventually(lambda: len(started) == ws_handler.TRANSLATION_CONCURRENCY)
-        await asyncio.sleep(0.01)
-        assert len(started) == ws_handler.TRANSLATION_CONCURRENCY
+        await eventually(lambda: len(untranslated) == 36)
+        assert untranslated == [f"안건 {number}" for number in range(limit + 1, limit + 37)]
+        assert len(state.segment_tasks) == limit  # 번역 대기열은 상한에서 멈춘다
         assert state.stt_ready is True and not state.speech_stream.done
         assert len(streaming.connections) == 1
         assert not any(event["type"] == "error" or event.get("recordingBlocked") for event in ws.sent)
         release.set()
-        await eventually(lambda: len(finished) == 100)
-        assert started == [f"안건 {number}" for number in range(1, 101)]
+        await eventually(lambda: len(finished) == limit)
+        assert started == [f"안건 {number}" for number in range(1, limit + 1)]
     finally:
         release.set()
         await asyncio.gather(*list(state.segment_tasks))
         await ws_handler._stop_recording(state, ws, "recording")
+
+
+async def test_an_untranslated_segment_is_still_shown_and_saved(monkeypatch):
+    ws = FakeWS()
+    state = ws_handler.ConnectionState(
+        ws=ws, stt_provider="nemotron", source_lang="ko", translation_target="en", meeting_id="m1",
+    )
+    saved = []
+
+    async def persist(meeting_id, message, **kwargs):
+        saved.append((meeting_id, message["originalText"], message["translatedText"]))
+
+    def bedrock_client():
+        raise AssertionError("번역을 건너뛸 때 Bedrock 을 부르면 안 된다")
+
+    monkeypatch.setattr(ws_handler, "_persist_message", persist)
+    monkeypatch.setattr(ws_handler, "bedrock_client", bedrock_client)
+    await ws_handler._process_segment(ws, "안건입니다.", "speaker1", "ko", state, "now", translate=False)
+    assert [event["phase"] for event in ws.sent] == ["stt", "done"]
+    assert saved == [("m1", "안건입니다.", "")]
 
 
 def wav(pcm):

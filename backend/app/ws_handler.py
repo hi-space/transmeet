@@ -111,6 +111,9 @@ logger = logging.getLogger(__name__)
 
 # 실시간 엔진 확정 발화를 동시에 번역하는 최대 수. 넘치면 녹음을 멈추지 않고 순서대로 기다린다.
 TRANSLATION_CONCURRENCY = 8
+# 번역 대기열 상한. 넘으면 그 뒤 발화는 번역 없이 원문만 보여 주고 저장한다 — 녹음은 계속되고
+# Bedrock 이 멈춰도 대기 태스크가 끝없이 쌓이지 않는다.
+TRANSLATION_BACKLOG_LIMIT = 64
 router = APIRouter()
 
 MAX_BUFFER_BYTES = 512_000   # ~16 seconds at 16 kHz 16-bit mono
@@ -451,9 +454,13 @@ async def _process_segment(
     detected_language: str,
     state: ConnectionState,
     timestamp: str,
+    *,
+    translate: bool = True,
 ) -> None:
     """
     Run the translation pipeline for one speech segment and emit WS events.
+
+    translate=False 는 번역 대기열이 넘쳤을 때다 — 원문만 보내고 저장한다(번역은 비워 둔다).
 
     Steps: push STT result → stream Bedrock translation → push final subtitle
            → persist to DynamoDB.
@@ -498,7 +505,7 @@ async def _process_segment(
     # ── 2: Stream translation via Bedrock ──────────────────────────────────────
     translated_text = original_text if translation_target == detected_language else ""
     try:
-        if translation_target != detected_language:
+        if translate and translation_target != detected_language:
             async with bedrock_client() as br:
                 stream_resp = await br.converse_stream(
                     modelId=bedrock_model_id,
@@ -1007,6 +1014,16 @@ def _start_sagemaker_streaming(
         # 번역은 오디오 수신과 분리하고, 동시 번역 수만 제한한다. 밀리면 순서대로 기다릴 뿐
         # 인식·녹음은 멈추지 않는다(예전엔 64건이 밀리면 녹음을 막았다).
         final_state = replace(snapshot, stt_stream_id=stream_id, stt_utterance_id=utterance_id)
+        if len(state.segment_tasks) >= TRANSLATION_BACKLOG_LIMIT:
+            logger.warning("[ws] translation backlog full (%d), saving original only: connection_id=%s",
+                           len(state.segment_tasks), connection_id)
+            # 원문 송신·저장만 하므로 금방 끝나 대기열에 쌓이지 않는다.
+            task = asyncio.create_task(_process_segment(
+                ws, result.text, snapshot.speaker, language, final_state, _iso_now(), translate=False,
+            ))
+            _background_tasks.add(task)
+            task.add_done_callback(_background_tasks.discard)
+            return
         task = asyncio.create_task(_translate_when_free(
             state.translation_slots, ws, result.text, snapshot.speaker, language, final_state, _iso_now(),
         ))
@@ -2220,7 +2237,8 @@ async def ws_endpoint(
         if state.speech_stream is not None:
             await _stop_recording(state, ws, connection_id)
         if state.stt_streaming and state.segment_tasks:
-            await asyncio.gather(*list(state.segment_tasks), return_exceptions=True)
+            # 밀린 번역을 끝까지 기다리면 용량 반납이 늦어진다. 남은 것은 취소하지 않고 마저 저장되게 둔다.
+            await asyncio.wait(list(state.segment_tasks), timeout=30)
         capacity.release(state.stt_provider, connection_id)
         # Clean up both modes
         if state.transcribe_task and not state.transcribe_task.done():
