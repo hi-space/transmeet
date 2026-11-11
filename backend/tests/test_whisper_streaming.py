@@ -400,26 +400,25 @@ async def test_whisper_requires_client_opt_in_or_keeps_batch_without_cloud_contr
     assert all(event["originalText"] == "회의를 시작합니다." for event in ws.sent)
 
 
-async def test_whisper_failure_releases_only_its_recording(whisper_service):
+async def test_whisper_failure_releases_only_its_recording(whisper_service, transcribe_sessions):
     ws = FakeWS()
     state = ws_handler.ConnectionState(ws=ws, stt_provider="whisper", stt_ready=True)
     ws_handler.capacity.acquire("whisper", "whisper-failed")
     ws_handler.capacity.acquire("qwen3-asr", "qwen-running")
     try:
         ws_handler._start_sagemaker_streaming(state, ws, "whisper-failed")
-        # 일시 오류는 다시 연결한다 — 재연결이 전부 실패해야 녹음을 막는다.
+        # 일시 오류는 다시 연결하고, 재연결이 전부 실패하면 Transcribe 로 넘어간다.
         for attempt in range(ws_handler.STREAM_MAX_RESTARTS + 1):
             await eventually(lambda: len(whisper_service) == attempt + 1)
             await whisper_service[attempt].emit({"type": "error", "message": "GPU failed"})
-        await eventually(lambda: not state.stt_ready)
-        await eventually(lambda: state.speech_stream.done)
+        await eventually(lambda: state.stt_provider == "transcribe")
+        assert state.stt_ready is True and state.speech_stream is None
         assert "whisper-failed" not in ws_handler.capacity.sessions["whisper"]
         assert "qwen-running" in ws_handler.capacity.sessions["qwen3-asr"]
-        status = next(e for e in ws.sent if e["type"] == "stt_status")
-        assert status["provider"] == "whisper"
-        assert status["streaming"] and status["recordingBlocked"]
+        notice = next(e for e in ws.sent if e["type"] == "stt_fallback")
+        assert notice["from"] == "whisper" and notice["to"] == "transcribe"
+        assert not any(e.get("recordingBlocked") or e["type"] == "error" for e in ws.sent)
     finally:
         ws_handler.capacity.release("whisper", "whisper-failed")
         ws_handler.capacity.release("qwen3-asr", "qwen-running")
-        if state.speech_stream is not None:
-            await state.speech_stream.close()
+        await ws_handler._stop_recording(state, ws, "whisper-failed")

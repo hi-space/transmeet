@@ -185,6 +185,14 @@ export default function Home() {
   const { settings, updateSettings } = useSettings()
   const [sttStatuses, setSttStatuses] = useState<Partial<Record<SttProvider, SttStatus>>>({})
   const selectedSttStatus = sttStatuses[settings.sttProvider]
+  // 백엔드가 이번 녹음을 다른 엔진(Transcribe)으로 넘겼다. 녹음이 끝나면 지운다.
+  const [sttFallback, setSttFallback] = useState<{
+    from: SttProvider
+    to: SttProvider
+    message: string
+  } | null>(null)
+  const sttFallbackRef = useRef(sttFallback)
+  sttFallbackRef.current = sttFallback
   const selectedSttStreaming = isStreamingStt(settings.sttProvider, selectedSttStatus)
   const sttStreamingRequested =
     selectedSttStatus?.provider === settings.sttProvider && selectedSttStatus.streaming === true
@@ -696,6 +704,12 @@ export default function Home() {
         setSttStatuses((previous) => ({ ...previous, [msg.provider]: msg }))
         return
       }
+      if (msg.type === 'stt_fallback') {
+        // alert 대신 상태 표시만 — 녹음은 끊기지 않고 계속된다
+        console.warn('[WS] STT fallback:', msg.from, '→', msg.to, msg.message)
+        setSttFallback({ from: msg.from, to: msg.to, message: msg.message })
+        return
+      }
       if (msg.type === 'meeting_end') {
         // 서버는 그 미팅을 보고 있는 연결 전부에 보낸다 — 다른 미팅 이벤트도 상태엔 남겨 두고 표시만 거른다
         if (msg.meetingId)
@@ -817,7 +831,8 @@ export default function Home() {
             speaker: partialSpeaker,
             // 언어가 뒤집혔으면 이전 언어 번역은 버린다
             translation:
-              langFlipped || !shouldTranslateSttPartial(settings.sttProvider)
+              langFlipped ||
+              !shouldTranslateSttPartial(sttFallbackRef.current?.to ?? settings.sttProvider)
                 ? undefined
                 : prev?.translation,
           }))
@@ -836,7 +851,7 @@ export default function Home() {
           }
 
           // SageMaker models can revise a hypothesis; translate only the final utterance.
-          if (!shouldTranslateSttPartial(settings.sttProvider)) {
+          if (!shouldTranslateSttPartial(sttFallbackRef.current?.to ?? settings.sttProvider)) {
             lastTranslatedPartialRef.current = ''
             pendingPartialRef.current = ''
             if (partialThrottleRef.current) {
@@ -1044,7 +1059,7 @@ export default function Home() {
           if (msg.messageId === '__pending__' || msg.messageId === '__pending_append__') {
             const currentDirection = pendingDirectionRef.current
             if (
-              !shouldTranslateSttPartial(settings.sttProvider) ||
+              !shouldTranslateSttPartial(sttFallbackRef.current?.to ?? settings.sttProvider) ||
               !currentDirection ||
               (msg.detectedLanguage && msg.detectedLanguage !== currentDirection.source) ||
               (msg.targetLanguage && msg.targetLanguage !== currentDirection.target)
@@ -1529,6 +1544,8 @@ export default function Home() {
     prevWsStatusRef.current = wsStatus
     if (wsStatus === 'connected' && prev !== 'connected' && isRecording) {
       console.warn('[WS] Reconnected during recording — resending startRecording')
+      // 백엔드가 선택한 엔진을 다시 시도한다 — 안 되면 다시 stt_fallback 이 온다
+      setSttFallback(null)
       startRecording({
         sttProvider: settings.sttProvider,
         sttStreaming: sttStreamingRequested,
@@ -1675,11 +1692,27 @@ export default function Home() {
   }, [stopAudio])
 
   useEffect(() => {
-    if (isRecording && shouldStopSttRecording(settings.sttProvider, selectedSttStatus)) {
+    // 폴백 중에는 선택한 엔진 상태와 무관하게 녹음이 돈다 — 엔진이 죽었다고 녹음을 끊지 않는다.
+    if (
+      isRecording &&
+      !sttFallback &&
+      shouldStopSttRecording(settings.sttProvider, selectedSttStatus)
+    ) {
       resetLocalRecording()
       stopRecording()
     }
-  }, [isRecording, settings.sttProvider, selectedSttStatus, resetLocalRecording, stopRecording])
+  }, [
+    isRecording,
+    sttFallback,
+    settings.sttProvider,
+    selectedSttStatus,
+    resetLocalRecording,
+    stopRecording,
+  ])
+
+  useEffect(() => {
+    if (!isRecording) setSttFallback(null)
+  }, [isRecording])
 
   const handleSttSelect = useCallback(
     (provider: SttProvider) => {
@@ -2802,6 +2835,15 @@ export default function Home() {
             }
             status={
               <>
+                {sttFallback && (
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className="ui-surface pointer-events-auto max-w-[min(24rem,calc(100vw-4rem))] px-3 py-2 text-xs shadow-lg"
+                  >
+                    {sttFallback.message}
+                  </div>
+                )}
                 {isManagedStt(settings.sttProvider, selectedSttStatus) &&
                   (wsStatus !== 'connected' || selectedSttStatus?.status !== 'ready') && (
                     <div className="ui-surface pointer-events-auto max-w-[min(24rem,calc(100vw-4rem))] px-3 pb-3 pt-1 shadow-lg">

@@ -154,26 +154,27 @@ async def test_qwen_partial_is_not_saved_and_final_retains_recording_identity(qw
     assert snapshot.stt_provider == "qwen3-asr"
 
 
-async def test_qwen_failure_releases_only_qwen_capacity(qwen_service):
+async def test_qwen_failure_releases_only_qwen_capacity(qwen_service, transcribe_sessions):
     ws = FakeWS()
     state = ws_handler.ConnectionState(ws=ws, stt_provider="qwen3-asr", stt_ready=True)
     ws_handler.capacity.acquire("qwen3-asr", "qwen-failed")
     ws_handler.capacity.acquire("nemotron", "nemotron-running")
     try:
         ws_handler._start_sagemaker_streaming(state, ws, "qwen-failed")
-        # 일시 오류는 다시 연결한다 — 재연결이 전부 실패해야 녹음을 막는다.
+        # 일시 오류는 다시 연결하고, 재연결이 전부 실패하면 Transcribe 로 넘어간다.
         for attempt in range(ws_handler.STREAM_MAX_RESTARTS + 1):
             await eventually(lambda: len(qwen_service) == attempt + 1)
             await qwen_service[attempt].emit({"type": "error", "message": "GPU failed"})
-        await eventually(lambda: not state.stt_ready)
-        await eventually(lambda: state.speech_stream.done)
+        await eventually(lambda: state.stt_provider == "transcribe")
+        assert state.stt_ready is True and state.speech_stream is None
         assert "qwen-failed" not in ws_handler.capacity.sessions["qwen3-asr"]
         assert "nemotron-running" in ws_handler.capacity.sessions["nemotron"]
-        status = next(e for e in ws.sent if e["type"] == "stt_status")
-        assert status["provider"] == "qwen3-asr"
-        assert status["streaming"] and status["recordingBlocked"]
+        notice = next(e for e in ws.sent if e["type"] == "stt_fallback")
+        assert notice["from"] == "qwen3-asr" and notice["to"] == "transcribe"
+        assert not any(e.get("recordingBlocked") or e["type"] == "error" for e in ws.sent)
     finally:
         ws_handler.capacity.release("nemotron", "nemotron-running")
+        await ws_handler._stop_recording(state, ws, "qwen-failed")
 
 
 async def test_qwen_final_messages_identify_qwen_in_the_translation_pipeline(monkeypatch):
@@ -226,3 +227,47 @@ async def test_websocket_recording_passes_selected_qwen_language_to_model(
     monkeypatch.setattr(ws_handler, "_process_segment", noop)
     await ws_handler.ws_endpoint(RecordingWS())
     assert qwen_service[0].controls[0]["language"] == expected
+
+
+async def test_restarting_a_recording_while_qwen_is_down_falls_back_to_transcribe(
+    qwen, monkeypatch, transcribe_sessions,
+):
+    """WS 가 다시 붙어 녹음을 재시작할 때 Qwen 이 죽어 있으면 녹음을 막지 말고 Transcribe 로."""
+    from fastapi import WebSocketDisconnect
+
+    class RecordingWS(FakeWS):
+        def __init__(self):
+            super().__init__()
+            self.actions = iter([
+                {"action": "startRecording", "sttProvider": "qwen3-asr",
+                 "sourceLang": "en", "translationTarget": "ko"},
+                {"action": "stopRecording"},
+            ])
+
+        async def accept(self):
+            pass
+
+        async def receive_json(self):
+            try:
+                return next(self.actions)
+            except StopIteration:
+                raise WebSocketDisconnect()
+
+    async def authenticate(ws):
+        return "test-user", ""
+
+    async def status(provider, **kwargs):
+        return {"provider": provider, "status": "error", "streaming": True}
+
+    async def noop(*args, **kwargs):
+        pass
+
+    monkeypatch.setattr(ws_handler, "_authenticate", authenticate)
+    monkeypatch.setattr(ws_handler.capacity, "status", status)
+    monkeypatch.setattr(ws_handler.capacity, "publish_activity", noop)
+    ws = RecordingWS()
+    await ws_handler.ws_endpoint(ws)
+    assert [session[:2] for session in transcribe_sessions] == [("transcribe", "en")]
+    assert not any(e.get("recordingBlocked") or e["type"] == "error" for e in ws.sent)
+    notice = next(e for e in ws.sent if e["type"] == "stt_fallback")
+    assert notice["from"] == "qwen3-asr" and notice["to"] == "transcribe"

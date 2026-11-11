@@ -147,23 +147,34 @@ async def test_transient_stream_error_reconnects_without_stopping_the_recording(
         ws_handler.capacity.release("nemotron", "recording")
 
 
-async def test_repeated_stream_failures_block_further_audio_and_release_capacity(streaming):
+async def test_repeated_stream_failures_fall_back_to_transcribe_without_stopping(
+    streaming, transcribe_sessions,
+):
+    """재연결이 다 실패해도 녹음은 멈추지 않는다 — Transcribe 로 넘어가 계속 받아 적는다."""
     ws = FakeWS()
-    state = ws_handler.ConnectionState(ws=ws, stt_provider="nemotron", stt_ready=True)
+    state = ws_handler.ConnectionState(ws=ws, stt_provider="nemotron", stt_ready=True, source_lang="ko")
     ws_handler.capacity.acquire("nemotron", "failed-recording")
     ws_handler._start_nemotron_streaming(state, ws, "failed-recording")
-    for attempt in range(ws_handler.STREAM_MAX_RESTARTS + 1):
-        await eventually(lambda: len(streaming.connections) == attempt + 1)
+    try:
+        for attempt in range(ws_handler.STREAM_MAX_RESTARTS + 1):
+            await eventually(lambda: len(streaming.connections) == attempt + 1)
+            assert state.stt_ready is True
+            await streaming.connections[attempt].emit({"type": "error", "message": "GPU failed"})
+        await eventually(lambda: transcribe_sessions)
+        assert transcribe_sessions == [("transcribe", "ko", "failed-recording")]
         assert state.stt_ready is True
-        await streaming.connections[attempt].emit({"type": "error", "message": "GPU failed"})
-    await eventually(lambda: state.stt_ready is False)
-    await eventually(lambda: state.nemotron_stream.done)
-    assert len(streaming.connections) == ws_handler.STREAM_MAX_RESTARTS + 1
-    assert "failed-recording" not in ws_handler.capacity.sessions["nemotron"]
-    assert any(event["type"] == "error" for event in ws.sent)
-    assert any(event["type"] == "stt_status" and event.get("recordingBlocked")
-               and event.get("streaming") and event["status"] == "error" for event in ws.sent)
-    assert all(connection.closed for connection in streaming.connections)
+        assert state.stt_provider == "transcribe"
+        assert state.speech_stream is None
+        assert len(streaming.connections) == ws_handler.STREAM_MAX_RESTARTS + 1
+        assert "failed-recording" not in ws_handler.capacity.sessions["nemotron"]
+        assert not any(event["type"] == "error" for event in ws.sent)
+        assert not any(event.get("recordingBlocked") for event in ws.sent)
+        notice = next(event for event in ws.sent if event["type"] == "stt_fallback")
+        assert (notice["from"], notice["to"]) == ("nemotron", "transcribe")
+        await eventually(lambda: all(connection.closed for connection in streaming.connections))
+    finally:
+        await ws_handler._stop_recording(state, ws, "failed-recording")
+    assert state.transcribe_task is None  # 정지가 Transcribe 를 정상 마무리했다
 
 
 async def test_a_final_resets_the_restart_budget(streaming, monkeypatch):
@@ -232,9 +243,10 @@ async def test_stopping_during_the_backoff_cancels_the_reconnect(streaming, monk
 
 
 def test_the_restart_budget_rides_out_a_long_gpu_stall():
-    # 백오프 합계가 최소 1분은 되어야 확정 디코드 정체(관측 ~20초)를 넘긴다.
+    # 시도마다 실패까지 ~4초가 더해지므로, 백오프 합계 14초면 관측된 ~20초 정체를 넘긴다.
+    # 그보다 오래 끌면 자막 공백만 길어진다 — 그 뒤엔 Transcribe 로 넘어간다.
     total = sum(REAL_RESTART_DELAY(n) for n in range(1, ws_handler.STREAM_MAX_RESTARTS + 1))
-    assert total >= 60
+    assert 14 <= total <= 30
     assert REAL_RESTART_DELAY(1) >= 1
 
 

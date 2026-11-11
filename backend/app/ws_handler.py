@@ -893,9 +893,9 @@ async def _run_transcribe_streaming(
 
 
 # 일시 오류(모델 지연·타임아웃) 뒤 같은 녹음을 새 연결로 이어 가는 횟수. 인식 결과가
-# 한 번이라도 나오면 다시 채워진다 — 엔드포인트가 실제로 죽었을 때만 녹음을 멈춘다.
-# 백오프 합계 약 1분 30초(+ 시도마다 실패까지 걸리는 시간)를 버틴다.
-STREAM_MAX_RESTARTS = 8
+# 한 번이라도 나오면 다시 채워진다. 백오프 2·4·8초(+ 시도마다 실패까지 ~4초)로 관측된
+# ~20초 GPU 정체를 넘기고, 그래도 안 되면 녹음을 멈추지 않고 Transcribe 로 넘어간다.
+STREAM_MAX_RESTARTS = 3
 STREAM_RESTART_MAX_DELAY = 15.0
 
 
@@ -1031,8 +1031,10 @@ async def _restart_sagemaker_streaming(state, ws, connection_id, stream, snapsho
         return
     if state.stream_reconnect_task is not None and not state.stream_reconnect_task.done():
         return  # 같은 실패에 대한 재연결이 이미 대기 중이다(오디오 전송 실패가 뒤따라 온 경우).
-    if not state.stt_ready or state.stream_restarts >= STREAM_MAX_RESTARTS:
-        await _sagemaker_recording_failed(state, ws, connection_id, stream, message, provider=snapshot.stt_provider)
+    if not state.stt_ready:
+        return  # 녹음을 멈추는 중이다.
+    if state.stream_restarts >= STREAM_MAX_RESTARTS:
+        await _fallback_to_transcribe(state, ws, connection_id, snapshot.stt_provider, message, stream=stream)
         return
     state.stream_restarts += 1
     delay = _stream_restart_delay(state.stream_restarts)
@@ -1050,6 +1052,49 @@ async def _restart_sagemaker_streaming(state, ws, connection_id, stream, snapsho
     # 실패한 스트림의 이벤트 핸들러 안에서 기다리면 그 스트림의 close() 가 막힌다 — 따로 돈다.
     # 대기 동안의 오디오는 자막에서 빠지지만 녹음 파일에는 남는다.
     state.stream_reconnect_task = asyncio.create_task(reconnect())
+
+
+# 실패한 스트림 정리처럼 기다리지 않고 흘려보내는 태스크 — 끝나기 전에 GC 되지 않게 붙잡아 둔다.
+_background_tasks: set[asyncio.Task] = set()
+
+
+async def _fallback_to_transcribe(state, ws, connection_id, failed_provider, reason, *, stream=None):
+    """선택한 엔진이 안 될 때 녹음을 멈추지 않고 같은 연결에서 Transcribe 로 받아 적는다.
+
+    이번 녹음이 끝날 때까지 Transcribe 를 쓰고, 다음 startRecording 은 다시 선택한 엔진으로 시도한다.
+    """
+    logger.warning(
+        "[ws] %s unavailable, falling back to Transcribe: connection_id=%s reason=%s",
+        failed_provider, connection_id, reason,
+    )
+    capacity.release(failed_provider, connection_id)
+    if stream is not None and state.speech_stream is stream:
+        state.speech_stream = None
+        # 오류로 끝난 스트림은 바로 닫힌다. 백프레셔로 실패한 스트림은 flush 를 최대 12초 기다리므로 따로 닫는다.
+        task = asyncio.create_task(stream.close())
+        _background_tasks.add(task)
+        task.add_done_callback(_background_tasks.discard)
+    if state.stream_reconnect_task is not None and not state.stream_reconnect_task.done():
+        state.stream_reconnect_task.cancel()
+    state.stream_reconnect_task = None
+    state.stream_restarts = 0
+    state.stt_provider = "transcribe"
+    state.stt_streaming = True
+    state.stt_ready = True
+    state.audio_queue = asyncio.Queue()
+    state.transcribe_fail_count = 0
+    state.transcribe_retry_at = 0.0
+    state.transcribe_task = asyncio.create_task(_run_transcribe_streaming(state, ws, connection_id))
+    labels = {"qwen3-asr": "Qwen", "nemotron": "Nemotron", "whisper": "Whisper"}
+    try:
+        await asyncio.wait_for(_safe_send(ws, {
+            "type": "stt_fallback", "from": failed_provider, "to": "transcribe",
+            "message": f"{labels.get(failed_provider, failed_provider)} 음성 인식이 응답하지 않아 "
+                       "Amazon Transcribe 로 전환했습니다. 녹음은 계속됩니다.",
+            "timestamp": _iso_now(),
+        }), timeout=1)
+    except Exception:
+        pass
 
 
 async def _sagemaker_recording_failed(state, ws, connection_id, stream, message, *, provider=None):
@@ -1922,11 +1967,16 @@ async def ws_endpoint(
                         "timestamp": _iso_now(),
                     })
                     continue
+                fallback_reason = None
                 if active_inference_component_for(provider) or streaming:
                     status = await capacity.start_session(provider, connection_id)
                     if status["status"] != "ready":
-                        await _safe_send(ws, {"type": "stt_status", **status, "recordingBlocked": True})
-                        continue
+                        if not streaming:
+                            await _safe_send(ws, {"type": "stt_status", **status, "recordingBlocked": True})
+                            continue
+                        # 화면은 엔진이 준비됐을 때만 녹음을 시작한다 — 여기 오는 건 녹음 도중 WS 가
+                        # 다시 붙어 재시작하는 경우다. 막으면 녹음이 끊기므로 Transcribe 로 이어 간다.
+                        fallback_reason = f"engine status {status['status']}"
                 # ── Cancel / reset any previous session ──────────────────────
                 if state.transcribe_task and not state.transcribe_task.done():
                     state.transcribe_task.cancel()
@@ -1966,7 +2016,9 @@ async def ws_endpoint(
                     state.stt_provider, state.source_lang, state.target_lang, state.speaker,
                 )
 
-                if state.stt_provider == "transcribe":
+                if fallback_reason is not None:
+                    await _fallback_to_transcribe(state, ws, connection_id, provider, fallback_reason)
+                elif state.stt_provider == "transcribe":
                     # Open persistent streaming session for entire recording
                     state.transcribe_task = asyncio.create_task(
                         _run_transcribe_streaming(state, ws, connection_id)

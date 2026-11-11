@@ -93,6 +93,15 @@ export interface ErrorServerMessage {
   timestamp: string
 }
 
+/** 선택한 엔진이 안 돼 이번 녹음을 다른 엔진으로 이어 받아 적는 중이다. 녹음은 계속된다. */
+export interface SttFallbackServerMessage {
+  type: 'stt_fallback'
+  from: SttProvider
+  to: SttProvider
+  message: string
+  timestamp: string
+}
+
 export interface PongServerMessage {
   type: 'pong'
   timestamp: string
@@ -100,6 +109,7 @@ export interface PongServerMessage {
 
 export type WsServerMessage =
   | SttStatusServerMessage
+  | SttFallbackServerMessage
   | SubtitleServerMessage
   | SubtitleStreamServerMessage
   | TtsStreamServerMessage
